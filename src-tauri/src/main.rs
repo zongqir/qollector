@@ -4,13 +4,16 @@ mod core;
 mod platform;
 mod repository;
 mod commands;
+mod ai;
 
 use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use platform::clipboard_trait::PlatformClipboard;
 use commands::clipboard_commands::*;
+use commands::ai_commands::*;
 use tauri::Manager;
+use std::sync::Mutex;
 
 #[cfg(target_os = "windows")]
 use platform::windows::windows::WindowsClipboard;
@@ -53,6 +56,13 @@ fn main() {
                     .expect("Failed to start clipboard monitoring");
 
                 app.manage(manager);
+
+                // Initialize AI state
+                let ai_config = ai::AIConfig::default();
+                let ai_state = AIState {
+                    config: Arc::new(Mutex::new(ai_config)),
+                };
+                app.manage(ai_state);
             });
 
             Ok(())
@@ -62,6 +72,10 @@ fn main() {
             copy_item,
             update_item,
             delete_item,
+            get_ai_config,
+            update_ai_config,
+            generate_ai_tags,
+            test_ai_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

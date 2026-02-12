@@ -3,6 +3,14 @@ name = "clipbox"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "clipbox"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clipbox"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -19,6 +27,7 @@ thiserror = "1"
 async-trait = "0.1"
 image = "0.25"
 arboard = "3"
+reqwest = { version = "0.13.2", features = ["json"] }
 
 # Windows specific
 [target.'cfg(target_os = "windows")'.dependencies]

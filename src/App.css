@@ -47,6 +47,23 @@ body {
   position: relative;
 }
 
+.settings-btn {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  background: #5568d3;
+  transform: translateY(-1px);
+}
+
 .search-input {
   width: 100%;
   padding: 10px 40px 10px 15px;
@@ -460,6 +477,28 @@ body {
 
 .tag-add-btn:hover {
   background: #5568d3;
+}
+
+.ai-tag-btn {
+  margin: 10px 0;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s;
+}
+
+.ai-tag-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.ai-tag-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .edit-actions {

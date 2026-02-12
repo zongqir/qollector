@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import Settings from './Settings';
 
 function App() {
   const [items, setItems] = useState([]);
@@ -12,6 +13,8 @@ function App() {
   const [newTag, setNewTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(null);
 
   useEffect(() => {
     loadItems();
@@ -83,6 +86,47 @@ function App() {
     if (newTag.trim() && !editTags.includes(newTag.trim())) {
       setEditTags([...editTags, newTag.trim()]);
       setNewTag('');
+    }
+  };
+
+  const generateAITags = async (item) => {
+    console.log('generateAITags called for item:', item.id);
+
+    if (!item.content) {
+      console.log('No content, skipping');
+      return;
+    }
+
+    setGeneratingAI(item.id);
+    try {
+      console.log('Calling generate_ai_tags with content:', item.content.substring(0, 50));
+      const aiTags = await invoke('generate_ai_tags', { content: item.content });
+      console.log('AI tags received:', aiTags);
+
+      if (aiTags && aiTags.length > 0) {
+        // Add AI: prefix to distinguish AI-generated tags
+        const taggedAI = aiTags.map(tag => `AI:${tag}`);
+        const existingTags = getTags(item.tags);
+        const newTags = [...existingTags, ...taggedAI.filter(t => !existingTags.includes(t))];
+
+        console.log('Updating item with new tags:', newTags);
+        const updatedItem = {
+          ...item,
+          tags: JSON.stringify(newTags),
+          updated_at: Math.floor(Date.now() / 1000)
+        };
+        await invoke('update_item', { item: updatedItem });
+        await loadItems();
+        console.log('Tags updated successfully');
+      } else {
+        console.log('No AI tags generated or AI not enabled');
+        alert('AI 未启用或未生成标签，请检查设置');
+      }
+    } catch (error) {
+      console.error('AI 标签生成失败:', error);
+      alert('AI 标签生成失败: ' + error);
+    } finally {
+      setGeneratingAI(null);
     }
   };
 
@@ -215,6 +259,8 @@ function App() {
 
   return (
     <div className="app">
+      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+
       <header className="header">
         <h1>📋 ClipBox</h1>
         <div className="search-box">
@@ -231,6 +277,9 @@ function App() {
             </button>
           )}
         </div>
+        <button onClick={() => setShowSettings(true)} className="settings-btn">
+          ⚙️ 设置
+        </button>
       </header>
 
       <div className="content">
@@ -257,6 +306,17 @@ function App() {
                       <span key={idx} className="tag">{tag}</span>
                     ))}
                   </div>
+                )}
+
+                {/* AI Tag button */}
+                {item.type_ === 'text' && item.content && (
+                  <button
+                    onClick={() => generateAITags(item)}
+                    disabled={generatingAI === item.id}
+                    className="ai-tag-btn"
+                  >
+                    {generatingAI === item.id ? '🤖 生成中...' : '🤖 AI 标签'}
+                  </button>
                 )}
 
                 {/* Note display and edit */}
