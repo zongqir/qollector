@@ -131,16 +131,18 @@ pub mod windows {
         }
 
         async fn set_content(&self, content: ClipboardContent) -> Result<(), ClipboardError> {
-            use arboard::Clipboard;
-            let mut clipboard = Clipboard::new()
-                .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-
             match content {
                 ClipboardContent::Text(text) => {
+                    use arboard::Clipboard;
+                    let mut clipboard = Clipboard::new()
+                        .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                     clipboard.set_text(text)
                         .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                 }
                 ClipboardContent::Image(data) => {
+                    use arboard::Clipboard;
+                    let mut clipboard = Clipboard::new()
+                        .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                     let img = image::load_from_memory(&data)
                         .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
                     clipboard.set_image(arboard::ImageData {
@@ -150,7 +152,10 @@ pub mod windows {
                     })
                     .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                 }
-                _ => return Err(ClipboardError::UnsupportedType),
+                ClipboardContent::File(paths_str) => {
+                    let paths: Vec<String> = paths_str.lines().map(|s| s.to_string()).collect();
+                    Self::set_file_paths(&paths)?;
+                }
             }
 
             Ok(())
@@ -201,6 +206,22 @@ pub mod windows {
     impl WindowsClipboard {
         fn get_clipboard_content_sync() -> Result<ClipboardContent, ClipboardError> {
             use arboard::Clipboard;
+
+            // Try to get file paths first (CF_HDROP format)
+            match Self::get_file_paths() {
+                Ok(files) if !files.is_empty() => {
+                    println!("Detected {} file(s) in clipboard", files.len());
+                    return Ok(ClipboardContent::File(files.join("\n")));
+                }
+                Ok(_) => {
+                    // Empty file list, continue to check other formats
+                }
+                Err(e) => {
+                    // Not a file or error, continue to check other formats
+                    println!("File detection: {:?}", e);
+                }
+            }
+
             let mut clipboard = Clipboard::new()
                 .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
 
@@ -225,6 +246,132 @@ pub mod windows {
             }
 
             Err(ClipboardError::UnsupportedType)
+        }
+
+        fn get_file_paths() -> Result<Vec<String>, ClipboardError> {
+            use windows::Win32::System::Memory::*;
+            use std::ffi::OsString;
+            use std::os::windows::ffi::OsStringExt;
+
+            unsafe {
+                OpenClipboard(None)
+                    .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
+
+                // CF_HDROP format (15)
+                let hdrop_result = GetClipboardData(15);
+
+                if hdrop_result.is_err() {
+                    let _ = CloseClipboard();
+                    return Err(ClipboardError::UnsupportedType);
+                }
+
+                let hdrop = hdrop_result.unwrap();
+                if hdrop.is_invalid() {
+                    let _ = CloseClipboard();
+                    return Err(ClipboardError::UnsupportedType);
+                }
+
+                // Convert HANDLE to HGLOBAL
+                let hglobal = HGLOBAL(hdrop.0);
+                let hdrop_ptr = GlobalLock(hglobal);
+                if hdrop_ptr.is_null() {
+                    let _ = CloseClipboard();
+                    return Err(ClipboardError::AccessError("Failed to lock memory".to_string()));
+                }
+
+                // Get file count
+                let file_count = windows::Win32::UI::Shell::DragQueryFileW(
+                    windows::Win32::UI::Shell::HDROP(hdrop_ptr),
+                    0xFFFFFFFF,
+                    None
+                );
+
+                let mut files = Vec::new();
+                for i in 0..file_count {
+                    let mut buffer = vec![0u16; 260];
+                    let len = windows::Win32::UI::Shell::DragQueryFileW(
+                        windows::Win32::UI::Shell::HDROP(hdrop_ptr),
+                        i,
+                        Some(&mut buffer)
+                    );
+
+                    if len > 0 {
+                        let path = OsString::from_wide(&buffer[..len as usize])
+                            .to_string_lossy()
+                            .to_string();
+                        files.push(path);
+                    }
+                }
+
+                let _ = GlobalUnlock(hglobal);
+                let _ = CloseClipboard();
+
+                Ok(files)
+            }
+        }
+
+        fn set_file_paths(paths: &[String]) -> Result<(), ClipboardError> {
+            use windows::Win32::System::Memory::*;
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+
+            unsafe {
+                OpenClipboard(None)
+                    .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
+
+                let _ = EmptyClipboard();
+
+                // Calculate size needed for DROPFILES structure + file paths
+                let mut total_size = std::mem::size_of::<windows::Win32::UI::Shell::DROPFILES>();
+                for path in paths {
+                    let wide: Vec<u16> = OsStr::new(path).encode_wide().chain(Some(0)).collect();
+                    total_size += wide.len() * 2;
+                }
+                total_size += 2; // Final null terminator
+
+                let hmem = GlobalAlloc(GMEM_MOVEABLE, total_size)
+                    .map_err(|e| ClipboardError::AccessError(format!("Failed to allocate memory: {}", e)))?;
+
+                let ptr = GlobalLock(hmem);
+                if ptr.is_null() {
+                    let _ = GlobalFree(hmem);
+                    let _ = CloseClipboard();
+                    return Err(ClipboardError::AccessError("Failed to lock memory".to_string()));
+                }
+
+                // Write DROPFILES structure
+                let dropfiles = ptr as *mut windows::Win32::UI::Shell::DROPFILES;
+                (*dropfiles).pFiles = std::mem::size_of::<windows::Win32::UI::Shell::DROPFILES>() as u32;
+                (*dropfiles).pt.x = 0;
+                (*dropfiles).pt.y = 0;
+                (*dropfiles).fNC = false.into();
+                (*dropfiles).fWide = true.into();
+
+                // Write file paths
+                let mut offset = std::mem::size_of::<windows::Win32::UI::Shell::DROPFILES>();
+                for path in paths {
+                    let wide: Vec<u16> = OsStr::new(path).encode_wide().chain(Some(0)).collect();
+                    let dest = (ptr as usize + offset) as *mut u16;
+                    std::ptr::copy_nonoverlapping(wide.as_ptr(), dest, wide.len());
+                    offset += wide.len() * 2;
+                }
+
+                // Final null terminator
+                let final_null = (ptr as usize + offset) as *mut u16;
+                *final_null = 0;
+
+                let _ = GlobalUnlock(hmem);
+
+                // Set clipboard data (CF_HDROP = 15)
+                // HGLOBAL can be used directly as HANDLE
+                let handle = HANDLE(hmem.0 as isize as *mut _);
+                SetClipboardData(15, handle)
+                    .map_err(|e| ClipboardError::AccessError(format!("Failed to set clipboard data: {}", e)))?;
+
+                let _ = CloseClipboard();
+
+                Ok(())
+            }
         }
 
         fn get_process_name(process_id: u32) -> Result<String, ClipboardError> {

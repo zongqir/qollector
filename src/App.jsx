@@ -147,6 +147,15 @@ function App() {
     return content.substring(0, maxLength) + '...';
   };
 
+  const getFileList = (content) => {
+    if (!content) return [];
+    return content.split('\n').filter(p => p.trim());
+  };
+
+  const getFileName = (path) => {
+    return path.split(/[/\\]/).pop() || path;
+  };
+
   const getImageThumbnail = (imagePathsStr) => {
     if (!imagePathsStr) return '';
     try {
@@ -348,6 +357,15 @@ function App() {
                           alt="Clipboard image"
                           className="clipboard-image"
                         />
+                      ) : item.type_ === 'file' ? (
+                        <div className="file-list">
+                          {getFileList(item.content).map((path, idx) => (
+                            <div key={idx} className="file-item">
+                              <span className="file-icon">📄</span>
+                              <span className="file-name">{getFileName(path)}</span>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
                         getContentPreview(item.content)
                       )}

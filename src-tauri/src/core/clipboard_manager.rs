@@ -112,9 +112,35 @@ impl ClipboardManager {
                 item.image_paths = Some(image_paths_json);
                 item
             }
-            ClipboardContent::File(_path) => {
-                println!("File clipboard content detected (not yet implemented)");
-                return Ok(());
+            ClipboardContent::File(paths_str) => {
+                println!("File clipboard content detected");
+
+                let paths: Vec<&str> = paths_str.lines().collect();
+                let file_count = paths.len();
+
+                // Create a summary of files
+                let file_names: Vec<String> = paths.iter()
+                    .map(|p| {
+                        std::path::Path::new(p)
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(p)
+                            .to_string()
+                    })
+                    .collect();
+
+                let summary = if file_count == 1 {
+                    format!("文件: {}", file_names[0])
+                } else {
+                    format!("{} 个文件: {}", file_count, file_names.join(", "))
+                };
+
+                println!("Files: {}", summary);
+
+                let mut item = ClipboardItem::new_text(summary, metadata);
+                item.type_ = "file".to_string();
+                item.content = Some(paths_str.clone());
+                item
             }
         };
 
@@ -151,6 +177,13 @@ impl ClipboardManager {
                 let data = std::fs::read(&image_path)
                     .map_err(|e| ClipboardError::PlatformError(format!("Failed to read image: {}", e)))?;
                 ClipboardContent::Image(data)
+            } else {
+                return Err(ClipboardError::UnsupportedType);
+            }
+        } else if item.type_ == "file" {
+            // Restore file paths to clipboard
+            if let Some(paths) = &item.content {
+                ClipboardContent::File(paths.clone())
             } else {
                 return Err(ClipboardError::UnsupportedType);
             }
