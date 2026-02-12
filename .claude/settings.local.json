@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check)",
+      "Bash(echo \"<!DOCTYPE html><html><body>ClipBox</body></html>\")",
+      "Bash(cargo build)",
+      "Bash(python -c \"\nfrom PIL import Image\nimg = Image.new\\(''RGB'', \\(32, 32\\), color=''blue''\\)\nimg.save\\(''icon.ico'', format=''ICO''\\)\nprint\\(''Icon created''\\)\n\")",
+      "Bash(npx @tauri-apps/cli icon icons/icon.png)",
+      "Bash(magick -size 32x32 xc:blue icon.png)",
+      "Bash(curl -L \"https://raw.githubusercontent.com/tauri-apps/tauri/dev/tooling/cli/templates/app/app-icon.png\" -o icons/icon.png)",
+      "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n$bmp = New-Object System.Drawing.Bitmap\\(32, 32\\)\n$g = [System.Drawing.Graphics]::FromImage\\($bmp\\)\n$g.Clear\\([System.Drawing.Color]::Blue\\)\n$g.Dispose\\(\\)\n$icon = [System.Drawing.Icon]::FromHandle\\($bmp.GetHicon\\(\\)\\)\n$stream = [System.IO.File]::Create\\(''icon.ico''\\)\n$icon.Save\\($stream\\)\n$stream.Close\\(\\)\nWrite-Host ''Icon created''\n\")",
+      "Bash(curl -L \"https://raw.githubusercontent.com/tauri-apps/tauri/v2/examples/api/src-tauri/icons/icon.ico\" -o icon.ico)",
+      "Bash(npx @tauri-apps/cli icon icons/icon.svg)"
+    ]
+  }
+}

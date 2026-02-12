@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Rust
+src-tauri/target/
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Tauri
+src-tauri/gen/
+node_modules
