@@ -10,6 +10,8 @@ function App() {
   const [editNote, setEditNote] = useState('');
   const [editTags, setEditTags] = useState([]);
   const [newTag, setNewTag] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState(null);
 
   useEffect(() => {
     loadItems();
@@ -106,6 +108,33 @@ function App() {
     }
   };
 
+  const startEditNote = (item) => {
+    setEditingNoteId(item.id);
+    setEditNote(item.user_note || '');
+  };
+
+  const saveNote = async (item) => {
+    try {
+      const updatedItem = {
+        ...item,
+        user_note: editNote,
+        updated_at: Math.floor(Date.now() / 1000)
+      };
+      await invoke('update_item', { item: updatedItem });
+      await loadItems();
+      setEditingNoteId(null);
+      setEditNote('');
+    } catch (error) {
+      console.error('保存备注失败:', error);
+      alert('保存备注失败: ' + error);
+    }
+  };
+
+  const cancelNoteEdit = () => {
+    setEditingNoteId(null);
+    setEditNote('');
+  };
+
   const formatDate = (timestamp) => {
     // Convert seconds to milliseconds
     const date = new Date(timestamp * 1000);
@@ -150,6 +179,27 @@ function App() {
     }
   };
 
+  const filteredItems = items.filter(item => {
+    if (!searchQuery.trim()) return true;
+
+    const query = searchQuery.toLowerCase();
+
+    // Search in content
+    if (item.content && item.content.toLowerCase().includes(query)) return true;
+
+    // Search in note
+    if (item.user_note && item.user_note.toLowerCase().includes(query)) return true;
+
+    // Search in tags
+    const tags = getTags(item.tags);
+    if (tags.some(tag => tag.toLowerCase().includes(query))) return true;
+
+    // Search in source app
+    if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
+
+    return false;
+  });
+
   if (loading) {
     return <div className="loading">加载中...</div>;
   }
@@ -158,17 +208,30 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>📋 ClipBox</h1>
-        <button onClick={loadItems} className="refresh-btn">
-          🔄 刷新
-        </button>
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="搜索内容、标签、备注..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="clear-search">
+              ✕
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="content">
-        {items.length === 0 ? (
-          <div className="empty">暂无剪贴板记录</div>
+        {filteredItems.length === 0 ? (
+          <div className="empty">
+            {searchQuery ? '没有找到匹配的记录' : '暂无剪贴板记录'}
+          </div>
         ) : (
           <div className="items-list">
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <div key={item.id} className="item-card">
                 <div className="item-header">
                   <div className="item-header-left">
@@ -187,10 +250,37 @@ function App() {
                   </div>
                 )}
 
-                {/* Note display */}
-                {item.user_note && (
-                  <div className="item-note">
-                    📝 {item.user_note}
+                {/* Note display and edit */}
+                {editingNoteId === item.id ? (
+                  <div className="note-edit-inline">
+                    <textarea
+                      value={editNote}
+                      onChange={(e) => setEditNote(e.target.value)}
+                      className="note-textarea"
+                      rows={2}
+                      placeholder="添加备注..."
+                      autoFocus
+                    />
+                    <div className="note-actions">
+                      <button onClick={() => saveNote(item)} className="note-save-btn">
+                        ✓
+                      </button>
+                      <button onClick={cancelNoteEdit} className="note-cancel-btn">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="item-note-container" onClick={() => startEditNote(item)}>
+                    {item.user_note ? (
+                      <div className="item-note">
+                        📝 {item.user_note}
+                      </div>
+                    ) : (
+                      <div className="item-note-placeholder">
+                        点击添加备注...
+                      </div>
+                    )}
                   </div>
                 )}
 
