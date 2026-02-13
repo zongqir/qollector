@@ -9,7 +9,8 @@
     "unpin": "Unpin Window",
     "minimize": "Minimize",
     "maximize": "Maximize",
-    "close": "Close"
+    "close": "Close",
+    "quickAdd": "Quick Input"
   },
   "search": {
     "placeholder": "Search content, tags, notes...",
@@ -152,6 +153,15 @@
     "fileAdded": "File info added",
     "addFailed": "Add failed: {{error}}",
     "fileInfo": "[File] {{name}} ({{size}})"
+  },
+  "quickInput": {
+    "title": "Quick Input",
+    "placeholder": "Enter text content...",
+    "submit": "Submit (Ctrl+Enter)",
+    "cancel": "Cancel (Esc)",
+    "success": "Added",
+    "failed": "Add failed: {{error}}",
+    "source": "Quick Input"
   },
   "tag": {
     "ai": "AI:",

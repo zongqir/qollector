@@ -11,6 +11,7 @@ pub async fn add_clipboard_item_manual(
     manager: State<'_, Arc<ClipboardManager>>,
     content_type: String,
     content: String,
+    source: Option<String>,
 ) -> Result<String, String> {
     println!("手动添加剪贴板项: type={}, content_len={}", content_type, content.len());
 
@@ -18,7 +19,7 @@ pub async fn add_clipboard_item_manual(
         .map_err(|e| format!("获取应用目录失败: {}", e))?;
 
     let metadata = WindowMetadata {
-        source_app: "拖拽".to_string(),
+        source_app: source.unwrap_or_else(|| "拖拽".to_string()),
         window_title: "".to_string(),
         source_url: None,
     };

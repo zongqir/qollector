@@ -35,6 +35,8 @@ function App() {
   const [copiedItemId, setCopiedItemId] = useState(null); // 用于显示复制成功反馈
   const [addingTagItemId, setAddingTagItemId] = useState(null); // 正在添加标签的项目ID
   const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
+  const [showQuickInput, setShowQuickInput] = useState(false); // 快速输入弹窗
+  const [quickInputText, setQuickInputText] = useState(''); // 快速输入内容
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
@@ -495,6 +497,50 @@ function App() {
     }
   };
 
+  // 打开快速输入弹窗
+  const openQuickInput = () => {
+    setShowQuickInput(true);
+    setQuickInputText('');
+  };
+
+  // 关闭快速输入弹窗
+  const closeQuickInput = () => {
+    setShowQuickInput(false);
+    setQuickInputText('');
+  };
+
+  // 提交快速输入
+  const submitQuickInput = async () => {
+    if (!quickInputText.trim()) {
+      closeQuickInput();
+      return;
+    }
+
+    try {
+      await invoke('add_clipboard_item_manual', {
+        content: quickInputText,
+        contentType: 'text',
+        source: t('quickInput.source')
+      });
+      await loadItems();
+      closeQuickInput();
+    } catch (error) {
+      console.error(t('quickInput.failed', { error }));
+      alert(t('quickInput.failed', { error }));
+    }
+  };
+
+  // 处理快速输入键盘事件
+  const handleQuickInputKeyDown = (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      submitQuickInput();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeQuickInput();
+    }
+  };
+
   const formatDate = (timestamp) => {
     // Convert seconds to milliseconds
     const date = new Date(timestamp * 1000);
@@ -787,6 +833,42 @@ function App() {
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <DragDrop onItemAdded={loadItems} />
 
+      {/* 快速输入弹窗 */}
+      {showQuickInput && (
+        <div className="quick-input-overlay" onClick={closeQuickInput}>
+          <div className="quick-input-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="quick-input-header">
+              <h3>{t('quickInput.title')}</h3>
+              <button onClick={closeQuickInput} className="quick-input-close">✕</button>
+            </div>
+            <textarea
+              className="quick-input-textarea"
+              placeholder={t('quickInput.placeholder')}
+              value={quickInputText}
+              onChange={(e) => setQuickInputText(e.target.value)}
+              onKeyDown={handleQuickInputKeyDown}
+              autoFocus
+              rows={8}
+            />
+            <div className="quick-input-footer">
+              <div className="quick-input-hints">
+                <span className="hint-item">{t('quickInput.submit')}</span>
+                <span className="hint-divider">|</span>
+                <span className="hint-item">{t('quickInput.cancel')}</span>
+              </div>
+              <div className="quick-input-actions">
+                <button onClick={closeQuickInput} className="quick-input-btn cancel">
+                  {t('edit.cancel')}
+                </button>
+                <button onClick={submitQuickInput} className="quick-input-btn submit">
+                  {t('edit.save')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 自定义标题栏 */}
       <div className="titlebar">
         <div data-tauri-drag-region className="titlebar-drag-area">
@@ -799,6 +881,13 @@ function App() {
             title={i18n.language === 'zh-CN' ? 'Switch to English' : '切换到中文'}
           >
             {i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中'}
+          </button>
+          <button
+            onClick={openQuickInput}
+            className="titlebar-btn quick-add-btn"
+            title={t('titlebar.quickAdd')}
+          >
+            ➕
           </button>
           <button
             onClick={toggleWindowAlwaysOnTop}
