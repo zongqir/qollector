@@ -3,10 +3,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+import { useTranslation } from 'react-i18next';
 import Settings from './Settings';
 import DragDrop from './DragDrop';
 
 function App() {
+  const { t, i18n } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -34,6 +36,12 @@ function App() {
   const [addingTagItemId, setAddingTagItemId] = useState(null); // 正在添加标签的项目ID
   const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
 
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
+
   // 打开图片预览窗口
   const openImagePreview = async (imagePath) => {
     try {
@@ -56,26 +64,26 @@ function App() {
 
       const webview = new WebviewWindow(windowLabel, {
         url: `${baseUrl}?path=${encodeURIComponent(originalPath)}`,
-        title: '图片预览',
+        title: t('preview.title'),
         width: 800,
         height: 600,
         center: true,
         resizable: true,
         alwaysOnTop: true,
-        decorations: true,
+        decorations: false,
         skipTaskbar: false
       });
 
       await webview.once('tauri://created', () => {
-        console.log('预览窗口已创建');
+        console.log(t('preview.created'));
       });
 
       await webview.once('tauri://error', (e) => {
-        console.error('预览窗口创建失败:', e);
+        console.error(t('preview.createFailed', { error: e }));
       });
     } catch (error) {
-      console.error('打开预览窗口失败:', error);
-      alert('打开预览窗口失败: ' + error);
+      console.error(t('preview.createFailed', { error }));
+      alert(t('error.previewFailed', { error }));
     }
   };
 
@@ -145,7 +153,7 @@ function App() {
 
       if (loading) setLoading(false);
     } catch (error) {
-      console.error('加载失败:', error);
+      console.error(t('error.loadFailed', { error }));
       if (loading) setLoading(false);
     }
   };
@@ -211,8 +219,8 @@ function App() {
       setTimeout(() => setCopiedItemId(null), 1000); // 1秒后隐藏
       console.log('已复制到剪贴板');
     } catch (error) {
-      console.error('复制失败:', error);
-      alert('复制失败: ' + error);
+      console.error(t('error.copyFailed', { error }));
+      alert(t('error.copyFailed', { error }));
     }
   };
 
@@ -262,8 +270,8 @@ function App() {
       console.log(`置顶状态已切换: ${newPinState}`);
       await loadItems();
     } catch (error) {
-      console.error('切换置顶失败:', error);
-      alert('切换置顶失败: ' + error);
+      console.error(t('error.togglePinFailed', { error }));
+      alert(t('error.togglePinFailed', { error }));
     }
   };
 
@@ -275,8 +283,8 @@ function App() {
       setIsAlwaysOnTop(newState);
       console.log(`窗口置顶状态: ${newState}`);
     } catch (error) {
-      console.error('切换窗口置顶失败:', error);
-      alert('切换窗口置顶失败: ' + error);
+      console.error(t('error.toggleWindowPinFailed', { error }));
+      alert(t('error.toggleWindowPinFailed', { error }));
     }
   };
 
@@ -374,8 +382,8 @@ function App() {
       console.log('识别结果:', ocrText);
       await loadItems();
     } catch (error) {
-      console.error('❌ OCR 识别失败:', error);
-      alert('OCR 识别失败: ' + error);
+      console.error(t('error.ocrFailed', { error }));
+      alert(t('error.ocrFailed', { error }));
     } finally {
       setOcrProcessing(null);
       console.log('=== OCR 识别结束 ===');
@@ -399,8 +407,8 @@ function App() {
       await loadItems();
       cancelEdit();
     } catch (error) {
-      console.error('更新失败:', error);
-      alert('更新失败: ' + error);
+      console.error(t('error.updateFailed', { error }));
+      alert(t('error.updateFailed', { error }));
     }
   };
 
@@ -421,8 +429,8 @@ function App() {
       setEditingNoteId(null);
       setEditNote('');
     } catch (error) {
-      console.error('保存备注失败:', error);
-      alert('保存备注失败: ' + error);
+      console.error(t('error.saveFailed', { error }));
+      alert(t('error.saveFailed', { error }));
     }
   };
 
@@ -464,8 +472,8 @@ function App() {
       await loadItems();
       cancelAddTag();
     } catch (error) {
-      console.error('添加标签失败:', error);
-      alert('添加标签失败: ' + error);
+      console.error(t('error.addTagFailed', { error }));
+      alert(t('error.addTagFailed', { error }));
     }
   };
 
@@ -481,7 +489,8 @@ function App() {
   const formatDate = (timestamp) => {
     // Convert seconds to milliseconds
     const date = new Date(timestamp * 1000);
-    return date.toLocaleString('zh-CN');
+    // 使用当前语言的本地化格式
+    return date.toLocaleString(i18n.language);
   };
 
   const getContentPreview = (content, maxLength = 100) => {
@@ -772,13 +781,20 @@ function App() {
       {/* 自定义标题栏 */}
       <div className="titlebar">
         <div data-tauri-drag-region className="titlebar-drag-area">
-          <div className="titlebar-title">ClipBox</div>
+          <div className="titlebar-title">{t('app.title')}</div>
         </div>
         <div className="titlebar-buttons">
           <button
+            onClick={toggleLanguage}
+            className="titlebar-btn lang-btn"
+            title={i18n.language === 'zh-CN' ? 'Switch to English' : '切换到中文'}
+          >
+            {i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中'}
+          </button>
+          <button
             onClick={toggleWindowAlwaysOnTop}
             className={`titlebar-btn pin-btn ${isAlwaysOnTop ? 'active' : ''}`}
-            title={isAlwaysOnTop ? '取消窗口置顶' : '窗口置顶'}
+            title={isAlwaysOnTop ? t('titlebar.unpin') : t('titlebar.pin')}
           >
             📌
           </button>
@@ -788,7 +804,7 @@ function App() {
               await appWindow.minimize();
             }}
             className="titlebar-btn"
-            title="最小化"
+            title={t('titlebar.minimize')}
           >
             ─
           </button>
@@ -798,7 +814,7 @@ function App() {
               await appWindow.toggleMaximize();
             }}
             className="titlebar-btn"
-            title="最大化"
+            title={t('titlebar.maximize')}
           >
             □
           </button>
@@ -808,7 +824,7 @@ function App() {
               await appWindow.close();
             }}
             className="titlebar-btn close-btn"
-            title="关闭"
+            title={t('titlebar.close')}
           >
             ✕
           </button>
@@ -819,7 +835,7 @@ function App() {
         <div className="search-box">
           <input
             type="text"
-            placeholder="搜索内容、标签、备注..."
+            placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
@@ -835,14 +851,14 @@ function App() {
         {selectedTags.length > 0 && (
           <div className="filter-status">
             <span className="filter-status-text">
-              筛选中 ({selectedTags.length})
+              {t('toolbar.filteringBy', { count: selectedTags.length })}
             </span>
             <button
               onClick={() => setSelectedTags([])}
               className="clear-filter-btn"
-              title="清除所有筛选"
+              title={t('toolbar.clearAll')}
             >
-              ✕ 清除
+              ✕ {t('toolbar.clearFilter')}
             </button>
           </div>
         )}
@@ -853,31 +869,31 @@ function App() {
             onClick={() => setSelectedType('all')}
             className={`type-filter-btn ${selectedType === 'all' ? 'active' : ''}`}
           >
-            全部
+            {t('search.typeFilter.all')}
           </button>
           <button
             onClick={() => setSelectedType('text')}
             className={`type-filter-btn ${selectedType === 'text' ? 'active' : ''}`}
           >
-            📝 文本
+            📝 {t('search.typeFilter.text')}
           </button>
           <button
             onClick={() => setSelectedType('image')}
             className={`type-filter-btn ${selectedType === 'image' ? 'active' : ''}`}
           >
-            🖼️ 图片
+            🖼️ {t('search.typeFilter.image')}
           </button>
           <button
             onClick={() => setSelectedType('file')}
             className={`type-filter-btn ${selectedType === 'file' ? 'active' : ''}`}
           >
-            📁 文件
+            📁 {t('search.typeFilter.file')}
           </button>
           <button
             onClick={() => setSelectedType('link')}
             className={`type-filter-btn ${selectedType === 'link' ? 'active' : ''}`}
           >
-            🔗 链接
+            🔗 {t('search.typeFilter.link')}
           </button>
         </div>
 
@@ -889,7 +905,7 @@ function App() {
             >
               <span className="tag-icon">🏷️</span>
               <span className="tag-label">
-                {selectedTags.length > 0 ? `已选 ${selectedTags.length} 个标签` : '筛选标签'}
+                {selectedTags.length > 0 ? t('toolbar.selectedTags', { count: selectedTags.length }) : t('toolbar.filterTags')}
               </span>
               <span className="dropdown-arrow">{showTagFilter ? '▲' : '▼'}</span>
             </button>
@@ -898,7 +914,7 @@ function App() {
                 <div className="tag-dropdown-search">
                   <input
                     type="text"
-                    placeholder="搜索标签..."
+                    placeholder={t('toolbar.searchTags')}
                     value={tagSearchQuery}
                     onChange={(e) => setTagSearchQuery(e.target.value)}
                     className="tag-search-input"
@@ -935,13 +951,13 @@ function App() {
                       );
                     })
                   ) : (
-                    <div className="tag-dropdown-empty">未找到匹配的标签</div>
+                    <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
                   )}
                 </div>
                 {selectedTags.length > 0 && (
                   <div className="tag-dropdown-footer">
                     <button onClick={() => setSelectedTags([])} className="clear-selection-btn">
-                      清除所有筛选
+                      {t('toolbar.clearAll')}
                     </button>
                   </div>
                 )}
@@ -957,7 +973,7 @@ function App() {
       <div className="content" ref={contentRef}>
         {filteredItems.length === 0 ? (
           <div className="empty">
-            {searchQuery ? '没有找到匹配的记录' : '暂无剪贴板记录'}
+            {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
           <div className="items-list">
@@ -978,17 +994,12 @@ function App() {
                       'link': '类型:链接'
                     };
                     const typeTag = typeMap[item.type_];
-                    const displayName = {
-                      'text': '文本',
-                      'image': '图片',
-                      'file': '文件',
-                      'link': '链接'
-                    }[item.type_];
+                    const displayName = t(`search.typeFilter.${item.type_}`);
                     return (
                       <span
                         className={`tag type-tag ${selectedTags.includes(typeTag) ? 'selected' : ''}`}
                         onClick={(e) => handleTagClick(typeTag, e)}
-                        title="点击筛选此类型"
+                        title={t('item.clickToFilterType')}
                       >
                         {displayName}
                       </span>
@@ -1000,7 +1011,7 @@ function App() {
                       key={`user-${idx}`}
                       className={`tag user-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
                       onClick={(e) => handleTagClick(tag, e)}
-                      title="点击筛选此标签"
+                      title={t('item.clickToFilter')}
                     >
                       {tag}
                     </span>
@@ -1012,7 +1023,7 @@ function App() {
                       <span
                         className={`tag source-tag ${selectedTags.includes(sourceTag) ? 'selected' : ''}`}
                         onClick={(e) => handleTagClick(sourceTag, e)}
-                        title="点击筛选此来源"
+                        title={t('item.clickToFilterSource')}
                       >
                         {getSourceApp(item.metadata)}
                       </span>
@@ -1026,7 +1037,7 @@ function App() {
                         key={`ai-${idx}`}
                         className={`tag ai-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
                         onClick={(e) => handleTagClick(tag, e)}
-                        title="点击筛选此AI标签"
+                        title={t('item.clickToFilterAI')}
                       >
                         {displayTag}
                       </span>
@@ -1041,7 +1052,7 @@ function App() {
                         value={newTagInput}
                         onChange={(e) => setNewTagInput(e.target.value)}
                         onKeyDown={(e) => handleTagInputKeyDown(item, e)}
-                        placeholder="输入标签..."
+                        placeholder={t('edit.enterTag')}
                         className="add-tag-input"
                         autoFocus
                         onBlur={() => {
@@ -1071,7 +1082,7 @@ function App() {
                     <button
                       className="add-tag-btn"
                       onClick={(e) => startAddTag(item, e)}
-                      title="添加标签"
+                      title={t('item.addTag')}
                     >
                       +
                     </button>
@@ -1087,7 +1098,7 @@ function App() {
                       onChange={(e) => setEditNote(e.target.value)}
                       className="note-edit-input"
                       rows={1}
-                      placeholder="添加备注..."
+                      placeholder={t('edit.notePlaceholder')}
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && e.ctrlKey) {
@@ -1097,14 +1108,14 @@ function App() {
                         }
                       }}
                     />
-                    <button onClick={() => saveNote(item)} className="note-btn-save" title="保存 (Ctrl+Enter)">✓</button>
-                    <button onClick={cancelNoteEdit} className="note-btn-cancel" title="取消 (Esc)">✕</button>
+                    <button onClick={() => saveNote(item)} className="note-btn-save" title={t('item.saveNote')}>✓</button>
+                    <button onClick={cancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>✕</button>
                   </div>
                 ) : item.user_note ? (
                   <div
                     className="note-display-bar"
                     onClick={() => startEditNote(item)}
-                    title="点击编辑备注"
+                    title={t('item.clickToEditNote')}
                   >
                     <span className="note-icon">📝</span>
                     <span className="note-text">{item.user_note}</span>
@@ -1118,10 +1129,10 @@ function App() {
                     draggable="true"
                     onDragStart={(e) => handleDragStart(item, e)}
                     className="toolbar-btn drag-handle"
-                    title="拖拽到其他应用"
+                    title={t('toolbar.dragToApp')}
                   >
                     <span className="toolbar-btn-icon">⠿</span>
-                    <span>拖出</span>
+                    <span>{t('toolbar.dragOut')}</span>
                   </span>
 
                   <div className="toolbar-divider"></div>
@@ -1133,10 +1144,10 @@ function App() {
                       togglePin(item, e);
                     }}
                     className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-                    title={item.is_pinned ? '取消置顶' : '置顶'}
+                    title={item.is_pinned ? t('item.unpin') : t('item.pin')}
                   >
                     <span className="toolbar-btn-icon">📌</span>
-                    <span>{item.is_pinned ? '已置顶' : '置顶'}</span>
+                    <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
                   </button>
 
                   {/* AI标签按钮 - 仅文本类型 */}
@@ -1150,12 +1161,12 @@ function App() {
                         }}
                         disabled={generatingAI === item.id}
                         className="toolbar-btn ai-btn"
-                        title={generatingAI === item.id ? 'AI生成中...' : '用AI生成标签'}
+                        title={generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
                       >
                         <span className="toolbar-btn-icon">
                           {generatingAI === item.id ? '⏳' : '✨'}
                         </span>
-                        <span>{generatingAI === item.id ? '生成中' : 'AI标签'}</span>
+                        <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
                       </button>
                     </>
                   )}
@@ -1171,12 +1182,12 @@ function App() {
                         }}
                         disabled={ocrProcessing === item.id}
                         className="toolbar-btn ocr-btn"
-                        title={ocrProcessing === item.id ? '识别中...' : '识别图片文字'}
+                        title={ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
                       >
                         <span className="toolbar-btn-icon">
                           {ocrProcessing === item.id ? '⏳' : '🔍'}
                         </span>
-                        <span>{ocrProcessing === item.id ? '识别中' : 'OCR识别'}</span>
+                        <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
                       </button>
                     </>
                   )}
@@ -1189,10 +1200,10 @@ function App() {
                       startEditNote(item);
                     }}
                     className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
-                    title={item.user_note ? '编辑备注' : '添加备注'}
+                    title={item.user_note ? t('item.editNote') : t('item.addNote')}
                   >
                     <span className="toolbar-btn-icon">📝</span>
-                    <span>{item.user_note ? '编辑备注' : '添加备注'}</span>
+                    <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
                   </button>
 
                   {/* 展开按钮 */}
@@ -1200,10 +1211,10 @@ function App() {
                   <button
                     onClick={(e) => toggleExpand(item.id, e)}
                     className={`toolbar-btn expand-btn ${expandedItemId === item.id ? 'active' : ''}`}
-                    title={expandedItemId === item.id ? '收起' : '展开全部'}
+                    title={expandedItemId === item.id ? t('item.collapse') : t('item.expandAll')}
                   >
                     <span className="toolbar-btn-icon">{expandedItemId === item.id ? '▲' : '▼'}</span>
-                    <span>{expandedItemId === item.id ? '收起' : '展开'}</span>
+                    <span>{expandedItemId === item.id ? t('item.collapse') : t('item.expand')}</span>
                   </button>
                 </div>
 
@@ -1211,7 +1222,7 @@ function App() {
                   <div className="edit-mode">
                     {item.type_ !== 'image' && (
                       <>
-                        <label className="edit-label">内容:</label>
+                        <label className="edit-label">{t('edit.content')}</label>
                         <textarea
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
@@ -1221,21 +1232,21 @@ function App() {
                       </>
                     )}
 
-                    <label className="edit-label">备注:</label>
+                    <label className="edit-label">{t('edit.note')}</label>
                     <textarea
                       value={editNote}
                       onChange={(e) => setEditNote(e.target.value)}
                       className="edit-textarea"
                       rows={2}
-                      placeholder="添加备注..."
+                      placeholder={t('edit.notePlaceholder')}
                     />
 
                     <div className="edit-actions">
                       <button onClick={() => saveEdit(item)} className="save-btn">
-                        ✓ 保存
+                        ✓ {t('edit.save')}
                       </button>
                       <button onClick={cancelEdit} className="cancel-btn">
-                        ✕ 取消
+                        ✕ {t('edit.cancel')}
                       </button>
                     </div>
                   </div>
@@ -1248,13 +1259,13 @@ function App() {
                     >
                       {/* Hover提示 */}
                       <div className="content-hover-tip">
-                        <div className="hover-actions">单击复制 | 双击{item.type_ === 'image' ? '预览' : '编辑'}</div>
+                        <div className="hover-actions">{t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}</div>
                       </div>
 
                       {/* 复制成功反馈 */}
                       {copiedItemId === item.id && (
                         <div className="copy-success-toast">
-                          ✓ 已复制
+                          ✓ {t('item.copied')}
                         </div>
                       )}
 
@@ -1270,7 +1281,7 @@ function App() {
                           </div>
                           {item.ocr_text && (
                             <div className="ocr-text-container">
-                              <div className="ocr-text-header">识别文本</div>
+                              <div className="ocr-text-header">{t('item.recognizedText')}</div>
                               <div className="ocr-text-content">{item.ocr_text}</div>
                             </div>
                           )}
