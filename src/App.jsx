@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import Settings from './Settings';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [showTagFilter, setShowTagFilter] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
 
   useEffect(() => {
     loadItems();
@@ -95,6 +97,19 @@ function App() {
     } catch (error) {
       console.error('切换置顶失败:', error);
       alert('切换置顶失败: ' + error);
+    }
+  };
+
+  const toggleWindowAlwaysOnTop = async () => {
+    try {
+      const appWindow = getCurrentWindow();
+      const newState = !isAlwaysOnTop;
+      await appWindow.setAlwaysOnTop(newState);
+      setIsAlwaysOnTop(newState);
+      console.log(`窗口置顶状态: ${newState}`);
+    } catch (error) {
+      console.error('切换窗口置顶失败:', error);
+      alert('切换窗口置顶失败: ' + error);
     }
   };
 
@@ -382,8 +397,51 @@ function App() {
     <div className="app">
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
 
+      {/* 自定义标题栏 */}
+      <div data-tauri-drag-region className="titlebar">
+        <div className="titlebar-title">ClipBox</div>
+        <div className="titlebar-buttons">
+          <button
+            onClick={toggleWindowAlwaysOnTop}
+            className={`titlebar-btn pin-btn ${isAlwaysOnTop ? 'active' : ''}`}
+            title={isAlwaysOnTop ? '取消窗口置顶' : '窗口置顶'}
+          >
+            📌
+          </button>
+          <button
+            onClick={async () => {
+              const appWindow = getCurrentWindow();
+              await appWindow.minimize();
+            }}
+            className="titlebar-btn"
+            title="最小化"
+          >
+            ─
+          </button>
+          <button
+            onClick={async () => {
+              const appWindow = getCurrentWindow();
+              await appWindow.toggleMaximize();
+            }}
+            className="titlebar-btn"
+            title="最大化"
+          >
+            □
+          </button>
+          <button
+            onClick={async () => {
+              const appWindow = getCurrentWindow();
+              await appWindow.close();
+            }}
+            className="titlebar-btn close-btn"
+            title="关闭"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
       <header className="header">
-        <h1>📋 ClipBox</h1>
         <div className="search-box">
           <input
             type="text"

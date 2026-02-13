@@ -6,7 +6,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f7f7f7;
   color: #333;
   overflow: hidden;
 }
@@ -21,29 +21,77 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.95);
+  background: #f7f7f7;
 }
 
-.header {
-  padding: 20px 30px;
+/* 自定义标题栏 */
+.titlebar {
+  height: 32px;
   background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  padding: 0 12px;
+  border-bottom: 1px solid #e5e5e5;
+  user-select: none;
 }
 
-.header h1 {
-  font-size: 24px;
-  color: #667eea;
-  font-weight: 600;
-  flex-shrink: 0;
+.titlebar-title {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.titlebar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.titlebar-btn:hover {
+  background: #f0f0f0;
+}
+
+.titlebar-btn.close-btn:hover {
+  background: #e81123;
+  color: white;
+}
+
+.titlebar-btn.pin-btn.active {
+  color: #ff9800;
+  transform: rotate(45deg);
+}
+
+.titlebar-btn.pin-btn.active:hover {
+  background: #fff3e0;
+}
+
+.header {
+  padding: 16px 24px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .search-box {
   flex: 1;
-  max-width: 500px;
   position: relative;
 }
 
@@ -62,6 +110,15 @@ body {
 .settings-btn:hover {
   border-color: #667eea;
   background: #f8f9ff;
+}
+
+/* 移除旧的窗口置顶按钮样式 */
+
+/* 窗口较窄时隐藏设置按钮 */
+@media (max-width: 768px) {
+  .settings-btn {
+    display: none;
+  }
 }
 
 .search-input {
@@ -126,15 +183,15 @@ body {
 .item-card {
   background: white;
   border-radius: 8px;
-  padding: 10px 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s;
+  padding: 16px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .item-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .item-tags {
@@ -148,13 +205,17 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  background: linear-gradient(135deg, #667eea15, #764ba215);
-  color: #667eea;
-  border-radius: 10px;
+  padding: 2px 8px;
+  background: #f5f5f5;
+  color: #666;
+  border-radius: 4px;
   font-size: 11px;
-  font-weight: 500;
-  border: 1px solid #667eea30;
+  font-weight: 400;
+  transition: all 0.2s;
+}
+
+.tag:hover {
+  background: #ebebeb;
 }
 
 .tag.editable {
@@ -182,18 +243,19 @@ body {
 
 .item-content {
   margin: 10px 0 0 0;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  font-size: 13px;
-  line-height: 1.5;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.7;
   color: #333;
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 80px;
   overflow: hidden;
   position: relative;
-  transition: max-height 0.3s ease-out 0.3s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: max-height 0.3s ease-out 0.3s;
+  border: none;
 }
 
 .item-content.clickable {
@@ -202,17 +264,18 @@ body {
 }
 
 .item-card:hover .item-content.clickable {
-  background: #e8eaf6;
-  transform: translateY(-1px);
+  background: transparent;
+  transform: none;
   max-height: 400px;
   overflow-y: auto;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
+  border: none;
 }
 
 .item-content.clickable:active {
-  transform: translateY(0);
-  background: #d1d5f7;
+  transform: none;
+  background: transparent;
 }
 
 /* Hover提示 - 简化 */
@@ -448,17 +511,21 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background: #fff9e6;
-  border-left: 3px solid #ffc107;
-  border-radius: 4px;
+  padding: 8px 0;
+  background: transparent;
+  border-left: 2px solid #ffa726;
+  border-radius: 0;
   margin-bottom: 8px;
+  margin-top: 8px;
+  padding-left: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  border: none;
+  border-left: 2px solid #ffa726;
 }
 
 .note-display-bar:hover {
-  background: #fff3cd;
+  background: transparent;
   border-left-color: #ff9800;
 }
 
@@ -468,11 +535,11 @@ body {
 }
 
 .note-text {
-  font-size: 12px;
+  font-size: 13px;
   color: #666;
   flex: 1;
   word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
 /* 备注编辑条 */
@@ -480,28 +547,33 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  background: #fff9e6;
-  border-left: 3px solid #ffc107;
-  border-radius: 4px;
+  padding: 8px 0;
+  padding-left: 12px;
+  background: transparent;
+  border-left: 2px solid #ffa726;
+  border-radius: 0;
   margin-bottom: 8px;
+  margin-top: 8px;
+  border: none;
+  border-left: 2px solid #ffa726;
 }
 
 .note-edit-input {
   flex: 1;
   padding: 4px 8px;
-  border: 1px solid #ffc107;
+  border: 1px solid #e5e5e5;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-family: inherit;
   resize: none;
   background: white;
   min-height: 24px;
+  transition: all 0.2s;
 }
 
 .note-edit-input:focus {
   outline: none;
-  border-color: #ff9800;
+  border-color: #999;
 }
 
 .note-btn-save,
@@ -843,6 +915,30 @@ body {
   white-space: nowrap;
 }
 
+/* 窗口较窄时隐藏标签文字 */
+@media (max-width: 768px) {
+  .tag-label {
+    display: none;
+  }
+
+  .tag-select-btn {
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .tag-dropdown {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .tag-dropdown-list {
+    max-height: 240px;
+  }
+}
+
 .dropdown-arrow {
   font-size: 10px;
   opacity: 0.7;
@@ -858,7 +954,7 @@ body {
   min-width: 280px;
   max-width: 350px;
   overflow: hidden;
-  z-index: 1000;
+  z-index: 10000;
   animation: dropdownSlide 0.2s ease-out;
 }
 
