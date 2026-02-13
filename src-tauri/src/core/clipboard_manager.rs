@@ -205,4 +205,34 @@ impl ClipboardManager {
         let repo = self.repository.lock().await;
         repo.delete(id).await
     }
+
+    pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.insert(item).await
+    }
+
+    pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.update_ocr_text(id, ocr_text).await
+    }
+
+    pub async fn toggle_pin(&self, id: &str) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        // 获取当前项目
+        if let Some(mut item) = repo.find_by_id(id).await? {
+            // 切换置顶状态
+            item.is_pinned = !item.is_pinned;
+            // 更新时间戳
+            item.updated_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+
+            repo.update(&item).await?;
+            Ok(item.is_pinned)
+        } else {
+            Err(sqlx::Error::RowNotFound)
+        }
+    }
 }

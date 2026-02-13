@@ -45,15 +45,22 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
+        // 优化索引：添加复合索引提升查询性能
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)")
             .execute(&self.pool)
             .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_created_at ON clipboard_items(created_at DESC)")
+        // 复合索引：is_deleted + is_pinned + updated_at（覆盖最常用的查询）
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_recent_query ON clipboard_items(is_deleted, is_pinned DESC, updated_at DESC)")
             .execute(&self.pool)
             .await?;
 
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_type ON clipboard_items(type)")
+            .execute(&self.pool)
+            .await?;
+
+        // 添加 is_pinned 索引用于快速过滤
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)")
             .execute(&self.pool)
             .await?;
 
@@ -106,7 +113,7 @@ impl ClipboardRepository {
 
     pub async fn get_recent(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY updated_at DESC LIMIT ?"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC LIMIT ?"
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -134,7 +141,7 @@ impl ClipboardRepository {
             sql.push_str(&format!(" AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')", query, query));
         }
 
-        sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
+        sql.push_str(&format!(" ORDER BY is_pinned DESC, updated_at DESC LIMIT {}", limit));
 
         let items = sqlx::query_as::<_, ClipboardItem>(&sql)
             .fetch_all(&self.pool)
@@ -172,5 +179,33 @@ impl ClipboardRepository {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                ocr_text = ?, updated_at = ?
+            WHERE id = ?
+            "#
+        )
+        .bind(ocr_text)
+        .bind(chrono::Utc::now().timestamp())
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn find_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let item = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE id = ? AND is_deleted = 0 LIMIT 1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(item)
     }
 }

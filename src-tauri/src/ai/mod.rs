@@ -109,7 +109,8 @@ impl AIService {
     }
 
     pub async fn generate_tags(&self, content: &str) -> Result<Vec<String>, AIError> {
-        if !self.config.enabled || self.config.api_key.is_empty() {
+        // 只要有API key就尝试生成,不检查enabled标志
+        if self.config.api_key.is_empty() {
             return Ok(Vec::new());
         }
 
