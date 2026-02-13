@@ -29,7 +29,7 @@ function Settings({ onClose }) {
   const [ocrConfig, setOcrConfig] = useState({
     enabled: true,
     provider: 'SiliconFlow',
-    api_key: 'sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp',
+    api_key: '', // 空字符串，需要用户填写
     api_secret: null,
     language: 'chi_sim+eng',
     auto_ocr: true,
@@ -68,7 +68,13 @@ function Settings({ onClose }) {
 
   const handleOcrSave = async () => {
     try {
-      await invoke('update_ocr_config', { config: ocrConfig });
+      // 准备配置（空字符串转为 null）
+      const configToSave = {
+        ...ocrConfig,
+        api_key: ocrConfig.api_key || null,
+      };
+
+      await invoke('update_ocr_config', { config: configToSave });
       alert('OCR 配置已保存');
     } catch (error) {
       console.error('保存 OCR 配置失败:', error);
@@ -92,21 +98,50 @@ function Settings({ onClose }) {
   const handleOcrTest = async () => {
     setTesting(true);
     setTestResult(null);
+
+    console.log('=== OCR 测试开始 ===');
+    console.log('当前配置:', ocrConfig);
+
     try {
+      // 验证配置
+      if (ocrConfig.provider !== 'Local' && !ocrConfig.api_key) {
+        console.error('❌ API Key 为空');
+        setTestResult({ success: false, message: '请先填写 API Key' });
+        setTesting(false);
+        return;
+      }
+
+      // 准备配置（空字符串转为 null）
+      const configToSave = {
+        ...ocrConfig,
+        api_key: ocrConfig.api_key || null,
+      };
+
+      console.log('准备保存的配置:', configToSave);
+
       // 先保存配置
-      await invoke('update_ocr_config', { config: ocrConfig });
+      console.log('📤 发送配置到后端...');
+      await invoke('update_ocr_config', { config: configToSave });
+      console.log('✅ 配置保存成功');
 
       // 然后测试可用性
+      console.log('🔍 检查服务可用性...');
       const available = await invoke('check_ocr_available');
+      console.log('可用性结果:', available);
+
       if (available) {
+        console.log('✅ OCR 服务可用');
         setTestResult({ success: true, message: 'OCR 服务可用！' });
       } else {
+        console.error('❌ OCR 服务不可用');
         setTestResult({ success: false, message: 'OCR 服务不可用，请检查 API Key 是否正确' });
       }
     } catch (error) {
+      console.error('❌ OCR 测试失败:', error);
       setTestResult({ success: false, message: 'OCR 测试失败: ' + error });
     } finally {
       setTesting(false);
+      console.log('=== OCR 测试结束 ===');
     }
   };
 

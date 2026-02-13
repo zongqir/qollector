@@ -77,8 +77,7 @@ impl Default for OcrConfig {
         Self {
             enabled: true,
             provider: OcrProviderType::SiliconFlow,
-            // 内置硅基流动 API Key（临时测试用）
-            api_key: Some("sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp".to_string()),
+            api_key: None, // 不再内置，需要用户配置
             api_secret: None,
             language: "chi_sim+eng".to_string(), // 中英文
             auto_ocr: true,

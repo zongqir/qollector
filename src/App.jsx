@@ -31,16 +31,14 @@ function App() {
 
   const initOcrService = async () => {
     try {
-      const config = {
-        enabled: true,
-        provider: 'SiliconFlow',
-        api_key: 'sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp',
-        api_secret: null,
-        language: 'chi_sim+eng',
-        auto_ocr: true,
-      };
-      await invoke('init_ocr_service', { config });
-      console.log('OCR 服务初始化成功');
+      // 尝试加载已保存的配置
+      const savedConfig = await invoke('get_ocr_config');
+      if (savedConfig && savedConfig.api_key) {
+        await invoke('init_ocr_service', { config: savedConfig });
+        console.log('OCR 服务初始化成功（使用已保存配置）');
+      } else {
+        console.log('OCR 服务未配置，请在设置中配置 API Key');
+      }
     } catch (error) {
       console.error('OCR 服务初始化失败:', error);
     }
@@ -152,23 +150,31 @@ function App() {
   const handleOCR = async (item) => {
     if (!item.image_paths) return;
 
+    console.log('=== OCR 识别开始 ===');
+    console.log('图片项目:', item.id);
+
     setOcrProcessing(item.id);
     try {
       const paths = JSON.parse(item.image_paths);
       const imagePath = paths.raw || paths.original;
+
+      console.log('图片路径:', imagePath);
+      console.log('📤 调用 OCR 识别...');
 
       const ocrText = await invoke('recognize_and_update', {
         itemId: item.id,
         imagePath: imagePath
       });
 
-      console.log('OCR 识别成功:', ocrText);
+      console.log('✅ OCR 识别成功');
+      console.log('识别结果:', ocrText);
       await loadItems();
     } catch (error) {
-      console.error('OCR 识别失败:', error);
+      console.error('❌ OCR 识别失败:', error);
       alert('OCR 识别失败: ' + error);
     } finally {
       setOcrProcessing(null);
+      console.log('=== OCR 识别结束 ===');
     }
   };
 
