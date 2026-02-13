@@ -39,9 +39,19 @@
             "core:window:allow-maximize",
             "core:window:allow-close",
             "core:window:allow-toggle-maximize",
+            "core:webview:allow-create-webview-window",
             "core:event:default",
             "core:path:default",
             "core:app:default"
+          ]
+        },
+        {
+          "identifier": "preview-capability",
+          "windows": ["preview-*"],
+          "permissions": [
+            "core:window:allow-close",
+            "core:window:allow-set-always-on-top",
+            "core:event:default"
           ]
         }
       ]

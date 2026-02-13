@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import Settings from './Settings';
 import DragDrop from './DragDrop';
 
@@ -27,6 +28,53 @@ function App() {
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 }); // 虚拟滚动：只渲染前20项
   const contentRef = useRef(null);
+  const clickTimerRef = useRef(null); // 用于区分单击和双击
+  const [copiedItemId, setCopiedItemId] = useState(null); // 用于显示复制成功反馈
+
+  // 打开图片预览窗口
+  const openImagePreview = async (imagePath) => {
+    try {
+      // 解析 JSON 格式的路径
+      let originalPath = imagePath;
+      try {
+        const paths = JSON.parse(imagePath);
+        originalPath = paths.original || paths.raw || imagePath;
+      } catch {
+        // 如果不是 JSON，直接使用原路径
+      }
+
+      const windowLabel = `preview-${Date.now()}`;
+
+      // 开发模式和生产模式使用不同的 URL
+      const isDev = window.location.hostname === 'localhost';
+      const baseUrl = isDev
+        ? 'http://localhost:5173/public/preview.html'
+        : 'preview.html';
+
+      const webview = new WebviewWindow(windowLabel, {
+        url: `${baseUrl}?path=${encodeURIComponent(originalPath)}`,
+        title: '图片预览',
+        width: 800,
+        height: 600,
+        center: true,
+        resizable: true,
+        alwaysOnTop: true,
+        decorations: true,
+        skipTaskbar: false
+      });
+
+      await webview.once('tauri://created', () => {
+        console.log('预览窗口已创建');
+      });
+
+      await webview.once('tauri://error', (e) => {
+        console.error('预览窗口创建失败:', e);
+      });
+    } catch (error) {
+      console.error('打开预览窗口失败:', error);
+      alert('打开预览窗口失败: ' + error);
+    }
+  };
 
   // 防抖搜索：延迟300ms执行搜索，避免每次输入都触发过滤
   useEffect(() => {
@@ -155,11 +203,50 @@ function App() {
     }
     try {
       await invoke('copy_item', { item });
-      // 使用更简洁的提示方式
+      // 显示复制成功反馈
+      setCopiedItemId(item.id);
+      setTimeout(() => setCopiedItemId(null), 1000); // 1秒后隐藏
       console.log('已复制到剪贴板');
     } catch (error) {
       console.error('复制失败:', error);
       alert('复制失败: ' + error);
+    }
+  };
+
+  // 处理内容区域的点击，区分单击和双击
+  const handleContentClick = (item, e) => {
+    e.stopPropagation();
+
+    // 清除之前的定时器
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+
+    // 设置延迟执行单击操作（300ms）
+    clickTimerRef.current = setTimeout(() => {
+      // 所有类型都执行复制
+      handleCopy(item, e);
+      clickTimerRef.current = null;
+    }, 300);
+  };
+
+  // 处理双击
+  const handleContentDoubleClick = (item, e, isImage = false) => {
+    e.stopPropagation();
+
+    // 清除单击定时器，防止单击操作执行
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+
+    if (isImage) {
+      // 图片双击打开预览
+      openImagePreview(item.image_paths);
+    } else {
+      // 文本双击进入编辑
+      startEdit(item);
     }
   };
 
@@ -891,14 +978,21 @@ function App() {
                 ) : (
                   <>
                     <div
-                      className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''}`}
-                      onClick={(e) => handleCopy(item, e)}
-                      onDoubleClick={() => startEdit(item)}
+                      className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''} ${copiedItemId === item.id ? 'copied' : ''}`}
+                      onClick={(e) => handleContentClick(item, e)}
+                      onDoubleClick={(e) => handleContentDoubleClick(item, e, item.type_ === 'image')}
                     >
                       {/* Hover提示 */}
                       <div className="content-hover-tip">
-                        <div className="hover-actions">单击复制 | 双击编辑</div>
+                        <div className="hover-actions">单击复制 | 双击{item.type_ === 'image' ? '预览' : '编辑'}</div>
                       </div>
+
+                      {/* 复制成功反馈 */}
+                      {copiedItemId === item.id && (
+                        <div className="copy-success-toast">
+                          ✓ 已复制
+                        </div>
+                      )}
 
                       {item.type_ === 'image' && item.image_paths ? (
                         <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>

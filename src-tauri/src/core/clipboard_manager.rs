@@ -147,7 +147,8 @@ impl ClipboardManager {
         let repo_lock = repo.lock().await;
 
         if let Some(existing) = repo_lock.find_by_hash(&item.content_hash).await? {
-            println!("Item already exists with hash: {}", item.content_hash);
+            println!("Duplicate detected, moving to top: {}", existing.id);
+            repo_lock.touch(&existing.id).await?;
             return Ok(());
         }
 

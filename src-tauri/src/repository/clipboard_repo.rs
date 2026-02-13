@@ -198,6 +198,16 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    pub async fn touch(&self, id: &str) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query("UPDATE clipboard_items SET updated_at = ? WHERE id = ?")
+            .bind(now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn find_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let item = sqlx::query_as::<_, ClipboardItem>(
             "SELECT * FROM clipboard_items WHERE id = ? AND is_deleted = 0 LIMIT 1"

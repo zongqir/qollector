@@ -308,6 +308,46 @@ body {
   overflow-y: auto;
 }
 
+/* 复制成功状态 */
+.item-content.copied {
+  animation: copyFlash 0.6s ease-out;
+}
+
+@keyframes copyFlash {
+  0% { background: transparent; }
+  50% { background: rgba(76, 175, 80, 0.15); }
+  100% { background: transparent; }
+}
+
+/* 复制成功提示 */
+.copy-success-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(76, 175, 80, 0.95);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  z-index: 100;
+  pointer-events: none;
+  animation: toastFadeIn 0.3s ease-out;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 .item-content.clickable:active {
   transform: none;
   background: transparent;
