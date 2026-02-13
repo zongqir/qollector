@@ -466,8 +466,10 @@ function App() {
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
 
       {/* 自定义标题栏 */}
-      <div data-tauri-drag-region className="titlebar">
-        <div className="titlebar-title">ClipBox</div>
+      <div className="titlebar">
+        <div data-tauri-drag-region className="titlebar-drag-area">
+          <div className="titlebar-title">ClipBox</div>
+        </div>
         <div className="titlebar-buttons">
           <button
             onClick={toggleWindowAlwaysOnTop}
