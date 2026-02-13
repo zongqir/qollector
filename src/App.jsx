@@ -28,6 +28,7 @@ function App() {
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
+  const [isMiniMode, setIsMiniMode] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
   const contentRef = useRef(null);
@@ -410,7 +411,7 @@ function App() {
   }, [filteredItems, visibleRange]);
 
   return (
-    <div className="app">
+    <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <DragDrop onItemAdded={loadItems} />
 
@@ -427,6 +428,8 @@ function App() {
         isAlwaysOnTop={isAlwaysOnTop}
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
         onOpenQuickInput={() => openEditModal()}
+        isMiniMode={isMiniMode}
+        onToggleMiniMode={() => setIsMiniMode(!isMiniMode)}
       />
 
       <SearchBar

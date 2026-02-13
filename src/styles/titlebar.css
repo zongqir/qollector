@@ -97,6 +97,25 @@
 }
 
 /* 快速添加按钮 */
+/* Mini 模式按钮 */
+.titlebar-btn.mini-btn {
+  color: #666;
+}
+
+.titlebar-btn.mini-btn:hover {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
+.titlebar-btn.mini-btn.active {
+  color: #9c27b0;
+  background: rgba(156, 39, 176, 0.15);
+}
+
+.titlebar-btn.mini-btn.active:hover {
+  background: rgba(156, 39, 176, 0.2);
+}
+
 .titlebar-btn.quick-add-btn {
   color: #667eea;
   font-weight: 600;

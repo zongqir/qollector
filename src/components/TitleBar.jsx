@@ -1,8 +1,20 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
 
-function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput }) {
+const NORMAL_SIZE = { width: 800, height: 600 };
+const MINI_SIZE = { width: 320, height: 450 };
+
+function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMiniMode, onToggleMiniMode }) {
   const { t } = useTranslation();
+
+  const handleToggleMini = async () => {
+    const appWindow = getCurrentWindow();
+    const nextMini = !isMiniMode;
+    const size = nextMini ? MINI_SIZE : NORMAL_SIZE;
+    await appWindow.setSize(new LogicalSize(size.width, size.height));
+    onToggleMiniMode();
+  };
 
   return (
     <div className="titlebar">
@@ -18,6 +30,26 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput }) {
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
+        </button>
+        <button
+          onClick={handleToggleMini}
+          className={`titlebar-btn mini-btn ${isMiniMode ? 'active' : ''}`}
+          title={isMiniMode ? t('titlebar.exitMini') : t('titlebar.miniMode')}
+        >
+          {isMiniMode ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="1" y="1" width="12" height="12" stroke="currentColor" strokeWidth="1.5" rx="1.5"/>
+              <path d="M4 5L7 2L10 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M4 9L7 12L10 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="3" y="2" width="8" height="10" stroke="currentColor" strokeWidth="1.5" rx="1.5"/>
+              <path d="M5 5H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M5 7H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M5 9H7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          )}
         </button>
         <button
           onClick={onToggleAlwaysOnTop}
@@ -40,18 +72,20 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput }) {
             <path d="M2 7H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
-        <button
-          onClick={async () => {
-            const appWindow = getCurrentWindow();
-            await appWindow.toggleMaximize();
-          }}
-          className="titlebar-btn maximize-btn"
-          title={t('titlebar.maximize')}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="2" y="2" width="10" height="10" stroke="currentColor" strokeWidth="1.5" rx="1"/>
-          </svg>
-        </button>
+        {!isMiniMode && (
+          <button
+            onClick={async () => {
+              const appWindow = getCurrentWindow();
+              await appWindow.toggleMaximize();
+            }}
+            className="titlebar-btn maximize-btn"
+            title={t('titlebar.maximize')}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <rect x="2" y="2" width="10" height="10" stroke="currentColor" strokeWidth="1.5" rx="1"/>
+            </svg>
+          </button>
+        )}
         <button
           onClick={async () => {
             const appWindow = getCurrentWindow();

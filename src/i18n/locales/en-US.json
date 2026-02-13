@@ -10,7 +10,9 @@
     "minimize": "Minimize",
     "maximize": "Maximize",
     "close": "Close",
-    "quickAdd": "Quick Input"
+    "quickAdd": "Quick Input",
+    "miniMode": "Mini Mode",
+    "exitMini": "Exit Mini Mode"
   },
   "search": {
     "placeholder": "Search content, tags, notes...",
