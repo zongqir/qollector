@@ -23,6 +23,7 @@ function App() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [showTagFilter, setShowTagFilter] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState('all'); // 独立的类型筛选（单选）
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
@@ -30,6 +31,8 @@ function App() {
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null); // 用于区分单击和双击
   const [copiedItemId, setCopiedItemId] = useState(null); // 用于显示复制成功反馈
+  const [addingTagItemId, setAddingTagItemId] = useState(null); // 正在添加标签的项目ID
+  const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
 
   // 打开图片预览窗口
   const openImagePreview = async (imagePath) => {
@@ -428,6 +431,53 @@ function App() {
     setEditNote('');
   };
 
+  // 开始添加标签
+  const startAddTag = (item, e) => {
+    if (e) e.stopPropagation();
+    setAddingTagItemId(item.id);
+    setNewTagInput('');
+  };
+
+  // 取消添加标签
+  const cancelAddTag = () => {
+    setAddingTagItemId(null);
+    setNewTagInput('');
+  };
+
+  // 添加标签到项目
+  const addTagToItem = async (item, tagToAdd) => {
+    try {
+      const existingTags = getTags(item.tags);
+      // 避免重复添加
+      if (existingTags.includes(tagToAdd)) {
+        cancelAddTag();
+        return;
+      }
+
+      const newTags = [...existingTags, tagToAdd];
+      const updatedItem = {
+        ...item,
+        tags: JSON.stringify(newTags),
+        updated_at: Math.floor(Date.now() / 1000)
+      };
+      await invoke('update_item', { item: updatedItem });
+      await loadItems();
+      cancelAddTag();
+    } catch (error) {
+      console.error('添加标签失败:', error);
+      alert('添加标签失败: ' + error);
+    }
+  };
+
+  // 处理标签输入回车
+  const handleTagInputKeyDown = (item, e) => {
+    if (e.key === 'Enter' && newTagInput.trim()) {
+      addTagToItem(item, newTagInput.trim());
+    } else if (e.key === 'Escape') {
+      cancelAddTag();
+    }
+  };
+
   const formatDate = (timestamp) => {
     // Convert seconds to milliseconds
     const date = new Date(timestamp * 1000);
@@ -514,28 +564,85 @@ function App() {
     if (!metadataStr) return 'Unknown';
     try {
       const metadata = JSON.parse(metadataStr);
-      return metadata.source_app || 'Unknown';
+      let appName = metadata.source_app || 'Unknown';
+      // 去掉 .exe 后缀
+      if (appName.toLowerCase().endsWith('.exe')) {
+        appName = appName.slice(0, -4);
+      }
+      return appName;
     } catch {
       return 'Unknown';
     }
   };
 
-  // 获取所有唯一标签（包括来源标签）- 使用 useMemo 缓存
+  // 获取所有唯一标签（包括来源标签和类型标签）- 使用 useMemo 缓存
   const allTags = useMemo(() => {
-    const tagSet = new Set();
+    const userTags = new Set();
+    const aiTags = new Set();
+    const sourceTags = new Set();
+    const typeTags = new Set();
+
     items.forEach(item => {
       // 添加用户标签和AI标签
       const tags = getTags(item.tags);
-      tags.forEach(tag => tagSet.add(tag));
+      tags.forEach(tag => {
+        if (tag.startsWith('AI:')) {
+          aiTags.add(tag);
+        } else {
+          userTags.add(tag);
+        }
+      });
 
-      // 添加来源标签
+      // 添加来源标签（去掉"来源:"前缀）
       const sourceApp = getSourceApp(item.metadata);
       if (sourceApp && sourceApp !== 'Unknown') {
-        tagSet.add(`来源:${sourceApp}`);
+        sourceTags.add(`来源:${sourceApp}`);
+      }
+
+      // 添加类型标签
+      if (item.type_) {
+        const typeMap = {
+          'text': '类型:文本',
+          'image': '类型:图片',
+          'file': '类型:文件',
+          'link': '类型:链接'
+        };
+        const typeTag = typeMap[item.type_];
+        if (typeTag) {
+          typeTags.add(typeTag);
+        }
       }
     });
-    return Array.from(tagSet).sort();
+
+    // 排序：类型标签 -> 人工标签 -> 来源标签 -> AI标签
+    return [
+      ...Array.from(typeTags).sort(),
+      ...Array.from(userTags).sort(),
+      ...Array.from(sourceTags).sort(),
+      ...Array.from(aiTags).sort()
+    ];
   }, [items]);
+
+  // 获取所有用户标签（用于添加标签时的建议）
+  const allUserTags = useMemo(() => {
+    const userTags = new Set();
+    items.forEach(item => {
+      const tags = getTags(item.tags);
+      tags.forEach(tag => {
+        if (!tag.startsWith('AI:')) {
+          userTags.add(tag);
+        }
+      });
+    });
+    return Array.from(userTags).sort();
+  }, [items]);
+
+  // 过滤标签建议
+  const filteredUserTags = useMemo(() => {
+    if (!newTagInput.trim()) return allUserTags;
+    const query = newTagInput.toLowerCase();
+    return allUserTags.filter(tag => tag.toLowerCase().includes(query));
+  }, [allUserTags, newTagInput]);
 
   // 过滤标签列表（用于搜索）- 使用 useMemo 缓存
   const filteredTagsList = useMemo(() => {
@@ -554,13 +661,31 @@ function App() {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      // 标签过滤（包括来源标签）
+      // 独立类型筛选（优先级最高）
+      if (selectedType !== 'all' && item.type_ !== selectedType) {
+        return false;
+      }
+
+      // 标签过滤（包括来源标签和类型标签）
       if (selectedTags.length > 0) {
         const itemTags = getTags(item.tags);
         const sourceApp = getSourceApp(item.metadata);
         const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
 
-        const allItemTags = sourceTag ? [...itemTags, sourceTag] : itemTags;
+        // 类型标签
+        const typeMap = {
+          'text': '类型:文本',
+          'image': '类型:图片',
+          'file': '类型:文件',
+          'link': '类型:链接'
+        };
+        const typeTag = typeMap[item.type_];
+
+        const allItemTags = [
+          ...itemTags,
+          ...(sourceTag ? [sourceTag] : []),
+          ...(typeTag ? [typeTag] : [])
+        ];
 
         const hasSelectedTag = selectedTags.some(selectedTag =>
           allItemTags.includes(selectedTag)
@@ -591,7 +716,7 @@ function App() {
 
       return false;
     });
-  }, [items, selectedTags, debouncedSearchQuery]);
+  }, [items, selectedTags, selectedType, debouncedSearchQuery]);
 
   // 虚拟滚动：监听滚动事件，动态更新可见范围
   useEffect(() => {
@@ -689,6 +814,41 @@ function App() {
             </button>
           )}
         </div>
+
+        {/* 类型筛选 - 单选，大屏显示 */}
+        <div className="type-filter-group">
+          <button
+            onClick={() => setSelectedType('all')}
+            className={`type-filter-btn ${selectedType === 'all' ? 'active' : ''}`}
+          >
+            全部
+          </button>
+          <button
+            onClick={() => setSelectedType('text')}
+            className={`type-filter-btn ${selectedType === 'text' ? 'active' : ''}`}
+          >
+            📝 文本
+          </button>
+          <button
+            onClick={() => setSelectedType('image')}
+            className={`type-filter-btn ${selectedType === 'image' ? 'active' : ''}`}
+          >
+            🖼️ 图片
+          </button>
+          <button
+            onClick={() => setSelectedType('file')}
+            className={`type-filter-btn ${selectedType === 'file' ? 'active' : ''}`}
+          >
+            📁 文件
+          </button>
+          <button
+            onClick={() => setSelectedType('link')}
+            className={`type-filter-btn ${selectedType === 'link' ? 'active' : ''}`}
+          >
+            🔗 链接
+          </button>
+        </div>
+
         {allTags.length > 0 && (
           <div className="tag-select-wrapper">
             <button
@@ -718,8 +878,13 @@ function App() {
                     filteredTagsList.map(tag => {
                       const isAITag = tag.startsWith('AI:');
                       const isSourceTag = tag.startsWith('来源:');
-                      const isUserTag = !isAITag && !isSourceTag;
-                      const displayTag = isAITag ? tag.substring(3) : tag;
+                      const isTypeTag = tag.startsWith('类型:');
+                      const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
+                      // 显示标签：AI标签去掉"AI:"，来源标签去掉"来源:"，类型标签去掉"类型:"
+                      const displayTag = isAITag ? tag.substring(3) :
+                                        isSourceTag ? tag.substring(3) :
+                                        isTypeTag ? tag.substring(3) :
+                                        tag;
                       return (
                         <div
                           key={tag}
@@ -727,7 +892,8 @@ function App() {
                           className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
                         >
                           <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
-                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''}`}>
+                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
+                            {isTypeTag && <span className="type-badge">T</span>}
                             {isAITag && <span className="ai-badge">AI</span>}
                             {isUserTag && <span className="user-badge">M</span>}
                             {isSourceTag && <span className="source-badge">S</span>}
@@ -769,27 +935,80 @@ function App() {
                 className="item-card"
                 title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}
               >
-                {/* Tags display - 包括用户标签、AI标签和来源标签 */}
-                {(getTags(item.tags).length > 0 || getSourceApp(item.metadata) !== 'Unknown') && (
-                  <div className="item-tags">
-                    {/* 来源标签 */}
-                    {getSourceApp(item.metadata) !== 'Unknown' && (
-                      <span className="tag source-tag">
-                        {getSourceApp(item.metadata)}
-                      </span>
-                    )}
-                    {/* 用户标签和AI标签 */}
-                    {getTags(item.tags).map((tag, idx) => {
-                      const isAITag = tag.startsWith('AI:');
-                      const displayTag = isAITag ? tag.substring(3) : tag;
-                      return (
-                        <span key={idx} className={`tag ${isAITag ? 'ai-tag' : 'user-tag'}`}>
-                          {displayTag}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                {/* Tags display - 顺序：类型、人工标签、来源标签、AI标签 */}
+                <div className="item-tags">
+                  {/* 类型标签 */}
+                  {item.type_ && (
+                    <span className="tag type-tag">
+                      {item.type_ === 'text' && '文本'}
+                      {item.type_ === 'image' && '图片'}
+                      {item.type_ === 'file' && '文件'}
+                      {item.type_ === 'link' && '链接'}
+                    </span>
+                  )}
+                  {/* 用户标签（人工标签） */}
+                  {getTags(item.tags).filter(tag => !tag.startsWith('AI:')).map((tag, idx) => (
+                    <span key={`user-${idx}`} className="tag user-tag">
+                      {tag}
+                    </span>
+                  ))}
+                  {/* 来源标签 */}
+                  {getSourceApp(item.metadata) !== 'Unknown' && (
+                    <span className="tag source-tag">
+                      {getSourceApp(item.metadata)}
+                    </span>
+                  )}
+                  {/* AI标签 */}
+                  {getTags(item.tags).filter(tag => tag.startsWith('AI:')).map((tag, idx) => (
+                    <span key={`ai-${idx}`} className="tag ai-tag">
+                      {tag.substring(3)}
+                    </span>
+                  ))}
+
+                  {/* 添加标签按钮/输入框 */}
+                  {addingTagItemId === item.id ? (
+                    <div className="add-tag-input-wrapper">
+                      <input
+                        type="text"
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => handleTagInputKeyDown(item, e)}
+                        placeholder="输入标签..."
+                        className="add-tag-input"
+                        autoFocus
+                        onBlur={() => {
+                          // 延迟关闭，让点击建议有时间触发
+                          setTimeout(() => cancelAddTag(), 200);
+                        }}
+                      />
+                      {/* 标签建议下拉 */}
+                      {filteredUserTags.length > 0 && newTagInput.trim() && (
+                        <div className="tag-suggestions">
+                          {filteredUserTags.slice(0, 5).map((tag, idx) => (
+                            <div
+                              key={idx}
+                              className="tag-suggestion-item"
+                              onMouseDown={(e) => {
+                                e.preventDefault(); // 防止失焦
+                                addTagToItem(item, tag);
+                              }}
+                            >
+                              {tag}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      className="add-tag-btn"
+                      onClick={(e) => startAddTag(item, e)}
+                      title="添加标签"
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
 
                 {/* 备注显示/编辑 */}
                 {editingNoteId === item.id ? (
@@ -942,29 +1161,6 @@ function App() {
                       rows={2}
                       placeholder="添加备注..."
                     />
-
-                    <label className="edit-label">标签:</label>
-                    <div className="tags-editor">
-                      <div className="tags-list">
-                        {editTags.map((tag, idx) => (
-                          <span key={idx} className="tag editable">
-                            {tag}
-                            <button onClick={() => removeTag(tag)} className="tag-remove">×</button>
-                          </span>
-                        ))}
-                      </div>
-                      <div className="tag-input-group">
-                        <input
-                          type="text"
-                          value={newTag}
-                          onChange={(e) => setNewTag(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                          placeholder="添加标签..."
-                          className="tag-input"
-                        />
-                        <button onClick={addTag} className="tag-add-btn">+</button>
-                      </div>
-                    </div>
 
                     <div className="edit-actions">
                       <button onClick={() => saveEdit(item)} className="save-btn">

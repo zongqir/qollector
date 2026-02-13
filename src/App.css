@@ -95,11 +95,58 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .search-box {
   flex: 1;
   position: relative;
+  min-width: 200px;
+}
+
+/* 类型筛选组 - 胶囊式单选 */
+.type-filter-group {
+  display: flex;
+  gap: 0;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.type-filter-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-filter-btn:hover:not(.active) {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+}
+
+.type-filter-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+/* 小屏隐藏类型筛选 */
+@media (max-width: 900px) {
+  .type-filter-group {
+    display: none;
+  }
 }
 
 .settings-btn {
@@ -206,6 +253,81 @@ body {
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 0;
+  align-items: center;
+}
+
+/* 添加标签按钮 */
+.add-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px dashed #d0d0d0;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  color: #999;
+  transition: all 0.2s;
+}
+
+.add-tag-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+/* 添加标签输入框容器 */
+.add-tag-input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.add-tag-input {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  background: white;
+}
+
+/* 标签建议下拉 */
+.tag-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 100;
+  min-width: 120px;
+}
+
+.tag-suggestion-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  transition: background 0.15s;
+}
+
+.tag-suggestion-item:hover {
+  background: #f5f5f5;
+}
+
+.tag-suggestion-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.tag-suggestion-item:last-child {
+  border-radius: 0 0 6px 6px;
 }
 
 .tag {
@@ -254,6 +376,18 @@ body {
 .tag.source-tag:hover {
   background: linear-gradient(135deg, #ff980025, #f57c0025);
   border-color: #f57c00;
+}
+
+/* 类型标签样式 - 青色清新 */
+.tag.type-tag {
+  background: linear-gradient(135deg, #00bcd415, #00897b15);
+  border-color: #00bcd4;
+  color: #00897b;
+}
+
+.tag.type-tag:hover {
+  background: linear-gradient(135deg, #00bcd425, #00897b25);
+  border-color: #00897b;
 }
 
 .tag.editable {
@@ -1146,6 +1280,12 @@ body {
   font-weight: 500;
 }
 
+/* 类型标签文本样式 */
+.tag-text.type-tag-text {
+  color: #00897b;
+  font-weight: 500;
+}
+
 /* 标签类型图标 */
 .tag-icon {
   font-size: 10px;
@@ -1190,6 +1330,21 @@ body {
   justify-content: center;
   padding: 1px 4px;
   background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+/* 类型标签徽章 - 青色渐变 */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  background: linear-gradient(135deg, #00bcd4, #00897b);
   color: white;
   border-radius: 3px;
   font-size: 9px;

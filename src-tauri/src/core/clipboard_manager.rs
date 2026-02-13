@@ -73,6 +73,12 @@ impl ClipboardManager {
             ClipboardContent::Image(data) => {
                 println!("Image clipboard content detected, saving...");
 
+                // 计算图片内容的MD5哈希
+                use md5::{Md5, Digest};
+                let mut hasher = Md5::new();
+                hasher.update(&data);
+                let image_hash = format!("{:x}", hasher.finalize());
+
                 // Generate unique filename
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)?
@@ -104,13 +110,25 @@ impl ClipboardManager {
                     "thumbnail": thumb_path.to_string_lossy().to_string()
                 }).to_string();
 
-                let mut item = ClipboardItem::new_text(
-                    format!("[Image: {}]", filename),
-                    metadata
-                );
-                item.type_ = "image".to_string();
-                item.image_paths = Some(image_paths_json);
-                item
+                let now = chrono::Utc::now().timestamp();
+                ClipboardItem {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    type_: "image".to_string(),
+                    content: Some(format!("[Image: {}]", filename)),
+                    original_content: None,
+                    content_hash: image_hash, // 使用图片内容的MD5
+                    image_paths: Some(image_paths_json),
+                    ocr_text: None,
+                    embedding: None,
+                    tags: None,
+                    user_note: None,
+                    metadata: Some(serde_json::to_string(&metadata).unwrap()),
+                    is_pinned: false,
+                    is_favorite: false,
+                    is_deleted: false,
+                    created_at: now,
+                    updated_at: now,
+                }
             }
             ClipboardContent::File(paths_str) => {
                 println!("File clipboard content detected");
