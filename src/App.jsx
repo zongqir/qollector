@@ -16,6 +16,9 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [showTagFilter, setShowTagFilter] = useState(false);
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
 
   useEffect(() => {
     loadItems();
@@ -26,8 +29,19 @@ function App() {
       loadItems();
     }, 3000);
 
-    return () => clearInterval(interval);
-  }, []);
+    // 点击外部关闭标签过滤面板
+    const handleClickOutside = (e) => {
+      if (showTagFilter && !e.target.closest('.tag-select-wrapper')) {
+        setShowTagFilter(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showTagFilter]);
 
   const initOcrService = async () => {
     try {
@@ -55,27 +69,36 @@ function App() {
     }
   };
 
-  const handleCopy = async (item) => {
+  const handleCopy = async (item, e) => {
+    // 阻止事件冒泡，避免触发其他点击事件
+    if (e) {
+      e.stopPropagation();
+    }
     try {
       await invoke('copy_item', { item });
-      alert('已复制到剪贴板');
+      // 使用更简洁的提示方式
+      console.log('已复制到剪贴板');
     } catch (error) {
       console.error('复制失败:', error);
       alert('复制失败: ' + error);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('确定要删除这条记录吗？')) return;
-
+  const togglePin = async (item, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
     try {
-      await invoke('delete_item', { id });
+      const newPinState = await invoke('toggle_pin_item', { id: item.id });
+      console.log(`置顶状态已切换: ${newPinState}`);
       await loadItems();
     } catch (error) {
-      console.error('删除失败:', error);
-      alert('删除失败: ' + error);
+      console.error('切换置顶失败:', error);
+      alert('切换置顶失败: ' + error);
     }
   };
+
+  // 删除功能已移除 - 剪贴板本身就是临时存储
 
   const startEdit = (item) => {
     setEditingId(item.id);
@@ -235,8 +258,7 @@ function App() {
 
   const getContentPreview = (content, maxLength = 100) => {
     if (!content) return '';
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    return content;
   };
 
   const getFileList = (content) => {
@@ -280,7 +302,55 @@ function App() {
     }
   };
 
+  // 获取所有唯一标签（包括来源标签）
+  const getAllTags = () => {
+    const tagSet = new Set();
+    items.forEach(item => {
+      // 添加用户标签
+      const tags = getTags(item.tags);
+      tags.forEach(tag => tagSet.add(tag));
+
+      // 添加来源标签
+      const sourceApp = getSourceApp(item.metadata);
+      if (sourceApp && sourceApp !== 'Unknown') {
+        tagSet.add(`来源:${sourceApp}`);
+      }
+    });
+    return Array.from(tagSet).sort();
+  };
+
+  // 过滤标签列表（用于搜索）
+  const getFilteredTags = () => {
+    const allTags = getAllTags();
+    if (!tagSearchQuery.trim()) return allTags;
+    const query = tagSearchQuery.toLowerCase();
+    return allTags.filter(tag => tag.toLowerCase().includes(query));
+  };
+
+  const toggleTagFilter = (tag) => {
+    setSelectedTags(prev =>
+      prev.includes(tag)
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
   const filteredItems = items.filter(item => {
+    // 标签过滤（包括来源标签）
+    if (selectedTags.length > 0) {
+      const itemTags = getTags(item.tags);
+      const sourceApp = getSourceApp(item.metadata);
+      const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
+
+      const allItemTags = sourceTag ? [...itemTags, sourceTag] : itemTags;
+
+      const hasSelectedTag = selectedTags.some(selectedTag =>
+        allItemTags.includes(selectedTag)
+      );
+      if (!hasSelectedTag) return false;
+    }
+
+    // 文本搜索
     if (!searchQuery.trim()) return true;
 
     const query = searchQuery.toLowerCase();
@@ -328,8 +398,59 @@ function App() {
             </button>
           )}
         </div>
+        {getAllTags().length > 0 && (
+          <div className="tag-select-wrapper">
+            <button
+              onClick={() => setShowTagFilter(!showTagFilter)}
+              className={`tag-select-btn ${selectedTags.length > 0 ? 'has-selection' : ''}`}
+            >
+              <span className="tag-icon">🏷️</span>
+              <span className="tag-label">
+                {selectedTags.length > 0 ? `已选 ${selectedTags.length} 个标签` : '筛选标签'}
+              </span>
+              <span className="dropdown-arrow">{showTagFilter ? '▲' : '▼'}</span>
+            </button>
+            {showTagFilter && (
+              <div className="tag-dropdown">
+                <div className="tag-dropdown-search">
+                  <input
+                    type="text"
+                    placeholder="搜索标签..."
+                    value={tagSearchQuery}
+                    onChange={(e) => setTagSearchQuery(e.target.value)}
+                    className="tag-search-input"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="tag-dropdown-list">
+                  {getFilteredTags().length > 0 ? (
+                    getFilteredTags().map(tag => (
+                      <div
+                        key={tag}
+                        onClick={() => toggleTagFilter(tag)}
+                        className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                      >
+                        <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
+                        <span className="tag-text">{tag}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="tag-dropdown-empty">未找到匹配的标签</div>
+                  )}
+                </div>
+                {selectedTags.length > 0 && (
+                  <div className="tag-dropdown-footer">
+                    <button onClick={() => setSelectedTags([])} className="clear-selection-btn">
+                      清除所有筛选
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         <button onClick={() => setShowSettings(true)} className="settings-btn">
-          ⚙️ 设置
+          ⚙️
         </button>
       </header>
 
@@ -341,15 +462,7 @@ function App() {
         ) : (
           <div className="items-list">
             {filteredItems.map((item) => (
-              <div key={item.id} className="item-card">
-                <div className="item-header">
-                  <div className="item-header-left">
-                    <span className="item-type">{item.type_}</span>
-                    <span className="item-source">来源: {getSourceApp(item.metadata)}</span>
-                  </div>
-                  <span className="item-date">{formatDate(item.created_at)}</span>
-                </div>
-
+              <div key={item.id} className="item-card" title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}>
                 {/* Tags display */}
                 {getTags(item.tags).length > 0 && (
                   <div className="item-tags">
@@ -359,68 +472,116 @@ function App() {
                   </div>
                 )}
 
-                {/* AI Tag button */}
-                {item.type_ === 'text' && item.content && (
-                  <button
-                    onClick={() => generateAITags(item)}
-                    disabled={generatingAI === item.id}
-                    className="ai-tag-btn"
-                  >
-                    {generatingAI === item.id ? '🤖 生成中...' : '🤖 AI 标签'}
-                  </button>
-                )}
-
-                {/* OCR button and result for images */}
-                {item.type_ === 'image' && (
-                  <div className="ocr-section">
-                    {item.ocr_text ? (
-                      <div className="ocr-result">
-                        <div className="ocr-label">🔍 识别文本:</div>
-                        <div className="ocr-text">{item.ocr_text}</div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleOCR(item)}
-                        disabled={ocrProcessing === item.id}
-                        className="ocr-btn"
-                      >
-                        {ocrProcessing === item.id ? '🔍 识别中...' : '🔍 识别文字'}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Note display and edit */}
+                {/* 备注显示/编辑 */}
                 {editingNoteId === item.id ? (
-                  <div className="note-edit-inline">
+                  <div className="note-edit-bar">
+                    <span className="note-icon">📝</span>
                     <textarea
                       value={editNote}
                       onChange={(e) => setEditNote(e.target.value)}
-                      className="note-textarea"
-                      rows={2}
+                      className="note-edit-input"
+                      rows={1}
                       placeholder="添加备注..."
                       autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && e.ctrlKey) {
+                          saveNote(item);
+                        } else if (e.key === 'Escape') {
+                          cancelNoteEdit();
+                        }
+                      }}
                     />
-                    <div className="note-actions">
-                      <button onClick={() => saveNote(item)} className="note-save-btn">
-                        ✓
-                      </button>
-                      <button onClick={cancelNoteEdit} className="note-cancel-btn">
-                        ✕
-                      </button>
-                    </div>
+                    <button onClick={() => saveNote(item)} className="note-btn-save" title="保存 (Ctrl+Enter)">✓</button>
+                    <button onClick={cancelNoteEdit} className="note-btn-cancel" title="取消 (Esc)">✕</button>
                   </div>
-                ) : (
-                  <div className="item-note-container" onClick={() => startEditNote(item)}>
-                    {item.user_note ? (
-                      <div className="item-note">
-                        📝 {item.user_note}
-                      </div>
-                    ) : (
-                      <div className="item-note-placeholder">
-                        点击添加备注...
-                      </div>
-                    )}
+                ) : item.user_note ? (
+                  <div
+                    className="note-display-bar"
+                    onClick={() => startEditNote(item)}
+                    title="点击编辑备注"
+                  >
+                    <span className="note-icon">📝</span>
+                    <span className="note-text">{item.user_note}</span>
+                  </div>
+                ) : null}
+
+                {/* 工具栏 - 统一操作按钮 */}
+                <div className="item-toolbar">
+                  {/* 置顶按钮 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePin(item, e);
+                    }}
+                    className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
+                    title={item.is_pinned ? '取消置顶' : '置顶'}
+                  >
+                    <span className="toolbar-btn-icon">📌</span>
+                    <span>{item.is_pinned ? '已置顶' : '置顶'}</span>
+                  </button>
+
+                  {/* AI标签按钮 - 仅文本类型 */}
+                  {item.type_ === 'text' && item.content && (
+                    <>
+                      <div className="toolbar-divider"></div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateAITags(item);
+                        }}
+                        disabled={generatingAI === item.id}
+                        className="toolbar-btn ai-btn"
+                        title={generatingAI === item.id ? 'AI生成中...' : '用AI生成标签'}
+                      >
+                        <span className="toolbar-btn-icon">
+                          {generatingAI === item.id ? '⏳' : '✨'}
+                        </span>
+                        <span>{generatingAI === item.id ? '生成中' : 'AI标签'}</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* OCR按钮 - 仅图片类型 */}
+                  {item.type_ === 'image' && !item.ocr_text && (
+                    <>
+                      <div className="toolbar-divider"></div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOCR(item);
+                        }}
+                        disabled={ocrProcessing === item.id}
+                        className="toolbar-btn ocr-btn"
+                        title={ocrProcessing === item.id ? '识别中...' : '识别图片文字'}
+                      >
+                        <span className="toolbar-btn-icon">
+                          {ocrProcessing === item.id ? '⏳' : '🔍'}
+                        </span>
+                        <span>{ocrProcessing === item.id ? '识别中' : 'OCR识别'}</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* 备注按钮 */}
+                  <div className="toolbar-divider"></div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditNote(item);
+                    }}
+                    className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
+                    title={item.user_note ? '编辑备注' : '添加备注'}
+                  >
+                    <span className="toolbar-btn-icon">📝</span>
+                    <span>{item.user_note ? '编辑备注' : '添加备注'}</span>
+                  </button>
+                </div>
+
+                {/* OCR识别结果 - 仅图片类型且已识别 */}
+                {item.type_ === 'image' && item.ocr_text && (
+                  <div className="ocr-result">
+                    <div className="ocr-label">🔍 识别文本:</div>
+                    <div className="ocr-text">{item.ocr_text}</div>
                   </div>
                 )}
 
@@ -481,7 +642,16 @@ function App() {
                   </div>
                 ) : (
                   <>
-                    <div className="item-content">
+                    <div
+                      className="item-content clickable"
+                      onClick={(e) => handleCopy(item, e)}
+                      onDoubleClick={() => startEdit(item)}
+                    >
+                      {/* Hover提示 */}
+                      <div className="content-hover-tip">
+                        <div className="hover-actions">单击复制 | 双击编辑</div>
+                      </div>
+
                       {item.type_ === 'image' && item.image_paths ? (
                         <img
                           src={getImageThumbnail(item.image_paths)}
@@ -500,17 +670,6 @@ function App() {
                       ) : (
                         getContentPreview(item.content)
                       )}
-                    </div>
-                    <div className="item-actions">
-                      <button onClick={() => handleCopy(item)} className="action-btn copy">
-                        📋 复制
-                      </button>
-                      <button onClick={() => startEdit(item)} className="action-btn edit">
-                        ✏️ 编辑
-                      </button>
-                      <button onClick={() => handleDelete(item.id)} className="action-btn delete">
-                        🗑️ 删除
-                      </button>
                     </div>
                   </>
                 )}

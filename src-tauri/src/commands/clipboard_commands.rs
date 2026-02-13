@@ -42,3 +42,13 @@ pub async fn delete_item(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn toggle_pin_item(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<bool, String> {
+    manager.toggle_pin(&id)
+        .await
+        .map_err(|e| e.to_string())
+}

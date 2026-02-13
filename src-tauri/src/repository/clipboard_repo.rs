@@ -106,7 +106,7 @@ impl ClipboardRepository {
 
     pub async fn get_recent(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY updated_at DESC LIMIT ?"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC LIMIT ?"
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -134,7 +134,7 @@ impl ClipboardRepository {
             sql.push_str(&format!(" AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')", query, query));
         }
 
-        sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
+        sql.push_str(&format!(" ORDER BY is_pinned DESC, updated_at DESC LIMIT {}", limit));
 
         let items = sqlx::query_as::<_, ClipboardItem>(&sql)
             .fetch_all(&self.pool)
@@ -189,5 +189,16 @@ impl ClipboardRepository {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn find_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let item = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE id = ? AND is_deleted = 0 LIMIT 1"
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(item)
     }
 }

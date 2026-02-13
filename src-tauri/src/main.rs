@@ -78,6 +78,7 @@ fn main() {
             copy_item,
             update_item,
             delete_item,
+            toggle_pin_item,
             get_ai_config,
             update_ai_config,
             generate_ai_tags,

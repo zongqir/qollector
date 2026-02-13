@@ -48,20 +48,20 @@ body {
 }
 
 .settings-btn {
-  padding: 8px 16px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
+  font-size: 16px;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .settings-btn:hover {
-  background: #5568d3;
-  transform: translateY(-1px);
+  border-color: #667eea;
+  background: #f8f9ff;
 }
 
 .search-input {
@@ -120,73 +120,41 @@ body {
 .items-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 8px;
 }
 
 .item-card {
   background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s;
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
 .item-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
-
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.item-header-left {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.item-type {
-  display: inline-block;
-  padding: 4px 12px;
-  background: #e8eaf6;
-  color: #667eea;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.item-source {
-  font-size: 12px;
-  color: #666;
-}
-
-.item-date {
-  font-size: 12px;
-  color: #999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
 }
 
 .item-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  background: #f0f0f0;
-  color: #555;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 3px 8px;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  color: #667eea;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid #667eea30;
 }
 
 .tag.editable {
@@ -210,123 +178,409 @@ body {
   color: #d32f2f;
 }
 
-.item-note-container {
-  cursor: pointer;
-  margin-bottom: 10px;
+/* 移除旧的备注样式 */
+
+.item-content {
+  margin: 10px 0;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 80px;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s;
 }
 
-.item-note {
-  padding: 8px 12px;
+.item-content.clickable {
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.item-content.clickable:hover {
+  background: #e8eaf6;
+  transform: translateY(-1px);
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.item-content.clickable:active {
+  transform: translateY(0);
+  background: #d1d5f7;
+}
+
+/* Hover提示 - 简化 */
+.content-hover-tip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hover-actions {
+  font-size: 10px;
+  color: #999;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.item-content.clickable:hover .content-hover-tip {
+  opacity: 1;
+}
+
+/* 工具栏 - 统一操作按钮 */
+.item-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: linear-gradient(to right, #fafafa, #f5f5f5);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  min-height: 28px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.2s ease-out;
+}
+
+.item-card:hover .item-toolbar {
+  opacity: 1;
+  max-height: 40px;
+  margin-bottom: 8px;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* 置顶按钮 */
+.toolbar-btn.pin-btn.active {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  color: white;
+}
+
+.toolbar-btn.pin-btn.active .toolbar-btn-icon {
+  transform: rotate(45deg);
+}
+
+/* AI按钮 */
+.toolbar-btn.ai-btn {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-color: #667eea30;
+  color: #667eea;
+}
+
+.toolbar-btn.ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+  color: white;
+}
+
+/* OCR按钮 */
+.toolbar-btn.ocr-btn {
+  background: #e8f5e9;
+  border-color: #4caf5030;
+  color: #4caf50;
+}
+
+.toolbar-btn.ocr-btn:hover:not(:disabled) {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+/* 备注按钮 */
+.toolbar-btn.note-btn.has-note {
+  background: #fff9e6;
+  border-color: #ffc107;
+  color: #f57c00;
+}
+
+.toolbar-btn.note-btn:hover:not(:disabled) {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: white;
+}
+
+/* 工具栏分隔符 */
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: #e0e0e0;
+  margin: 0 4px;
+}
+
+/* 移除旧的内联按钮样式 */
+.ai-tag-icon-btn-inline {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #667eea30;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ai-tag-icon-btn-inline .ai-icon {
+  font-size: 10px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.5px;
+}
+
+.ai-tag-icon-btn-inline:hover:not(:disabled) {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.ai-tag-icon-btn-inline:hover:not(:disabled) .ai-icon {
+  -webkit-text-fill-color: white;
+}
+
+.ai-tag-icon-btn-inline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ai-tag-icon-btn-inline .ai-loading {
+  font-size: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 置顶按钮 - 内联在内容区域左上角（AI按钮右侧） */
+.pin-icon-btn {
+  position: absolute;
+  top: 8px;
+  left: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  font-size: 14px;
+  opacity: 0.5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pin-icon-btn:hover {
+  opacity: 1;
+  background: #fff3e0;
+  border-color: #ff9800;
+  transform: scale(1.05);
+}
+
+.pin-icon-btn.pinned {
+  opacity: 1;
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  transform: rotate(45deg);
+}
+
+.pin-icon-btn.pinned:hover {
+  transform: rotate(45deg) scale(1.05);
+}
+
+/* 备注显示条 */
+.note-display-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
   background: #fff9e6;
   border-left: 3px solid #ffc107;
   border-radius: 4px;
-  font-size: 13px;
-  color: #666;
-  transition: all 0.3s;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.item-note-container:hover .item-note {
+.note-display-bar:hover {
   background: #fff3cd;
+  border-left-color: #ff9800;
 }
 
-.item-note-placeholder {
-  padding: 8px 12px;
-  background: #f5f5f5;
-  border-left: 3px solid #ddd;
-  border-radius: 4px;
-  font-size: 13px;
-  color: #999;
-  font-style: italic;
-  transition: all 0.3s;
+.note-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
-.item-note-container:hover .item-note-placeholder {
-  background: #e8e8e8;
-  border-left-color: #bbb;
+.note-text {
+  font-size: 12px;
   color: #666;
-}
-
-.note-edit-inline {
-  margin-bottom: 10px;
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.note-textarea {
   flex: 1;
-  padding: 8px 12px;
-  border: 2px solid #ffc107;
-  border-radius: 6px;
-  font-size: 13px;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 50px;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
-.note-textarea:focus {
+/* 备注编辑条 */
+.note-edit-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #fff9e6;
+  border-left: 3px solid #ffc107;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.note-edit-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+  background: white;
+  min-height: 24px;
+}
+
+.note-edit-input:focus {
   outline: none;
   border-color: #ff9800;
 }
 
-.note-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.note-save-btn,
-.note-cancel-btn {
-  width: 32px;
-  height: 32px;
+.note-btn-save,
+.note-btn-cancel {
+  width: 24px;
+  height: 24px;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
-  transition: all 0.3s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.note-save-btn {
+.note-btn-save {
   background: #4caf50;
   color: white;
 }
 
-.note-save-btn:hover {
+.note-btn-save:hover {
   background: #45a049;
 }
 
-.note-cancel-btn {
+.note-btn-cancel {
   background: #9e9e9e;
   color: white;
 }
 
-.note-cancel-btn:hover {
+.note-btn-cancel:hover {
   background: #757575;
 }
 
-.item-content {
-  margin: 15px 0;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
+/* 添加备注按钮 - 仅在没有备注时显示 */
+.add-note-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
   font-size: 14px;
-  line-height: 1.6;
-  color: #333;
-  white-space: pre-wrap;
-  word-break: break-all;
+  opacity: 0.5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-note-btn:hover {
+  opacity: 1;
+  background: #fff9e6;
+  border-color: #ffc107;
+  transform: scale(1.05);
 }
 
 .clipboard-image {
   max-width: 100%;
-  max-height: 300px;
-  border-radius: 8px;
+  max-height: 120px;
+  border-radius: 6px;
   display: block;
   margin: 0 auto;
   object-fit: contain;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.item-content:hover .clipboard-image {
+  max-height: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .file-list {
@@ -356,49 +610,7 @@ body {
   word-break: break-all;
 }
 
-.item-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s;
-  font-weight: 500;
-}
-
-.action-btn.copy {
-  background: #4caf50;
-  color: white;
-}
-
-.action-btn.copy:hover {
-  background: #45a049;
-}
-
-.action-btn.edit {
-  background: #2196f3;
-  color: white;
-}
-
-.action-btn.edit:hover {
-  background: #1976d2;
-}
-
-.action-btn.delete {
-  background: #f44336;
-  color: white;
-}
-
-.action-btn.delete:hover {
-  background: #d32f2f;
-}
+/* 移除了复制、编辑、删除按钮 - 使用更简洁的交互方式 */
 
 .edit-mode {
   margin: 15px 0;
@@ -479,71 +691,27 @@ body {
   background: #5568d3;
 }
 
-.ai-tag-btn {
-  margin: 10px 0;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.3s;
-}
-
-.ai-tag-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.ai-tag-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.ocr-section {
-  margin: 12px 0;
-}
-
-.ocr-btn {
-  padding: 8px 16px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.3s;
-}
-
-.ocr-btn:hover:not(:disabled) {
-  background: #45a049;
-  transform: translateY(-1px);
-}
-
-.ocr-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* 移除旧的AI按钮和备注样式 */
 
 .ocr-result {
   background: #f5f5f5;
   border-left: 3px solid #4caf50;
-  padding: 12px;
+  padding: 8px 10px;
   border-radius: 4px;
+  margin-bottom: 8px;
 }
 
 .ocr-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #4caf50;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .ocr-text {
-  font-size: 13px;
+  font-size: 12px;
   color: #333;
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -599,4 +767,175 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(102, 126, 234, 0.5);
+}
+
+/* 标签下拉选择器样式 */
+.tag-select-wrapper {
+  position: relative;
+}
+
+.tag-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  color: #666;
+  font-weight: 500;
+}
+
+.tag-select-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.tag-select-btn.has-selection {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.tag-icon {
+  font-size: 16px;
+}
+
+.tag-label {
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.tag-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 280px;
+  max-width: 350px;
+  overflow: hidden;
+  z-index: 1000;
+  animation: dropdownSlide 0.2s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tag-dropdown-search {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.tag-dropdown-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.tag-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.tag-dropdown-item.selected {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+}
+
+.tag-check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: white;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.tag-dropdown-item.selected .tag-check {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+}
+
+.tag-text {
+  font-size: 13px;
+  color: #333;
+  flex: 1;
+  word-break: break-word;
+}
+
+.tag-dropdown-empty {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+.tag-dropdown-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.clear-selection-btn {
+  width: 100%;
+  padding: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.clear-selection-btn:hover {
+  background: #ff9800;
+  color: white;
+  border-color: #ff9800;
 }
