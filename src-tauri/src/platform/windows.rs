@@ -67,7 +67,7 @@ pub mod windows {
                 .map_err(|e| ClipboardError::PlatformError(format!("Failed to receive window handle: {}", e)))?
                 .map_err(|e| ClipboardError::PlatformError(e))?;
 
-            let hwnd = unsafe { HWND(hwnd_ptr as *mut _) };
+            let hwnd = HWND(hwnd_ptr as *mut _);
 
             Ok(Self {
                 hwnd: SendHwnd(hwnd),

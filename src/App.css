@@ -256,27 +256,35 @@ body {
   align-items: center;
 }
 
-/* 添加标签按钮 */
+/* 添加标签按钮 - 改进UI */
 .add-tag-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 1px dashed #d0d0d0;
-  background: transparent;
-  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #e0e0e0;
+  background: linear-gradient(135deg, #ffffff, #f8f9ff);
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  color: #999;
-  transition: all 0.2s;
+  font-size: 18px;
+  font-weight: 600;
+  color: #667eea;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .add-tag-btn:hover {
   border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.add-tag-btn:active {
+  transform: scale(0.95) rotate(90deg);
 }
 
 /* 添加标签输入框容器 */
@@ -295,31 +303,48 @@ body {
   background: white;
 }
 
-/* 标签建议下拉 */
+/* 标签建议下拉 - 改进样式 */
 .tag-suggestions {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 150px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  max-height: 200px;
   overflow-y: auto;
   z-index: 100;
-  min-width: 120px;
+  min-width: 160px;
+  animation: suggestionsSlideIn 0.2s ease-out;
+}
+
+@keyframes suggestionsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tag-suggestion-item {
-  padding: 6px 12px;
+  padding: 8px 14px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   color: #333;
-  transition: background 0.15s;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  font-weight: 500;
 }
 
 .tag-suggestion-item:hover {
-  background: #f5f5f5;
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05));
+  border-left-color: #667eea;
+  color: #667eea;
+  padding-left: 18px;
 }
 
 .tag-suggestion-item:first-child {

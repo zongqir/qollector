@@ -2,7 +2,6 @@ use crate::core::models::{ClipboardItem, WindowMetadata};
 use crate::core::clipboard_manager::ClipboardManager;
 use tauri::{State, AppHandle, Manager};
 use std::sync::Arc;
-use std::path::PathBuf;
 use base64::Engine;
 
 /// 手动添加剪贴板项（用于拖拽功能）

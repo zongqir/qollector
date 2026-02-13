@@ -637,9 +637,9 @@ function App() {
     return Array.from(userTags).sort();
   }, [items]);
 
-  // 过滤标签建议
+  // 过滤标签建议 - 改进：没有输入时也显示所有标签
   const filteredUserTags = useMemo(() => {
-    if (!newTagInput.trim()) return allUserTags;
+    if (!newTagInput.trim()) return allUserTags; // 显示所有标签
     const query = newTagInput.toLowerCase();
     return allUserTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allUserTags, newTagInput]);
@@ -981,10 +981,10 @@ function App() {
                           setTimeout(() => cancelAddTag(), 200);
                         }}
                       />
-                      {/* 标签建议下拉 */}
-                      {filteredUserTags.length > 0 && newTagInput.trim() && (
+                      {/* 标签建议下拉 - 改进：始终显示（如果有标签） */}
+                      {filteredUserTags.length > 0 && (
                         <div className="tag-suggestions">
-                          {filteredUserTags.slice(0, 5).map((tag, idx) => (
+                          {filteredUserTags.slice(0, 8).map((tag, idx) => (
                             <div
                               key={idx}
                               className="tag-suggestion-item"

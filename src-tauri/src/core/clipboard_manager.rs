@@ -74,10 +74,7 @@ impl ClipboardManager {
                 println!("Image clipboard content detected, saving...");
 
                 // 计算图片内容的MD5哈希
-                use md5::{Md5, Digest};
-                let mut hasher = Md5::new();
-                hasher.update(&data);
-                let image_hash = format!("{:x}", hasher.finalize());
+                let image_hash = format!("{:x}", md5::compute(&data));
 
                 // Generate unique filename
                 let timestamp = std::time::SystemTime::now()
