@@ -60,7 +60,26 @@ fn main() {
                 #[cfg(not(target_os = "windows"))]
                 panic!("Unsupported platform");
 
-                let manager = Arc::new(ClipboardManager::new(platform, repository, app_dir));
+                // Initialize AI state
+                let ai_config = ai::AIConfig::default();
+                let ai_config_arc = Arc::new(Mutex::new(ai_config.clone()));
+                let ai_state = AIState {
+                    config: ai_config_arc.clone(),
+                };
+
+                // Initialize OCR state
+                let ocr_service_arc = Arc::new(Mutex::new(None));
+                let ocr_state = OcrState {
+                    service: Mutex::new(None),
+                };
+
+                let manager = Arc::new(ClipboardManager::new(
+                    platform,
+                    repository,
+                    app_dir,
+                    ai_config_arc,
+                    ocr_service_arc,
+                ));
 
                 println!("Starting clipboard monitoring...");
 
@@ -69,16 +88,7 @@ fn main() {
                     .expect("Failed to start clipboard monitoring");
 
                 app.manage(manager);
-
-                // Initialize AI state
-                let ai_config = ai::AIConfig::default();
-                let ai_state = AIState {
-                    config: Arc::new(Mutex::new(ai_config)),
-                };
                 app.manage(ai_state);
-
-                // Initialize OCR state
-                let ocr_state = OcrState::new();
                 app.manage(ocr_state);
             });
 

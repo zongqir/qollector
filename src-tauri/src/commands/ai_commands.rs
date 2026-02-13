@@ -1,4 +1,5 @@
 use crate::ai::{AIConfig, AIService};
+use crate::core::clipboard_manager::ClipboardManager;
 use tauri::State;
 use std::sync::{Arc, Mutex};
 
@@ -15,10 +16,15 @@ pub async fn get_ai_config(state: State<'_, AIState>) -> Result<AIConfig, String
 #[tauri::command]
 pub async fn update_ai_config(
     state: State<'_, AIState>,
+    manager: State<'_, Arc<ClipboardManager>>,
     config: AIConfig,
 ) -> Result<(), String> {
     let mut current_config = state.config.lock().unwrap();
-    *current_config = config;
+    *current_config = config.clone();
+    drop(current_config);
+
+    // 同步更新 ClipboardManager 中的配置
+    manager.update_ai_config(config);
     Ok(())
 }
 
