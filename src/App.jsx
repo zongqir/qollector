@@ -1,103 +1,55 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useTranslation } from 'react-i18next';
 import Settings from './Settings';
 import DragDrop from './DragDrop';
 import EditModal from './EditModal';
+import { getTags, getSourceApp } from './utils/tagHelpers';
+import { useSearch } from './hooks/useSearch';
+import { useFilters } from './hooks/useFilters';
+import { useNoteEdit } from './hooks/useNoteEdit';
+import { useTagManagement } from './hooks/useTagManagement';
+import { useEditModal } from './hooks/useEditModal';
+import { useVirtualScroll } from './hooks/useVirtualScroll';
+import { openImagePreview } from './services/windowService';
+import { initOcrService } from './services/ocrService';
+import { copyItemToClipboard, getRecentItems } from './services/clipboardService';
+import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from './services/aiService';
+import TitleBar from './components/TitleBar';
+import SearchBar from './components/SearchBar';
+import ItemCard from './components/ItemCard';
 
 function App() {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editNote, setEditNote] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
-  const [selectedTags, setSelectedTags] = useState([]);
-  const [showTagFilter, setShowTagFilter] = useState(false);
-  const [tagSearchQuery, setTagSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('all'); // 独立的类型筛选（单选）
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 }); // 虚拟滚动：只渲染前20项
   const contentRef = useRef(null);
-  const clickTimerRef = useRef(null); // 用于区分单击和双击
-  const [copiedItemId, setCopiedItemId] = useState(null); // 用于显示复制成功反馈
-  const [addingTagItemId, setAddingTagItemId] = useState(null); // 正在添加标签的项目ID
-  const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false); // 是否只显示收藏
+  const clickTimerRef = useRef(null);
+  const [copiedItemId, setCopiedItemId] = useState(null);
 
-  // 编辑弹窗状态
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editModalMode, setEditModalMode] = useState('new'); // 'new' 或 'edit'
-  const [editingItem, setEditingItem] = useState(null);
+  // Custom hooks
+  const { searchQuery, setSearchQuery, debouncedSearchQuery } = useSearch();
+  const {
+    selectedTags, setSelectedTags,
+    selectedType, setSelectedType,
+    showFavoritesOnly, setShowFavoritesOnly,
+    showTagFilter, setShowTagFilter,
+    tagSearchQuery, setTagSearchQuery,
+    toggleTagFilter, handleTagClick,
+  } = useFilters();
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
     i18n.changeLanguage(newLang);
     localStorage.setItem('language', newLang);
   };
-
-  // 打开图片预览窗口
-  const openImagePreview = async (imagePath) => {
-    try {
-      // 解析 JSON 格式的路径
-      let originalPath = imagePath;
-      try {
-        const paths = JSON.parse(imagePath);
-        originalPath = paths.original || paths.raw || imagePath;
-      } catch {
-        // 如果不是 JSON，直接使用原路径
-      }
-
-      const windowLabel = `preview-${Date.now()}`;
-
-      // 开发模式和生产模式使用不同的 URL
-      const isDev = window.location.hostname === 'localhost';
-      const baseUrl = isDev
-        ? 'http://localhost:5173/public/preview.html'
-        : 'preview.html';
-
-      const webview = new WebviewWindow(windowLabel, {
-        url: `${baseUrl}?path=${encodeURIComponent(originalPath)}`,
-        title: t('preview.title'),
-        width: 800,
-        height: 600,
-        center: true,
-        resizable: true,
-        alwaysOnTop: true,
-        decorations: false,
-        skipTaskbar: false
-      });
-
-      await webview.once('tauri://created', () => {
-        console.log(t('preview.created'));
-      });
-
-      await webview.once('tauri://error', (e) => {
-        console.error(t('preview.createFailed', { error: e }));
-      });
-    } catch (error) {
-      console.error(t('preview.createFailed', { error }));
-      alert(t('error.previewFailed', { error }));
-    }
-  };
-
-  // 防抖搜索：延迟300ms执行搜索，避免每次输入都触发过滤
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   useEffect(() => {
     loadItems();
@@ -113,45 +65,13 @@ function App() {
     };
   }, []); // 移除 showTagFilter 依赖
 
-  // 单独处理点击外部关闭标签面板
-  useEffect(() => {
-    if (!showTagFilter) return;
-
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.tag-select-wrapper')) {
-        setShowTagFilter(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [showTagFilter]);
-
-  const initOcrService = async () => {
-    try {
-      // 尝试加载已保存的配置
-      const savedConfig = await invoke('get_ocr_config');
-      if (savedConfig && savedConfig.api_key) {
-        await invoke('init_ocr_service', { config: savedConfig });
-        console.log('OCR 服务初始化成功（使用已保存配置）');
-      } else {
-        console.log('OCR 服务未配置，请在设置中配置 API Key');
-      }
-    } catch (error) {
-      console.error('OCR 服务初始化失败:', error);
-    }
-  };
-
   const loadItems = async () => {
     try {
-      const result = await invoke('get_recent_items', { limit: 100 });
+      const result = await getRecentItems(100);
       setItems(result);
 
-      // 自动为新的文本项目生成AI标签
       if (!loading) {
-        autoGenerateAITags(result);
+        autoGenerateAITagsSvc(result, processedItemIds, setProcessedItemIds);
       }
 
       if (loading) setLoading(false);
@@ -161,65 +81,14 @@ function App() {
     }
   };
 
-  // 自动为新项目生成AI标签 - 优化：限制并发数量
-  const autoGenerateAITags = async (items) => {
-    // 只处理前3个未处理的项目，避免一次性处理太多
-    let processedCount = 0;
-    const maxConcurrent = 3;
-
-    for (const item of items) {
-      if (processedCount >= maxConcurrent) break;
-
-      // 只处理文本类型且未处理过的项目
-      if (item.type_ === 'text' &&
-          item.content &&
-          !processedItemIds.has(item.id)) {
-
-        // 检查是否已有AI标签
-        const tags = getTags(item.tags);
-        const hasAITags = tags.some(tag => tag.startsWith('AI:'));
-
-        if (!hasAITags) {
-          // 标记为已处理
-          setProcessedItemIds(prev => new Set([...prev, item.id]));
-          processedCount++;
-
-          // 静默生成AI标签（不等待完成，避免阻塞）
-          invoke('generate_ai_tags', { content: item.content })
-            .then(aiTags => {
-              if (aiTags && aiTags.length > 0) {
-                const taggedAI = aiTags.map(tag => `AI:${tag}`);
-                const newTags = [...tags, ...taggedAI];
-
-                const updatedItem = {
-                  ...item,
-                  tags: JSON.stringify(newTags),
-                  updated_at: Math.floor(Date.now() / 1000)
-                };
-                return invoke('update_item', { item: updatedItem });
-              }
-            })
-            .catch(error => {
-              console.error('自动AI标签生成失败(静默):', error);
-            });
-        } else {
-          // 已有AI标签,标记为已处理
-          setProcessedItemIds(prev => new Set([...prev, item.id]));
-        }
-      }
-    }
-  };
-
   const handleCopy = async (item, e) => {
-    // 阻止事件冒泡，避免触发其他点击事件
     if (e) {
       e.stopPropagation();
     }
     try {
-      await invoke('copy_item', { item });
-      // 显示复制成功反馈
+      await copyItemToClipboard(item);
       setCopiedItemId(item.id);
-      setTimeout(() => setCopiedItemId(null), 1000); // 1秒后隐藏
+      setTimeout(() => setCopiedItemId(null), 1000);
       console.log('已复制到剪贴板');
     } catch (error) {
       console.error(t('error.copyFailed', { error }));
@@ -257,7 +126,7 @@ function App() {
 
     if (isImage) {
       // 图片双击打开预览
-      openImagePreview(item.image_paths);
+      openImagePreview(item.image_paths, t);
     } else {
       // 文本双击打开编辑弹窗
       openEditModal(item);
@@ -269,17 +138,14 @@ function App() {
       e.stopPropagation();
     }
     try {
-      // 如果当前是未置顶状态,检查置顶数量
       if (!item.is_pinned) {
         const pinnedCount = items.filter(i => i.is_pinned).length;
         if (pinnedCount >= 5) {
-          // 提示用户将自动取消最早的置顶项
           console.log(t('error.pinLimitReached'));
         }
       }
 
-      const newPinState = await invoke('toggle_pin_item', { id: item.id });
-      console.log(`置顶状态已切换: ${newPinState}`);
+      await invoke('toggle_pin_item', { id: item.id });
       await loadItems();
     } catch (error) {
       console.error(t('error.togglePinFailed', { error }));
@@ -302,107 +168,30 @@ function App() {
 
   // 删除功能已移除 - 剪贴板本身就是临时存储
 
-  // 打开编辑弹窗
-  const openEditModal = (item = null) => {
-    if (item) {
-      setEditModalMode('edit');
-      setEditingItem(item);
-    } else {
-      setEditModalMode('new');
-      setEditingItem(null);
-    }
-    setShowEditModal(true);
-  };
+  const {
+    showEditModal, editModalMode, editingItem,
+    openEditModal, handleEditModalSave, handleEditModalCancel,
+  } = useEditModal(loadItems, t);
 
-  // 保存编辑弹窗的内容
-  const handleEditModalSave = async (data) => {
-    try {
-      if (editModalMode === 'new') {
-        // 新建模式
-        await invoke('add_clipboard_item_manual', {
-          content: data.content,
-          contentType: 'text',
-          source: t('quickInput.source'),
-          autoFavorite: false
-        });
+  const {
+    editingNoteId, editNote, setEditNote,
+    startEditNote, saveNote, cancelNoteEdit,
+  } = useNoteEdit(loadItems, t);
 
-        // 如果有标签或备注，更新项目
-        if (data.tags.length > 0 || data.note) {
-          await loadItems();
-          const newItems = await invoke('get_recent_items', { limit: 100 });
-          const newItem = newItems[0];
-          if (newItem) {
-            const updatedItem = {
-              ...newItem,
-              user_note: data.note,
-              tags: JSON.stringify(data.tags),
-              updated_at: Math.floor(Date.now() / 1000)
-            };
-            await invoke('update_item', { item: updatedItem });
-          }
-        }
-      } else {
-        // 编辑模式
-        const updatedItem = {
-          ...editingItem,
-          content: data.content || editingItem.content,
-          user_note: data.note,
-          tags: JSON.stringify(data.tags),
-          updated_at: Math.floor(Date.now() / 1000)
-        };
-        await invoke('update_item', { item: updatedItem });
-      }
-
-      await loadItems();
-      setShowEditModal(false);
-      setEditingItem(null);
-    } catch (error) {
-      console.error(t('error.saveFailed', { error }));
-      alert(t('error.saveFailed', { error }));
-    }
-  };
-
-  // 取消编辑弹窗
-  const handleEditModalCancel = () => {
-    setShowEditModal(false);
-    setEditingItem(null);
-  };
+  const {
+    addingTagItemId, newTagInput, setNewTagInput,
+    startAddTag, cancelAddTag, addTagToItem, handleTagInputKeyDown,
+  } = useTagManagement(loadItems, t);
 
   const generateAITags = async (item) => {
-    console.log('generateAITags called for item:', item.id);
-
-    if (!item.content) {
-      console.log('No content, skipping');
-      return;
-    }
+    if (!item.content) return;
 
     setGeneratingAI(item.id);
     try {
-      console.log('Calling generate_ai_tags with content:', item.content.substring(0, 50));
-      const aiTags = await invoke('generate_ai_tags', { content: item.content });
-      console.log('AI tags received:', aiTags);
-
-      if (aiTags && aiTags.length > 0) {
-        // Add AI: prefix internally to distinguish AI-generated tags
-        const taggedAI = aiTags.map(tag => `AI:${tag}`);
-        const existingTags = getTags(item.tags);
-        const newTags = [...existingTags, ...taggedAI.filter(t => !existingTags.includes(t))];
-
-        console.log('Updating item with new tags:', newTags);
-        const updatedItem = {
-          ...item,
-          tags: JSON.stringify(newTags),
-          updated_at: Math.floor(Date.now() / 1000)
-        };
-        await invoke('update_item', { item: updatedItem });
-        await loadItems();
-        console.log('Tags updated successfully');
-      } else {
-        console.log('No AI tags generated or AI not enabled');
-      }
+      await generateAITagsForItem(item);
+      await loadItems();
     } catch (error) {
       console.error('AI 标签生成失败:', error);
-      // 静默处理失败,不弹出提示
     } finally {
       setGeneratingAI(null);
     }
@@ -411,103 +200,22 @@ function App() {
   const handleOCR = async (item) => {
     if (!item.image_paths) return;
 
-    console.log('=== OCR 识别开始 ===');
-    console.log('图片项目:', item.id);
-
     setOcrProcessing(item.id);
     try {
       const paths = JSON.parse(item.image_paths);
       const imagePath = paths.raw || paths.original;
 
-      console.log('图片路径:', imagePath);
-      console.log('📤 调用 OCR 识别...');
-
-      const ocrText = await invoke('recognize_and_update', {
+      await invoke('recognize_and_update', {
         itemId: item.id,
         imagePath: imagePath
       });
 
-      console.log('✅ OCR 识别成功');
-      console.log('识别结果:', ocrText);
       await loadItems();
     } catch (error) {
       console.error(t('error.ocrFailed', { error }));
       alert(t('error.ocrFailed', { error }));
     } finally {
       setOcrProcessing(null);
-      console.log('=== OCR 识别结束 ===');
-    }
-  };
-
-  // 备注编辑（行内编辑）
-  const startEditNote = (item) => {
-    setEditingNoteId(item.id);
-    setEditNote(item.user_note || '');
-  };
-
-  const saveNote = async (item) => {
-    try {
-      const updatedItem = {
-        ...item,
-        user_note: editNote,
-        updated_at: Math.floor(Date.now() / 1000)
-      };
-      await invoke('update_item', { item: updatedItem });
-      await loadItems();
-      setEditingNoteId(null);
-      setEditNote('');
-    } catch (error) {
-      console.error(t('error.saveFailed', { error }));
-      alert(t('error.saveFailed', { error }));
-    }
-  };
-
-  const cancelNoteEdit = () => {
-    setEditingNoteId(null);
-    setEditNote('');
-  };
-
-  // 标签添加（行内添加）
-  const startAddTag = (item, e) => {
-    if (e) e.stopPropagation();
-    setAddingTagItemId(item.id);
-    setNewTagInput('');
-  };
-
-  const cancelAddTag = () => {
-    setAddingTagItemId(null);
-    setNewTagInput('');
-  };
-
-  const addTagToItem = async (item, tagToAdd) => {
-    try {
-      const existingTags = getTags(item.tags);
-      // 避免重复添加
-      if (existingTags.includes(tagToAdd)) {
-        cancelAddTag();
-        return;
-      }
-
-      const newTags = [...existingTags, tagToAdd];
-      const updatedItem = {
-        ...item,
-        tags: JSON.stringify(newTags),
-        updated_at: Math.floor(Date.now() / 1000)
-      };
-      await invoke('update_item', { item: updatedItem });
-      await loadItems();
-      cancelAddTag();
-    } catch (error) {
-      console.error(t('error.addTagFailed', { error }));
-      alert(t('error.addTagFailed', { error }));
-    }
-  };
-
-  const handleTagInputKeyDown = (item, e) => {
-    if (e.key === 'Enter' && newTagInput.trim()) {
-      addTagToItem(item, newTagInput.trim());
-    } else if (e.key === 'Escape') {
-      cancelAddTag();
     }
   };
 
@@ -521,56 +229,9 @@ function App() {
       await loadItems();
     } catch (error) {
       console.error('切换收藏失败:', error);
-      alert('切换收藏失败: ' + error);
     }
   };
 
-  const formatDate = (timestamp) => {
-    // Convert seconds to milliseconds
-    const date = new Date(timestamp * 1000);
-    // 使用当前语言的本地化格式
-    return date.toLocaleString(i18n.language);
-  };
-
-  const getContentPreview = (content, maxLength = 100) => {
-    if (!content) return '';
-    return content;
-  };
-
-  const getFileList = (content) => {
-    if (!content) return [];
-    return content.split('\n').filter(p => p.trim());
-  };
-
-  const getFileName = (path) => {
-    return path.split(/[/\\]/).pop() || path;
-  };
-
-  const getImageThumbnail = (imagePathsStr) => {
-    if (!imagePathsStr) return '';
-    try {
-      const paths = JSON.parse(imagePathsStr);
-      const thumbnailPath = paths.thumbnail || paths.original;
-      const converted = convertFileSrc(thumbnailPath);
-      return converted;
-    } catch (e) {
-      console.error('Error parsing image paths:', e);
-      return convertFileSrc(imagePathsStr);
-    }
-  };
-
-  const getImageOriginal = (imagePathsStr) => {
-    if (!imagePathsStr) return '';
-    try {
-      const paths = JSON.parse(imagePathsStr);
-      const originalPath = paths.original || paths.raw || paths.thumbnail;
-      const converted = convertFileSrc(originalPath);
-      return converted;
-    } catch (e) {
-      console.error('Error parsing image paths:', e);
-      return convertFileSrc(imagePathsStr);
-    }
-  };
 
   const toggleExpand = (itemId, e) => {
     if (e) {
@@ -599,29 +260,6 @@ function App() {
     setTimeout(() => document.body.removeChild(dragEl), 0);
   };
 
-  const getTags = (tagsStr) => {
-    if (!tagsStr) return [];
-    try {
-      return JSON.parse(tagsStr);
-    } catch {
-      return [];
-    }
-  };
-
-  const getSourceApp = (metadataStr) => {
-    if (!metadataStr) return 'Unknown';
-    try {
-      const metadata = JSON.parse(metadataStr);
-      let appName = metadata.source_app || 'Unknown';
-      // 去掉 .exe 后缀
-      if (appName.toLowerCase().endsWith('.exe')) {
-        appName = appName.slice(0, -4);
-      }
-      return appName;
-    } catch {
-      return 'Unknown';
-    }
-  };
 
   // 获取所有唯一标签（包括来源标签和类型标签）- 使用 useMemo 缓存
   const allTags = useMemo(() => {
@@ -699,30 +337,6 @@ function App() {
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
 
-  // 点击标签进行筛选
-  const handleTagClick = (tag, e) => {
-    e.stopPropagation();
-
-    // 判断是否已选中
-    const isSelected = selectedTags.includes(tag);
-
-    if (isSelected) {
-      // 取消选中
-      setSelectedTags(prev => prev.filter(t => t !== tag));
-    } else {
-      // 添加选中
-      setSelectedTags(prev => [...prev, tag]);
-    }
-  };
-
-  const toggleTagFilter = (tag) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       // 收藏筛选（优先级最高）
@@ -787,32 +401,10 @@ function App() {
     });
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  // 虚拟滚动：监听滚动事件，动态更新可见范围
-  useEffect(() => {
-    const contentElement = contentRef.current;
-    if (!contentElement) return;
-
-    const handleScroll = () => {
-      const scrollTop = contentElement.scrollTop;
-      const itemHeight = 150; // 估算每个项目的平均高度
-      const visibleCount = Math.ceil(contentElement.clientHeight / itemHeight);
-      const start = Math.max(0, Math.floor(scrollTop / itemHeight) - 5); // 提前渲染5个
-      const end = Math.min(filteredItems.length, start + visibleCount + 10); // 多渲染10个
-
-      setVisibleRange({ start, end });
-    };
-
-    contentElement.addEventListener('scroll', handleScroll);
-    handleScroll(); // 初始化
-
-    return () => {
-      contentElement.removeEventListener('scroll', handleScroll);
-    };
-  }, [filteredItems.length]);
+  const visibleRange = useVirtualScroll(contentRef, filteredItems.length);
 
   // 可见的项目列表
   const visibleItems = useMemo(() => {
-    // 如果项目少于30个，不使用虚拟滚动
     if (filteredItems.length < 30) return filteredItems;
     return filteredItems.slice(visibleRange.start, visibleRange.end);
   }, [filteredItems, visibleRange]);
@@ -822,7 +414,6 @@ function App() {
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <DragDrop onItemAdded={loadItems} />
 
-      {/* 编辑弹窗 */}
       {showEditModal && (
         <EditModal
           item={editingItem}
@@ -832,216 +423,30 @@ function App() {
         />
       )}
 
-      {/* 自定义标题栏 */}
-      <div className="titlebar">
-        <div data-tauri-drag-region className="titlebar-drag-area">
-          <div className="titlebar-title">{t('app.title')}</div>
-        </div>
-        <div className="titlebar-buttons">
-          <button
-            onClick={() => openEditModal()}
-            className="titlebar-btn quick-add-btn"
-            title={t('titlebar.quickAdd')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </button>
-          <button
-            onClick={toggleWindowAlwaysOnTop}
-            className={`titlebar-btn pin-btn ${isAlwaysOnTop ? 'active' : ''}`}
-            title={isAlwaysOnTop ? t('titlebar.unpin') : t('titlebar.pin')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2V8M4 5L7 8L10 5M7 8V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          <button
-            onClick={async () => {
-              const appWindow = getCurrentWindow();
-              await appWindow.minimize();
-            }}
-            className="titlebar-btn minimize-btn"
-            title={t('titlebar.minimize')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 7H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-          <button
-            onClick={async () => {
-              const appWindow = getCurrentWindow();
-              await appWindow.toggleMaximize();
-            }}
-            className="titlebar-btn maximize-btn"
-            title={t('titlebar.maximize')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <rect x="2" y="2" width="10" height="10" stroke="currentColor" strokeWidth="1.5" rx="1"/>
-            </svg>
-          </button>
-          <button
-            onClick={async () => {
-              const appWindow = getCurrentWindow();
-              await appWindow.close();
-            }}
-            className="titlebar-btn close-btn"
-            title={t('titlebar.close')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <TitleBar
+        isAlwaysOnTop={isAlwaysOnTop}
+        onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
+        onOpenQuickInput={() => openEditModal()}
+      />
 
-      <header className="header">
-        <div className="search-box">
-          <input
-            type="text"
-            placeholder={t('search.placeholder')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="clear-search">
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* 标签筛选状态提示 */}
-        {selectedTags.length > 0 && (
-          <div className="filter-status">
-            <span className="filter-status-text">
-              {t('toolbar.filteringBy', { count: selectedTags.length })}
-            </span>
-            <button
-              onClick={() => setSelectedTags([])}
-              className="clear-filter-btn"
-              title={t('toolbar.clearAll')}
-            >
-              ✕ {t('toolbar.clearFilter')}
-            </button>
-          </div>
-        )}
-
-        {/* 类型筛选 - 单选，大屏显示 */}
-        <div className="type-filter-group">
-          <button
-            onClick={() => setSelectedType('all')}
-            className={`type-filter-btn ${selectedType === 'all' ? 'active' : ''}`}
-          >
-            {t('search.typeFilter.all')}
-          </button>
-          <button
-            onClick={() => setSelectedType('text')}
-            className={`type-filter-btn ${selectedType === 'text' ? 'active' : ''}`}
-          >
-            📝 {t('search.typeFilter.text')}
-          </button>
-          <button
-            onClick={() => setSelectedType('image')}
-            className={`type-filter-btn ${selectedType === 'image' ? 'active' : ''}`}
-          >
-            🖼️ {t('search.typeFilter.image')}
-          </button>
-          <button
-            onClick={() => setSelectedType('file')}
-            className={`type-filter-btn ${selectedType === 'file' ? 'active' : ''}`}
-          >
-            📁 {t('search.typeFilter.file')}
-          </button>
-          <button
-            onClick={() => setSelectedType('link')}
-            className={`type-filter-btn ${selectedType === 'link' ? 'active' : ''}`}
-          >
-            🔗 {t('search.typeFilter.link')}
-          </button>
-        </div>
-
-        {/* 收藏筛选按钮 */}
-        <button
-          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className={`favorites-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
-          title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
-        >
-          ⭐
-        </button>
-
-        {allTags.length > 0 && (
-          <div className="tag-select-wrapper">
-            <button
-              onClick={() => setShowTagFilter(!showTagFilter)}
-              className={`tag-select-btn ${selectedTags.length > 0 ? 'has-selection' : ''}`}
-            >
-              <span className="tag-icon">🏷️</span>
-              <span className="tag-label">
-                {selectedTags.length > 0 ? t('toolbar.selectedTags', { count: selectedTags.length }) : t('toolbar.filterTags')}
-              </span>
-              <span className="dropdown-arrow">{showTagFilter ? '▲' : '▼'}</span>
-            </button>
-            {showTagFilter && (
-              <div className="tag-dropdown">
-                <div className="tag-dropdown-search">
-                  <input
-                    type="text"
-                    placeholder={t('toolbar.searchTags')}
-                    value={tagSearchQuery}
-                    onChange={(e) => setTagSearchQuery(e.target.value)}
-                    className="tag-search-input"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="tag-dropdown-list">
-                  {filteredTagsList.length > 0 ? (
-                    filteredTagsList.map(tag => {
-                      const isAITag = tag.startsWith('AI:');
-                      const isSourceTag = tag.startsWith('来源:');
-                      const isTypeTag = tag.startsWith('类型:');
-                      const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
-                      // 显示标签：AI标签去掉"AI:"，来源标签去掉"来源:"，类型标签去掉"类型:"
-                      const displayTag = isAITag ? tag.substring(3) :
-                                        isSourceTag ? tag.substring(3) :
-                                        isTypeTag ? tag.substring(3) :
-                                        tag;
-                      return (
-                        <div
-                          key={tag}
-                          onClick={() => toggleTagFilter(tag)}
-                          className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                        >
-                          <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
-                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
-                            {isTypeTag && <span className="type-badge">T</span>}
-                            {isAITag && <span className="ai-badge">AI</span>}
-                            {isUserTag && <span className="user-badge">M</span>}
-                            {isSourceTag && <span className="source-badge">S</span>}
-                            {displayTag}
-                          </span>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
-                  )}
-                </div>
-                {selectedTags.length > 0 && (
-                  <div className="tag-dropdown-footer">
-                    <button onClick={() => setSelectedTags([])} className="clear-selection-btn">
-                      {t('toolbar.clearAll')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        <button onClick={() => setShowSettings(true)} className="settings-btn">
-          ⚙️
-        </button>
-      </header>
+      <SearchBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedType={selectedType}
+        onTypeChange={setSelectedType}
+        showFavoritesOnly={showFavoritesOnly}
+        onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
+        selectedTags={selectedTags}
+        onClearTags={() => setSelectedTags([])}
+        showTagFilter={showTagFilter}
+        onToggleTagFilter={() => setShowTagFilter(!showTagFilter)}
+        allTags={allTags}
+        filteredTagsList={filteredTagsList}
+        tagSearchQuery={tagSearchQuery}
+        onTagSearchChange={setTagSearchQuery}
+        onToggleTag={toggleTagFilter}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
       <div className="content" ref={contentRef}>
         {filteredItems.length === 0 ? (
@@ -1051,305 +456,39 @@ function App() {
         ) : (
           <div className="items-list">
             {visibleItems.map((item) => (
-              <div
+              <ItemCard
                 key={item.id}
-                className="item-card"
-                title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}
-              >
-                {/* Tags display - 顺序：类型、人工标签、来源标签、AI标签 */}
-                <div className="item-tags">
-                  {/* 类型标签 */}
-                  {item.type_ && (() => {
-                    const typeMap = {
-                      'text': '类型:文本',
-                      'image': '类型:图片',
-                      'file': '类型:文件',
-                      'link': '类型:链接'
-                    };
-                    const typeTag = typeMap[item.type_];
-                    const displayName = t(`search.typeFilter.${item.type_}`);
-                    return (
-                      <span
-                        className={`tag type-tag ${selectedTags.includes(typeTag) ? 'selected' : ''}`}
-                        onClick={(e) => handleTagClick(typeTag, e)}
-                        title={t('item.clickToFilterType')}
-                      >
-                        {displayName}
-                      </span>
-                    );
-                  })()}
-                  {/* 用户标签（人工标签） */}
-                  {getTags(item.tags).filter(tag => !tag.startsWith('AI:')).map((tag, idx) => (
-                    <span
-                      key={`user-${idx}`}
-                      className={`tag user-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                      onClick={(e) => handleTagClick(tag, e)}
-                      title={t('item.clickToFilter')}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                  {/* 来源标签 */}
-                  {getSourceApp(item.metadata) !== 'Unknown' && (() => {
-                    const sourceTag = `来源:${getSourceApp(item.metadata)}`;
-                    return (
-                      <span
-                        className={`tag source-tag ${selectedTags.includes(sourceTag) ? 'selected' : ''}`}
-                        onClick={(e) => handleTagClick(sourceTag, e)}
-                        title={t('item.clickToFilterSource')}
-                      >
-                        {getSourceApp(item.metadata)}
-                      </span>
-                    );
-                  })()}
-                  {/* AI标签 */}
-                  {getTags(item.tags).filter(tag => tag.startsWith('AI:')).map((tag, idx) => {
-                    const displayTag = tag.substring(3);
-                    return (
-                      <span
-                        key={`ai-${idx}`}
-                        className={`tag ai-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                        onClick={(e) => handleTagClick(tag, e)}
-                        title={t('item.clickToFilterAI')}
-                      >
-                        {displayTag}
-                      </span>
-                    );
-                  })}
-
-                  {/* 添加标签按钮/输入框 */}
-                  {addingTagItemId === item.id ? (
-                    <div className="add-tag-input-wrapper">
-                      <input
-                        type="text"
-                        value={newTagInput}
-                        onChange={(e) => setNewTagInput(e.target.value)}
-                        onKeyDown={(e) => handleTagInputKeyDown(item, e)}
-                        placeholder={t('edit.enterTag')}
-                        className="add-tag-input"
-                        autoFocus
-                        onBlur={() => {
-                          // 延迟关闭，让点击建议有时间触发
-                          setTimeout(() => cancelAddTag(), 200);
-                        }}
-                      />
-                      {/* 标签建议下拉 - 改进：始终显示（如果有标签） */}
-                      {filteredUserTags.length > 0 && (
-                        <div className="tag-suggestions">
-                          {filteredUserTags.slice(0, 8).map((tag, idx) => (
-                            <div
-                              key={idx}
-                              className="tag-suggestion-item"
-                              onMouseDown={(e) => {
-                                e.preventDefault(); // 防止失焦
-                                addTagToItem(item, tag);
-                              }}
-                            >
-                              {tag}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      className="add-tag-btn"
-                      onClick={(e) => startAddTag(item, e)}
-                      title={t('item.addTag')}
-                    >
-                      +
-                    </button>
-                  )}
-                </div>
-
-                {/* 备注显示/编辑 */}
-                {editingNoteId === item.id ? (
-                  <div className="note-edit-bar">
-                    <span className="note-icon">📝</span>
-                    <textarea
-                      value={editNote}
-                      onChange={(e) => setEditNote(e.target.value)}
-                      className="note-edit-input"
-                      rows={1}
-                      placeholder={t('edit.notePlaceholder')}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && e.ctrlKey) {
-                          saveNote(item);
-                        } else if (e.key === 'Escape') {
-                          cancelNoteEdit();
-                        }
-                      }}
-                    />
-                    <button onClick={() => saveNote(item)} className="note-btn-save" title={t('item.saveNote')}>✓</button>
-                    <button onClick={cancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>✕</button>
-                  </div>
-                ) : item.user_note ? (
-                  <div
-                    className="note-display-bar"
-                    onClick={() => startEditNote(item)}
-                    title={t('item.clickToEditNote')}
-                  >
-                    <span className="note-text">{item.user_note}</span>
-                  </div>
-                ) : null}
-
-                {/* 工具栏 - 统一操作按钮 */}
-                <div className="item-toolbar">
-                  {/* 拖出按钮 */}
-                  <span
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(item, e)}
-                    className="toolbar-btn drag-handle"
-                    title={t('toolbar.dragToApp')}
-                  >
-                    <span className="toolbar-btn-icon">⠿</span>
-                    <span>{t('toolbar.dragOut')}</span>
-                  </span>
-
-                  <div className="toolbar-divider"></div>
-
-                  {/* 置顶按钮 */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      togglePin(item, e);
-                    }}
-                    className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-                    title={item.is_pinned ? t('item.unpin') : t('item.pin')}
-                  >
-                    <span className="toolbar-btn-icon">📌</span>
-                    <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
-                  </button>
-
-                  {/* 收藏按钮 */}
-                  <div className="toolbar-divider"></div>
-                  <button
-                    onClick={(e) => toggleFavorite(item, e)}
-                    className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
-                    title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
-                  >
-                    <span className="toolbar-btn-icon">{item.is_favorite ? '⭐' : '☆'}</span>
-                    <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-                  </button>
-
-                  {/* AI标签按钮 - 仅文本类型 */}
-                  {item.type_ === 'text' && item.content && (
-                    <>
-                      <div className="toolbar-divider"></div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          generateAITags(item);
-                        }}
-                        disabled={generatingAI === item.id}
-                        className="toolbar-btn ai-btn"
-                        title={generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
-                      >
-                        <span className="toolbar-btn-icon">
-                          {generatingAI === item.id ? '⏳' : '✨'}
-                        </span>
-                        <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
-                      </button>
-                    </>
-                  )}
-
-                  {/* OCR按钮 - 仅图片类型 */}
-                  {item.type_ === 'image' && !item.ocr_text && (
-                    <>
-                      <div className="toolbar-divider"></div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOCR(item);
-                        }}
-                        disabled={ocrProcessing === item.id}
-                        className="toolbar-btn ocr-btn"
-                        title={ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
-                      >
-                        <span className="toolbar-btn-icon">
-                          {ocrProcessing === item.id ? '⏳' : '🔍'}
-                        </span>
-                        <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
-                      </button>
-                    </>
-                  )}
-
-                  {/* 备注按钮 */}
-                  <div className="toolbar-divider"></div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startEditNote(item);
-                    }}
-                    className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
-                    title={item.user_note ? t('item.editNote') : t('item.addNote')}
-                  >
-                    <span className="toolbar-btn-icon">📝</span>
-                    <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
-                  </button>
-
-                  {/* 展开按钮 */}
-                  <div className="toolbar-divider"></div>
-                  <button
-                    onClick={(e) => toggleExpand(item.id, e)}
-                    className={`toolbar-btn expand-btn ${expandedItemId === item.id ? 'active' : ''}`}
-                    title={expandedItemId === item.id ? t('item.collapse') : t('item.expandAll')}
-                  >
-                    <span className="toolbar-btn-icon">{expandedItemId === item.id ? '▲' : '▼'}</span>
-                    <span>{expandedItemId === item.id ? t('item.collapse') : t('item.expand')}</span>
-                  </button>
-                </div>
-
-                {/* 内容区域 */}
-                <div
-                  className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''} ${copiedItemId === item.id ? 'copied' : ''}`}
-                  onClick={(e) => handleContentClick(item, e)}
-                  onDoubleClick={(e) => handleContentDoubleClick(item, e, item.type_ === 'image')}
-                >
-                  {/* Hover提示 */}
-                  <div className="content-hover-tip">
-                    <div className="hover-actions">{t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}</div>
-                  </div>
-
-                  {/* 复制成功反馈 */}
-                  {copiedItemId === item.id && (
-                    <div className="copy-success-toast">
-                      ✓ {t('item.copied')}
-                    </div>
-                  )}
-
-                  {item.type_ === 'image' && item.image_paths ? (
-                    <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>
-                      <div className="image-container">
-                        <img
-                          src={expandedItemId === item.id ? getImageOriginal(item.image_paths) : getImageThumbnail(item.image_paths)}
-                          alt="Clipboard image"
-                          className="clipboard-image"
-                          loading="lazy"
-                        />
-                      </div>
-                      {item.ocr_text && (
-                        <div className="ocr-text-container">
-                          <div className="ocr-text-header">{t('item.recognizedText')}</div>
-                          <div className="ocr-text-content">{item.ocr_text}</div>
-                        </div>
-                      )}
-                    </div>
-                  ) : item.type_ === 'file' ? (
-                    <div className="file-list">
-                      {getFileList(item.content).map((path, idx) => (
-                        <div key={idx} className="file-item">
-                          <span className="file-icon">📄</span>
-                          <span className="file-name">{getFileName(path)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    getContentPreview(item.content)
-                  )}
-                </div>
-              </div>
+                item={item}
+                expandedItemId={expandedItemId}
+                copiedItemId={copiedItemId}
+                selectedTags={selectedTags}
+                addingTagItemId={addingTagItemId}
+                newTagInput={newTagInput}
+                onNewTagInputChange={setNewTagInput}
+                onTagInputKeyDown={handleTagInputKeyDown}
+                onStartAddTag={startAddTag}
+                onCancelAddTag={cancelAddTag}
+                onAddTagToItem={addTagToItem}
+                filteredUserTags={filteredUserTags}
+                onTagClick={handleTagClick}
+                editingNoteId={editingNoteId}
+                editNote={editNote}
+                onEditNoteChange={setEditNote}
+                onStartEditNote={startEditNote}
+                onSaveNote={saveNote}
+                onCancelNoteEdit={cancelNoteEdit}
+                onDragStart={handleDragStart}
+                onTogglePin={togglePin}
+                onToggleFavorite={toggleFavorite}
+                onGenerateAITags={generateAITags}
+                generatingAI={generatingAI}
+                onHandleOCR={handleOCR}
+                ocrProcessing={ocrProcessing}
+                onToggleExpand={toggleExpand}
+                onContentClick={handleContentClick}
+                onContentDoubleClick={handleContentDoubleClick}
+                language={i18n.language}
+              />
             ))}
           </div>
         )}

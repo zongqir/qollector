@@ -1,0 +1,158 @@
+.header {
+  padding: 16px 24px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  min-width: 200px;
+}
+
+/* 类型筛选组 - 胶囊式单选 */
+.type-filter-group {
+  display: flex;
+  gap: 0;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.type-filter-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-filter-btn:hover:not(.active) {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+}
+
+.type-filter-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+/* 小屏隐藏类型筛选 */
+@media (max-width: 900px) {
+  .type-filter-group {
+    display: none;
+  }
+}
+
+/* 收藏筛选按钮 */
+.favorites-filter-btn {
+  padding: 8px 14px;
+  background: white;
+  color: #666;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.favorites-filter-btn:hover {
+  border-color: #ffa726;
+  background: #fff9e6;
+}
+
+.favorites-filter-btn.active {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+  color: white;
+  border-color: #ffa726;
+  box-shadow: 0 2px 8px rgba(255, 167, 38, 0.3);
+}
+
+
+.settings-btn {
+  padding: 8px 14px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+/* SEARCH_BAR_CONTINUED */
+
+/* 移除旧的窗口置顶按钮样式 */
+
+/* 窗口较窄时隐藏设置按钮 */
+@media (max-width: 768px) {
+  .settings-btn {
+    display: none;
+  }
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 40px 10px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e0e0e0;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.clear-search:hover {
+  background: #d0d0d0;
+  color: #333;
+}

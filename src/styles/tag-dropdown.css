@@ -1,0 +1,339 @@
+/* 标签下拉选择器样式 */
+.tag-select-wrapper {
+  position: relative;
+}
+
+.tag-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  color: #666;
+  font-weight: 500;
+}
+
+.tag-select-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.tag-select-btn.has-selection {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+}
+
+.tag-icon {
+  font-size: 16px;
+}
+
+.tag-label {
+  white-space: nowrap;
+}
+
+/* 窗口较窄时隐藏标签文字 */
+@media (max-width: 768px) {
+  .tag-label {
+    display: none;
+  }
+
+  .tag-select-btn {
+    min-width: 40px;
+    justify-content: center;
+  }
+
+  .tag-dropdown {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .tag-dropdown-list {
+    max-height: 240px;
+  }
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.tag-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 280px;
+  max-width: 350px;
+  overflow: hidden;
+  z-index: 10000;
+  animation: dropdownSlide 0.2s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tag-dropdown-search {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #e8e8e8;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.tag-dropdown-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.tag-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.tag-dropdown-item.selected {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+}
+
+.tag-check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: white;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.tag-dropdown-item.selected .tag-check {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+}
+
+.tag-text {
+  font-size: 13px;
+  color: #333;
+  flex: 1;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* AI标签文本样式 */
+.tag-text.ai-tag-text {
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* 用户标签文本样式 */
+.tag-text.user-tag-text {
+  color: #1976d2;
+  font-weight: 500;
+}
+
+/* 来源标签文本样式 */
+.tag-text.source-tag-text {
+  color: #f57c00;
+  font-weight: 500;
+}
+
+/* 类型标签文本样式 */
+.tag-text.type-tag-text {
+  color: #00897b;
+  font-weight: 500;
+}
+
+/* 标签类型图标 */
+.tag-icon {
+  font-size: 10px;
+  margin-right: 2px;
+  opacity: 0.9;
+}
+
+/* AI徽章 - 紫色渐变 */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+/* 用户标签徽章 - 蓝色渐变 */
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+/* 来源标签徽章 - 橙色渐变 */
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+/* 类型标签徽章 - 青色渐变 */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  background: linear-gradient(135deg, #00bcd4, #00897b);
+  color: white;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+}
+
+.tag-dropdown-empty {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
+.tag-dropdown-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.clear-selection-btn {
+  width: 100%;
+  padding: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.clear-selection-btn:hover {
+  background: #ff9800;
+  color: white;
+  border-color: #ff9800;
+}
+
+/* 筛选状态提示 */
+.filter-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  animation: filterStatusSlide 0.3s ease-out;
+  flex-shrink: 0;
+}
+
+@keyframes filterStatusSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-status-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clear-filter-btn {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.clear-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}

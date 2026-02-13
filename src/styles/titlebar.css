@@ -1,0 +1,114 @@
+/* 自定义标题栏 */
+.titlebar {
+  height: 32px;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e5e5;
+  user-select: none;
+}
+
+.titlebar-drag-area {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+}
+
+.titlebar-title {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.titlebar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.titlebar-btn svg {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.titlebar-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.titlebar-btn:active {
+  transform: scale(0.95);
+}
+
+/* 关闭按钮 */
+.titlebar-btn.close-btn:hover {
+  background: #e81123;
+  color: white;
+}
+
+/* 置顶按钮 */
+.titlebar-btn.pin-btn {
+  color: #666;
+}
+
+.titlebar-btn.pin-btn:hover {
+  background: rgba(255, 152, 0, 0.1);
+  color: #ff9800;
+}
+
+.titlebar-btn.pin-btn.active {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.15);
+}
+
+.titlebar-btn.pin-btn.active svg {
+  transform: rotate(180deg);
+}
+
+.titlebar-btn.pin-btn.active:hover {
+  background: rgba(255, 152, 0, 0.2);
+}
+
+/* 最小化按钮 */
+.titlebar-btn.minimize-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+/* 最大化按钮 */
+.titlebar-btn.maximize-btn:hover {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+/* 快速添加按钮 */
+.titlebar-btn.quick-add-btn {
+  color: #667eea;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.titlebar-btn.quick-add-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  transform: scale(1.1) rotate(90deg);
+}
+
+.titlebar-btn.quick-add-btn:active {
+  transform: scale(0.95) rotate(90deg);
+}

@@ -1,0 +1,230 @@
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
+  align-items: center;
+}
+
+/* 添加标签按钮 - 改进UI */
+.add-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e0e0e0;
+  background: linear-gradient(135deg, #ffffff, #f8f9ff);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #667eea;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  line-height: 1;
+  padding: 0;
+}
+
+.add-tag-btn:hover {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.add-tag-btn:active {
+  transform: scale(0.95) rotate(90deg);
+}
+
+/* 添加标签输入框容器 */
+.add-tag-input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.add-tag-input {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  background: white;
+}
+
+/* 标签建议下拉 - 改进样式 */
+.tag-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  min-width: 160px;
+  animation: suggestionsSlideIn 0.2s ease-out;
+}
+
+@keyframes suggestionsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tag-suggestion-item {
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  font-weight: 500;
+}
+
+.tag-suggestion-item:hover {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.05));
+  border-left-color: #667eea;
+  color: #667eea;
+  padding-left: 18px;
+}
+
+/* TAGS_CONTINUED */
+
+.tag-suggestion-item:first-child {
+  border-radius: 6px 6px 0 0;
+}
+
+.tag-suggestion-item:last-child {
+  border-radius: 0 0 6px 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 标签选中状态 */
+.tag.selected {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+}
+
+/* AI标签样式 - 紫色渐变 */
+.tag.ai-tag {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.tag.ai-tag:hover {
+  background: linear-gradient(135deg, #667eea25, #764ba225);
+  border-color: #5568d3;
+}
+
+.tag.ai-tag.selected {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+  color: white;
+}
+
+/* TAGS_CONTINUED_2 */
+
+/* 用户标签样式 - 蓝色清新 */
+.tag.user-tag {
+  background: linear-gradient(135deg, #2196f315, #1976d215);
+  border-color: #2196f3;
+  color: #1976d2;
+}
+
+.tag.user-tag:hover {
+  background: linear-gradient(135deg, #2196f325, #1976d225);
+  border-color: #1565c0;
+}
+
+.tag.user-tag.selected {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  border-color: #2196f3;
+  color: white;
+}
+
+/* 来源标签样式 - 橙色温暖 */
+.tag.source-tag {
+  background: linear-gradient(135deg, #ff980015, #f57c0015);
+  border-color: #ff9800;
+  color: #f57c00;
+}
+
+.tag.source-tag:hover {
+  background: linear-gradient(135deg, #ff980025, #f57c0025);
+  border-color: #f57c00;
+}
+
+.tag.source-tag.selected {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  color: white;
+}
+
+/* 类型标签样式 - 青色清新 */
+.tag.type-tag {
+  background: linear-gradient(135deg, #00bcd415, #00897b15);
+  border-color: #00bcd4;
+  color: #00897b;
+}
+
+.tag.type-tag:hover {
+  background: linear-gradient(135deg, #00bcd425, #00897b25);
+  border-color: #00897b;
+}
+
+/* TAGS_CONTINUED_3 */
+
+.tag.type-tag.selected {
+  background: linear-gradient(135deg, #00bcd4, #00897b);
+  border-color: #00bcd4;
+  color: white;
+}
+
+.tag.editable {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding-right: 6px;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  margin-left: 2px;
+  line-height: 1;
+}
+
+.tag-remove:hover {
+  color: #d32f2f;
+}
+
+/* 移除旧的备注样式 */

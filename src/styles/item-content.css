@@ -1,0 +1,104 @@
+.item-content {
+  margin: 10px 0 0 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 80px;
+  overflow: hidden;
+  position: relative;
+  transition: max-height 0.3s ease-out;
+  border: none;
+  will-change: max-height; /* 优化展开动画 */
+}
+
+.item-content.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+/* 展开状态 */
+.item-content.expanded {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* 复制成功状态 */
+.item-content.copied {
+  animation: copyFlash 0.6s ease-out;
+}
+
+@keyframes copyFlash {
+  0% { background: transparent; }
+  50% { background: rgba(76, 175, 80, 0.15); }
+  100% { background: transparent; }
+}
+
+/* 复制成功提示 */
+.copy-success-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(76, 175, 80, 0.95);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  z-index: 100;
+  pointer-events: none;
+  animation: toastFadeIn 0.3s ease-out;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.item-content.clickable:active {
+  transform: none;
+  background: transparent;
+}
+
+/* Hover提示 - 简化 */
+.content-hover-tip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hover-actions {
+  font-size: 10px;
+  color: #999;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.item-card:hover .content-hover-tip {
+  opacity: 1;
+}
+
+/* 展开按钮激活状态 */
+.toolbar-btn.expand-btn.active {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  color: #1976d2;
+}
