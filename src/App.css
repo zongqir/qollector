@@ -362,6 +362,36 @@ body {
   }
 }
 
+/* 收藏筛选按钮 */
+.favorites-filter-btn {
+  padding: 8px 14px;
+  background: white;
+  color: #666;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.favorites-filter-btn:hover {
+  border-color: #ffa726;
+  background: #fff9e6;
+}
+
+.favorites-filter-btn.active {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+  color: white;
+  border-color: #ffa726;
+  box-shadow: 0 2px 8px rgba(255, 167, 38, 0.3);
+}
+
+
 .settings-btn {
   padding: 8px 14px;
   background: white;
@@ -897,6 +927,36 @@ body {
   border-color: #ffc107;
   color: white;
 }
+
+/* 收藏按钮 */
+.toolbar-btn.favorite-btn {
+  background: white;
+  border-color: #e8e8e8;
+  color: #999;
+}
+
+.toolbar-btn.favorite-btn:hover:not(:disabled) {
+  background: #fff9e6;
+  border-color: #ffa726;
+  color: #f57c00;
+}
+
+.toolbar-btn.favorite-btn.active {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+  border-color: #ffa726;
+  color: white;
+}
+
+.toolbar-btn.favorite-btn.active .toolbar-btn-icon {
+  animation: starPulse 0.5s ease-out;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
 
 /* 工具栏分隔符 */
 .toolbar-divider {

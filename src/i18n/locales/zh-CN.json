@@ -35,7 +35,10 @@
     "selectedTags": "已选 {{count}} 个标签",
     "filterTags": "筛选标签",
     "dragToApp": "拖拽到其他应用",
-    "dragOut": "拖出"
+    "dragOut": "拖出",
+    "favorites": "收藏",
+    "showFavorites": "显示收藏",
+    "showAll": "显示全部"
   },
   "item": {
     "pinned": "已置顶",
@@ -71,7 +74,10 @@
     "recognizeText": "识别图片文字",
     "expandAll": "展开全部",
     "saveNote": "保存 (Ctrl+Enter)",
-    "cancelNote": "取消 (Esc)"
+    "cancelNote": "取消 (Esc)",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "favorited": "已收藏"
   },
   "edit": {
     "content": "内容:",

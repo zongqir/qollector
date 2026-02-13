@@ -35,7 +35,10 @@
     "selectedTags": "{{count}} tags selected",
     "filterTags": "Filter Tags",
     "dragToApp": "Drag to other apps",
-    "dragOut": "Drag"
+    "dragOut": "Drag",
+    "favorites": "Favorites",
+    "showFavorites": "Show Favorites",
+    "showAll": "Show All"
   },
   "item": {
     "pinned": "Pinned",
@@ -71,7 +74,10 @@
     "recognizeText": "Recognize image text",
     "expandAll": "Expand all",
     "saveNote": "Save (Ctrl+Enter)",
-    "cancelNote": "Cancel (Esc)"
+    "cancelNote": "Cancel (Esc)",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "favorited": "Favorited"
   },
   "edit": {
     "content": "Content:",

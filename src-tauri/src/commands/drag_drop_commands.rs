@@ -12,6 +12,7 @@ pub async fn add_clipboard_item_manual(
     content_type: String,
     content: String,
     source: Option<String>,
+    auto_favorite: Option<bool>,
 ) -> Result<String, String> {
     println!("手动添加剪贴板项: type={}, content_len={}", content_type, content.len());
 
@@ -24,7 +25,7 @@ pub async fn add_clipboard_item_manual(
         source_url: None,
     };
 
-    let item = match content_type.as_str() {
+    let mut item = match content_type.as_str() {
         "text" => {
             if content.trim().is_empty() {
                 return Err("文本内容为空".to_string());
@@ -108,6 +109,11 @@ pub async fn add_clipboard_item_manual(
             return Err(format!("不支持的内容类型: {}", content_type));
         }
     };
+
+    // 如果指定了自动收藏，设置收藏状态
+    if auto_favorite.unwrap_or(false) {
+        item.is_favorite = true;
+    }
 
     // 保存到数据库
     manager.insert_item(&item)

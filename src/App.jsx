@@ -37,6 +37,7 @@ function App() {
   const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
   const [showQuickInput, setShowQuickInput] = useState(false); // 快速输入弹窗
   const [quickInputText, setQuickInputText] = useState(''); // 快速输入内容
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false); // 是否只显示收藏
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
@@ -520,10 +521,13 @@ function App() {
       await invoke('add_clipboard_item_manual', {
         content: quickInputText,
         contentType: 'text',
-        source: t('quickInput.source')
+        source: t('quickInput.source'),
+        autoFavorite: true  // 快速输入自动收藏
       });
       await loadItems();
       closeQuickInput();
+      // 自动切换到收藏视图
+      setShowFavoritesOnly(true);
     } catch (error) {
       console.error(t('quickInput.failed', { error }));
       alert(t('quickInput.failed', { error }));
@@ -538,6 +542,20 @@ function App() {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       closeQuickInput();
+    }
+  };
+
+  // 切换收藏状态
+  const toggleFavorite = async (item, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    try {
+      await invoke('toggle_favorite_item', { id: item.id });
+      await loadItems();
+    } catch (error) {
+      console.error('切换收藏失败:', error);
+      alert('切换收藏失败: ' + error);
     }
   };
 
@@ -741,7 +759,12 @@ function App() {
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      // 独立类型筛选（优先级最高）
+      // 收藏筛选（优先级最高）
+      if (showFavoritesOnly && !item.is_favorite) {
+        return false;
+      }
+
+      // 独立类型筛选
       if (selectedType !== 'all' && item.type_ !== selectedType) {
         return false;
       }
@@ -796,7 +819,7 @@ function App() {
 
       return false;
     });
-  }, [items, selectedTags, selectedType, debouncedSearchQuery]);
+  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
   // 虚拟滚动：监听滚动事件，动态更新可见范围
   useEffect(() => {
@@ -994,6 +1017,15 @@ function App() {
             🔗 {t('search.typeFilter.link')}
           </button>
         </div>
+
+        {/* 收藏筛选按钮 */}
+        <button
+          onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+          className={`favorites-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
+          title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+        >
+          ⭐
+        </button>
 
         {allTags.length > 0 && (
           <div className="tag-select-wrapper">
@@ -1246,6 +1278,17 @@ function App() {
                   >
                     <span className="toolbar-btn-icon">📌</span>
                     <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
+                  </button>
+
+                  {/* 收藏按钮 */}
+                  <div className="toolbar-divider"></div>
+                  <button
+                    onClick={(e) => toggleFavorite(item, e)}
+                    className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
+                    title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+                  >
+                    <span className="toolbar-btn-icon">{item.is_favorite ? '⭐' : '☆'}</span>
+                    <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
                   </button>
 
                   {/* AI标签按钮 - 仅文本类型 */}

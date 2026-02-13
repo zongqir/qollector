@@ -273,4 +273,25 @@ impl ClipboardManager {
             Err(sqlx::Error::RowNotFound)
         }
     }
+
+    pub async fn toggle_favorite(&self, id: &str) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        // 获取当前项目
+        if let Some(mut item) = repo.find_by_id(id).await? {
+            // 切换收藏状态
+            item.is_favorite = !item.is_favorite;
+
+            // 更新时间戳
+            item.updated_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+
+            repo.update(&item).await?;
+            Ok(item.is_favorite)
+        } else {
+            Err(sqlx::Error::RowNotFound)
+        }
+    }
 }
