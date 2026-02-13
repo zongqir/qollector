@@ -1,0 +1,215 @@
+{
+  "app": {
+    "title": "ClipBox",
+    "loading": "加载中...",
+    "noItems": "暂无剪贴板历史"
+  },
+  "titlebar": {
+    "pin": "窗口置顶",
+    "unpin": "取消窗口置顶",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "close": "关闭",
+    "quickAdd": "快速输入"
+  },
+  "search": {
+    "placeholder": "搜索内容、标签、备注...",
+    "noResults": "没有找到匹配的记录",
+    "typeFilter": {
+      "all": "全部",
+      "text": "文本",
+      "image": "图片",
+      "file": "文件",
+      "link": "链接"
+    }
+  },
+  "toolbar": {
+    "settings": "设置",
+    "tagFilter": "标签筛选",
+    "searchTags": "搜索标签...",
+    "clearFilter": "清除筛选",
+    "selectedCount": "已选 {{count}} 个",
+    "filteringBy": "筛选中 ({{count}})",
+    "clearAll": "清除所有筛选",
+    "noTagsFound": "未找到匹配的标签",
+    "selectedTags": "已选 {{count}} 个标签",
+    "filterTags": "筛选标签",
+    "dragToApp": "拖拽到其他应用",
+    "dragOut": "拖出",
+    "favorites": "收藏",
+    "showFavorites": "显示收藏",
+    "showAll": "显示全部"
+  },
+  "item": {
+    "pinned": "已置顶",
+    "pin": "置顶 (最多5个)",
+    "unpin": "取消置顶",
+    "copy": "复制",
+    "copied": "已复制",
+    "aiTag": "AI标签",
+    "generating": "生成中",
+    "ocr": "OCR识别",
+    "recognizing": "识别中",
+    "addNote": "添加备注",
+    "editNote": "编辑备注",
+    "expand": "展开",
+    "collapse": "收起",
+    "addTag": "添加标签",
+    "removeTag": "移除标签",
+    "clickToCopy": "单击复制",
+    "doubleClickToPreview": "双击预览",
+    "doubleClickToEdit": "双击编辑",
+    "recognizedText": "识别文本",
+    "file": "文件",
+    "source": "来源",
+    "unknown": "Unknown",
+    "clickToFilter": "点击筛选此标签",
+    "clickToFilterType": "点击筛选此类型",
+    "clickToFilterSource": "点击筛选此来源",
+    "clickToFilterAI": "点击筛选此AI标签",
+    "clickToEditNote": "点击编辑备注",
+    "aiGenerating": "AI生成中...",
+    "generateAITags": "用AI生成标签",
+    "ocrRecognizing": "识别中...",
+    "recognizeText": "识别图片文字",
+    "expandAll": "展开全部",
+    "saveNote": "保存 (Ctrl+Enter)",
+    "cancelNote": "取消 (Esc)",
+    "favorite": "收藏",
+    "unfavorite": "取消收藏",
+    "favorited": "已收藏"
+  },
+  "edit": {
+    "content": "内容:",
+    "note": "备注:",
+    "notePlaceholder": "添加备注...",
+    "save": "保存",
+    "cancel": "取消",
+    "addTagPlaceholder": "输入标签名...",
+    "enterTag": "输入标签..."
+  },
+  "settings": {
+    "title": "设置",
+    "close": "关闭",
+    "save": "保存",
+    "cancel": "取消",
+    "test": "测试连接",
+    "testing": "测试中...",
+    "tabs": {
+      "ai": "AI 标签",
+      "ocr": "OCR 识别",
+      "general": "通用设置"
+    },
+    "ai": {
+      "provider": "AI 提供商",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "输入 API Key",
+      "model": "模型",
+      "modelPlaceholder": "例如: Qwen/Qwen2.5-7B-Instruct",
+      "customName": "服务名称",
+      "customNamePlaceholder": "例如: OpenAI",
+      "customUrl": "API 地址",
+      "customUrlPlaceholder": "https://api.example.com/v1",
+      "testSuccess": "AI 连接成功！",
+      "testFailed": "AI 连接失败: {{error}}",
+      "providers": {
+        "SiliconFlow": "硅基流动",
+        "Volcano": "火山引擎",
+        "Alibaba": "阿里云",
+        "Custom": "自定义"
+      }
+    },
+    "ocr": {
+      "enabled": "启用 OCR 识别",
+      "autoOcr": "自动识别新图片",
+      "provider": "OCR 提供商",
+      "language": "识别语言",
+      "languagePlaceholder": "chi_sim+eng",
+      "languageHint": "常用: chi_sim (简体中文), chi_tra (繁体中文), eng (英文)",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "输入 API Key",
+      "testSuccess": "OCR 服务可用！",
+      "testFailed": "OCR 测试失败: {{error}}",
+      "apiKeyRequired": "请先填写 API Key",
+      "serviceUnavailable": "OCR 服务不可用，请检查 API Key 是否正确",
+      "providers": {
+        "Local": "本地 Tesseract",
+        "SiliconFlow": "硅基流动 OCR",
+        "DeepSeek": "DeepSeek OCR",
+        "Aliyun": "阿里云 OCR",
+        "Tencent": "腾讯云 OCR",
+        "Baidu": "百度 OCR"
+      },
+      "localInfo": {
+        "title": "本地 OCR 需要安装 Tesseract：",
+        "windows": "Windows: choco install tesseract",
+        "macos": "macOS: brew install tesseract",
+        "linux": "Linux: sudo apt install tesseract-ocr tesseract-ocr-chi-sim"
+      }
+    },
+    "general": {
+      "language": "语言",
+      "languageHint": "切换界面语言"
+    }
+  },
+  "dragDrop": {
+    "dropHere": "拖放到这里添加到收集箱",
+    "textAdded": "文本已添加",
+    "imageAdded": "图片已添加",
+    "fileAdded": "文件信息已添加",
+    "addFailed": "添加失败: {{error}}",
+    "fileInfo": "[文件] {{name}} ({{size}})"
+  },
+  "quickInput": {
+    "title": "快速输入",
+    "placeholder": "输入文本内容...",
+    "submit": "提交 (Ctrl+Enter)",
+    "cancel": "取消 (Esc)",
+    "success": "已添加",
+    "failed": "添加失败: {{error}}",
+    "source": "快速输入"
+  },
+  "tag": {
+    "ai": "AI:",
+    "source": "来源:",
+    "type": "类型:",
+    "types": {
+      "text": "文本",
+      "image": "图片",
+      "file": "文件",
+      "link": "链接"
+    }
+  },
+  "error": {
+    "loadFailed": "加载失败: {{error}}",
+    "copyFailed": "复制失败: {{error}}",
+    "updateFailed": "更新失败: {{error}}",
+    "saveFailed": "保存失败: {{error}}",
+    "togglePinFailed": "切换置顶失败: {{error}}",
+    "toggleWindowPinFailed": "切换窗口置顶失败: {{error}}",
+    "pinLimitReached": "已达到置顶上限(5个)，自动取消最早置顶的项",
+    "aiTagFailed": "AI 标签生成失败",
+    "ocrFailed": "OCR 识别失败: {{error}}",
+    "addTagFailed": "添加标签失败: {{error}}",
+    "previewFailed": "打开预览窗口失败: {{error}}"
+  },
+  "preview": {
+    "title": "图片预览",
+    "created": "预览窗口已创建",
+    "createFailed": "预览窗口创建失败: {{error}}"
+  },
+  "editModal": {
+    "newTitle": "快速添加",
+    "editTitle": "编辑内容",
+    "content": "内容",
+    "contentPlaceholder": "输入内容...",
+    "note": "备注",
+    "notePlaceholder": "添加备注...",
+    "tags": "标签",
+    "addTagPlaceholder": "输入标签名...",
+    "addTag": "添加",
+    "pinItem": "置顶此项",
+    "saveHint": "保存 (Ctrl+Enter)",
+    "cancelHint": "取消 (Esc)"
+  }
+}

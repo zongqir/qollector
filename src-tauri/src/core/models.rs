@@ -27,9 +27,16 @@ impl ClipboardItem {
         let hash = Self::calculate_hash(&content);
         let now = chrono::Utc::now().timestamp();
 
+        // 检测是否为链接
+        let item_type = if Self::is_url(&content) {
+            "link"
+        } else {
+            "text"
+        };
+
         Self {
             id: uuid::Uuid::new_v4().to_string(),
-            type_: "text".to_string(),
+            type_: item_type.to_string(),
             content: Some(content.clone()),
             original_content: Some(content),
             content_hash: hash,
@@ -45,6 +52,42 @@ impl ClipboardItem {
             created_at: now,
             updated_at: now,
         }
+    }
+
+    // 检测是否为URL - 使用 url crate 进行正确的解析
+    fn is_url(text: &str) -> bool {
+        let trimmed = text.trim();
+
+        // 必须是单行文本
+        if trimmed.contains('\n') || trimmed.contains('\r') {
+            return false;
+        }
+
+        // 长度限制
+        if trimmed.is_empty() || trimmed.len() > 2048 {
+            return false;
+        }
+
+        // 使用 url crate 解析
+        if let Ok(parsed_url) = url::Url::parse(trimmed) {
+            // 必须有scheme（协议）
+            let scheme = parsed_url.scheme();
+
+            // 只接受常见的网络协议
+            let valid_schemes = ["http", "https", "ftp", "ftps", "ws", "wss"];
+            if !valid_schemes.contains(&scheme) {
+                return false;
+            }
+
+            // 必须有host（域名或IP）
+            if parsed_url.host().is_none() {
+                return false;
+            }
+
+            return true;
+        }
+
+        false
     }
 
     pub fn new_image(raw_path: String, thumb_path: String, metadata: WindowMetadata) -> Self {

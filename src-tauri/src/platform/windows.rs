@@ -67,7 +67,7 @@ pub mod windows {
                 .map_err(|e| ClipboardError::PlatformError(format!("Failed to receive window handle: {}", e)))?
                 .map_err(|e| ClipboardError::PlatformError(e))?;
 
-            let hwnd = unsafe { HWND(hwnd_ptr as *mut _) };
+            let hwnd = HWND(hwnd_ptr as *mut _);
 
             Ok(Self {
                 hwnd: SendHwnd(hwnd),
@@ -131,34 +131,36 @@ pub mod windows {
         }
 
         async fn set_content(&self, content: ClipboardContent) -> Result<(), ClipboardError> {
-            match content {
-                ClipboardContent::Text(text) => {
-                    use arboard::Clipboard;
-                    let mut clipboard = Clipboard::new()
+            // 使用 block_in_place 在当前线程中同步执行，避免跨线程剪贴板问题
+            tokio::task::block_in_place(|| {
+                match content {
+                    ClipboardContent::Text(text) => {
+                        use arboard::Clipboard;
+                        let mut clipboard = Clipboard::new()
+                            .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+                        clipboard.set_text(text)
+                            .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+                    }
+                    ClipboardContent::Image(data) => {
+                        use arboard::Clipboard;
+                        let mut clipboard = Clipboard::new()
+                            .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+                        let img = image::load_from_memory(&data)
+                            .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
+                        clipboard.set_image(arboard::ImageData {
+                            width: img.width() as usize,
+                            height: img.height() as usize,
+                            bytes: img.to_rgba8().into_raw().into(),
+                        })
                         .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-                    clipboard.set_text(text)
-                        .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+                    }
+                    ClipboardContent::File(paths_str) => {
+                        let paths: Vec<String> = paths_str.lines().map(|s| s.to_string()).collect();
+                        Self::set_file_paths(&paths)?;
+                    }
                 }
-                ClipboardContent::Image(data) => {
-                    use arboard::Clipboard;
-                    let mut clipboard = Clipboard::new()
-                        .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-                    let img = image::load_from_memory(&data)
-                        .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
-                    clipboard.set_image(arboard::ImageData {
-                        width: img.width() as usize,
-                        height: img.height() as usize,
-                        bytes: img.to_rgba8().into_raw().into(),
-                    })
-                    .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-                }
-                ClipboardContent::File(paths_str) => {
-                    let paths: Vec<String> = paths_str.lines().map(|s| s.to_string()).collect();
-                    Self::set_file_paths(&paths)?;
-                }
-            }
-
-            Ok(())
+                Ok(())
+            })
         }
 
         fn get_active_window_info(&self) -> Result<WindowMetadata, ClipboardError> {

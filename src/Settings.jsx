@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 import './Settings.css';
 
 const AI_PROVIDERS = [
@@ -19,6 +20,7 @@ const OCR_PROVIDERS = [
 ];
 
 function Settings({ onClose }) {
+  const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('ai');
   const [aiConfig, setAiConfig] = useState({
     provider: { SiliconFlow: null },
@@ -38,6 +40,11 @@ function Settings({ onClose }) {
   const [customUrl, setCustomUrl] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('language', lng);
+  };
 
   useEffect(() => {
     loadConfigs();
@@ -90,9 +97,9 @@ function Settings({ onClose }) {
     setTestResult(null);
     try {
       await invoke('test_ai_connection', { config: aiConfig });
-      setTestResult({ success: true, message: 'AI 连接成功！' });
+      setTestResult({ success: true, message: t('settings.ai.testSuccess') });
     } catch (error) {
-      setTestResult({ success: false, message: 'AI 连接失败: ' + error });
+      setTestResult({ success: false, message: t('settings.ai.testFailed', { error }) });
     } finally {
       setTesting(false);
     }
@@ -109,7 +116,7 @@ function Settings({ onClose }) {
       // 验证配置
       if (ocrConfig.provider !== 'Local' && !ocrConfig.api_key) {
         console.error('❌ API Key 为空');
-        setTestResult({ success: false, message: '请先填写 API Key' });
+        setTestResult({ success: false, message: t('settings.ocr.apiKeyRequired') });
         setTesting(false);
         return;
       }
@@ -134,14 +141,14 @@ function Settings({ onClose }) {
 
       if (available) {
         console.log('✅ OCR 服务可用');
-        setTestResult({ success: true, message: 'OCR 服务可用！' });
+        setTestResult({ success: true, message: t('settings.ocr.testSuccess') });
       } else {
         console.error('❌ OCR 服务不可用');
-        setTestResult({ success: false, message: 'OCR 服务不可用，请检查 API Key 是否正确' });
+        setTestResult({ success: false, message: t('settings.ocr.serviceUnavailable') });
       }
     } catch (error) {
       console.error('❌ OCR 测试失败:', error);
-      setTestResult({ success: false, message: 'OCR 测试失败: ' + error });
+      setTestResult({ success: false, message: t('settings.ocr.testFailed', { error }) });
     } finally {
       setTesting(false);
       console.log('=== OCR 测试结束 ===');
@@ -174,29 +181,52 @@ function Settings({ onClose }) {
     <div className="settings-overlay">
       <div className="settings-modal">
         <div className="settings-header">
-          <h2>设置</h2>
+          <h2>{t('settings.title')}</h2>
           <button onClick={onClose} className="close-btn">✕</button>
         </div>
 
         <div className="settings-tabs">
           <button
+            className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`}
+            onClick={() => setActiveTab('general')}
+          >
+            {t('settings.tabs.general')}
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
             onClick={() => setActiveTab('ai')}
           >
-            AI 标签
+            {t('settings.tabs.ai')}
           </button>
           <button
             className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
             onClick={() => setActiveTab('ocr')}
           >
-            OCR 识别
+            {t('settings.tabs.ocr')}
           </button>
         </div>
+
+        {activeTab === 'general' && (
+          <div className="settings-content">
+            <div className="setting-item">
+              <label>{t('settings.general.language')}</label>
+              <select
+                value={i18n.language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="setting-select"
+              >
+                <option value="zh-CN">简体中文</option>
+                <option value="en-US">English</option>
+              </select>
+              <small className="setting-hint">{t('settings.general.languageHint')}</small>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'ai' && (
           <div className="settings-content">
             <div className="setting-item">
-              <label>AI 提供商</label>
+              <label>{t('settings.ai.provider')}</label>
               <select
                 value={getAiProviderValue()}
                 onChange={(e) => handleAiProviderChange(e.target.value)}
@@ -204,7 +234,7 @@ function Settings({ onClose }) {
               >
                 {AI_PROVIDERS.map((provider) => (
                   <option key={provider.value} value={provider.value}>
-                    {provider.label}
+                    {t(`settings.ai.providers.${provider.value}`)}
                   </option>
                 ))}
               </select>
@@ -213,7 +243,7 @@ function Settings({ onClose }) {
             {getAiProviderValue() === 'Custom' && (
               <>
                 <div className="setting-item">
-                  <label>服务名称</label>
+                  <label>{t('settings.ai.customName')}</label>
                   <input
                     type="text"
                     value={customName}
@@ -228,12 +258,12 @@ function Settings({ onClose }) {
                         });
                       }
                     }}
-                    placeholder="例如: OpenAI"
+                    placeholder={t('settings.ai.customNamePlaceholder')}
                     className="setting-input"
                   />
                 </div>
                 <div className="setting-item">
-                  <label>API 地址</label>
+                  <label>{t('settings.ai.customUrl')}</label>
                   <input
                     type="text"
                     value={customUrl}
@@ -248,7 +278,7 @@ function Settings({ onClose }) {
                         });
                       }
                     }}
-                    placeholder="https://api.example.com/v1"
+                    placeholder={t('settings.ai.customUrlPlaceholder')}
                     className="setting-input"
                   />
                 </div>
@@ -256,30 +286,30 @@ function Settings({ onClose }) {
             )}
 
             <div className="setting-item">
-              <label>API Key</label>
+              <label>{t('settings.ai.apiKey')}</label>
               <input
                 type="password"
                 value={aiConfig.api_key}
                 onChange={(e) => setAiConfig({ ...aiConfig, api_key: e.target.value })}
-                placeholder="输入 API Key"
+                placeholder={t('settings.ai.apiKeyPlaceholder')}
                 className="setting-input"
               />
             </div>
 
             <div className="setting-item">
-              <label>模型</label>
+              <label>{t('settings.ai.model')}</label>
               <input
                 type="text"
                 value={aiConfig.model}
                 onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                placeholder="例如: Qwen/Qwen2.5-7B-Instruct"
+                placeholder={t('settings.ai.modelPlaceholder')}
                 className="setting-input"
               />
             </div>
 
             <div className="setting-actions">
               <button onClick={handleAiTest} disabled={testing} className="test-btn">
-                {testing ? '测试中...' : '测试连接'}
+                {testing ? t('settings.testing') : t('settings.test')}
               </button>
               {testResult && (
                 <span className={`test-result ${testResult.success ? 'success' : 'error'}`}>
@@ -299,7 +329,7 @@ function Settings({ onClose }) {
                   checked={ocrConfig.enabled}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, enabled: e.target.checked })}
                 />
-                启用 OCR 识别
+                {t('settings.ocr.enabled')}
               </label>
             </div>
 
@@ -310,12 +340,12 @@ function Settings({ onClose }) {
                   checked={ocrConfig.auto_ocr}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
                 />
-                自动识别新图片
+                {t('settings.ocr.autoOcr')}
               </label>
             </div>
 
             <div className="setting-item">
-              <label>OCR 提供商</label>
+              <label>{t('settings.ocr.provider')}</label>
               <select
                 value={ocrConfig.provider}
                 onChange={(e) => setOcrConfig({ ...ocrConfig, provider: e.target.value })}
@@ -323,7 +353,7 @@ function Settings({ onClose }) {
               >
                 {OCR_PROVIDERS.map((provider) => (
                   <option key={provider.value} value={provider.value}>
-                    {provider.label}
+                    {t(`settings.ocr.providers.${provider.value}`)}
                   </option>
                 ))}
               </select>
@@ -331,28 +361,28 @@ function Settings({ onClose }) {
 
             {ocrConfig.provider === 'Local' && (
               <div className="setting-item">
-                <label>识别语言</label>
+                <label>{t('settings.ocr.language')}</label>
                 <input
                   type="text"
                   value={ocrConfig.language}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, language: e.target.value })}
-                  placeholder="chi_sim+eng"
+                  placeholder={t('settings.ocr.languagePlaceholder')}
                   className="setting-input"
                 />
                 <small className="setting-hint">
-                  常用: chi_sim (简体中文), chi_tra (繁体中文), eng (英文)
+                  {t('settings.ocr.languageHint')}
                 </small>
               </div>
             )}
 
             {ocrConfig.provider !== 'Local' && (
               <div className="setting-item">
-                <label>API Key</label>
+                <label>{t('settings.ocr.apiKey')}</label>
                 <input
                   type="password"
                   value={ocrConfig.api_key || ''}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, api_key: e.target.value })}
-                  placeholder="输入 API Key"
+                  placeholder={t('settings.ocr.apiKeyPlaceholder')}
                   className="setting-input"
                 />
               </div>
@@ -361,11 +391,11 @@ function Settings({ onClose }) {
             {ocrConfig.provider === 'Local' && (
               <div className="setting-item">
                 <div className="info-box">
-                  <strong>本地 OCR 需要安装 Tesseract：</strong>
+                  <strong>{t('settings.ocr.localInfo.title')}</strong>
                   <ul>
-                    <li>Windows: <code>choco install tesseract</code></li>
-                    <li>macOS: <code>brew install tesseract</code></li>
-                    <li>Linux: <code>sudo apt install tesseract-ocr tesseract-ocr-chi-sim</code></li>
+                    <li>{t('settings.ocr.localInfo.windows')}</li>
+                    <li>{t('settings.ocr.localInfo.macos')}</li>
+                    <li>{t('settings.ocr.localInfo.linux')}</li>
                   </ul>
                 </div>
               </div>
@@ -373,7 +403,7 @@ function Settings({ onClose }) {
 
             <div className="setting-actions">
               <button onClick={handleOcrTest} disabled={testing} className="test-btn">
-                {testing ? '测试中...' : '测试服务'}
+                {testing ? t('settings.testing') : t('settings.test')}
               </button>
               {testResult && (
                 <span className={`test-result ${testResult.success ? 'success' : 'error'}`}>
@@ -385,12 +415,12 @@ function Settings({ onClose }) {
         )}
 
         <div className="settings-footer">
-          <button onClick={onClose} className="cancel-btn">取消</button>
+          <button onClick={onClose} className="cancel-btn">{t('settings.cancel')}</button>
           <button
-            onClick={activeTab === 'ai' ? handleAiSave : handleOcrSave}
+            onClick={activeTab === 'ai' ? handleAiSave : activeTab === 'ocr' ? handleOcrSave : onClose}
             className="save-btn"
           >
-            保存
+            {t('settings.save')}
           </button>
         </div>
       </div>

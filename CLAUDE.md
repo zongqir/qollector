@@ -11,19 +11,36 @@ ClipBox 是一款现代化的跨平台剪贴板管理器，使用 Rust (Tauri v2
 1. 极致简洁：零配置，默认即最优。
 2. 审美优先：具有深色模式、毛玻璃效果和流畅动画的现代 UI。要求绝对颜值。
 3. 真正的跨平台：坚持 Linux 优先原则，在 Windows/macOS/Linux 上提供统一体验。
+4. 国际化支持：支持多语言切换（简体中文、English），可轻松扩展更多语言。
 
 
 ## 构建与开发命令
 
+### 快速开始（最常用）
+
+```bash
+# 🚀 开发模式（推荐）- 同时启动前端和后端，支持热重载
+npm run tauri dev
+# 或
+cargo tauri dev
+
+# 📦 生产构建 - 生成可执行文件
+npm run tauri build
+# 或
+cargo tauri build
+```
+
 ### 前端开发
 
 ```bash
-# 启动 Vite 开发服务器
+# 启动 Vite 开发服务器（仅前端，不启动 Tauri）
 npm run dev
 
-# 构建前端
+# 构建前端（生成 dist 目录）
 npm run build
 
+# 预览构建结果
+npm run preview
 ```
 
 ### 后端开发
@@ -32,13 +49,81 @@ npm run build
 # 仅构建 Rust 后端
 cargo build --manifest-path src-tauri/Cargo.toml
 
-# 构建整个 Tauri 应用
+# 构建整个 Tauri 应用（包含前端）
 cargo tauri build
 
 # 开发模式运行（同时启动前端和后端）
 cargo tauri dev
 
+# 清理构建缓存
+cargo clean --manifest-path src-tauri/Cargo.toml
 ```
+
+### 常见编译场景
+
+#### 场景 1：日常开发调试
+```bash
+# 一条命令搞定，自动打开应用窗口
+npm run tauri dev
+```
+
+#### 场景 2：测试前端修改
+```bash
+# 只启动前端，在浏览器中查看
+npm run dev
+# 访问 http://localhost:5173
+```
+
+#### 场景 3：打包发布
+```bash
+# 先安装依赖（如果是新克隆的项目）
+npm install
+
+# 构建生产版本
+npm run tauri build
+
+# 生成的可执行文件位于：
+# Windows: src-tauri/target/release/clipbox.exe
+# Linux: src-tauri/target/release/clipbox
+# macOS: src-tauri/target/release/bundle/macos/ClipBox.app
+```
+
+#### 场景 4：清理重新编译
+```bash
+# 清理所有构建产物
+cargo clean --manifest-path src-tauri/Cargo.toml
+rm -rf dist node_modules
+
+# 重新安装和构建
+npm install
+npm run tauri build
+```
+
+### 编译时间参考
+
+| 操作 | 首次编译 | 增量编译 | 说明 |
+|------|---------|---------|------|
+| `npm run tauri dev` | 2-5 分钟 | 10-30 秒 | 开发模式 |
+| `npm run tauri build` | 5-10 分钟 | 2-5 分钟 | 生产构建 |
+| `npm run dev` | 5-10 秒 | 1-2 秒 | 仅前端 |
+| `npm run build` | 10-20 秒 | 5-10 秒 | 仅前端 |
+
+### 常见问题
+
+**Q: 编译太慢怎么办？**
+A: 参考下面的"编译优化指南"，使用 sccache 可以提速 50-80%。
+
+**Q: 修改前端代码后需要重新编译吗？**
+A: 不需要，`npm run tauri dev` 支持热重载，保存即生效。
+
+**Q: 修改 Rust 代码后需要重新编译吗？**
+A: 需要，但 `npm run tauri dev` 会自动检测并重新编译。
+
+**Q: 如何只编译前端不启动 Tauri？**
+A: 使用 `npm run dev`，然后在浏览器中访问。
+
+**Q: 生成的可执行文件在哪里？**
+A: Windows 在 `src-tauri/target/release/clipbox.exe`。
 
 ### 测试
 
@@ -278,9 +363,13 @@ SQLite 数据库位于应用数据目录下的 `clipbox.db`：
 **`src/`**
 
 * `App.jsx`：主组件，包含历史列表、搜索、编辑功能。
-* `Settings.jsx`：AI 配置弹窗。
+* `Settings.jsx`：AI 配置弹窗，支持多语言切换。
 * `DragDrop.jsx`：拖拽功能组件。
 * `App.css` / `Settings.css` / `DragDrop.css`：样式表。
+* `i18n/`：国际化配置和语言文件
+  * `index.js`：i18next 配置
+  * `locales/zh-CN.json`：简体中文翻译
+  * `locales/en-US.json`：英文翻译
 
 **关键前端模式：**
 
@@ -290,6 +379,7 @@ SQLite 数据库位于应用数据目录下的 `clipbox.db`：
 * 支持跨内容、标签、笔记和来源应用的全局搜索。
 * 全局拖拽监听，支持拖入文本、图片、文件。
 * 每个卡片可拖出到其他应用。
+* 国际化支持：使用 react-i18next，语言选择持久化到 localStorage。
 
 ## 关键实现细节
 
@@ -351,3 +441,26 @@ Windows 文件复制使用 `CF_HDROP` 格式。程序提取文件路径并将其
 
 ## 对话中文
 要求整个对话是中文
+
+## 国际化支持
+
+项目已集成 i18next 和 react-i18next 实现国际化。
+
+**当前支持的语言：**
+* 简体中文 (zh-CN) - 默认语言
+* English (en-US)
+
+**使用方式：**
+* 标题栏快速切换：点击 🌐 按钮
+* 设置页面切换：设置 → 通用设置 → 语言
+* 语言选择自动保存到 localStorage
+
+**开发指南：**
+* 在组件中使用 `const { t } = useTranslation()` 获取翻译函数
+* 使用 `t('key.path')` 获取翻译文本
+* 带参数的翻译：`t('error.message', { error: errorMsg })`
+* 翻译文件位于 `src/i18n/locales/`
+* 详细文档见 `docs/i18n-guide.md`
+
+**待完成：**
+App.jsx 主界面中还有部分硬编码文本需要替换为 t() 函数调用。

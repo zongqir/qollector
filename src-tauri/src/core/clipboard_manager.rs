@@ -73,6 +73,9 @@ impl ClipboardManager {
             ClipboardContent::Image(data) => {
                 println!("Image clipboard content detected, saving...");
 
+                // 计算图片内容的MD5哈希
+                let image_hash = format!("{:x}", md5::compute(&data));
+
                 // Generate unique filename
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)?
@@ -104,13 +107,25 @@ impl ClipboardManager {
                     "thumbnail": thumb_path.to_string_lossy().to_string()
                 }).to_string();
 
-                let mut item = ClipboardItem::new_text(
-                    format!("[Image: {}]", filename),
-                    metadata
-                );
-                item.type_ = "image".to_string();
-                item.image_paths = Some(image_paths_json);
-                item
+                let now = chrono::Utc::now().timestamp();
+                ClipboardItem {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    type_: "image".to_string(),
+                    content: Some(format!("[Image: {}]", filename)),
+                    original_content: None,
+                    content_hash: image_hash, // 使用图片内容的MD5
+                    image_paths: Some(image_paths_json),
+                    ocr_text: None,
+                    embedding: None,
+                    tags: None,
+                    user_note: None,
+                    metadata: Some(serde_json::to_string(&metadata).unwrap()),
+                    is_pinned: false,
+                    is_favorite: false,
+                    is_deleted: false,
+                    created_at: now,
+                    updated_at: now,
+                }
             }
             ClipboardContent::File(paths_str) => {
                 println!("File clipboard content detected");
@@ -147,7 +162,8 @@ impl ClipboardManager {
         let repo_lock = repo.lock().await;
 
         if let Some(existing) = repo_lock.find_by_hash(&item.content_hash).await? {
-            println!("Item already exists with hash: {}", item.content_hash);
+            println!("Duplicate detected, moving to top: {}", existing.id);
+            repo_lock.touch(&existing.id).await?;
             return Ok(());
         }
 
@@ -193,6 +209,12 @@ impl ClipboardManager {
             return Err(ClipboardError::UnsupportedType);
         };
 
+        // 如果是置顶项,更新其时间戳以保持活跃
+        if item.is_pinned {
+            let repo = self.repository.lock().await;
+            let _ = repo.touch(&item.id).await;
+        }
+
         self.platform.set_content(content).await
     }
 
@@ -222,7 +244,23 @@ impl ClipboardManager {
         // 获取当前项目
         if let Some(mut item) = repo.find_by_id(id).await? {
             // 切换置顶状态
-            item.is_pinned = !item.is_pinned;
+            let new_pinned_state = !item.is_pinned;
+
+            // 如果是要置顶(从未置顶变为置顶)
+            if new_pinned_state {
+                // 检查当前置顶数量
+                let pinned_items = repo.get_pinned_items().await?;
+
+                // 如果已经有5个置顶项,取消最早置顶的那个
+                if pinned_items.len() >= 5 {
+                    if let Some(oldest_pinned) = pinned_items.first() {
+                        println!("已达到置顶上限(5个),取消最早置顶的项: {}", oldest_pinned.id);
+                        repo.unpin(&oldest_pinned.id).await?;
+                    }
+                }
+            }
+
+            item.is_pinned = new_pinned_state;
             // 更新时间戳
             item.updated_at = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -231,6 +269,27 @@ impl ClipboardManager {
 
             repo.update(&item).await?;
             Ok(item.is_pinned)
+        } else {
+            Err(sqlx::Error::RowNotFound)
+        }
+    }
+
+    pub async fn toggle_favorite(&self, id: &str) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        // 获取当前项目
+        if let Some(mut item) = repo.find_by_id(id).await? {
+            // 切换收藏状态
+            item.is_favorite = !item.is_favorite;
+
+            // 更新时间戳
+            item.updated_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+
+            repo.update(&item).await?;
+            Ok(item.is_favorite)
         } else {
             Err(sqlx::Error::RowNotFound)
         }

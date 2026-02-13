@@ -2,7 +2,6 @@ use crate::core::models::{ClipboardItem, WindowMetadata};
 use crate::core::clipboard_manager::ClipboardManager;
 use tauri::{State, AppHandle, Manager};
 use std::sync::Arc;
-use std::path::PathBuf;
 use base64::Engine;
 
 /// 手动添加剪贴板项（用于拖拽功能）
@@ -12,6 +11,8 @@ pub async fn add_clipboard_item_manual(
     manager: State<'_, Arc<ClipboardManager>>,
     content_type: String,
     content: String,
+    source: Option<String>,
+    auto_favorite: Option<bool>,
 ) -> Result<String, String> {
     println!("手动添加剪贴板项: type={}, content_len={}", content_type, content.len());
 
@@ -19,12 +20,12 @@ pub async fn add_clipboard_item_manual(
         .map_err(|e| format!("获取应用目录失败: {}", e))?;
 
     let metadata = WindowMetadata {
-        source_app: "拖拽".to_string(),
+        source_app: source.unwrap_or_else(|| "拖拽".to_string()),
         window_title: "".to_string(),
         source_url: None,
     };
 
-    let item = match content_type.as_str() {
+    let mut item = match content_type.as_str() {
         "text" => {
             if content.trim().is_empty() {
                 return Err("文本内容为空".to_string());
@@ -108,6 +109,11 @@ pub async fn add_clipboard_item_manual(
             return Err(format!("不支持的内容类型: {}", content_type));
         }
     };
+
+    // 如果指定了自动收藏，设置收藏状态
+    if auto_favorite.unwrap_or(false) {
+        item.is_favorite = true;
+    }
 
     // 保存到数据库
     manager.insert_item(&item)

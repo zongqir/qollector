@@ -1,0 +1,215 @@
+{
+  "app": {
+    "title": "ClipBox",
+    "loading": "Loading...",
+    "noItems": "No clipboard history"
+  },
+  "titlebar": {
+    "pin": "Pin Window",
+    "unpin": "Unpin Window",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close",
+    "quickAdd": "Quick Input"
+  },
+  "search": {
+    "placeholder": "Search content, tags, notes...",
+    "noResults": "No matching records found",
+    "typeFilter": {
+      "all": "All",
+      "text": "Text",
+      "image": "Image",
+      "file": "File",
+      "link": "Link"
+    }
+  },
+  "toolbar": {
+    "settings": "Settings",
+    "tagFilter": "Tag Filter",
+    "searchTags": "Search tags...",
+    "clearFilter": "Clear Filter",
+    "selectedCount": "{{count}} selected",
+    "filteringBy": "Filtering ({{count}})",
+    "clearAll": "Clear all filters",
+    "noTagsFound": "No matching tags found",
+    "selectedTags": "{{count}} tags selected",
+    "filterTags": "Filter Tags",
+    "dragToApp": "Drag to other apps",
+    "dragOut": "Drag",
+    "favorites": "Favorites",
+    "showFavorites": "Show Favorites",
+    "showAll": "Show All"
+  },
+  "item": {
+    "pinned": "Pinned",
+    "pin": "Pin (Max 5)",
+    "unpin": "Unpin",
+    "copy": "Copy",
+    "copied": "Copied",
+    "aiTag": "AI Tag",
+    "generating": "Generating",
+    "ocr": "OCR",
+    "recognizing": "Recognizing",
+    "addNote": "Add Note",
+    "editNote": "Edit Note",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "addTag": "Add Tag",
+    "removeTag": "Remove Tag",
+    "clickToCopy": "Click to copy",
+    "doubleClickToPreview": "Double-click to preview",
+    "doubleClickToEdit": "Double-click to edit",
+    "recognizedText": "Recognized Text",
+    "file": "File",
+    "source": "Source",
+    "unknown": "Unknown",
+    "clickToFilter": "Click to filter this tag",
+    "clickToFilterType": "Click to filter this type",
+    "clickToFilterSource": "Click to filter this source",
+    "clickToFilterAI": "Click to filter this AI tag",
+    "clickToEditNote": "Click to edit note",
+    "aiGenerating": "AI generating...",
+    "generateAITags": "Generate AI tags",
+    "ocrRecognizing": "Recognizing...",
+    "recognizeText": "Recognize image text",
+    "expandAll": "Expand all",
+    "saveNote": "Save (Ctrl+Enter)",
+    "cancelNote": "Cancel (Esc)",
+    "favorite": "Favorite",
+    "unfavorite": "Unfavorite",
+    "favorited": "Favorited"
+  },
+  "edit": {
+    "content": "Content:",
+    "note": "Note:",
+    "notePlaceholder": "Add note...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addTagPlaceholder": "Enter tag name...",
+    "enterTag": "Enter tag..."
+  },
+  "settings": {
+    "title": "Settings",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "test": "Test Connection",
+    "testing": "Testing...",
+    "tabs": {
+      "ai": "AI Tags",
+      "ocr": "OCR Recognition",
+      "general": "General"
+    },
+    "ai": {
+      "provider": "AI Provider",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter API Key",
+      "model": "Model",
+      "modelPlaceholder": "e.g., Qwen/Qwen2.5-7B-Instruct",
+      "customName": "Service Name",
+      "customNamePlaceholder": "e.g., OpenAI",
+      "customUrl": "API URL",
+      "customUrlPlaceholder": "https://api.example.com/v1",
+      "testSuccess": "AI connection successful!",
+      "testFailed": "AI connection failed: {{error}}",
+      "providers": {
+        "SiliconFlow": "SiliconFlow",
+        "Volcano": "Volcano Engine",
+        "Alibaba": "Alibaba Cloud",
+        "Custom": "Custom"
+      }
+    },
+    "ocr": {
+      "enabled": "Enable OCR Recognition",
+      "autoOcr": "Auto-recognize new images",
+      "provider": "OCR Provider",
+      "language": "Recognition Language",
+      "languagePlaceholder": "chi_sim+eng",
+      "languageHint": "Common: chi_sim (Simplified Chinese), chi_tra (Traditional Chinese), eng (English)",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Enter API Key",
+      "testSuccess": "OCR service available!",
+      "testFailed": "OCR test failed: {{error}}",
+      "apiKeyRequired": "Please enter API Key first",
+      "serviceUnavailable": "OCR service unavailable, please check if API Key is correct",
+      "providers": {
+        "Local": "Local Tesseract",
+        "SiliconFlow": "SiliconFlow OCR",
+        "DeepSeek": "DeepSeek OCR",
+        "Aliyun": "Aliyun OCR",
+        "Tencent": "Tencent Cloud OCR",
+        "Baidu": "Baidu OCR"
+      },
+      "localInfo": {
+        "title": "Local OCR requires Tesseract installation:",
+        "windows": "Windows: choco install tesseract",
+        "macos": "macOS: brew install tesseract",
+        "linux": "Linux: sudo apt install tesseract-ocr tesseract-ocr-chi-sim"
+      }
+    },
+    "general": {
+      "language": "Language",
+      "languageHint": "Switch interface language"
+    }
+  },
+  "dragDrop": {
+    "dropHere": "Drop here to add to ClipBox",
+    "textAdded": "Text added",
+    "imageAdded": "Image added",
+    "fileAdded": "File info added",
+    "addFailed": "Add failed: {{error}}",
+    "fileInfo": "[File] {{name}} ({{size}})"
+  },
+  "quickInput": {
+    "title": "Quick Input",
+    "placeholder": "Enter text content...",
+    "submit": "Submit (Ctrl+Enter)",
+    "cancel": "Cancel (Esc)",
+    "success": "Added",
+    "failed": "Add failed: {{error}}",
+    "source": "Quick Input"
+  },
+  "tag": {
+    "ai": "AI:",
+    "source": "Source:",
+    "type": "Type:",
+    "types": {
+      "text": "Text",
+      "image": "Image",
+      "file": "File",
+      "link": "Link"
+    }
+  },
+  "error": {
+    "loadFailed": "Load failed: {{error}}",
+    "copyFailed": "Copy failed: {{error}}",
+    "updateFailed": "Update failed: {{error}}",
+    "saveFailed": "Save failed: {{error}}",
+    "togglePinFailed": "Toggle pin failed: {{error}}",
+    "toggleWindowPinFailed": "Toggle window pin failed: {{error}}",
+    "pinLimitReached": "Pin limit reached (5 max), oldest pinned item unpinned automatically",
+    "aiTagFailed": "AI tag generation failed",
+    "ocrFailed": "OCR recognition failed: {{error}}",
+    "addTagFailed": "Add tag failed: {{error}}",
+    "previewFailed": "Open preview window failed: {{error}}"
+  },
+  "preview": {
+    "title": "Image Preview",
+    "created": "Preview window created",
+    "createFailed": "Preview window creation failed: {{error}}"
+  },
+  "editModal": {
+    "newTitle": "Quick Add",
+    "editTitle": "Edit Content",
+    "content": "Content",
+    "contentPlaceholder": "Enter content...",
+    "note": "Note",
+    "notePlaceholder": "Add note...",
+    "tags": "Tags",
+    "addTagPlaceholder": "Enter tag name...",
+    "addTag": "Add",
+    "pinItem": "Pin this item",
+    "saveHint": "Save (Ctrl+Enter)",
+    "cancelHint": "Cancel (Esc)"
+  }
+}

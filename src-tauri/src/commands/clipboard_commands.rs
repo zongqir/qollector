@@ -52,3 +52,13 @@ pub async fn toggle_pin_item(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn toggle_favorite_item(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<bool, String> {
+    manager.toggle_favorite(&id)
+        .await
+        .map_err(|e| e.to_string())
+}

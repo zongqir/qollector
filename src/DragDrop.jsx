@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 import './DragDrop.css';
 
 function DragDrop({ onItemAdded }) {
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
@@ -80,12 +82,12 @@ function DragDrop({ onItemAdded }) {
             try {
               await invoke('add_clipboard_item_manual', {
                 contentType: 'text',
-                content: `[文件] ${file.name} (${formatSize(file.size)})`,
+                content: t('dragDrop.fileInfo', { name: file.name, size: formatSize(file.size) }),
               });
-              console.log('文件信息已添加');
+              console.log(t('dragDrop.fileAdded'));
               if (onItemAdded) onItemAdded();
             } catch (err) {
-              console.error('添加文件失败:', err);
+              console.error(t('dragDrop.addFailed', { error: err }));
             }
           }
         }
@@ -111,7 +113,7 @@ function DragDrop({ onItemAdded }) {
         <div className="drag-overlay">
           <div className="drag-overlay-content">
             <div className="drag-icon">📥</div>
-            <div className="drag-text">拖放到这里添加到收集箱</div>
+            <div className="drag-text">{t('dragDrop.dropHere')}</div>
           </div>
         </div>
       )}

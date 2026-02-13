@@ -103,6 +103,7 @@ fn main() {
             get_ocr_providers,
             add_clipboard_item_manual,
             add_image_file,
+            toggle_favorite_item,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
