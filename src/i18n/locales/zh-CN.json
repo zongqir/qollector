@@ -197,5 +197,19 @@
     "title": "图片预览",
     "created": "预览窗口已创建",
     "createFailed": "预览窗口创建失败: {{error}}"
+  },
+  "editModal": {
+    "newTitle": "快速添加",
+    "editTitle": "编辑内容",
+    "content": "内容",
+    "contentPlaceholder": "输入内容...",
+    "note": "备注",
+    "notePlaceholder": "添加备注...",
+    "tags": "标签",
+    "addTagPlaceholder": "输入标签名...",
+    "addTag": "添加",
+    "pinItem": "置顶此项",
+    "saveHint": "保存 (Ctrl+Enter)",
+    "cancelHint": "取消 (Esc)"
   }
 }

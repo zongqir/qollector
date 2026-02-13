@@ -6,6 +6,9 @@ import enUS from './locales/en-US.json';
 // 从 localStorage 获取保存的语言设置，默认为中文
 const savedLanguage = localStorage.getItem('language') || 'zh-CN';
 
+console.log('i18n initializing with language:', savedLanguage);
+console.log('Available translations:', { zhCN, enUS });
+
 i18n
   .use(initReactI18next)
   .init({

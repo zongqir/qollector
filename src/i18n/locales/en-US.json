@@ -197,5 +197,19 @@
     "title": "Image Preview",
     "created": "Preview window created",
     "createFailed": "Preview window creation failed: {{error}}"
+  },
+  "editModal": {
+    "newTitle": "Quick Add",
+    "editTitle": "Edit Content",
+    "content": "Content",
+    "contentPlaceholder": "Enter content...",
+    "note": "Note",
+    "notePlaceholder": "Add note...",
+    "tags": "Tags",
+    "addTagPlaceholder": "Enter tag name...",
+    "addTag": "Add",
+    "pinItem": "Pin this item",
+    "saveHint": "Save (Ctrl+Enter)",
+    "cancelHint": "Cancel (Esc)"
   }
 }

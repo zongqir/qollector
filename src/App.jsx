@@ -6,19 +6,16 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { useTranslation } from 'react-i18next';
 import Settings from './Settings';
 import DragDrop from './DragDrop';
+import EditModal from './EditModal';
 
 function App() {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editContent, setEditContent] = useState('');
-  const [editNote, setEditNote] = useState('');
-  const [editTags, setEditTags] = useState([]);
-  const [newTag, setNewTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editNote, setEditNote] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
@@ -35,9 +32,12 @@ function App() {
   const [copiedItemId, setCopiedItemId] = useState(null); // 用于显示复制成功反馈
   const [addingTagItemId, setAddingTagItemId] = useState(null); // 正在添加标签的项目ID
   const [newTagInput, setNewTagInput] = useState(''); // 新标签输入
-  const [showQuickInput, setShowQuickInput] = useState(false); // 快速输入弹窗
-  const [quickInputText, setQuickInputText] = useState(''); // 快速输入内容
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false); // 是否只显示收藏
+
+  // 编辑弹窗状态
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalMode, setEditModalMode] = useState('new'); // 'new' 或 'edit'
+  const [editingItem, setEditingItem] = useState(null);
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'zh-CN' ? 'en-US' : 'zh-CN';
@@ -259,8 +259,8 @@ function App() {
       // 图片双击打开预览
       openImagePreview(item.image_paths);
     } else {
-      // 文本双击进入编辑
-      startEdit(item);
+      // 文本双击打开编辑弹窗
+      openEditModal(item);
     }
   };
 
@@ -302,33 +302,70 @@ function App() {
 
   // 删除功能已移除 - 剪贴板本身就是临时存储
 
-  const startEdit = (item) => {
-    setEditingId(item.id);
-    setEditContent(item.content || '');
-    setEditNote(item.user_note || '');
+  // 打开编辑弹窗
+  const openEditModal = (item = null) => {
+    if (item) {
+      setEditModalMode('edit');
+      setEditingItem(item);
+    } else {
+      setEditModalMode('new');
+      setEditingItem(null);
+    }
+    setShowEditModal(true);
+  };
 
-    // Parse tags from JSON string
+  // 保存编辑弹窗的内容
+  const handleEditModalSave = async (data) => {
     try {
-      const tags = item.tags ? JSON.parse(item.tags) : [];
-      setEditTags(tags);
-    } catch {
-      setEditTags([]);
+      if (editModalMode === 'new') {
+        // 新建模式
+        await invoke('add_clipboard_item_manual', {
+          content: data.content,
+          contentType: 'text',
+          source: t('quickInput.source'),
+          autoFavorite: false
+        });
+
+        // 如果有标签或备注，更新项目
+        if (data.tags.length > 0 || data.note) {
+          await loadItems();
+          const newItems = await invoke('get_recent_items', { limit: 100 });
+          const newItem = newItems[0];
+          if (newItem) {
+            const updatedItem = {
+              ...newItem,
+              user_note: data.note,
+              tags: JSON.stringify(data.tags),
+              updated_at: Math.floor(Date.now() / 1000)
+            };
+            await invoke('update_item', { item: updatedItem });
+          }
+        }
+      } else {
+        // 编辑模式
+        const updatedItem = {
+          ...editingItem,
+          content: data.content || editingItem.content,
+          user_note: data.note,
+          tags: JSON.stringify(data.tags),
+          updated_at: Math.floor(Date.now() / 1000)
+        };
+        await invoke('update_item', { item: updatedItem });
+      }
+
+      await loadItems();
+      setShowEditModal(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error(t('error.saveFailed', { error }));
+      alert(t('error.saveFailed', { error }));
     }
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditContent('');
-    setEditNote('');
-    setEditTags([]);
-    setNewTag('');
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && !editTags.includes(newTag.trim())) {
-      setEditTags([...editTags, newTag.trim()]);
-      setNewTag('');
-    }
+  // 取消编辑弹窗
+  const handleEditModalCancel = () => {
+    setShowEditModal(false);
+    setEditingItem(null);
   };
 
   const generateAITags = async (item) => {
@@ -402,28 +439,7 @@ function App() {
     }
   };
 
-  const removeTag = (tagToRemove) => {
-    setEditTags(editTags.filter(tag => tag !== tagToRemove));
-  };
-
-  const saveEdit = async (item) => {
-    try {
-      const updatedItem = {
-        ...item,
-        content: editContent,
-        user_note: editNote,
-        tags: JSON.stringify(editTags),
-        updated_at: Math.floor(Date.now() / 1000)
-      };
-      await invoke('update_item', { item: updatedItem });
-      await loadItems();
-      cancelEdit();
-    } catch (error) {
-      console.error(t('error.updateFailed', { error }));
-      alert(t('error.updateFailed', { error }));
-    }
-  };
-
+  // 备注编辑（行内编辑）
   const startEditNote = (item) => {
     setEditingNoteId(item.id);
     setEditNote(item.user_note || '');
@@ -451,20 +467,18 @@ function App() {
     setEditNote('');
   };
 
-  // 开始添加标签
+  // 标签添加（行内添加）
   const startAddTag = (item, e) => {
     if (e) e.stopPropagation();
     setAddingTagItemId(item.id);
     setNewTagInput('');
   };
 
-  // 取消添加标签
   const cancelAddTag = () => {
     setAddingTagItemId(null);
     setNewTagInput('');
   };
 
-  // 添加标签到项目
   const addTagToItem = async (item, tagToAdd) => {
     try {
       const existingTags = getTags(item.tags);
@@ -489,59 +503,11 @@ function App() {
     }
   };
 
-  // 处理标签输入回车
   const handleTagInputKeyDown = (item, e) => {
     if (e.key === 'Enter' && newTagInput.trim()) {
       addTagToItem(item, newTagInput.trim());
     } else if (e.key === 'Escape') {
       cancelAddTag();
-    }
-  };
-
-  // 打开快速输入弹窗
-  const openQuickInput = () => {
-    setShowQuickInput(true);
-    setQuickInputText('');
-  };
-
-  // 关闭快速输入弹窗
-  const closeQuickInput = () => {
-    setShowQuickInput(false);
-    setQuickInputText('');
-  };
-
-  // 提交快速输入
-  const submitQuickInput = async () => {
-    if (!quickInputText.trim()) {
-      closeQuickInput();
-      return;
-    }
-
-    try {
-      await invoke('add_clipboard_item_manual', {
-        content: quickInputText,
-        contentType: 'text',
-        source: t('quickInput.source'),
-        autoFavorite: true  // 快速输入自动收藏
-      });
-      await loadItems();
-      closeQuickInput();
-      // 自动切换到收藏视图
-      setShowFavoritesOnly(true);
-    } catch (error) {
-      console.error(t('quickInput.failed', { error }));
-      alert(t('quickInput.failed', { error }));
-    }
-  };
-
-  // 处理快速输入键盘事件
-  const handleQuickInputKeyDown = (e) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault();
-      submitQuickInput();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      closeQuickInput();
     }
   };
 
@@ -856,40 +822,14 @@ function App() {
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <DragDrop onItemAdded={loadItems} />
 
-      {/* 快速输入弹窗 */}
-      {showQuickInput && (
-        <div className="quick-input-overlay" onClick={closeQuickInput}>
-          <div className="quick-input-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="quick-input-header">
-              <h3>{t('quickInput.title')}</h3>
-              <button onClick={closeQuickInput} className="quick-input-close">✕</button>
-            </div>
-            <textarea
-              className="quick-input-textarea"
-              placeholder={t('quickInput.placeholder')}
-              value={quickInputText}
-              onChange={(e) => setQuickInputText(e.target.value)}
-              onKeyDown={handleQuickInputKeyDown}
-              autoFocus
-              rows={8}
-            />
-            <div className="quick-input-footer">
-              <div className="quick-input-hints">
-                <span className="hint-item">{t('quickInput.submit')}</span>
-                <span className="hint-divider">|</span>
-                <span className="hint-item">{t('quickInput.cancel')}</span>
-              </div>
-              <div className="quick-input-actions">
-                <button onClick={closeQuickInput} className="quick-input-btn cancel">
-                  {t('edit.cancel')}
-                </button>
-                <button onClick={submitQuickInput} className="quick-input-btn submit">
-                  {t('edit.save')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* 编辑弹窗 */}
+      {showEditModal && (
+        <EditModal
+          item={editingItem}
+          mode={editModalMode}
+          onSave={handleEditModalSave}
+          onCancel={handleEditModalCancel}
+        />
       )}
 
       {/* 自定义标题栏 */}
@@ -906,7 +846,7 @@ function App() {
             {i18n.language === 'zh-CN' ? '🌐 EN' : '🌐 中'}
           </button>
           <button
-            onClick={openQuickInput}
+            onClick={() => openEditModal()}
             className="titlebar-btn quick-add-btn"
             title={t('titlebar.quickAdd')}
           >
@@ -1359,89 +1299,54 @@ function App() {
                   </button>
                 </div>
 
-                {editingId === item.id ? (
-                  <div className="edit-mode">
-                    {item.type_ !== 'image' && (
-                      <>
-                        <label className="edit-label">{t('edit.content')}</label>
-                        <textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="edit-textarea"
-                          rows={5}
-                        />
-                      </>
-                    )}
-
-                    <label className="edit-label">{t('edit.note')}</label>
-                    <textarea
-                      value={editNote}
-                      onChange={(e) => setEditNote(e.target.value)}
-                      className="edit-textarea"
-                      rows={2}
-                      placeholder={t('edit.notePlaceholder')}
-                    />
-
-                    <div className="edit-actions">
-                      <button onClick={() => saveEdit(item)} className="save-btn">
-                        ✓ {t('edit.save')}
-                      </button>
-                      <button onClick={cancelEdit} className="cancel-btn">
-                        ✕ {t('edit.cancel')}
-                      </button>
-                    </div>
+                {/* 内容区域 */}
+                <div
+                  className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''} ${copiedItemId === item.id ? 'copied' : ''}`}
+                  onClick={(e) => handleContentClick(item, e)}
+                  onDoubleClick={(e) => handleContentDoubleClick(item, e, item.type_ === 'image')}
+                >
+                  {/* Hover提示 */}
+                  <div className="content-hover-tip">
+                    <div className="hover-actions">{t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}</div>
                   </div>
-                ) : (
-                  <>
-                    <div
-                      className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''} ${copiedItemId === item.id ? 'copied' : ''}`}
-                      onClick={(e) => handleContentClick(item, e)}
-                      onDoubleClick={(e) => handleContentDoubleClick(item, e, item.type_ === 'image')}
-                    >
-                      {/* Hover提示 */}
-                      <div className="content-hover-tip">
-                        <div className="hover-actions">{t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}</div>
+
+                  {/* 复制成功反馈 */}
+                  {copiedItemId === item.id && (
+                    <div className="copy-success-toast">
+                      ✓ {t('item.copied')}
+                    </div>
+                  )}
+
+                  {item.type_ === 'image' && item.image_paths ? (
+                    <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>
+                      <div className="image-container">
+                        <img
+                          src={expandedItemId === item.id ? getImageOriginal(item.image_paths) : getImageThumbnail(item.image_paths)}
+                          alt="Clipboard image"
+                          className="clipboard-image"
+                          loading="lazy"
+                        />
                       </div>
-
-                      {/* 复制成功反馈 */}
-                      {copiedItemId === item.id && (
-                        <div className="copy-success-toast">
-                          ✓ {t('item.copied')}
+                      {item.ocr_text && (
+                        <div className="ocr-text-container">
+                          <div className="ocr-text-header">{t('item.recognizedText')}</div>
+                          <div className="ocr-text-content">{item.ocr_text}</div>
                         </div>
-                      )}
-
-                      {item.type_ === 'image' && item.image_paths ? (
-                        <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>
-                          <div className="image-container">
-                            <img
-                              src={expandedItemId === item.id ? getImageOriginal(item.image_paths) : getImageThumbnail(item.image_paths)}
-                              alt="Clipboard image"
-                              className="clipboard-image"
-                              loading="lazy"
-                            />
-                          </div>
-                          {item.ocr_text && (
-                            <div className="ocr-text-container">
-                              <div className="ocr-text-header">{t('item.recognizedText')}</div>
-                              <div className="ocr-text-content">{item.ocr_text}</div>
-                            </div>
-                          )}
-                        </div>
-                      ) : item.type_ === 'file' ? (
-                        <div className="file-list">
-                          {getFileList(item.content).map((path, idx) => (
-                            <div key={idx} className="file-item">
-                              <span className="file-icon">📄</span>
-                              <span className="file-name">{getFileName(path)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        getContentPreview(item.content)
                       )}
                     </div>
-                  </>
-                )}
+                  ) : item.type_ === 'file' ? (
+                    <div className="file-list">
+                      {getFileList(item.content).map((path, idx) => (
+                        <div key={idx} className="file-item">
+                          <span className="file-icon">📄</span>
+                          <span className="file-name">{getFileName(path)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    getContentPreview(item.content)
+                  )}
+                </div>
               </div>
             ))}
           </div>
