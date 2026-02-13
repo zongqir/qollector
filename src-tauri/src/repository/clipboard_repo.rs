@@ -173,4 +173,21 @@ impl ClipboardRepository {
 
         Ok(())
     }
+
+    pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                ocr_text = ?, updated_at = ?
+            WHERE id = ?
+            "#
+        )
+        .bind(ocr_text)
+        .bind(chrono::Utc::now().timestamp())
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }

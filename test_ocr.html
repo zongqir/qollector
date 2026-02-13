@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OCR 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>ClipBox OCR 功能测试</h1>
+
+    <div class="test-section">
+        <h2>1. 初始化 OCR 服务</h2>
+        <button onclick="initOcr()">初始化 OCR</button>
+        <div id="init-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 检查 OCR 可用性</h2>
+        <button onclick="checkAvailable()">检查可用性</button>
+        <div id="check-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 获取当前配置</h2>
+        <button onclick="getConfig()">获取配置</button>
+        <div id="config-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 测试图片识别</h2>
+        <p>请先复制一张包含文字的图片到剪贴板，然后点击下面的按钮</p>
+        <button onclick="testRecognize()">识别最新图片</button>
+        <div id="recognize-result" class="result"></div>
+    </div>
+
+    <script>
+        const { invoke } = window.__TAURI__.core;
+
+        async function initOcr() {
+            const resultDiv = document.getElementById('init-result');
+            try {
+                const config = {
+                    enabled: true,
+                    provider: 'SiliconFlow',
+                    api_key: 'sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp',
+                    api_secret: null,
+                    language: 'chi_sim+eng',
+                    auto_ocr: true,
+                };
+                const result = await invoke('init_ocr_service', { config });
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✓ ' + result;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ 错误: ' + error;
+            }
+        }
+
+        async function checkAvailable() {
+            const resultDiv = document.getElementById('check-result');
+            try {
+                const available = await invoke('check_ocr_available');
+                resultDiv.className = 'result ' + (available ? 'success' : 'error');
+                resultDiv.textContent = available ? '✓ OCR 服务可用' : '✗ OCR 服务不可用';
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ 错误: ' + error;
+            }
+        }
+
+        async function getConfig() {
+            const resultDiv = document.getElementById('config-result');
+            try {
+                const config = await invoke('get_ocr_config');
+                resultDiv.className = 'result success';
+                resultDiv.textContent = JSON.stringify(config, null, 2);
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ 错误: ' + error;
+            }
+        }
+
+        async function testRecognize() {
+            const resultDiv = document.getElementById('recognize-result');
+            resultDiv.textContent = '正在获取最新图片...';
+
+            try {
+                // 获取最近的剪贴板项目
+                const items = await invoke('get_recent_items', { limit: 10 });
+
+                // 找到第一个图片项目
+                const imageItem = items.find(item => item.type === 'image');
+
+                if (!imageItem) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '✗ 没有找到图片项目，请先复制一张图片';
+                    return;
+                }
+
+                resultDiv.textContent = '正在识别图片: ' + imageItem.id + '...';
+
+                // 获取图片路径
+                const imagePaths = JSON.parse(imageItem.image_paths || '{}');
+                const imagePath = imagePaths.original;
+
+                if (!imagePath) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = '✗ 图片路径不存在';
+                    return;
+                }
+
+                // 调用 OCR 识别
+                const text = await invoke('recognize_and_update', {
+                    itemId: imageItem.id,
+                    imagePath: imagePath
+                });
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '✓ 识别成功！\n\n识别结果:\n' + text;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '✗ 错误: ' + error;
+            }
+        }
+
+        // 页面加载时自动初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('页面加载完成，准备测试 OCR');
+        });
+    </script>
+</body>
+</html>

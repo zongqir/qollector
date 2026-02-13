@@ -1,0 +1,22 @@
+{
+  "model": "Qwen/Qwen3-VL-8B-Instruct",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "请识别图片中的所有文字，直接返回文字内容，不要添加任何解释或格式。如果图片中没有文字，返回空字符串。"
+        },
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "https://via.placeholder.com/300x100/FFFFFF/000000?text=Hello+World+测试"
+          }
+        }
+      ]
+    }
+  ],
+  "max_tokens": 2000,
+  "temperature": 0.0
+}

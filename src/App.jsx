@@ -15,9 +15,11 @@ function App() {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
+  const [ocrProcessing, setOcrProcessing] = useState(null);
 
   useEffect(() => {
     loadItems();
+    initOcrService();
 
     // 每3秒自动刷新一次
     const interval = setInterval(() => {
@@ -26,6 +28,23 @@ function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const initOcrService = async () => {
+    try {
+      const config = {
+        enabled: true,
+        provider: 'SiliconFlow',
+        api_key: 'sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp',
+        api_secret: null,
+        language: 'chi_sim+eng',
+        auto_ocr: true,
+      };
+      await invoke('init_ocr_service', { config });
+      console.log('OCR 服务初始化成功');
+    } catch (error) {
+      console.error('OCR 服务初始化失败:', error);
+    }
+  };
 
   const loadItems = async () => {
     try {
@@ -127,6 +146,29 @@ function App() {
       alert('AI 标签生成失败: ' + error);
     } finally {
       setGeneratingAI(null);
+    }
+  };
+
+  const handleOCR = async (item) => {
+    if (!item.image_paths) return;
+
+    setOcrProcessing(item.id);
+    try {
+      const paths = JSON.parse(item.image_paths);
+      const imagePath = paths.raw || paths.original;
+
+      const ocrText = await invoke('recognize_and_update', {
+        itemId: item.id,
+        imagePath: imagePath
+      });
+
+      console.log('OCR 识别成功:', ocrText);
+      await loadItems();
+    } catch (error) {
+      console.error('OCR 识别失败:', error);
+      alert('OCR 识别失败: ' + error);
+    } finally {
+      setOcrProcessing(null);
     }
   };
 
@@ -250,6 +292,9 @@ function App() {
     // Search in source app
     if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
 
+    // Search in OCR text
+    if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
+
     return false;
   });
 
@@ -317,6 +362,26 @@ function App() {
                   >
                     {generatingAI === item.id ? '🤖 生成中...' : '🤖 AI 标签'}
                   </button>
+                )}
+
+                {/* OCR button and result for images */}
+                {item.type_ === 'image' && (
+                  <div className="ocr-section">
+                    {item.ocr_text ? (
+                      <div className="ocr-result">
+                        <div className="ocr-label">🔍 识别文本:</div>
+                        <div className="ocr-text">{item.ocr_text}</div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleOCR(item)}
+                        disabled={ocrProcessing === item.id}
+                        className="ocr-btn"
+                      >
+                        {ocrProcessing === item.id ? '🔍 识别中...' : '🔍 识别文字'}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Note display and edit */}

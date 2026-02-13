@@ -5,6 +5,7 @@ mod platform;
 mod repository;
 mod commands;
 mod ai;
+mod ocr;
 
 use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
@@ -12,6 +13,7 @@ use repository::clipboard_repo::ClipboardRepository;
 use platform::clipboard_trait::PlatformClipboard;
 use commands::clipboard_commands::*;
 use commands::ai_commands::*;
+use commands::ocr_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 
@@ -63,6 +65,10 @@ fn main() {
                     config: Arc::new(Mutex::new(ai_config)),
                 };
                 app.manage(ai_state);
+
+                // Initialize OCR state
+                let ocr_state = OcrState::new();
+                app.manage(ocr_state);
             });
 
             Ok(())
@@ -76,7 +82,15 @@ fn main() {
             update_ai_config,
             generate_ai_tags,
             test_ai_connection,
+            init_ocr_service,
+            get_ocr_config,
+            update_ocr_config,
+            recognize_image,
+            recognize_and_update,
+            check_ocr_available,
+            get_ocr_providers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+// test
