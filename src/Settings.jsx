@@ -45,14 +45,17 @@ function Settings({ onClose }) {
 
   const loadConfigs = async () => {
     try {
+      console.log('📥 加载配置...');
       const [ai, ocr] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config')
       ]);
+      console.log('后端返回的 OCR 配置:', ocr);
       setAiConfig(ai);
       setOcrConfig(ocr);
+      console.log('✅ 配置加载完成');
     } catch (error) {
-      console.error('加载配置失败:', error);
+      console.error('❌ 加载配置失败:', error);
     }
   };
 

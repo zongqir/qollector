@@ -33,10 +33,15 @@ pub async fn init_ocr_service(
 pub async fn get_ocr_config(
     state: State<'_, OcrState>,
 ) -> Result<OcrConfig, String> {
+    println!("获取 OCR 配置");
     let service_guard = state.service.lock().unwrap();
     if let Some(service) = service_guard.as_ref() {
-        Ok(service.get_config().clone())
+        let config = service.get_config().clone();
+        println!("返回已保存的配置: {:?}", config.provider);
+        println!("  API Key 长度: {}", config.api_key.as_ref().map(|k| k.len()).unwrap_or(0));
+        Ok(config)
     } else {
+        println!("返回默认配置");
         Ok(OcrConfig::default())
     }
 }
