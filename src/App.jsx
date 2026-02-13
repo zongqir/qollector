@@ -651,6 +651,22 @@ function App() {
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
 
+  // 点击标签进行筛选
+  const handleTagClick = (tag, e) => {
+    e.stopPropagation();
+
+    // 判断是否已选中
+    const isSelected = selectedTags.includes(tag);
+
+    if (isSelected) {
+      // 取消选中
+      setSelectedTags(prev => prev.filter(t => t !== tag));
+    } else {
+      // 添加选中
+      setSelectedTags(prev => [...prev, tag]);
+    }
+  };
+
   const toggleTagFilter = (tag) => {
     setSelectedTags(prev =>
       prev.includes(tag)
@@ -815,6 +831,22 @@ function App() {
           )}
         </div>
 
+        {/* 标签筛选状态提示 */}
+        {selectedTags.length > 0 && (
+          <div className="filter-status">
+            <span className="filter-status-text">
+              筛选中 ({selectedTags.length})
+            </span>
+            <button
+              onClick={() => setSelectedTags([])}
+              className="clear-filter-btn"
+              title="清除所有筛选"
+            >
+              ✕ 清除
+            </button>
+          </div>
+        )}
+
         {/* 类型筛选 - 单选，大屏显示 */}
         <div className="type-filter-group">
           <button
@@ -938,32 +970,68 @@ function App() {
                 {/* Tags display - 顺序：类型、人工标签、来源标签、AI标签 */}
                 <div className="item-tags">
                   {/* 类型标签 */}
-                  {item.type_ && (
-                    <span className="tag type-tag">
-                      {item.type_ === 'text' && '文本'}
-                      {item.type_ === 'image' && '图片'}
-                      {item.type_ === 'file' && '文件'}
-                      {item.type_ === 'link' && '链接'}
-                    </span>
-                  )}
+                  {item.type_ && (() => {
+                    const typeMap = {
+                      'text': '类型:文本',
+                      'image': '类型:图片',
+                      'file': '类型:文件',
+                      'link': '类型:链接'
+                    };
+                    const typeTag = typeMap[item.type_];
+                    const displayName = {
+                      'text': '文本',
+                      'image': '图片',
+                      'file': '文件',
+                      'link': '链接'
+                    }[item.type_];
+                    return (
+                      <span
+                        className={`tag type-tag ${selectedTags.includes(typeTag) ? 'selected' : ''}`}
+                        onClick={(e) => handleTagClick(typeTag, e)}
+                        title="点击筛选此类型"
+                      >
+                        {displayName}
+                      </span>
+                    );
+                  })()}
                   {/* 用户标签（人工标签） */}
                   {getTags(item.tags).filter(tag => !tag.startsWith('AI:')).map((tag, idx) => (
-                    <span key={`user-${idx}`} className="tag user-tag">
+                    <span
+                      key={`user-${idx}`}
+                      className={`tag user-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                      onClick={(e) => handleTagClick(tag, e)}
+                      title="点击筛选此标签"
+                    >
                       {tag}
                     </span>
                   ))}
                   {/* 来源标签 */}
-                  {getSourceApp(item.metadata) !== 'Unknown' && (
-                    <span className="tag source-tag">
-                      {getSourceApp(item.metadata)}
-                    </span>
-                  )}
+                  {getSourceApp(item.metadata) !== 'Unknown' && (() => {
+                    const sourceTag = `来源:${getSourceApp(item.metadata)}`;
+                    return (
+                      <span
+                        className={`tag source-tag ${selectedTags.includes(sourceTag) ? 'selected' : ''}`}
+                        onClick={(e) => handleTagClick(sourceTag, e)}
+                        title="点击筛选此来源"
+                      >
+                        {getSourceApp(item.metadata)}
+                      </span>
+                    );
+                  })()}
                   {/* AI标签 */}
-                  {getTags(item.tags).filter(tag => tag.startsWith('AI:')).map((tag, idx) => (
-                    <span key={`ai-${idx}`} className="tag ai-tag">
-                      {tag.substring(3)}
-                    </span>
-                  ))}
+                  {getTags(item.tags).filter(tag => tag.startsWith('AI:')).map((tag, idx) => {
+                    const displayTag = tag.substring(3);
+                    return (
+                      <span
+                        key={`ai-${idx}`}
+                        className={`tag ai-tag ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                        onClick={(e) => handleTagClick(tag, e)}
+                        title="点击筛选此AI标签"
+                      >
+                        {displayTag}
+                      </span>
+                    );
+                  })}
 
                   {/* 添加标签按钮/输入框 */}
                   {addingTagItemId === item.id ? (

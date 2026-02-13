@@ -261,18 +261,20 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 2px solid #e0e0e0;
   background: linear-gradient(135deg, #ffffff, #f8f9ff);
   border-radius: 50%;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #667eea;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   position: relative;
+  line-height: 1;
+  padding: 0;
 }
 
 .add-tag-btn:hover {
@@ -365,6 +367,15 @@ body {
   font-weight: 500;
   transition: all 0.2s;
   border: 1px solid;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 标签选中状态 */
+.tag.selected {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
 }
 
 /* AI标签样式 - 紫色渐变 */
@@ -379,6 +390,12 @@ body {
   border-color: #5568d3;
 }
 
+.tag.ai-tag.selected {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+  color: white;
+}
+
 /* 用户标签样式 - 蓝色清新 */
 .tag.user-tag {
   background: linear-gradient(135deg, #2196f315, #1976d215);
@@ -389,6 +406,12 @@ body {
 .tag.user-tag:hover {
   background: linear-gradient(135deg, #2196f325, #1976d225);
   border-color: #1565c0;
+}
+
+.tag.user-tag.selected {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  border-color: #2196f3;
+  color: white;
 }
 
 /* 来源标签样式 - 橙色温暖 */
@@ -403,6 +426,12 @@ body {
   border-color: #f57c00;
 }
 
+.tag.source-tag.selected {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  color: white;
+}
+
 /* 类型标签样式 - 青色清新 */
 .tag.type-tag {
   background: linear-gradient(135deg, #00bcd415, #00897b15);
@@ -413,6 +442,12 @@ body {
 .tag.type-tag:hover {
   background: linear-gradient(135deg, #00bcd425, #00897b25);
   border-color: #00897b;
+}
+
+.tag.type-tag.selected {
+  background: linear-gradient(135deg, #00bcd4, #00897b);
+  border-color: #00bcd4;
+  color: white;
 }
 
 .tag.editable {
@@ -1408,4 +1443,55 @@ body {
   background: #ff9800;
   color: white;
   border-color: #ff9800;
+}
+
+/* 筛选状态提示 */
+.filter-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  animation: filterStatusSlide 0.3s ease-out;
+  flex-shrink: 0;
+}
+
+@keyframes filterStatusSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-status-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clear-filter-btn {
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.clear-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
 }
