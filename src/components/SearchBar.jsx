@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { X, Star, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -13,6 +14,14 @@ function SearchBar({
 }) {
   const { t } = useTranslation();
 
+  const typeIcons = {
+    all: null,
+    text: <FileText size={14} />,
+    image: <Image size={14} />,
+    file: <File size={14} />,
+    link: <Link size={14} />
+  };
+
   return (
     <header className="header">
       <div className="search-box">
@@ -25,7 +34,7 @@ function SearchBar({
         />
         {searchQuery && (
           <button onClick={() => onSearchChange('')} className="clear-search">
-            ✕
+            <X size={16} />
           </button>
         )}
       </div>
@@ -40,21 +49,21 @@ function SearchBar({
             className="clear-filter-btn"
             title={t('toolbar.clearAll')}
           >
-            ✕ {t('toolbar.clearFilter')}
+            <X size={14} /> {t('toolbar.clearFilter')}
           </button>
         </div>
       )}
 
       <div className="type-filter-group">
         {['all', 'text', 'image', 'file', 'link'].map(type => {
-          const icons = { all: '', text: '📝 ', image: '🖼️ ', file: '📁 ', link: '🔗 ' };
           return (
             <button
               key={type}
               onClick={() => onTypeChange(type)}
               className={`type-filter-btn ${selectedType === type ? 'active' : ''}`}
             >
-              {icons[type]}{t(`search.typeFilter.${type}`)}
+              {typeIcons[type] && <span className="type-icon">{typeIcons[type]}</span>}
+              {t(`search.typeFilter.${type}`)}
             </button>
           );
         })}
@@ -65,7 +74,7 @@ function SearchBar({
         className={`favorites-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
         title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
       >
-        ⭐
+        <Star size={16} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
       </button>
 
       {allTags.length > 0 && (
@@ -74,11 +83,11 @@ function SearchBar({
             onClick={onToggleTagFilter}
             className={`tag-select-btn ${selectedTags.length > 0 ? 'has-selection' : ''}`}
           >
-            <span className="tag-icon">🏷️</span>
+            <Tag size={14} className="tag-icon" />
             <span className="tag-label">
               {selectedTags.length > 0 ? t('toolbar.selectedTags', { count: selectedTags.length }) : t('toolbar.filterTags')}
             </span>
-            <span className="dropdown-arrow">{showTagFilter ? '▲' : '▼'}</span>
+            {showTagFilter ? <ChevronUp size={14} className="dropdown-arrow" /> : <ChevronDown size={14} className="dropdown-arrow" />}
           </button>
           {showTagFilter && (
             <div className="tag-dropdown">
@@ -109,7 +118,7 @@ function SearchBar({
                         onClick={() => onToggleTag(tag)}
                         className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
                       >
-                        <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
+                        <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
                         <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
                           {isTypeTag && <span className="type-badge">T</span>}
                           {isAITag && <span className="ai-badge">AI</span>}
@@ -136,7 +145,7 @@ function SearchBar({
         </div>
       )}
       <button onClick={onOpenSettings} className="settings-btn">
-        ⚙️
+        <Settings size={18} />
       </button>
     </header>
   );

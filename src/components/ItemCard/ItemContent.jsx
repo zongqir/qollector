@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Check, FileText } from 'lucide-react';
 import { getContentPreview, getFileList, getFileName } from '../../utils/formatters';
 import { getImageThumbnail, getImageOriginal } from '../../utils/imageHelpers';
 
@@ -16,7 +17,7 @@ function ItemContent({
     >
       {isCopied && (
         <div className="copy-success-toast">
-          ✓ {t('item.copied')}
+          <Check size={16} /> {t('item.copied')}
         </div>
       )}
 
@@ -41,7 +42,7 @@ function ItemContent({
         <div className="file-list">
           {getFileList(item.content).map((path, idx) => (
             <div key={idx} className="file-item">
-              <span className="file-icon">📄</span>
+              <FileText size={16} className="file-icon" />
               <span className="file-name">{getFileName(path)}</span>
             </div>
           ))}

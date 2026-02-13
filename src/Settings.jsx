@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import './Settings.css';
 
 const AI_PROVIDERS = [
@@ -182,7 +183,7 @@ function Settings({ onClose }) {
       <div className="settings-modal">
         <div className="settings-header">
           <h2>{t('settings.title')}</h2>
-          <button onClick={onClose} className="close-btn">✕</button>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
 
         <div className="settings-tabs">

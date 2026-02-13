@@ -43,6 +43,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  z-index: 10;
 }
 
 .add-tag-input {
@@ -116,7 +117,8 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
   max-height: 240px;
   overflow-y: auto;
-  z-index: 100;
+  overflow-x: hidden;
+  z-index: 1000;
   min-width: 180px;
   animation: suggestionsSlideIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -146,17 +148,20 @@
   gap: 8px;
 }
 
-.tag-suggestion-item::before {
-  content: '🏷️';
-  font-size: 14px;
+.tag-suggestion-icon {
   opacity: 0.6;
   transition: opacity 0.12s;
+  flex-shrink: 0;
 }
 
 .tag-suggestion-item:hover {
   background: linear-gradient(90deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
   border-left-color: #667eea;
   color: #667eea;
+}
+
+.tag-suggestion-item:hover .tag-suggestion-icon {
+  opacity: 1;
 }
 
 .tag-suggestion-item:hover::before {

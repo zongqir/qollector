@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Check, X, Tag } from 'lucide-react';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 
 function ItemTags({
@@ -92,14 +93,14 @@ function ItemTags({
             title={t('item.confirmTag')}
             disabled={!newTagInput.trim()}
           >
-            ✓
+            <Check size={13} />
           </button>
           <button
             onClick={onCancelAddTag}
             className="tag-btn-cancel"
             title={t('item.cancelTag')}
           >
-            ✕
+            <X size={13} />
           </button>
           {filteredUserTags.length > 0 && (
             <div className="tag-suggestions">
@@ -110,6 +111,7 @@ function ItemTags({
                   onClick={() => onAddTagToItem(item, tag)}
                   onMouseDown={(e) => e.preventDefault()}
                 >
+                  <Tag size={14} className="tag-suggestion-icon" />
                   {tag}
                 </div>
               ))}

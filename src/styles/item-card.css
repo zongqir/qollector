@@ -1,6 +1,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: visible;
   padding: 20px 30px;
 }
 
@@ -16,6 +17,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: visible;
 }
 
 .item-card {
@@ -26,6 +28,13 @@
   transition: all 0.2s ease;
   cursor: pointer;
   position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* 当卡片内有下拉框时提升层级 */
+.item-card:has(.tag-suggestions) {
+  z-index: 100;
 }
 
 .item-card:hover {

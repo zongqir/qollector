@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Check, X } from 'lucide-react';
 
 function NoteDisplay({
   item, editingNoteId, editNote, onEditNoteChange,
@@ -9,7 +10,6 @@ function NoteDisplay({
   if (editingNoteId === item.id) {
     return (
       <div className="note-edit-bar">
-        <span className="note-icon">📝</span>
         <textarea
           value={editNote}
           onChange={(e) => onEditNoteChange(e.target.value)}
@@ -25,8 +25,12 @@ function NoteDisplay({
             }
           }}
         />
-        <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>✓</button>
-        <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>✕</button>
+        <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>
+          <Check size={13} />
+        </button>
+        <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>
+          <X size={13} />
+        </button>
       </div>
     );
   }
