@@ -29,15 +29,19 @@ pub async fn generate_ai_tags(
 ) -> Result<Vec<String>, String> {
     let config = state.config.lock().unwrap().clone();
 
-    if !config.enabled {
+    // 只要有API key就尝试生成,失败静默返回空数组
+    if config.api_key.is_empty() {
         return Ok(Vec::new());
     }
 
     let service = AIService::new(config);
-    service
-        .generate_tags(&content)
-        .await
-        .map_err(|e| e.to_string())
+    match service.generate_tags(&content).await {
+        Ok(tags) => Ok(tags),
+        Err(e) => {
+            eprintln!("AI标签生成失败(静默): {}", e);
+            Ok(Vec::new()) // 失败时返回空数组而不是错误
+        }
+    }
 }
 
 #[tauri::command]

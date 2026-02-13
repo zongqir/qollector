@@ -21,6 +21,8 @@ function App() {
   const [showTagFilter, setShowTagFilter] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
+  const [processedItemIds, setProcessedItemIds] = useState(new Set());
+  const [expandedItemId, setExpandedItemId] = useState(null);
 
   useEffect(() => {
     loadItems();
@@ -64,10 +66,57 @@ function App() {
     try {
       const result = await invoke('get_recent_items', { limit: 100 });
       setItems(result);
+
+      // 自动为新的文本项目生成AI标签
+      if (!loading) {
+        autoGenerateAITags(result);
+      }
+
       if (loading) setLoading(false);
     } catch (error) {
       console.error('加载失败:', error);
       if (loading) setLoading(false);
+    }
+  };
+
+  // 自动为新项目生成AI标签
+  const autoGenerateAITags = async (items) => {
+    for (const item of items) {
+      // 只处理文本类型且未处理过的项目
+      if (item.type_ === 'text' &&
+          item.content &&
+          !processedItemIds.has(item.id)) {
+
+        // 检查是否已有AI标签
+        const tags = getTags(item.tags);
+        const hasAITags = tags.some(tag => tag.startsWith('AI:'));
+
+        if (!hasAITags) {
+          // 标记为已处理
+          setProcessedItemIds(prev => new Set([...prev, item.id]));
+
+          // 静默生成AI标签
+          try {
+            const aiTags = await invoke('generate_ai_tags', { content: item.content });
+            if (aiTags && aiTags.length > 0) {
+              const taggedAI = aiTags.map(tag => `AI:${tag}`);
+              const newTags = [...tags, ...taggedAI];
+
+              const updatedItem = {
+                ...item,
+                tags: JSON.stringify(newTags),
+                updated_at: Math.floor(Date.now() / 1000)
+              };
+              await invoke('update_item', { item: updatedItem });
+            }
+          } catch (error) {
+            console.error('自动AI标签生成失败(静默):', error);
+          }
+        } else {
+          // 已有AI标签,标记为已处理
+          setProcessedItemIds(prev => new Set([...prev, item.id]));
+        }
+      }
     }
   };
 
@@ -159,7 +208,7 @@ function App() {
       console.log('AI tags received:', aiTags);
 
       if (aiTags && aiTags.length > 0) {
-        // Add AI: prefix to distinguish AI-generated tags
+        // Add AI: prefix internally to distinguish AI-generated tags
         const taggedAI = aiTags.map(tag => `AI:${tag}`);
         const existingTags = getTags(item.tags);
         const newTags = [...existingTags, ...taggedAI.filter(t => !existingTags.includes(t))];
@@ -175,11 +224,10 @@ function App() {
         console.log('Tags updated successfully');
       } else {
         console.log('No AI tags generated or AI not enabled');
-        alert('AI 未启用或未生成标签，请检查设置');
       }
     } catch (error) {
       console.error('AI 标签生成失败:', error);
-      alert('AI 标签生成失败: ' + error);
+      // 静默处理失败,不弹出提示
     } finally {
       setGeneratingAI(null);
     }
@@ -298,6 +346,26 @@ function App() {
     }
   };
 
+  const getImageOriginal = (imagePathsStr) => {
+    if (!imagePathsStr) return '';
+    try {
+      const paths = JSON.parse(imagePathsStr);
+      const originalPath = paths.original || paths.raw || paths.thumbnail;
+      const converted = convertFileSrc(originalPath);
+      return converted;
+    } catch (e) {
+      console.error('Error parsing image paths:', e);
+      return convertFileSrc(imagePathsStr);
+    }
+  };
+
+  const toggleExpand = (itemId, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setExpandedItemId(expandedItemId === itemId ? null : itemId);
+  };
+
   const getTags = (tagsStr) => {
     if (!tagsStr) return [];
     try {
@@ -321,7 +389,7 @@ function App() {
   const getAllTags = () => {
     const tagSet = new Set();
     items.forEach(item => {
-      // 添加用户标签
+      // 添加用户标签和AI标签
       const tags = getTags(item.tags);
       tags.forEach(tag => tagSet.add(tag));
 
@@ -482,16 +550,27 @@ function App() {
                 </div>
                 <div className="tag-dropdown-list">
                   {getFilteredTags().length > 0 ? (
-                    getFilteredTags().map(tag => (
-                      <div
-                        key={tag}
-                        onClick={() => toggleTagFilter(tag)}
-                        className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                      >
-                        <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
-                        <span className="tag-text">{tag}</span>
-                      </div>
-                    ))
+                    getFilteredTags().map(tag => {
+                      const isAITag = tag.startsWith('AI:');
+                      const isSourceTag = tag.startsWith('来源:');
+                      const isUserTag = !isAITag && !isSourceTag;
+                      const displayTag = isAITag ? tag.substring(3) : tag;
+                      return (
+                        <div
+                          key={tag}
+                          onClick={() => toggleTagFilter(tag)}
+                          className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                        >
+                          <span className="tag-check">{selectedTags.includes(tag) ? '✓' : ''}</span>
+                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''}`}>
+                            {isAITag && <span className="ai-badge">AI</span>}
+                            {isUserTag && <span className="user-badge">M</span>}
+                            {isSourceTag && <span className="source-badge">S</span>}
+                            {displayTag}
+                          </span>
+                        </div>
+                      );
+                    })
                   ) : (
                     <div className="tag-dropdown-empty">未找到匹配的标签</div>
                   )}
@@ -521,12 +600,25 @@ function App() {
           <div className="items-list">
             {filteredItems.map((item) => (
               <div key={item.id} className="item-card" title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}>
-                {/* Tags display */}
-                {getTags(item.tags).length > 0 && (
+                {/* Tags display - 包括用户标签、AI标签和来源标签 */}
+                {(getTags(item.tags).length > 0 || getSourceApp(item.metadata) !== 'Unknown') && (
                   <div className="item-tags">
-                    {getTags(item.tags).map((tag, idx) => (
-                      <span key={idx} className="tag">{tag}</span>
-                    ))}
+                    {/* 来源标签 */}
+                    {getSourceApp(item.metadata) !== 'Unknown' && (
+                      <span className="tag source-tag">
+                        {getSourceApp(item.metadata)}
+                      </span>
+                    )}
+                    {/* 用户标签和AI标签 */}
+                    {getTags(item.tags).map((tag, idx) => {
+                      const isAITag = tag.startsWith('AI:');
+                      const displayTag = isAITag ? tag.substring(3) : tag;
+                      return (
+                        <span key={idx} className={`tag ${isAITag ? 'ai-tag' : 'user-tag'}`}>
+                          {displayTag}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -633,6 +725,17 @@ function App() {
                     <span className="toolbar-btn-icon">📝</span>
                     <span>{item.user_note ? '编辑备注' : '添加备注'}</span>
                   </button>
+
+                  {/* 展开按钮 */}
+                  <div className="toolbar-divider"></div>
+                  <button
+                    onClick={(e) => toggleExpand(item.id, e)}
+                    className={`toolbar-btn expand-btn ${expandedItemId === item.id ? 'active' : ''}`}
+                    title={expandedItemId === item.id ? '收起' : '展开全部'}
+                  >
+                    <span className="toolbar-btn-icon">{expandedItemId === item.id ? '▲' : '▼'}</span>
+                    <span>{expandedItemId === item.id ? '收起' : '展开'}</span>
+                  </button>
                 </div>
 
                 {editingId === item.id ? (
@@ -693,7 +796,7 @@ function App() {
                 ) : (
                   <>
                     <div
-                      className="item-content clickable"
+                      className={`item-content clickable ${expandedItemId === item.id ? 'expanded' : ''}`}
                       onClick={(e) => handleCopy(item, e)}
                       onDoubleClick={() => startEdit(item)}
                     >
@@ -706,7 +809,7 @@ function App() {
                         <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>
                           <div className="image-container">
                             <img
-                              src={getImageThumbnail(item.image_paths)}
+                              src={expandedItemId === item.id ? getImageOriginal(item.image_paths) : getImageThumbnail(item.image_paths)}
                               alt="Clipboard image"
                               className="clipboard-image"
                             />

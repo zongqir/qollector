@@ -62,7 +62,7 @@ function Settings({ onClose }) {
   const handleAiSave = async () => {
     try {
       await invoke('update_ai_config', { config: aiConfig });
-      alert('AI 配置已保存');
+      onClose();
     } catch (error) {
       console.error('保存 AI 配置失败:', error);
       alert('保存失败: ' + error);
@@ -78,7 +78,7 @@ function Settings({ onClose }) {
       };
 
       await invoke('update_ocr_config', { config: configToSave });
-      alert('OCR 配置已保存');
+      onClose();
     } catch (error) {
       console.error('保存 OCR 配置失败:', error);
       alert('保存失败: ' + error);
@@ -195,17 +195,6 @@ function Settings({ onClose }) {
 
         {activeTab === 'ai' && (
           <div className="settings-content">
-            <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
-                  checked={aiConfig.enabled}
-                  onChange={(e) => setAiConfig({ ...aiConfig, enabled: e.target.checked })}
-                />
-                启用 AI 自动标签
-              </label>
-            </div>
-
             <div className="setting-item">
               <label>AI 提供商</label>
               <select
