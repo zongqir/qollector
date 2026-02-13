@@ -141,7 +141,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .tag {
@@ -181,7 +181,7 @@ body {
 /* 移除旧的备注样式 */
 
 .item-content {
-  margin: 10px 0;
+  margin: 10px 0 0 0;
   padding: 12px;
   background: #f8f9fa;
   border-radius: 6px;
@@ -193,16 +193,15 @@ body {
   max-height: 80px;
   overflow: hidden;
   position: relative;
-  transition: all 0.3s;
+  transition: max-height 0.3s ease-out 0.3s, background 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 
 .item-content.clickable {
   cursor: pointer;
-  transition: all 0.3s;
   position: relative;
 }
 
-.item-content.clickable:hover {
+.item-card:hover .item-content.clickable {
   background: #e8eaf6;
   transform: translateY(-1px);
   max-height: 400px;
@@ -222,7 +221,7 @@ body {
   top: 8px;
   right: 8px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease-out 0.3s;
   pointer-events: none;
   z-index: 10;
 }
@@ -236,7 +235,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.item-content.clickable:hover .content-hover-tip {
+.item-card:hover .content-hover-tip {
   opacity: 1;
 }
 
@@ -245,21 +244,22 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 10px;
+  padding: 0 10px;
   background: linear-gradient(to right, #fafafa, #f5f5f5);
   border-radius: 6px;
-  margin-bottom: 8px;
-  min-height: 28px;
+  margin: 0;
+  height: 0;
+  min-height: 0;
   opacity: 0;
-  max-height: 0;
   overflow: hidden;
-  transition: all 0.2s ease-out;
+  transition: opacity 0.2s ease-out 0.3s, height 0.2s ease-out 0.3s, padding 0.2s ease-out 0.3s, margin 0.2s ease-out 0.3s;
 }
 
 .item-card:hover .item-toolbar {
   opacity: 1;
-  max-height: 40px;
-  margin-bottom: 8px;
+  height: 28px;
+  padding: 6px 10px;
+  margin: 8px 0;
 }
 
 .toolbar-btn {
@@ -574,11 +574,11 @@ body {
   display: block;
   margin: 0 auto;
   object-fit: contain;
-  transition: all 0.3s;
+  transition: max-height 0.3s ease-out 0.3s, box-shadow 0.2s;
   cursor: pointer;
 }
 
-.item-content:hover .clipboard-image {
+.item-card:hover .clipboard-image {
   max-height: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
