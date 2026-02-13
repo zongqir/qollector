@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -13,6 +13,7 @@ function App() {
   const [editTags, setEditTags] = useState([]);
   const [newTag, setNewTag] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
@@ -23,6 +24,17 @@ function App() {
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 }); // 虚拟滚动：只渲染前20项
+  const contentRef = useRef(null);
+
+  // 防抖搜索：延迟300ms执行搜索，避免每次输入都触发过滤
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     loadItems();
@@ -33,16 +45,23 @@ function App() {
       loadItems();
     }, 3000);
 
-    // 点击外部关闭标签过滤面板
+    return () => {
+      clearInterval(interval);
+    };
+  }, []); // 移除 showTagFilter 依赖
+
+  // 单独处理点击外部关闭标签面板
+  useEffect(() => {
+    if (!showTagFilter) return;
+
     const handleClickOutside = (e) => {
-      if (showTagFilter && !e.target.closest('.tag-select-wrapper')) {
+      if (!e.target.closest('.tag-select-wrapper')) {
         setShowTagFilter(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
 
     return () => {
-      clearInterval(interval);
       document.removeEventListener('click', handleClickOutside);
     };
   }, [showTagFilter]);
@@ -79,9 +98,15 @@ function App() {
     }
   };
 
-  // 自动为新项目生成AI标签
+  // 自动为新项目生成AI标签 - 优化：限制并发数量
   const autoGenerateAITags = async (items) => {
+    // 只处理前3个未处理的项目，避免一次性处理太多
+    let processedCount = 0;
+    const maxConcurrent = 3;
+
     for (const item of items) {
+      if (processedCount >= maxConcurrent) break;
+
       // 只处理文本类型且未处理过的项目
       if (item.type_ === 'text' &&
           item.content &&
@@ -94,24 +119,26 @@ function App() {
         if (!hasAITags) {
           // 标记为已处理
           setProcessedItemIds(prev => new Set([...prev, item.id]));
+          processedCount++;
 
-          // 静默生成AI标签
-          try {
-            const aiTags = await invoke('generate_ai_tags', { content: item.content });
-            if (aiTags && aiTags.length > 0) {
-              const taggedAI = aiTags.map(tag => `AI:${tag}`);
-              const newTags = [...tags, ...taggedAI];
+          // 静默生成AI标签（不等待完成，避免阻塞）
+          invoke('generate_ai_tags', { content: item.content })
+            .then(aiTags => {
+              if (aiTags && aiTags.length > 0) {
+                const taggedAI = aiTags.map(tag => `AI:${tag}`);
+                const newTags = [...tags, ...taggedAI];
 
-              const updatedItem = {
-                ...item,
-                tags: JSON.stringify(newTags),
-                updated_at: Math.floor(Date.now() / 1000)
-              };
-              await invoke('update_item', { item: updatedItem });
-            }
-          } catch (error) {
-            console.error('自动AI标签生成失败(静默):', error);
-          }
+                const updatedItem = {
+                  ...item,
+                  tags: JSON.stringify(newTags),
+                  updated_at: Math.floor(Date.now() / 1000)
+                };
+                return invoke('update_item', { item: updatedItem });
+              }
+            })
+            .catch(error => {
+              console.error('自动AI标签生成失败(静默):', error);
+            });
         } else {
           // 已有AI标签,标记为已处理
           setProcessedItemIds(prev => new Set([...prev, item.id]));
@@ -385,8 +412,8 @@ function App() {
     }
   };
 
-  // 获取所有唯一标签（包括来源标签）
-  const getAllTags = () => {
+  // 获取所有唯一标签（包括来源标签）- 使用 useMemo 缓存
+  const allTags = useMemo(() => {
     const tagSet = new Set();
     items.forEach(item => {
       // 添加用户标签和AI标签
@@ -400,15 +427,14 @@ function App() {
       }
     });
     return Array.from(tagSet).sort();
-  };
+  }, [items]);
 
-  // 过滤标签列表（用于搜索）
-  const getFilteredTags = () => {
-    const allTags = getAllTags();
+  // 过滤标签列表（用于搜索）- 使用 useMemo 缓存
+  const filteredTagsList = useMemo(() => {
     if (!tagSearchQuery.trim()) return allTags;
     const query = tagSearchQuery.toLowerCase();
     return allTags.filter(tag => tag.toLowerCase().includes(query));
-  };
+  }, [allTags, tagSearchQuery]);
 
   const toggleTagFilter = (tag) => {
     setSelectedTags(prev =>
@@ -418,48 +444,76 @@ function App() {
     );
   };
 
-  const filteredItems = items.filter(item => {
-    // 标签过滤（包括来源标签）
-    if (selectedTags.length > 0) {
-      const itemTags = getTags(item.tags);
-      const sourceApp = getSourceApp(item.metadata);
-      const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      // 标签过滤（包括来源标签）
+      if (selectedTags.length > 0) {
+        const itemTags = getTags(item.tags);
+        const sourceApp = getSourceApp(item.metadata);
+        const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
 
-      const allItemTags = sourceTag ? [...itemTags, sourceTag] : itemTags;
+        const allItemTags = sourceTag ? [...itemTags, sourceTag] : itemTags;
 
-      const hasSelectedTag = selectedTags.some(selectedTag =>
-        allItemTags.includes(selectedTag)
-      );
-      if (!hasSelectedTag) return false;
-    }
+        const hasSelectedTag = selectedTags.some(selectedTag =>
+          allItemTags.includes(selectedTag)
+        );
+        if (!hasSelectedTag) return false;
+      }
 
-    // 文本搜索
-    if (!searchQuery.trim()) return true;
+      // 文本搜索
+      if (!debouncedSearchQuery.trim()) return true;
 
-    const query = searchQuery.toLowerCase();
+      const query = debouncedSearchQuery.toLowerCase();
 
-    // Search in content
-    if (item.content && item.content.toLowerCase().includes(query)) return true;
+      // Search in content
+      if (item.content && item.content.toLowerCase().includes(query)) return true;
 
-    // Search in note
-    if (item.user_note && item.user_note.toLowerCase().includes(query)) return true;
+      // Search in note
+      if (item.user_note && item.user_note.toLowerCase().includes(query)) return true;
 
-    // Search in tags
-    const tags = getTags(item.tags);
-    if (tags.some(tag => tag.toLowerCase().includes(query))) return true;
+      // Search in tags
+      const tags = getTags(item.tags);
+      if (tags.some(tag => tag.toLowerCase().includes(query))) return true;
 
-    // Search in source app
-    if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
+      // Search in source app
+      if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
 
-    // Search in OCR text
-    if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
+      // Search in OCR text
+      if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
 
-    return false;
-  });
+      return false;
+    });
+  }, [items, selectedTags, debouncedSearchQuery]);
 
-  if (loading) {
-    return <div className="loading">加载中...</div>;
-  }
+  // 虚拟滚动：监听滚动事件，动态更新可见范围
+  useEffect(() => {
+    const contentElement = contentRef.current;
+    if (!contentElement) return;
+
+    const handleScroll = () => {
+      const scrollTop = contentElement.scrollTop;
+      const itemHeight = 150; // 估算每个项目的平均高度
+      const visibleCount = Math.ceil(contentElement.clientHeight / itemHeight);
+      const start = Math.max(0, Math.floor(scrollTop / itemHeight) - 5); // 提前渲染5个
+      const end = Math.min(filteredItems.length, start + visibleCount + 10); // 多渲染10个
+
+      setVisibleRange({ start, end });
+    };
+
+    contentElement.addEventListener('scroll', handleScroll);
+    handleScroll(); // 初始化
+
+    return () => {
+      contentElement.removeEventListener('scroll', handleScroll);
+    };
+  }, [filteredItems.length]);
+
+  // 可见的项目列表
+  const visibleItems = useMemo(() => {
+    // 如果项目少于30个，不使用虚拟滚动
+    if (filteredItems.length < 30) return filteredItems;
+    return filteredItems.slice(visibleRange.start, visibleRange.end);
+  }, [filteredItems, visibleRange]);
 
   return (
     <div className="app">
@@ -526,7 +580,7 @@ function App() {
             </button>
           )}
         </div>
-        {getAllTags().length > 0 && (
+        {allTags.length > 0 && (
           <div className="tag-select-wrapper">
             <button
               onClick={() => setShowTagFilter(!showTagFilter)}
@@ -551,8 +605,8 @@ function App() {
                   />
                 </div>
                 <div className="tag-dropdown-list">
-                  {getFilteredTags().length > 0 ? (
-                    getFilteredTags().map(tag => {
+                  {filteredTagsList.length > 0 ? (
+                    filteredTagsList.map(tag => {
                       const isAITag = tag.startsWith('AI:');
                       const isSourceTag = tag.startsWith('来源:');
                       const isUserTag = !isAITag && !isSourceTag;
@@ -593,14 +647,14 @@ function App() {
         </button>
       </header>
 
-      <div className="content">
+      <div className="content" ref={contentRef}>
         {filteredItems.length === 0 ? (
           <div className="empty">
             {searchQuery ? '没有找到匹配的记录' : '暂无剪贴板记录'}
           </div>
         ) : (
           <div className="items-list">
-            {filteredItems.map((item) => (
+            {visibleItems.map((item) => (
               <div key={item.id} className="item-card" title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}>
                 {/* Tags display - 包括用户标签、AI标签和来源标签 */}
                 {(getTags(item.tags).length > 0 || getSourceApp(item.metadata) !== 'Unknown') && (
@@ -814,6 +868,7 @@ function App() {
                               src={expandedItemId === item.id ? getImageOriginal(item.image_paths) : getImageThumbnail(item.image_paths)}
                               alt="Clipboard image"
                               className="clipboard-image"
+                              loading="lazy"
                             />
                           </div>
                           {item.ocr_text && (

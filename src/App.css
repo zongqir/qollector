@@ -294,6 +294,7 @@ body {
   position: relative;
   transition: max-height 0.3s ease-out;
   border: none;
+  will-change: max-height; /* 优化展开动画 */
 }
 
 .item-content.clickable {
@@ -357,6 +358,7 @@ body {
   opacity: 0;
   overflow: hidden;
   transition: opacity 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, margin 0.2s ease-out;
+  will-change: opacity, height; /* 优化动画性能 */
 }
 
 .item-card:hover .item-toolbar {
@@ -688,6 +690,7 @@ body {
   object-fit: contain;
   transition: max-height 0.3s ease-out, box-shadow 0.2s;
   cursor: pointer;
+  will-change: max-height; /* 提示浏览器优化动画 */
 }
 
 /* 展开状态下的图片 */
