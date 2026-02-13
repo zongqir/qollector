@@ -206,6 +206,11 @@ impl ClipboardManager {
         repo.delete(id).await
     }
 
+    pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.insert(item).await
+    }
+
     pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.update_ocr_text(id, ocr_text).await

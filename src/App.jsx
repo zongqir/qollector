@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import Settings from './Settings';
+import DragDrop from './DragDrop';
 
 function App() {
   const [items, setItems] = useState([]);
@@ -393,6 +394,26 @@ function App() {
     setExpandedItemId(expandedItemId === itemId ? null : itemId);
   };
 
+  // 拖出功能：处理拖拽开始
+  const handleDragStart = (item, e) => {
+    // 设置纯文本数据
+    const text = item.type_ === 'text' ? (item.content || '') :
+                 item.type_ === 'file' ? (item.content || '') :
+                 item.type_ === 'image' && item.ocr_text ? item.ocr_text :
+                 (item.content || '');
+
+    e.dataTransfer.setData('text/plain', text);
+    e.dataTransfer.effectAllowed = 'copy';
+
+    // 设置拖拽预览为小标签
+    const dragEl = document.createElement('div');
+    dragEl.textContent = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+    dragEl.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;';
+    document.body.appendChild(dragEl);
+    e.dataTransfer.setDragImage(dragEl, 0, 0);
+    setTimeout(() => document.body.removeChild(dragEl), 0);
+  };
+
   const getTags = (tagsStr) => {
     if (!tagsStr) return [];
     try {
@@ -518,6 +539,7 @@ function App() {
   return (
     <div className="app">
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      <DragDrop onItemAdded={loadItems} />
 
       {/* 自定义标题栏 */}
       <div className="titlebar">
@@ -655,7 +677,11 @@ function App() {
         ) : (
           <div className="items-list">
             {visibleItems.map((item) => (
-              <div key={item.id} className="item-card" title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}>
+              <div
+                key={item.id}
+                className="item-card"
+                title={`${formatDate(item.created_at)} · ${getSourceApp(item.metadata)}`}
+              >
                 {/* Tags display - 包括用户标签、AI标签和来源标签 */}
                 {(getTags(item.tags).length > 0 || getSourceApp(item.metadata) !== 'Unknown') && (
                   <div className="item-tags">
@@ -713,6 +739,19 @@ function App() {
 
                 {/* 工具栏 - 统一操作按钮 */}
                 <div className="item-toolbar">
+                  {/* 拖出按钮 */}
+                  <span
+                    draggable="true"
+                    onDragStart={(e) => handleDragStart(item, e)}
+                    className="toolbar-btn drag-handle"
+                    title="拖拽到其他应用"
+                  >
+                    <span className="toolbar-btn-icon">⠿</span>
+                    <span>拖出</span>
+                  </span>
+
+                  <div className="toolbar-divider"></div>
+
                   {/* 置顶按钮 */}
                   <button
                     onClick={(e) => {

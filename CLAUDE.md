@@ -239,6 +239,7 @@ Rust 后端采用分层架构：
 * **`commands/`**：Tauri 命令句柄（IPC 端点）
 * `clipboard_commands.rs`：条目的增删改查。
 * `ai_commands.rs`：AI 标签配置与生成。
+* `drag_drop_commands.rs`：拖拽功能支持。
 
 
 * **`ai/`**：AI 集成
@@ -278,7 +279,8 @@ SQLite 数据库位于应用数据目录下的 `clipbox.db`：
 
 * `App.jsx`：主组件，包含历史列表、搜索、编辑功能。
 * `Settings.jsx`：AI 配置弹窗。
-* `App.css` / `Settings.css`：样式表。
+* `DragDrop.jsx`：拖拽功能组件。
+* `App.css` / `Settings.css` / `DragDrop.css`：样式表。
 
 **关键前端模式：**
 
@@ -286,6 +288,8 @@ SQLite 数据库位于应用数据目录下的 `clipbox.db`：
 * 行内笔记编辑（点击即编辑，无需弹窗）。
 * 带加载状态的 AI 标签生成。
 * 支持跨内容、标签、笔记和来源应用的全局搜索。
+* 全局拖拽监听，支持拖入文本、图片、文件。
+* 每个卡片可拖出到其他应用。
 
 ## 关键实现细节
 
@@ -307,6 +311,25 @@ Windows 文件复制使用 `CF_HDROP` 格式。程序提取文件路径并将其
 
 * 支持 OpenAI 兼容格式。
 * AI 生成的标签带有 `AI:` 前缀以示区别。
+
+### 拖拽功能
+
+**拖入（Drop In）：**
+* 全局监听拖拽事件（dragenter、dragleave、dragover、drop）。
+* 支持文本、图片（base64）、文件路径三种类型。
+* 拖入时显示半透明遮罩层和提示动画。
+* 使用计数器避免嵌套元素导致的闪烁。
+
+**拖出（Drag Out）：**
+* 每个 item-card 设置 `draggable="true"`。
+* 通过 `dataTransfer.setData()` 传递内容。
+* 文本项传递文本内容，图片项传递图片路径，文件项传递文件路径。
+* 拖拽时卡片变为半透明，鼠标变为抓取状态。
+
+**后端支持：**
+* `add_clipboard_item_manual` 命令处理手动添加的内容。
+* 自动生成缩略图、计算哈希、保存元数据。
+* 来源应用标记为"拖拽"。
 
 ## 常见坑点
 
