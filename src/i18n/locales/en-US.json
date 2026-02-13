@@ -58,6 +58,8 @@
     "collapse": "Collapse",
     "addTag": "Add Tag",
     "removeTag": "Remove Tag",
+    "confirmTag": "Confirm",
+    "cancelTag": "Cancel",
     "clickToCopy": "Click to copy",
     "doubleClickToPreview": "Double-click to preview",
     "doubleClickToEdit": "Double-click to edit",

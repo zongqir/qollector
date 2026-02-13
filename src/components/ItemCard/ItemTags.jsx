@@ -75,15 +75,40 @@ function ItemTags({
             placeholder={t('edit.enterTag')}
             className="add-tag-input"
             autoFocus
-            onBlur={() => { setTimeout(() => onCancelAddTag(), 200); }}
+            onBlur={(e) => {
+              // 如果点击的是建议项或按钮，不要关闭
+              if (!e.relatedTarget || !e.relatedTarget.closest('.add-tag-input-wrapper')) {
+                setTimeout(() => onCancelAddTag(), 150);
+              }
+            }}
           />
+          <button
+            onClick={() => {
+              if (newTagInput.trim()) {
+                onAddTagToItem(item, newTagInput.trim());
+              }
+            }}
+            className="tag-btn-confirm"
+            title={t('item.confirmTag')}
+            disabled={!newTagInput.trim()}
+          >
+            ✓
+          </button>
+          <button
+            onClick={onCancelAddTag}
+            className="tag-btn-cancel"
+            title={t('item.cancelTag')}
+          >
+            ✕
+          </button>
           {filteredUserTags.length > 0 && (
             <div className="tag-suggestions">
               {filteredUserTags.slice(0, 8).map((tag, idx) => (
                 <div
                   key={idx}
                   className="tag-suggestion-item"
-                  onMouseDown={(e) => { e.preventDefault(); onAddTagToItem(item, tag); }}
+                  onClick={() => onAddTagToItem(item, tag)}
+                  onMouseDown={(e) => e.preventDefault()}
                 >
                   {tag}
                 </div>

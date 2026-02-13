@@ -72,30 +72,6 @@
   background: transparent;
 }
 
-/* Hover提示 - 简化 */
-.content-hover-tip {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  opacity: 0;
-  transition: opacity 0.2s ease-out;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.hover-actions {
-  font-size: 10px;
-  color: #999;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 4px 8px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.item-card:hover .content-hover-tip {
-  opacity: 1;
-}
-
 /* 展开按钮激活状态 */
 .toolbar-btn.expand-btn.active {
   background: #e3f2fd;

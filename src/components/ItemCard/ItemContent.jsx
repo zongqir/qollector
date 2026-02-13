@@ -14,12 +14,6 @@ function ItemContent({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
     >
-      <div className="content-hover-tip">
-        <div className="hover-actions">
-          {t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}
-        </div>
-      </div>
-
       {isCopied && (
         <div className="copy-success-toast">
           ✓ {t('item.copied')}

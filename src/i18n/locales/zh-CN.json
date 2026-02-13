@@ -58,6 +58,8 @@
     "collapse": "收起",
     "addTag": "添加标签",
     "removeTag": "移除标签",
+    "confirmTag": "确认添加",
+    "cancelTag": "取消",
     "clickToCopy": "单击复制",
     "doubleClickToPreview": "双击预览",
     "doubleClickToEdit": "双击编辑",

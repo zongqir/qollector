@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
@@ -16,7 +17,7 @@ function ItemToolbar({
         className="toolbar-btn drag-handle"
         title={t('toolbar.dragToApp')}
       >
-        <span className="toolbar-btn-icon">⠿</span>
+        <GripVertical size={14} className="toolbar-btn-icon" />
         <span>{t('toolbar.dragOut')}</span>
       </span>
       <div className="toolbar-divider"></div>
@@ -25,7 +26,7 @@ function ItemToolbar({
         className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
         title={item.is_pinned ? t('item.unpin') : t('item.pin')}
       >
-        <span className="toolbar-btn-icon">📌</span>
+        <Pin size={14} className="toolbar-btn-icon" />
         <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
       </button>
       <div className="toolbar-divider"></div>
@@ -34,7 +35,7 @@ function ItemToolbar({
         className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
         title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
       >
-        <span className="toolbar-btn-icon">{item.is_favorite ? '⭐' : '☆'}</span>
+        <Star size={14} className="toolbar-btn-icon" fill={item.is_favorite ? 'currentColor' : 'none'} />
         <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
       </button>
       {item.type_ === 'text' && item.content && (
@@ -46,7 +47,7 @@ function ItemToolbar({
             className="toolbar-btn ai-btn"
             title={generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
           >
-            <span className="toolbar-btn-icon">{generatingAI === item.id ? '⏳' : '✨'}</span>
+            <Sparkles size={14} className="toolbar-btn-icon" />
             <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
           </button>
         </>
@@ -60,7 +61,7 @@ function ItemToolbar({
             className="toolbar-btn ocr-btn"
             title={ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
           >
-            <span className="toolbar-btn-icon">{ocrProcessing === item.id ? '⏳' : '🔍'}</span>
+            <Search size={14} className="toolbar-btn-icon" />
             <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
           </button>
         </>
@@ -71,7 +72,7 @@ function ItemToolbar({
         className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
         title={item.user_note ? t('item.editNote') : t('item.addNote')}
       >
-        <span className="toolbar-btn-icon">📝</span>
+        <StickyNote size={14} className="toolbar-btn-icon" />
         <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
       </button>
       <div className="toolbar-divider"></div>
@@ -80,9 +81,12 @@ function ItemToolbar({
         className={`toolbar-btn expand-btn ${isExpanded ? 'active' : ''}`}
         title={isExpanded ? t('item.collapse') : t('item.expandAll')}
       >
-        <span className="toolbar-btn-icon">{isExpanded ? '▲' : '▼'}</span>
+        {isExpanded ? <ChevronUp size={14} className="toolbar-btn-icon" /> : <ChevronDown size={14} className="toolbar-btn-icon" />}
         <span>{isExpanded ? t('item.collapse') : t('item.expand')}</span>
       </button>
+      <div className="toolbar-hint">
+        {t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}
+      </div>
     </div>
   );
 }
