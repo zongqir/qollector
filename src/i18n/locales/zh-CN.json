@@ -10,7 +10,9 @@
     "minimize": "最小化",
     "maximize": "最大化",
     "close": "关闭",
-    "quickAdd": "快速输入"
+    "quickAdd": "快速输入",
+    "miniMode": "迷你模式",
+    "exitMini": "退出迷你模式"
   },
   "search": {
     "placeholder": "搜索内容、标签、备注...",
@@ -56,6 +58,8 @@
     "collapse": "收起",
     "addTag": "添加标签",
     "removeTag": "移除标签",
+    "confirmTag": "确认添加",
+    "cancelTag": "取消",
     "clickToCopy": "单击复制",
     "doubleClickToPreview": "双击预览",
     "doubleClickToEdit": "双击编辑",
@@ -98,7 +102,8 @@
     "tabs": {
       "ai": "AI 标签",
       "ocr": "OCR 识别",
-      "general": "通用设置"
+      "general": "通用设置",
+      "mcp": "MCP 服务"
     },
     "ai": {
       "provider": "AI 提供商",
@@ -150,6 +155,28 @@
     "general": {
       "language": "语言",
       "languageHint": "切换界面语言"
+    },
+    "mcp": {
+      "enabled": "启用 MCP 服务",
+      "enabledHint": "允许 AI 通过 MCP 协议访问剪贴板数据",
+      "port": "HTTP 端口",
+      "portHint": "MCP 服务器监听端口（默认 38470）",
+      "actualPort": "（实际使用端口: {{port}}）",
+      "copyConfig": "复制配置",
+      "configCopied": "配置已复制到剪贴板！",
+      "info": {
+        "title": "可用工具：",
+        "search": "clipbox_search - 搜索剪贴板历史",
+        "recent": "clipbox_recent - 获取最近记录",
+        "get": "clipbox_get - 获取指定条目",
+        "add": "clipbox_add - 添加新条目",
+        "delete": "clipbox_delete - 删除条目",
+        "stats": "clipbox_stats - 获取统计信息"
+      },
+      "usage": {
+        "title": "使用方法：",
+        "description": "在 Claude Desktop 配置文件中添加："
+      }
     }
   },
   "dragDrop": {

@@ -1,0 +1,252 @@
+/* 工具栏 - 统一操作按钮 */
+.item-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: linear-gradient(to right, #fafafa, #f5f5f5);
+  border-radius: 6px;
+  margin: 0;
+  height: 0;
+  min-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, margin 0.2s ease-out;
+  will-change: opacity, height; /* 优化动画性能 */
+}
+
+.item-card:hover .item-toolbar {
+  opacity: 1;
+  height: 28px;
+  padding: 6px 0;
+  margin: 8px 0;
+}
+
+/* 工具栏右侧提示 */
+.toolbar-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: #999;
+  font-weight: 400;
+  white-space: nowrap;
+  padding-left: 12px;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-color: #d0d0d0;
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 置顶按钮 */
+.toolbar-btn.pin-btn.active {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  color: white;
+}
+
+.toolbar-btn.pin-btn.active .toolbar-btn-icon {
+  transform: rotate(45deg);
+}
+
+/* AI按钮 */
+.toolbar-btn.ai-btn {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border-color: #667eea30;
+  color: #667eea;
+}
+
+.toolbar-btn.ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: #667eea;
+  color: white;
+}
+
+/* OCR按钮 */
+.toolbar-btn.ocr-btn {
+  background: #e8f5e9;
+  border-color: #4caf5030;
+  color: #4caf50;
+}
+
+.toolbar-btn.ocr-btn:hover:not(:disabled) {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+/* 备注按钮 */
+.toolbar-btn.note-btn.has-note {
+  background: #fff9e6;
+  border-color: #ffc107;
+  color: #f57c00;
+}
+
+/* TOOLBAR_CONTINUED */
+
+.toolbar-btn.note-btn:hover:not(:disabled) {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: white;
+}
+
+/* 收藏按钮 */
+.toolbar-btn.favorite-btn {
+  background: white;
+  border-color: #e8e8e8;
+  color: #999;
+}
+
+.toolbar-btn.favorite-btn:hover:not(:disabled) {
+  background: #fff9e6;
+  border-color: #ffa726;
+  color: #f57c00;
+}
+
+.toolbar-btn.favorite-btn.active {
+  background: linear-gradient(135deg, #ffa726, #f57c00);
+  border-color: #ffa726;
+  color: white;
+}
+
+.toolbar-btn.favorite-btn.active .toolbar-btn-icon {
+  animation: starPulse 0.5s ease-out;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+
+/* 工具栏分隔符 */
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: #e0e0e0;
+  margin: 0 4px;
+}
+
+/* TOOLBAR_CONTINUED_2 */
+
+/* 移除旧的内联按钮样式 */
+.ai-tag-icon-btn-inline {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #667eea30;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ai-tag-icon-btn-inline .ai-icon {
+  font-size: 10px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.5px;
+}
+
+.ai-tag-icon-btn-inline:hover:not(:disabled) {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.ai-tag-icon-btn-inline:hover:not(:disabled) .ai-icon {
+  -webkit-text-fill-color: white;
+}
+
+.ai-tag-icon-btn-inline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* TOOLBAR_CONTINUED_3 */
+
+.ai-tag-icon-btn-inline .ai-loading {
+  font-size: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 置顶按钮 - 内联在内容区域左上角（AI按钮右侧） */
+.pin-icon-btn {
+  position: absolute;
+  top: 8px;
+  left: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  font-size: 14px;
+  opacity: 0.5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pin-icon-btn:hover {
+  opacity: 1;
+  background: #fff3e0;
+  border-color: #ff9800;
+  transform: scale(1.05);
+}
+
+.pin-icon-btn.pinned {
+  opacity: 1;
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  transform: rotate(45deg);
+}
+
+.pin-icon-btn.pinned:hover {
+  transform: rotate(45deg) scale(1.05);
+}

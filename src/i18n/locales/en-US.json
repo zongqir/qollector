@@ -10,7 +10,9 @@
     "minimize": "Minimize",
     "maximize": "Maximize",
     "close": "Close",
-    "quickAdd": "Quick Input"
+    "quickAdd": "Quick Input",
+    "miniMode": "Mini Mode",
+    "exitMini": "Exit Mini Mode"
   },
   "search": {
     "placeholder": "Search content, tags, notes...",
@@ -56,6 +58,8 @@
     "collapse": "Collapse",
     "addTag": "Add Tag",
     "removeTag": "Remove Tag",
+    "confirmTag": "Confirm",
+    "cancelTag": "Cancel",
     "clickToCopy": "Click to copy",
     "doubleClickToPreview": "Double-click to preview",
     "doubleClickToEdit": "Double-click to edit",
@@ -98,7 +102,8 @@
     "tabs": {
       "ai": "AI Tags",
       "ocr": "OCR Recognition",
-      "general": "General"
+      "general": "General",
+      "mcp": "MCP Service"
     },
     "ai": {
       "provider": "AI Provider",
@@ -150,6 +155,28 @@
     "general": {
       "language": "Language",
       "languageHint": "Switch interface language"
+    },
+    "mcp": {
+      "enabled": "Enable MCP Service",
+      "enabledHint": "Allow AI to access clipboard data via MCP protocol",
+      "port": "HTTP Port",
+      "portHint": "MCP server listening port (default 38470)",
+      "actualPort": "(Actual port: {{port}})",
+      "copyConfig": "Copy Config",
+      "configCopied": "Config copied to clipboard!",
+      "info": {
+        "title": "Available Tools:",
+        "search": "clipbox_search - Search clipboard history",
+        "recent": "clipbox_recent - Get recent items",
+        "get": "clipbox_get - Get specific item",
+        "add": "clipbox_add - Add new item",
+        "delete": "clipbox_delete - Delete item",
+        "stats": "clipbox_stats - Get statistics"
+      },
+      "usage": {
+        "title": "Usage:",
+        "description": "Add to Claude Desktop config file:"
+      }
     }
   },
   "dragDrop": {

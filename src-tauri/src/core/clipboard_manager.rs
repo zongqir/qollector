@@ -1,25 +1,39 @@
 use crate::core::models::{ClipboardItem, ClipboardContent, WindowMetadata};
 use crate::platform::clipboard_trait::{PlatformClipboard, ClipboardError, ClipboardCallback};
 use crate::repository::clipboard_repo::ClipboardRepository;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use crate::ai::{AIConfig, AIService};
+use crate::ocr::OcrService;
+use std::sync::{Arc, Mutex};
+use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use std::path::PathBuf;
 
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
-    repository: Arc<Mutex<ClipboardRepository>>,
+    repository: Arc<TokioMutex<ClipboardRepository>>,
     image_dir: PathBuf,
+    ai_config: Arc<Mutex<AIConfig>>,
+    ocr_config: Arc<Mutex<Option<OcrService>>>,
+    ai_semaphore: Arc<Semaphore>, // AI请求串行化控制
 }
 
 impl ClipboardManager {
-    pub fn new(platform: Arc<dyn PlatformClipboard>, repository: ClipboardRepository, app_dir: PathBuf) -> Self {
+    pub fn new(
+        platform: Arc<dyn PlatformClipboard>,
+        repository: ClipboardRepository,
+        app_dir: PathBuf,
+        ai_config: Arc<Mutex<AIConfig>>,
+        ocr_config: Arc<Mutex<Option<OcrService>>>,
+    ) -> Self {
         let image_dir = app_dir.join("images");
         std::fs::create_dir_all(&image_dir).expect("Failed to create images directory");
 
         Self {
             platform,
-            repository: Arc::new(Mutex::new(repository)),
+            repository: Arc::new(TokioMutex::new(repository)),
             image_dir,
+            ai_config,
+            ocr_config,
+            ai_semaphore: Arc::new(Semaphore::new(1)), // 只允许1个AI请求同时执行
         }
     }
 
@@ -27,14 +41,28 @@ impl ClipboardManager {
         let repo = self.repository.clone();
         let platform = self.platform.clone();
         let image_dir = self.image_dir.clone();
+        let ai_config = self.ai_config.clone();
+        let ocr_config = self.ocr_config.clone();
+        let ai_semaphore = self.ai_semaphore.clone();
 
         let callback: ClipboardCallback = Box::new(move |content| {
             let repo = repo.clone();
             let platform = platform.clone();
             let image_dir = image_dir.clone();
+            let ai_config = ai_config.clone();
+            let ocr_config = ocr_config.clone();
+            let ai_semaphore = ai_semaphore.clone();
 
             Box::pin(async move {
-                if let Err(e) = Self::handle_clipboard_change(content, repo, platform, image_dir).await {
+                if let Err(e) = Self::handle_clipboard_change(
+                    content,
+                    repo,
+                    platform,
+                    image_dir,
+                    ai_config,
+                    ocr_config,
+                    ai_semaphore,
+                ).await {
                     eprintln!("Error handling clipboard change: {}", e);
                 }
                 Ok(())
@@ -48,9 +76,12 @@ impl ClipboardManager {
 
     async fn handle_clipboard_change(
         content: ClipboardContent,
-        repo: Arc<Mutex<ClipboardRepository>>,
+        repo: Arc<TokioMutex<ClipboardRepository>>,
         platform: Arc<dyn PlatformClipboard>,
         image_dir: PathBuf,
+        ai_config: Arc<Mutex<AIConfig>>,
+        ocr_config: Arc<Mutex<Option<OcrService>>>,
+        ai_semaphore: Arc<Semaphore>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
@@ -168,8 +199,138 @@ impl ClipboardManager {
         }
 
         println!("Inserting new clipboard item: {}", item.id);
+        let item_id = item.id.clone();
+        let item_type = item.type_.clone();
+        let item_content = item.content.clone();
+        let item_image_paths = item.image_paths.clone();
+
         repo_lock.insert(&item).await?;
+        drop(repo_lock); // 释放锁
         println!("Clipboard item saved successfully!");
+
+        // 后台异步处理AI标签和OCR
+        let repo_clone = repo.clone();
+        let ai_config_clone = ai_config.clone();
+        let ocr_config_clone = ocr_config.clone();
+        let ai_semaphore_clone = ai_semaphore.clone();
+
+        tokio::spawn(async move {
+            // 根据类型决定处理流程
+            if item_type == "image" {
+                // 图片：先OCR，再基于OCR文字生成AI标签
+                if let Some(image_paths_str) = item_image_paths {
+                    let ocr_service_opt = ocr_config_clone.lock().unwrap().clone();
+                    let mut ocr_text = String::new();
+
+                    // 步骤1: 执行OCR
+                    if let Some(service) = ocr_service_opt {
+                        let config = service.get_config();
+                        if config.enabled && config.auto_ocr {
+                            println!("自动执行OCR: item_id={}", item_id);
+
+                            // 解析图片路径
+                            let image_path = if let Ok(paths) = serde_json::from_str::<serde_json::Value>(&image_paths_str) {
+                                paths["original"].as_str().unwrap_or("").to_string()
+                            } else {
+                                image_paths_str.clone()
+                            };
+
+                            if !image_path.is_empty() {
+                                match service.recognize(&image_path).await {
+                                    Ok(result) if !result.text.trim().is_empty() => {
+                                        ocr_text = result.text.clone();
+                                        let repo_lock = repo_clone.lock().await;
+                                        let _ = repo_lock.update_ocr_text(&item_id, &result.text).await;
+                                        println!("OCR文本已自动识别: {} 字符", result.text.len());
+                                    }
+                                    Ok(_) => println!("OCR识别返回空文本"),
+                                    Err(e) => eprintln!("OCR识别失败: {}", e),
+                                }
+                            }
+                        }
+                    }
+
+                    // 步骤2: 基于OCR文字生成AI标签（串行化）
+                    if !ocr_text.is_empty() {
+                        let ai_config = ai_config_clone.lock().unwrap().clone();
+                        if !ai_config.api_key.is_empty() {
+                            // 获取信号量许可，确保AI请求串行执行
+                            let _permit = ai_semaphore_clone.acquire().await.unwrap();
+                            println!("🔒 获取AI请求锁，基于OCR文字生成标签: item_id={}", item_id);
+
+                            let service = AIService::new(ai_config);
+                            match service.generate_tags(&ocr_text).await {
+                                Ok(tags) if !tags.is_empty() => {
+                                    let ai_tags: Vec<String> = tags.iter()
+                                        .map(|t| format!("AI:{}", t))
+                                        .collect();
+
+                                    let repo_lock = repo_clone.lock().await;
+                                    if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
+                                        let existing_tags: Vec<String> = item.tags
+                                            .as_ref()
+                                            .and_then(|t| serde_json::from_str(t).ok())
+                                            .unwrap_or_default();
+
+                                        let mut all_tags = existing_tags;
+                                        all_tags.extend(ai_tags);
+
+                                        item.tags = Some(serde_json::to_string(&all_tags).unwrap());
+                                        let _ = repo_lock.update(&item).await;
+                                        println!("✅ AI标签已自动添加（基于OCR）: {:?}", tags);
+                                    }
+                                }
+                                Ok(_) => println!("AI标签生成返回空结果"),
+                                Err(e) => eprintln!("❌ AI标签生成失败: {}", e),
+                            }
+                            // _permit 在这里自动释放
+                            println!("🔓 释放AI请求锁");
+                        }
+                    } else {
+                        println!("图片无OCR文字，跳过AI标签生成");
+                    }
+                }
+            } else {
+                // 文本/文件：直接生成AI标签（串行化）
+                if let Some(content) = item_content.as_ref() {
+                    let ai_config = ai_config_clone.lock().unwrap().clone();
+                    if !ai_config.api_key.is_empty() {
+                        // 获取信号量许可，确保AI请求串行执行
+                        let _permit = ai_semaphore_clone.acquire().await.unwrap();
+                        println!("🔒 获取AI请求锁，生成标签: item_id={}, type={}", item_id, item_type);
+
+                        let service = AIService::new(ai_config);
+                        match service.generate_tags(content).await {
+                            Ok(tags) if !tags.is_empty() => {
+                                let ai_tags: Vec<String> = tags.iter()
+                                    .map(|t| format!("AI:{}", t))
+                                    .collect();
+
+                                let repo_lock = repo_clone.lock().await;
+                                if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
+                                    let existing_tags: Vec<String> = item.tags
+                                        .as_ref()
+                                        .and_then(|t| serde_json::from_str(t).ok())
+                                        .unwrap_or_default();
+
+                                    let mut all_tags = existing_tags;
+                                    all_tags.extend(ai_tags);
+
+                                    item.tags = Some(serde_json::to_string(&all_tags).unwrap());
+                                    let _ = repo_lock.update(&item).await;
+                                    println!("✅ AI标签已自动添加: {:?}", tags);
+                                }
+                            }
+                            Ok(_) => println!("AI标签生成返回空结果"),
+                            Err(e) => eprintln!("❌ AI标签生成失败: {}", e),
+                        }
+                        // _permit 在这里自动释放
+                        println!("🔓 释放AI请求锁");
+                    }
+                }
+            }
+        });
+
         Ok(())
     }
 
@@ -293,5 +454,106 @@ impl ClipboardManager {
         } else {
             Err(sqlx::Error::RowNotFound)
         }
+    }
+
+    pub fn update_ai_config(&self, config: AIConfig) {
+        let mut ai_config = self.ai_config.lock().unwrap();
+        *ai_config = config;
+    }
+
+    pub fn update_ocr_service(&self, service: Option<OcrService>) {
+        let mut ocr_service = self.ocr_config.lock().unwrap();
+        *ocr_service = service;
+    }
+
+    // ========== MCP 相关方法 ==========
+
+    /// 搜索剪贴板条目
+    pub async fn search_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let filters = crate::core::models::SearchFilters::default();
+        repo.search(query, &filters, limit as i32).await
+    }
+
+    /// 获取最近的条目
+    pub async fn get_recent_items(&self, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent(limit as i32).await
+    }
+
+    /// 根据 ID 获取条目
+    pub async fn get_item_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.find_by_id(id).await
+    }
+
+    /// 添加文本条目
+    pub async fn add_text_item(&self, content: &str, notes: Option<&str>) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
+        use sha2::{Sha256, Digest};
+
+        let mut hasher = Sha256::new();
+        hasher.update(content.as_bytes());
+        let hash = format!("{:x}", hasher.finalize());
+
+        let metadata = self.platform.get_active_window_info()
+            .unwrap_or_else(|_| crate::core::models::WindowMetadata {
+                source_app: "MCP".to_string(),
+                window_title: "".to_string(),
+                source_url: None,
+            });
+
+        let mut item = ClipboardItem::new_text(content.to_string(), metadata);
+        item.content_hash = hash;
+
+        if let Some(note) = notes {
+            item.user_note = Some(note.to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        repo.insert(&item).await?;
+
+        Ok(item)
+    }
+
+    /// 获取统计信息
+    pub async fn get_statistics(&self) -> Result<serde_json::Value, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        // 获取总数
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        // 按类型统计
+        let text_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let image_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let pinned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let favorite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        Ok(serde_json::json!({
+            "total": total,
+            "by_type": {
+                "text": text_count,
+                "image": image_count,
+                "file": file_count
+            },
+            "pinned": pinned_count,
+            "favorite": favorite_count
+        }))
     }
 }

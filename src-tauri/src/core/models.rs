@@ -192,6 +192,18 @@ pub struct SearchFilters {
     pub is_favorite: Option<bool>,
 }
 
+impl Default for SearchFilters {
+    fn default() -> Self {
+        Self {
+            type_filter: None,
+            tag_filter: None,
+            date_range: None,
+            is_pinned: None,
+            is_favorite: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateRange {
     pub start: i64,

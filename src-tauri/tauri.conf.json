@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "identifier": "com.clipbox.app",
   "build": {
-    "beforeDevCommand": "",
-    "beforeBuildCommand": "",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
@@ -39,6 +39,9 @@
             "core:window:allow-maximize",
             "core:window:allow-close",
             "core:window:allow-toggle-maximize",
+            "core:window:allow-set-size",
+            "core:window:allow-inner-size",
+            "core:window:allow-set-min-size",
             "core:webview:allow-create-webview-window",
             "core:event:default",
             "core:path:default",

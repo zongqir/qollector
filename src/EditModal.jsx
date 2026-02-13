@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import './EditModal.css';
 
 function EditModal({ item, mode, onSave, onCancel }) {
@@ -72,7 +73,7 @@ function EditModal({ item, mode, onSave, onCancel }) {
       <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
         <div className="edit-modal-header">
           <h3>{isNewMode ? t('editModal.newTitle') : t('editModal.editTitle')}</h3>
-          <button onClick={onCancel} className="edit-modal-close">✕</button>
+          <button onClick={onCancel} className="edit-modal-close"><X size={20} /></button>
         </div>
 
         <div className="edit-modal-body">
@@ -136,7 +137,7 @@ function EditModal({ item, mode, onSave, onCancel }) {
                     onClick={() => handleRemoveTag(tag)}
                     className="edit-modal-tag-remove"
                   >
-                    ✕
+                    <X size={14} />
                   </button>
                 </span>
               ))}

@@ -12,6 +12,7 @@ ClipBox 是一款现代化的跨平台剪贴板管理器，使用 Rust (Tauri v2
 2. 审美优先：具有深色模式、毛玻璃效果和流畅动画的现代 UI。要求绝对颜值。
 3. 真正的跨平台：坚持 Linux 优先原则，在 Windows/macOS/Linux 上提供统一体验。
 4. 国际化支持：支持多语言切换（简体中文、English），可轻松扩展更多语言。
+5. AI 集成：支持 MCP (Model Context Protocol)，允许 AI 助手直接访问剪贴板数据。
 
 
 ## 构建与开发命令
@@ -451,7 +452,6 @@ Windows 文件复制使用 `CF_HDROP` 格式。程序提取文件路径并将其
 * English (en-US)
 
 **使用方式：**
-* 标题栏快速切换：点击 🌐 按钮
 * 设置页面切换：设置 → 通用设置 → 语言
 * 语言选择自动保存到 localStorage
 
@@ -462,5 +462,41 @@ Windows 文件复制使用 `CF_HDROP` 格式。程序提取文件路径并将其
 * 翻译文件位于 `src/i18n/locales/`
 * 详细文档见 `docs/i18n-guide.md`
 
-**待完成：**
-App.jsx 主界面中还有部分硬编码文本需要替换为 t() 函数调用。
+## MCP 集成
+
+ClipBox 集成了 MCP (Model Context Protocol) 服务器，允许 AI 助手（如 Claude Desktop）直接访问剪贴板数据。
+
+**架构：**
+```
+Claude Desktop
+    ↕ stdio (JSON-RPC)
+ClipBox MCP Server
+    ↕ 内部 API
+ClipBox Core
+```
+
+**模块结构：**
+* `src-tauri/src/mcp/` - MCP 模块
+  * `config.rs` - MCP 配置（默认启用）
+  * `protocol.rs` - JSON-RPC 2.0 协议定义
+  * `server.rs` - MCP 服务器实现（stdio 模式）
+  * `tools.rs` - 工具集实现
+
+**可用工具：**
+1. `clipbox_search` - 搜索剪贴板历史
+2. `clipbox_recent` - 获取最近记录
+3. `clipbox_get` - 获取指定条目
+4. `clipbox_add` - 添加新条目（仅文本）
+5. `clipbox_delete` - 删除条目
+6. `clipbox_stats` - 获取统计信息
+
+**设置：**
+* 设置 → MCP 服务 → 启用/禁用
+* 默认开启，可在设置中关闭
+* 详细配置见 `docs/mcp-guide.md`
+
+## 代码规范
+1. 尽可能模块化文件 方法 和函数
+2. 一个文件不准超过800行
+3. 尽量抽象出来
+4. 尽可能考虑多平台的影响 比如windows mac和linux

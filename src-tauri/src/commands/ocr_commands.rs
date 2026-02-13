@@ -19,12 +19,16 @@ impl OcrState {
 pub async fn init_ocr_service(
     config: OcrConfig,
     state: State<'_, OcrState>,
+    manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
-    let service = OcrService::new(config)
+    let service = OcrService::new(config.clone())
         .map_err(|e| format!("Failed to initialize OCR service: {}", e))?;
 
     let provider_name = service.provider_name().to_string();
-    *state.service.lock().unwrap() = Some(service);
+    *state.service.lock().unwrap() = Some(service.clone());
+
+    // 同步更新 ClipboardManager 中的配置
+    manager.update_ocr_service(Some(service));
 
     Ok(format!("OCR service initialized with provider: {}", provider_name))
 }
@@ -50,6 +54,7 @@ pub async fn get_ocr_config(
 pub async fn update_ocr_config(
     config: OcrConfig,
     state: State<'_, OcrState>,
+    manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
     println!("收到 OCR 配置更新请求:");
     println!("  enabled: {}", config.enabled);
@@ -64,15 +69,19 @@ pub async fn update_ocr_config(
     };
 
     if let Some(mut service) = service_opt {
-        service.update_config(config)
+        service.update_config(config.clone())
             .map_err(|e| format!("Failed to update OCR config: {}", e))?;
-        *state.service.lock().unwrap() = Some(service);
+        *state.service.lock().unwrap() = Some(service.clone());
+
+        // 同步更新 ClipboardManager 中的配置
+        manager.update_ocr_service(Some(service));
+
         println!("OCR 配置更新成功");
         Ok("OCR config updated".to_string())
     } else {
         // 如果服务不存在，创建新服务
         println!("OCR 服务不存在，创建新服务");
-        init_ocr_service(config, state).await
+        init_ocr_service(config, state, manager).await
     }
 }
 

@@ -1,0 +1,72 @@
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: 20px 30px;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible;
+}
+
+.item-card {
+  background: #fafafa;
+  border-radius: 20px;
+  padding: 16px;
+  border: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* 当卡片内有下拉框时提升层级 */
+.item-card:has(.tag-suggestions) {
+  z-index: 100;
+}
+
+.item-card:hover {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+}
+
+/* 底部区域 - 智能布局：空间够就同行，不够就换行 */
+.item-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item-footer .note-display-bar {
+  flex: 1 1 auto;
+  margin-top: 0;
+  min-width: 120px;
+  max-width: 100%;
+}
+
+.item-footer .note-edit-bar {
+  flex: 1 1 100%;
+  margin-top: 0;
+}
+
+.item-footer .item-tags {
+  flex: 0 1 auto;
+  margin-bottom: 0;
+  justify-content: flex-end;
+  margin-left: auto;
+}

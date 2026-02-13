@@ -1,0 +1,297 @@
+.item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* 添加标签按钮 - 与标签形状统一 */
+.add-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border: 1px dashed #c0c0c0;
+  background: linear-gradient(135deg, #ffffff, #f8f9ff);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  color: #999;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  line-height: 1;
+  gap: 2px;
+}
+
+.add-tag-btn:hover {
+  border-color: #667eea;
+  border-style: solid;
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  color: #667eea;
+}
+
+.add-tag-btn:active {
+  transform: scale(0.95);
+}
+
+/* 添加标签输入框容器 */
+.add-tag-input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+}
+
+.add-tag-input {
+  width: 120px;
+  padding: 4px 8px;
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+  background: white;
+  transition: all 0.2s;
+}
+
+.add-tag-input:focus {
+  border-color: #5568d3;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+/* 标签确认和取消按钮 */
+.tag-btn-confirm,
+.tag-btn-cancel {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tag-btn-confirm {
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  color: white;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.tag-btn-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+}
+
+.tag-btn-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tag-btn-cancel {
+  background: linear-gradient(135deg, #9e9e9e, #757575);
+  color: white;
+  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.2);
+}
+
+.tag-btn-cancel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(158, 158, 158, 0.3);
+}
+
+/* 标签建议下拉 - 改进样式 */
+.tag-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1000;
+  min-width: 180px;
+  animation: suggestionsSlideIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes suggestionsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tag-suggestion-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 3px solid transparent;
+  font-weight: 500;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag-suggestion-icon {
+  opacity: 0.6;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+
+.tag-suggestion-item:hover {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+  border-left-color: #667eea;
+  color: #667eea;
+}
+
+.tag-suggestion-item:hover .tag-suggestion-icon {
+  opacity: 1;
+}
+
+.tag-suggestion-item:hover::before {
+  opacity: 1;
+}
+
+.tag-suggestion-item:active {
+  background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.08));
+  transform: scale(0.98);
+}
+
+/* TAGS_CONTINUED */
+
+.tag-suggestion-item:first-child {
+  border-radius: 7px 7px 0 0;
+}
+
+.tag-suggestion-item:last-child {
+  border-radius: 0 0 7px 7px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  color: white;
+}
+
+/* 标签选中状态 */
+.tag.selected {
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* AI标签样式 - 紫色高饱和 */
+.tag.ai-tag {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+}
+
+.tag.ai-tag:hover {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.tag.ai-tag.selected {
+  background: linear-gradient(135deg, #6d28d9, #5b21b6);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.5);
+}
+
+/* TAGS_CONTINUED_2 */
+
+/* 用户标签样式 - 蓝色高饱和 */
+.tag.user-tag {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.tag.user-tag:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.tag.user-tag.selected {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+}
+
+/* 来源标签样式 - 橙色高饱和 */
+.tag.source-tag {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.tag.source-tag:hover {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+.tag.source-tag.selected {
+  background: linear-gradient(135deg, #ea580c, #c2410c);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.5);
+}
+
+/* 类型标签样式 - 青色高饱和 */
+.tag.type-tag {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.tag.type-tag:hover {
+  background: linear-gradient(135deg, #22d3ee, #06b6d4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+}
+
+.tag.type-tag.selected {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.5);
+}
+
+.tag.editable {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding-right: 10px;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  margin-left: 2px;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.tag-remove:hover {
+  opacity: 1;
+}
+
+/* 移除旧的备注样式 */
