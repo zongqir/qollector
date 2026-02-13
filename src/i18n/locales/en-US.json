@@ -38,7 +38,7 @@
   },
   "item": {
     "pinned": "Pinned",
-    "pin": "Pin",
+    "pin": "Pin (Max 5)",
     "unpin": "Unpin",
     "copy": "Copy",
     "copied": "Copied",
@@ -171,6 +171,7 @@
     "saveFailed": "Save failed: {{error}}",
     "togglePinFailed": "Toggle pin failed: {{error}}",
     "toggleWindowPinFailed": "Toggle window pin failed: {{error}}",
+    "pinLimitReached": "Pin limit reached (5 max), oldest pinned item unpinned automatically",
     "aiTagFailed": "AI tag generation failed",
     "ocrFailed": "OCR recognition failed: {{error}}",
     "addTagFailed": "Add tag failed: {{error}}",

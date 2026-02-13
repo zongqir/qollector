@@ -266,6 +266,15 @@ function App() {
       e.stopPropagation();
     }
     try {
+      // 如果当前是未置顶状态,检查置顶数量
+      if (!item.is_pinned) {
+        const pinnedCount = items.filter(i => i.is_pinned).length;
+        if (pinnedCount >= 5) {
+          // 提示用户将自动取消最早的置顶项
+          console.log(t('error.pinLimitReached'));
+        }
+      }
+
       const newPinState = await invoke('toggle_pin_item', { id: item.id });
       console.log(`置顶状态已切换: ${newPinState}`);
       await loadItems();

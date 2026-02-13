@@ -218,4 +218,24 @@ impl ClipboardRepository {
 
         Ok(item)
     }
+
+    /// 获取所有置顶项,按更新时间排序(最早的在前)
+    pub async fn get_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 AND is_pinned = 1 ORDER BY updated_at ASC"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
+    /// 取消指定项的置顶状态
+    pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE clipboard_items SET is_pinned = 0 WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
 }

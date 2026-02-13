@@ -38,7 +38,7 @@
   },
   "item": {
     "pinned": "已置顶",
-    "pin": "置顶",
+    "pin": "置顶 (最多5个)",
     "unpin": "取消置顶",
     "copy": "复制",
     "copied": "已复制",
@@ -171,6 +171,7 @@
     "saveFailed": "保存失败: {{error}}",
     "togglePinFailed": "切换置顶失败: {{error}}",
     "toggleWindowPinFailed": "切换窗口置顶失败: {{error}}",
+    "pinLimitReached": "已达到置顶上限(5个)，自动取消最早置顶的项",
     "aiTagFailed": "AI 标签生成失败",
     "ocrFailed": "OCR 识别失败: {{error}}",
     "addTagFailed": "添加标签失败: {{error}}",

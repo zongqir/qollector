@@ -209,6 +209,12 @@ impl ClipboardManager {
             return Err(ClipboardError::UnsupportedType);
         };
 
+        // 如果是置顶项,更新其时间戳以保持活跃
+        if item.is_pinned {
+            let repo = self.repository.lock().await;
+            let _ = repo.touch(&item.id).await;
+        }
+
         self.platform.set_content(content).await
     }
 
@@ -238,7 +244,23 @@ impl ClipboardManager {
         // 获取当前项目
         if let Some(mut item) = repo.find_by_id(id).await? {
             // 切换置顶状态
-            item.is_pinned = !item.is_pinned;
+            let new_pinned_state = !item.is_pinned;
+
+            // 如果是要置顶(从未置顶变为置顶)
+            if new_pinned_state {
+                // 检查当前置顶数量
+                let pinned_items = repo.get_pinned_items().await?;
+
+                // 如果已经有5个置顶项,取消最早置顶的那个
+                if pinned_items.len() >= 5 {
+                    if let Some(oldest_pinned) = pinned_items.first() {
+                        println!("已达到置顶上限(5个),取消最早置顶的项: {}", oldest_pinned.id);
+                        repo.unpin(&oldest_pinned.id).await?;
+                    }
+                }
+            }
+
+            item.is_pinned = new_pinned_state;
             // 更新时间戳
             item.updated_at = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
