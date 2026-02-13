@@ -572,7 +572,6 @@ body {
   max-height: 120px;
   border-radius: 6px;
   display: block;
-  margin: 0 auto;
   object-fit: contain;
   transition: max-height 0.3s ease-out 0.3s, box-shadow 0.2s;
   cursor: pointer;
@@ -581,6 +580,63 @@ body {
 .item-card:hover .clipboard-image {
   max-height: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* 图文并排布局 */
+.image-content-wrapper {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.image-content-wrapper.has-ocr .image-container {
+  flex: 0 0 45%;
+  max-width: 45%;
+  border-right: 1px solid #d0d0d0;
+  padding-right: 12px;
+}
+
+.image-content-wrapper:not(.has-ocr) .image-container {
+  flex: 1;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+}
+
+.ocr-text-container {
+  flex: 1;
+  padding-left: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease-out 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-card:hover .ocr-text-container {
+  max-height: 400px;
+}
+
+.ocr-text-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: #667eea;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.ocr-text-content {
+  font-size: 12px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
 }
 
 .file-list {
@@ -693,28 +749,7 @@ body {
 
 /* 移除旧的AI按钮和备注样式 */
 
-.ocr-result {
-  background: #f5f5f5;
-  border-left: 3px solid #4caf50;
-  padding: 8px 10px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-}
-
-.ocr-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #4caf50;
-  margin-bottom: 4px;
-}
-
-.ocr-text {
-  font-size: 12px;
-  color: #333;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
+/* 移除旧的OCR结果样式 */
 
 .edit-actions {
   display: flex;

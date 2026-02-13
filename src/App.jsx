@@ -577,14 +577,6 @@ function App() {
                   </button>
                 </div>
 
-                {/* OCR识别结果 - 仅图片类型且已识别 */}
-                {item.type_ === 'image' && item.ocr_text && (
-                  <div className="ocr-result">
-                    <div className="ocr-label">🔍 识别文本:</div>
-                    <div className="ocr-text">{item.ocr_text}</div>
-                  </div>
-                )}
-
                 {editingId === item.id ? (
                   <div className="edit-mode">
                     {item.type_ !== 'image' && (
@@ -653,11 +645,21 @@ function App() {
                       </div>
 
                       {item.type_ === 'image' && item.image_paths ? (
-                        <img
-                          src={getImageThumbnail(item.image_paths)}
-                          alt="Clipboard image"
-                          className="clipboard-image"
-                        />
+                        <div className={`image-content-wrapper ${item.ocr_text ? 'has-ocr' : ''}`}>
+                          <div className="image-container">
+                            <img
+                              src={getImageThumbnail(item.image_paths)}
+                              alt="Clipboard image"
+                              className="clipboard-image"
+                            />
+                          </div>
+                          {item.ocr_text && (
+                            <div className="ocr-text-container">
+                              <div className="ocr-text-header">识别文本</div>
+                              <div className="ocr-text-content">{item.ocr_text}</div>
+                            </div>
+                          )}
+                        </div>
                       ) : item.type_ === 'file' ? (
                         <div className="file-list">
                           {getFileList(item.content).map((path, idx) => (
