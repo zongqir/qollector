@@ -29,6 +29,7 @@ function App() {
   const [ocrProcessing, setOcrProcessing] = useState(null);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [isMiniMode, setIsMiniMode] = useState(false);
+  const [pinBeforeMini, setPinBeforeMini] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
   const contentRef = useRef(null);
@@ -51,6 +52,39 @@ function App() {
     i18n.changeLanguage(newLang);
     localStorage.setItem('language', newLang);
   };
+
+  const MINI_THRESHOLD = 450;
+
+  const setMiniMode = async (enterMini) => {
+    if (enterMini === isMiniMode) return;
+    const appWindow = getCurrentWindow();
+    if (enterMini) {
+      setPinBeforeMini(isAlwaysOnTop);
+      if (!isAlwaysOnTop) {
+        await appWindow.setAlwaysOnTop(true);
+        setIsAlwaysOnTop(true);
+      }
+    } else {
+      if (!pinBeforeMini && isAlwaysOnTop) {
+        await appWindow.setAlwaysOnTop(false);
+        setIsAlwaysOnTop(false);
+      }
+    }
+    setIsMiniMode(enterMini);
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width <= MINI_THRESHOLD && !isMiniMode) {
+        setMiniMode(true);
+      } else if (width > MINI_THRESHOLD && isMiniMode) {
+        setMiniMode(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMiniMode, isAlwaysOnTop, pinBeforeMini]);
 
   useEffect(() => {
     loadItems();
@@ -429,7 +463,7 @@ function App() {
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
         onOpenQuickInput={() => openEditModal()}
         isMiniMode={isMiniMode}
-        onToggleMiniMode={() => setIsMiniMode(!isMiniMode)}
+        onToggleMiniMode={() => setMiniMode(!isMiniMode)}
       />
 
       <SearchBar
