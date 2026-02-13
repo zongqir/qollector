@@ -6,6 +6,7 @@ mod repository;
 mod commands;
 mod ai;
 mod ocr;
+mod mcp;
 
 use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
@@ -15,8 +16,10 @@ use commands::clipboard_commands::*;
 use commands::ai_commands::*;
 use commands::ocr_commands::*;
 use commands::drag_drop_commands::*;
+use commands::mcp_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
+use tokio::sync::Mutex as TokioMutex;
 
 #[cfg(target_os = "windows")]
 use platform::windows::windows::WindowsClipboard;
@@ -73,6 +76,10 @@ fn main() {
                     service: Mutex::new(None),
                 };
 
+                // Initialize MCP config
+                let mcp_config = mcp::McpConfig::default();
+                let mcp_config_arc = Arc::new(TokioMutex::new(mcp_config.clone()));
+
                 let manager = Arc::new(ClipboardManager::new(
                     platform,
                     repository,
@@ -87,9 +94,27 @@ fn main() {
                     .await
                     .expect("Failed to start clipboard monitoring");
 
+                // 启动 MCP 服务器 (如果启用)
+                if mcp_config.enabled {
+                    let mcp_server = Arc::new(mcp::McpServer::new(
+                        mcp_config_arc.clone(),
+                        manager.clone(),
+                    ));
+
+                    let server_clone = mcp_server.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = server_clone.start().await {
+                            eprintln!("[MCP] 服务器启动失败: {}", e);
+                        }
+                    });
+
+                    println!("[MCP] 服务器已启动");
+                }
+
                 app.manage(manager);
                 app.manage(ai_state);
                 app.manage(ocr_state);
+                app.manage(mcp_config_arc);
             });
 
             Ok(())
@@ -114,6 +139,10 @@ fn main() {
             add_clipboard_item_manual,
             add_image_file,
             toggle_favorite_item,
+            get_mcp_config,
+            get_mcp_port,
+            update_mcp_config,
+            test_mcp_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

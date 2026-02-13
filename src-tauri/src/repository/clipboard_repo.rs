@@ -3,7 +3,7 @@ use crate::core::models::{ClipboardItem, SearchFilters};
 use std::path::PathBuf;
 
 pub struct ClipboardRepository {
-    pool: SqlitePool,
+    pub(crate) pool: SqlitePool,
 }
 
 impl ClipboardRepository {

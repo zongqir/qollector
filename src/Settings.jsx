@@ -37,6 +37,12 @@ function Settings({ onClose }) {
     language: 'chi_sim+eng',
     auto_ocr: true,
   });
+  const [mcpConfig, setMcpConfig] = useState({
+    enabled: true,
+    port: 38470,
+    mode: 'http',
+  });
+  const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [testing, setTesting] = useState(false);
@@ -54,13 +60,19 @@ function Settings({ onClose }) {
   const loadConfigs = async () => {
     try {
       console.log('📥 加载配置...');
-      const [ai, ocr] = await Promise.all([
+      const [ai, ocr, mcp, mcpPort] = await Promise.all([
         invoke('get_ai_config'),
-        invoke('get_ocr_config')
+        invoke('get_ocr_config'),
+        invoke('get_mcp_config'),
+        invoke('get_mcp_port').catch(() => 38470)
       ]);
       console.log('后端返回的 OCR 配置:', ocr);
+      console.log('后端返回的 MCP 配置:', mcp);
+      console.log('MCP 实际端口:', mcpPort);
       setAiConfig(ai);
       setOcrConfig(ocr);
+      setMcpConfig(mcp);
+      setActualMcpPort(mcpPort);
       console.log('✅ 配置加载完成');
     } catch (error) {
       console.error('❌ 加载配置失败:', error);
@@ -89,6 +101,16 @@ function Settings({ onClose }) {
       onClose();
     } catch (error) {
       console.error('保存 OCR 配置失败:', error);
+      alert('保存失败: ' + error);
+    }
+  };
+
+  const handleMcpSave = async () => {
+    try {
+      await invoke('update_mcp_config', { config: mcpConfig });
+      onClose();
+    } catch (error) {
+      console.error('保存 MCP 配置失败:', error);
       alert('保存失败: ' + error);
     }
   };
@@ -204,6 +226,12 @@ function Settings({ onClose }) {
             onClick={() => setActiveTab('ocr')}
           >
             {t('settings.tabs.ocr')}
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mcp')}
+          >
+            {t('settings.tabs.mcp')}
           </button>
         </div>
 
@@ -415,10 +443,99 @@ function Settings({ onClose }) {
           </div>
         )}
 
+        {activeTab === 'mcp' && (
+          <div className="settings-content">
+            <div className="setting-item">
+              <label className="setting-label">
+                <input
+                  type="checkbox"
+                  checked={mcpConfig.enabled}
+                  onChange={(e) => setMcpConfig({ ...mcpConfig, enabled: e.target.checked })}
+                />
+                {t('settings.mcp.enabled')}
+              </label>
+              <small className="setting-hint">{t('settings.mcp.enabledHint')}</small>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.mcp.port')}</label>
+              <input
+                type="number"
+                value={mcpConfig.port || 38470}
+                onChange={(e) => setMcpConfig({ ...mcpConfig, port: parseInt(e.target.value) || 38470 })}
+                placeholder="38470"
+                className="setting-input"
+                min="1024"
+                max="65535"
+              />
+              <small className="setting-hint">
+                {t('settings.mcp.portHint')}
+                {actualMcpPort !== mcpConfig.port && (
+                  <span style={{ color: '#ff9800', marginLeft: '8px' }}>
+                    {t('settings.mcp.actualPort', { port: actualMcpPort })}
+                  </span>
+                )}
+              </small>
+            </div>
+
+            <div className="setting-item">
+              <div className="info-box">
+                <strong>{t('settings.mcp.info.title')}</strong>
+                <ul>
+                  <li>{t('settings.mcp.info.search')}</li>
+                  <li>{t('settings.mcp.info.recent')}</li>
+                  <li>{t('settings.mcp.info.get')}</li>
+                  <li>{t('settings.mcp.info.add')}</li>
+                  <li>{t('settings.mcp.info.delete')}</li>
+                  <li>{t('settings.mcp.info.stats')}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="setting-item">
+              <div className="info-box">
+                <strong>{t('settings.mcp.usage.title')}</strong>
+                <p>{t('settings.mcp.usage.description')}</p>
+                <pre className="code-block">
+{`{
+  "mcpServers": {
+    "clipbox": {
+      "url": "http://localhost:${actualMcpPort}/mcp"
+    }
+  }
+}`}
+                </pre>
+                <button
+                  onClick={() => {
+                    const config = `{
+  "mcpServers": {
+    "clipbox": {
+      "url": "http://localhost:${actualMcpPort}/mcp"
+    }
+  }
+}`;
+                    navigator.clipboard.writeText(config);
+                    alert(t('settings.mcp.configCopied'));
+                  }}
+                  className="test-btn"
+                  style={{ marginTop: '8px' }}
+                >
+                  {t('settings.mcp.copyConfig')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="settings-footer">
           <button onClick={onClose} className="cancel-btn">{t('settings.cancel')}</button>
           <button
-            onClick={activeTab === 'ai' ? handleAiSave : activeTab === 'ocr' ? handleOcrSave : onClose}
+            onClick={
+              activeTab === 'ai' ? handleAiSave :
+              activeTab === 'ocr' ? handleOcrSave :
+              activeTab === 'mcp' ? handleMcpSave :
+              onClose
+            }
             className="save-btn"
           >
             {t('settings.save')}

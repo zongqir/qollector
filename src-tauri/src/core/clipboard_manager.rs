@@ -465,4 +465,95 @@ impl ClipboardManager {
         let mut ocr_service = self.ocr_config.lock().unwrap();
         *ocr_service = service;
     }
+
+    // ========== MCP 相关方法 ==========
+
+    /// 搜索剪贴板条目
+    pub async fn search_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let filters = crate::core::models::SearchFilters::default();
+        repo.search(query, &filters, limit as i32).await
+    }
+
+    /// 获取最近的条目
+    pub async fn get_recent_items(&self, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent(limit as i32).await
+    }
+
+    /// 根据 ID 获取条目
+    pub async fn get_item_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.find_by_id(id).await
+    }
+
+    /// 添加文本条目
+    pub async fn add_text_item(&self, content: &str, notes: Option<&str>) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
+        use sha2::{Sha256, Digest};
+
+        let mut hasher = Sha256::new();
+        hasher.update(content.as_bytes());
+        let hash = format!("{:x}", hasher.finalize());
+
+        let metadata = self.platform.get_active_window_info()
+            .unwrap_or_else(|_| crate::core::models::WindowMetadata {
+                source_app: "MCP".to_string(),
+                window_title: "".to_string(),
+                source_url: None,
+            });
+
+        let mut item = ClipboardItem::new_text(content.to_string(), metadata);
+        item.content_hash = hash;
+
+        if let Some(note) = notes {
+            item.user_note = Some(note.to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        repo.insert(&item).await?;
+
+        Ok(item)
+    }
+
+    /// 获取统计信息
+    pub async fn get_statistics(&self) -> Result<serde_json::Value, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        // 获取总数
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        // 按类型统计
+        let text_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let image_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let pinned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        let favorite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0")
+            .fetch_one(&repo.pool)
+            .await?;
+
+        Ok(serde_json::json!({
+            "total": total,
+            "by_type": {
+                "text": text_count,
+                "image": image_count,
+                "file": file_count
+            },
+            "pinned": pinned_count,
+            "favorite": favorite_count
+        }))
+    }
 }
