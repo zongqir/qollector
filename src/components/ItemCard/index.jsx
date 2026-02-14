@@ -17,8 +17,8 @@ function ItemCard({
   onStartEditNote, onSaveNote, onCancelNoteEdit,
   // toolbar actions
   onDragStart, onTogglePin, onToggleFavorite,
-  onGenerateAITags, generatingAI,
-  onHandleOCR, ocrProcessing,
+  onGenerateAITags, generatingAI, aiEnabled,
+  onHandleOCR, ocrProcessing, ocrEnabled,
   onToggleExpand,
   // content actions
   onContentClick, onContentDoubleClick,
@@ -42,8 +42,10 @@ function ItemCard({
         onToggleFavorite={onToggleFavorite}
         onGenerateAITags={onGenerateAITags}
         generatingAI={generatingAI}
+        aiEnabled={aiEnabled}
         onHandleOCR={onHandleOCR}
         ocrProcessing={ocrProcessing}
+        ocrEnabled={ocrEnabled}
         onStartEditNote={onStartEditNote}
         onToggleExpand={onToggleExpand}
         isExpanded={isExpanded}

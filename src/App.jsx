@@ -27,6 +27,8 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [ocrEnabled, setOcrEnabled] = useState(false);
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   const [isMiniMode, setIsMiniMode] = useState(false);
   const [pinBeforeMini, setPinBeforeMini] = useState(false);
@@ -89,6 +91,7 @@ function App() {
   useEffect(() => {
     loadItems();
     initOcrService();
+    loadConfigs();
 
     // 每3秒自动刷新一次
     const interval = setInterval(() => {
@@ -99,6 +102,19 @@ function App() {
       clearInterval(interval);
     };
   }, []); // 移除 showTagFilter 依赖
+
+  const loadConfigs = async () => {
+    try {
+      const [aiConfig, ocrConfig] = await Promise.all([
+        invoke('get_ai_config'),
+        invoke('get_ocr_config')
+      ]);
+      setAiEnabled(aiConfig.enabled || false);
+      setOcrEnabled(ocrConfig.enabled || false);
+    } catch (error) {
+      console.error('加载配置失败:', error);
+    }
+  };
 
   const loadItems = async () => {
     try {
@@ -519,8 +535,10 @@ function App() {
                 onToggleFavorite={toggleFavorite}
                 onGenerateAITags={generateAITags}
                 generatingAI={generatingAI}
+                aiEnabled={aiEnabled}
                 onHandleOCR={handleOCR}
                 ocrProcessing={ocrProcessing}
+                ocrEnabled={ocrEnabled}
                 onToggleExpand={toggleExpand}
                 onContentClick={handleContentClick}
                 onContentDoubleClick={handleContentDoubleClick}

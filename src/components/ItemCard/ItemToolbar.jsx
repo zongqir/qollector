@@ -3,11 +3,30 @@ import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, Che
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
-  onGenerateAITags, generatingAI,
-  onHandleOCR, ocrProcessing,
+  onGenerateAITags, generatingAI, aiEnabled,
+  onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
 }) {
   const { t } = useTranslation();
+
+  // 检查是否已有 AI 标签
+  const hasAITags = () => {
+    if (!item.tags) return false;
+    try {
+      const tags = JSON.parse(item.tags);
+      return tags.some(tag => tag.startsWith('AI:'));
+    } catch {
+      return false;
+    }
+  };
+
+  // 判断是否显示 AI 标签按钮
+  // AI 功能开启 + 文本类型 + 有内容 + 没有 AI 标签
+  const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags();
+
+  // 判断是否显示 OCR 按钮
+  // OCR 功能开启 + 图片类型 + 没有 OCR 文本
+  const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
 
   return (
     <div className="item-toolbar">
@@ -38,7 +57,7 @@ function ItemToolbar({
         <Star size={14} className="toolbar-btn-icon" fill={item.is_favorite ? 'currentColor' : 'none'} />
         <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
       </button>
-      {item.type_ === 'text' && item.content && (
+      {shouldShowAIButton && (
         <>
           <div className="toolbar-divider"></div>
           <button
@@ -52,7 +71,7 @@ function ItemToolbar({
           </button>
         </>
       )}
-      {item.type_ === 'image' && !item.ocr_text && (
+      {shouldShowOCRButton && (
         <>
           <div className="toolbar-divider"></div>
           <button
