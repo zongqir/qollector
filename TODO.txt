@@ -27,40 +27,4 @@
 [] 性能还得挑右
 [] 情况是一个拖拽，我拖拽出来的这个东西不仅仅是文字，其实还有一种是文件或者是图片。
 
-[] [重构] Slint 迁移计划 — 目标内存 20-30MB
-   背景：当前 Tauri+WebView2 架构内存 100-141MB，WebView2 占 60-80MB 无法根本压缩。
-   方案：用 Slint 原生渲染替换 WebView2+React 前端，后端 Rust 代码基本保留。
-   预估内存：Slint 渲染器 5-10MB + 后端 13-22MB = 18-32MB
-   UI 还原度：~80-85%（渐变色→纯色，阴影层次减弱，微动画略生硬）
-
-   需要重写的前端模块：
-   - [ ] 主列表（虚拟滚动卡片）— Slint ListView + 自定义组件
-   - [ ] 搜索栏 + 类型筛选 + 收藏筛选
-   - [ ] 设置面板（AI/OCR/MCP/通用 4个 tab，最复杂）
-   - [ ] 编辑弹窗 — Slint PopupWindow
-   - [ ] 锁屏界面
-   - [ ] 标题栏（无边框自定义 + 窗口拖拽）
-   - [ ] 图片预览窗口（第二个 Slint 窗口）
-   - [ ] 标签系统（标签渲染、添加、建议下拉）
-   - [ ] 备注编辑
-   - [ ] 深色/浅色主题切换 — Slint 全局属性
-   - [ ] i18n（中/英）— 手写 HashMap 方案
-   - [ ] Mini 模式响应式
-
-   需要处理的技术点：
-   - [ ] 拖入：winit DroppedFile 事件（简单）
-   - [ ] 拖出：drag crate v2.1.0（CrabNebula 出品，跨平台）
-   - [ ] 图标：lucide 图标替换为 SVG 或 Slint 内置图标
-   - [ ] 后端胶水层：去掉 Tauri IPC，改为直接 Rust 函数调用
-   - [ ] Cargo.toml：去掉 tauri/tauri-plugin-single-instance，加 slint/drag/winit
-
-   可保留不动的后端模块：
-   - core/（clipboard_manager, models）
-   - repository/（clipboard_repo, config_repo）
-   - ai/（多供应商 AI 服务）
-   - ocr/（多供应商 OCR 服务）
-   - mcp/（MCP 服务器）
-   - platform/（剪贴板监听）
-
-
 
