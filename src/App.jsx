@@ -295,6 +295,12 @@ function App() {
     }
   };
 
+  // 处理拖曳添加后的类型切换
+  const handleTypeAdded = (type) => {
+    // 自动切换到对应的类型 tab
+    setSelectedType(type);
+  };
+
 
   const toggleExpand = (itemId, e) => {
     if (e) {
@@ -470,7 +476,7 @@ function App() {
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
-      <DragDrop onItemAdded={loadItems} />
+      <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
 
       {showEditModal && (
         <EditModal
