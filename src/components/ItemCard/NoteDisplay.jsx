@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X } from 'lucide-react';
 
@@ -50,4 +51,4 @@ function NoteDisplay({
   return null;
 }
 
-export default NoteDisplay;
+export default memo(NoteDisplay);

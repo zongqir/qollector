@@ -20,7 +20,7 @@ const OCR_PROVIDERS = [
   { value: 'Baidu', label: '百度 OCR' },
 ];
 
-function Settings({ onClose }) {
+function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('ai');
 
@@ -48,6 +48,7 @@ function Settings({ onClose }) {
   const [generalConfig, setGeneralConfig] = useState({
     max_pinned_items: 3,
     language: 'zh-CN',
+    theme_mode: themeMode || 'system',
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -61,16 +62,42 @@ function Settings({ onClose }) {
   const [currentAiModel, setCurrentAiModel] = useState('Qwen/Qwen2.5-7B-Instruct');
   const [showAiApiKey, setShowAiApiKey] = useState(false);
 
+  // 应用锁状态
+  const [lockHasPassword, setLockHasPassword] = useState(false);
+  const [lockOldPassword, setLockOldPassword] = useState('');
+  const [lockNewPassword, setLockNewPassword] = useState('');
+  const [lockConfirmPassword, setLockConfirmPassword] = useState('');
+  const [lockError, setLockError] = useState('');
+  const [lockSuccess, setLockSuccess] = useState('');
+
   // 当前 OCR 供应商的凭证（用于 UI 显示和编辑）
   const [currentOcrApiKey, setCurrentOcrApiKey] = useState('');
   const [currentOcrApiSecret, setCurrentOcrApiSecret] = useState('');
   const [showOcrApiKey, setShowOcrApiKey] = useState(false);
 
-  const changeLanguage = (lng) => {
+  // 导入导出状态
+  const [exportIncludeImages, setExportIncludeImages] = useState(false);
+  const [exportEncrypt, setExportEncrypt] = useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportConfirmPassword, setExportConfirmPassword] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [importNeedPassword, setImportNeedPassword] = useState(false);
+  const [importPassword, setImportPassword] = useState('');
+  const [importFilePath, setImportFilePath] = useState(null);
+
+  const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
-    // 同时更新到 generalConfig
-    setGeneralConfig({ ...generalConfig, language: lng });
+    const updated = { ...generalConfig, language: lng };
+    setGeneralConfig(updated);
+    try {
+      await invoke('update_general_config', { config: updated });
+    } catch (error) {
+      console.error('保存语言配置失败:', error);
+    }
   };
 
   useEffect(() => {
@@ -156,6 +183,10 @@ function Settings({ onClose }) {
       console.log('MCP 实际端口:', mcpPort);
       console.log('后端返回的通用配置:', general);
 
+      // 检查锁屏密码状态
+      const hasLock = await invoke('has_lock_password');
+      setLockHasPassword(hasLock);
+
       // 设置 AI 配置
       setAiConfig(ai);
 
@@ -177,6 +208,11 @@ function Settings({ onClose }) {
     } catch (error) {
       console.error('❌ 加载配置失败:', error);
     }
+  };
+
+  const handleClose = () => {
+    if (onConfigChange) onConfigChange();
+    onClose();
   };
 
   const handleAiSave = async () => {
@@ -201,7 +237,7 @@ function Settings({ onClose }) {
       // 更新前端状态，确保下次打开时显示正确
       setAiConfig(configToSave);
 
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 AI 配置失败:', error);
       alert('保存失败: ' + error);
@@ -230,7 +266,7 @@ function Settings({ onClose }) {
       // 更新前端状态，确保下次打开时显示正确
       setOcrConfig(configToSave);
 
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 OCR 配置失败:', error);
       alert('保存失败: ' + error);
@@ -240,19 +276,9 @@ function Settings({ onClose }) {
   const handleMcpSave = async () => {
     try {
       await invoke('update_mcp_config', { config: mcpConfig });
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 MCP 配置失败:', error);
-      alert('保存失败: ' + error);
-    }
-  };
-
-  const handleGeneralSave = async () => {
-    try {
-      await invoke('update_general_config', { config: generalConfig });
-      onClose();
-    } catch (error) {
-      console.error('保存通用配置失败:', error);
       alert('保存失败: ' + error);
     }
   };
@@ -410,12 +436,65 @@ function Settings({ onClose }) {
     }
   };
 
+  const handleExport = async () => {
+    if (exportEncrypt) {
+      if (!exportPassword) return;
+      if (exportPassword !== exportConfirmPassword) {
+        setExportResult({ success: false, message: t('export.passwordMismatch') });
+        return;
+      }
+    }
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const path = await invoke('export_data', {
+        includeImages: exportIncludeImages,
+        password: exportEncrypt ? exportPassword : null,
+      });
+      setExportResult({ success: true, message: t('export.exportSuccess', { path }) });
+    } catch (error) {
+      if (error === 'CANCELLED') {
+        setExportResult({ success: false, message: t('export.cancelled') });
+      } else {
+        setExportResult({ success: false, message: t('export.exportFailed', { error }) });
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = async (pwd, path) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await invoke('import_data', { password: pwd || null, filePath: path || null });
+      setImportResult({ success: true, message: t('export.importSuccess', { imported: result.imported, skipped: result.skipped }) });
+      setImportNeedPassword(false);
+      setImportPassword('');
+      setImportFilePath(null);
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      if (typeof error === 'string' && error.startsWith('ENCRYPTED:')) {
+        const encPath = error.substring('ENCRYPTED:'.length);
+        setImportNeedPassword(true);
+        setImportFilePath(encPath);
+        setImportResult({ success: false, message: t('export.importNeedPassword') });
+      } else if (error === 'CANCELLED') {
+        setImportResult({ success: false, message: t('export.cancelled') });
+      } else {
+        setImportResult({ success: false, message: t('export.importFailed', { error }) });
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="settings-overlay">
       <div className="settings-modal">
         <div className="settings-header">
           <h2>{t('settings.title')}</h2>
-          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+          <button onClick={handleClose} className="close-btn"><X size={20} /></button>
         </div>
 
         <div className="settings-tabs">
@@ -461,15 +540,45 @@ function Settings({ onClose }) {
             </div>
 
             <div className="setting-item">
+              <label>{t('settings.general.theme')}</label>
+              <select
+                value={generalConfig.theme_mode || 'system'}
+                onChange={async (e) => {
+                  const newMode = e.target.value;
+                  const updated = { ...generalConfig, theme_mode: newMode };
+                  setGeneralConfig(updated);
+                  if (onThemeModeChange) onThemeModeChange(newMode);
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                  } catch (error) {
+                    console.error('保存主题配置失败:', error);
+                  }
+                }}
+                className="setting-select"
+              >
+                <option value="system">{t('settings.general.themeSystem')}</option>
+                <option value="light">{t('settings.general.themeLight')}</option>
+                <option value="dark">{t('settings.general.themeDark')}</option>
+              </select>
+              <small className="setting-hint">{t('settings.general.themeHint')}</small>
+            </div>
+
+            <div className="setting-item">
               <label>{t('settings.general.maxPinnedItems')}</label>
               <input
                 type="number"
                 value={generalConfig.max_pinned_items}
-                onChange={(e) => {
+                onChange={async (e) => {
                   let value = parseInt(e.target.value) || 3;
                   if (value < 1) value = 1;
                   if (value > 10) value = 10;
-                  setGeneralConfig({ ...generalConfig, max_pinned_items: value });
+                  const updated = { ...generalConfig, max_pinned_items: value };
+                  setGeneralConfig(updated);
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                  } catch (error) {
+                    console.error('保存置顶数配置失败:', error);
+                  }
                 }}
                 min="1"
                 max="10"
@@ -483,6 +592,275 @@ function Settings({ onClose }) {
                   </span>
                 )}
               </small>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.general.featureModules')}</label>
+              <div className="feature-toggles">
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...aiConfig, enabled: e.target.checked };
+                      setAiConfig(updated);
+                      try {
+                        await invoke('update_ai_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 AI 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableAI')}
+                </label>
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={ocrConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...ocrConfig, enabled: e.target.checked };
+                      setOcrConfig(updated);
+                      try {
+                        await invoke('update_ocr_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 OCR 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableOCR')}
+                </label>
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...mcpConfig, enabled: e.target.checked };
+                      setMcpConfig(updated);
+                      try {
+                        await invoke('update_mcp_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 MCP 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableMCP')}
+                </label>
+              </div>
+            </div>
+
+            {/* 高级设置 - 应用锁 */}
+            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {t('lock.settingsTitle')}
+                <span style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}>Pro</span>
+              </label>
+              <small className="setting-hint" style={{ marginBottom: '8px', display: 'block' }}>
+                {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
+              </small>
+
+              {lockHasPassword && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="password"
+                    value={lockOldPassword}
+                    onChange={(e) => { setLockOldPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                    placeholder={t('lock.oldPassword')}
+                    className="setting-input"
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="password"
+                  value={lockNewPassword}
+                  onChange={(e) => { setLockNewPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                  placeholder={lockHasPassword ? t('lock.newPassword') : t('lock.setPassword')}
+                  className="setting-input"
+                />
+                {lockNewPassword && (
+                  <input
+                    type="password"
+                    value={lockConfirmPassword}
+                    onChange={(e) => { setLockConfirmPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                    placeholder={t('lock.confirmPassword')}
+                    className="setting-input"
+                  />
+                )}
+              </div>
+
+              {lockError && <small style={{ color: '#ef4444', marginTop: '4px' }}>{lockError}</small>}
+              {lockSuccess && <small style={{ color: '#22c55e', marginTop: '4px' }}>{lockSuccess}</small>}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  className="test-btn"
+                  onClick={async () => {
+                    setLockError('');
+                    setLockSuccess('');
+                    // 设置新密码
+                    if (lockNewPassword) {
+                      if (lockNewPassword !== lockConfirmPassword) {
+                        setLockError(t('lock.mismatch'));
+                        return;
+                      }
+                      try {
+                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: lockNewPassword });
+                        setLockSuccess(t('lock.setSuccess'));
+                        setLockHasPassword(true);
+                        setLockOldPassword('');
+                        setLockNewPassword('');
+                        setLockConfirmPassword('');
+                      } catch (err) {
+                        setLockError(String(err));
+                      }
+                    }
+                  }}
+                  disabled={!lockNewPassword || !lockConfirmPassword}
+                >
+                  {lockHasPassword ? t('lock.changePassword') : t('lock.enableLock')}
+                </button>
+                {lockHasPassword && (
+                  <button
+                    className="test-btn"
+                    style={{ background: '#ef4444', color: '#fff' }}
+                    onClick={async () => {
+                      setLockError('');
+                      setLockSuccess('');
+                      if (!lockOldPassword) {
+                        setLockError(t('lock.needOldPassword'));
+                        return;
+                      }
+                      try {
+                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: '' });
+                        setLockSuccess(t('lock.removeSuccess'));
+                        setLockHasPassword(false);
+                        setLockOldPassword('');
+                        setLockNewPassword('');
+                        setLockConfirmPassword('');
+                      } catch (err) {
+                        setLockError(String(err));
+                      }
+                    }}
+                  >
+                    {t('lock.removeLock')}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 数据管理 - 导入导出 */}
+            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {t('export.title')}
+                <span style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}>Pro</span>
+              </label>
+
+              {/* 导出选项 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
+                  <span>{t('export.includeImages')}</span>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={exportIncludeImages}
+                      onChange={(e) => setExportIncludeImages(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </span>
+                </label>
+                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
+                  <span>{t('export.encrypt')}</span>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={exportEncrypt}
+                      onChange={(e) => { setExportEncrypt(e.target.checked); setExportPassword(''); setExportConfirmPassword(''); }}
+                    />
+                    <span className="toggle-slider" />
+                  </span>
+                </label>
+                {exportEncrypt && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <input
+                      type="password"
+                      value={exportPassword}
+                      onChange={(e) => setExportPassword(e.target.value)}
+                      placeholder={t('export.password')}
+                      className="setting-input"
+                    />
+                    <input
+                      type="password"
+                      value={exportConfirmPassword}
+                      onChange={(e) => setExportConfirmPassword(e.target.value)}
+                      placeholder={t('export.confirmPassword')}
+                      className="setting-input"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                <button
+                  className="test-btn"
+                  style={{ flex: 'none' }}
+                  onClick={handleExport}
+                  disabled={exporting || importing}
+                >
+                  {exporting ? t('export.exporting') : t('export.export')}
+                </button>
+                <button
+                  className="test-btn"
+                  style={{ flex: 'none' }}
+                  onClick={() => { setImportNeedPassword(false); setImportPassword(''); setImportFilePath(null); setImportResult(null); handleImport(null, null); }}
+                  disabled={exporting || importing}
+                >
+                  {importing ? t('export.importing') : t('export.import')}
+                </button>
+              </div>
+
+              {/* 加密文件需要密码 */}
+              {importNeedPassword && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                  <input
+                    type="password"
+                    value={importPassword}
+                    onChange={(e) => setImportPassword(e.target.value)}
+                    placeholder={t('export.password')}
+                    className="setting-input"
+                    style={{ flex: 1 }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && importPassword) handleImport(importPassword, importFilePath); }}
+                  />
+                  <button
+                    className="test-btn"
+                    onClick={() => handleImport(importPassword, importFilePath)}
+                    disabled={!importPassword || importing}
+                  >
+                    {t('export.import')}
+                  </button>
+                </div>
+              )}
+
+              {/* 结果提示 */}
+              {(exportResult || importResult) && (
+                <small style={{ color: (exportResult || importResult)?.success ? '#22c55e' : '#ef4444', marginTop: '6px', display: 'block' }}>
+                  {(exportResult || importResult)?.message}
+                </small>
+              )}
             </div>
           </div>
         )}
@@ -642,17 +1020,6 @@ function Settings({ onClose }) {
               <label className="setting-label">
                 <input
                   type="checkbox"
-                  checked={ocrConfig.enabled}
-                  onChange={(e) => setOcrConfig({ ...ocrConfig, enabled: e.target.checked })}
-                />
-                {t('settings.ocr.enabled')}
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
                   checked={ocrConfig.auto_ocr}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
                 />
@@ -781,18 +1148,6 @@ function Settings({ onClose }) {
         {activeTab === 'mcp' && (
           <div className="settings-content">
             <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
-                  checked={mcpConfig.enabled}
-                  onChange={(e) => setMcpConfig({ ...mcpConfig, enabled: e.target.checked })}
-                />
-                {t('settings.mcp.enabled')}
-              </label>
-              <small className="setting-hint">{t('settings.mcp.enabledHint')}</small>
-            </div>
-
-            <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
                 type="number"
@@ -863,19 +1218,20 @@ function Settings({ onClose }) {
         )}
 
         <div className="settings-footer">
-          <button onClick={onClose} className="cancel-btn">{t('settings.cancel')}</button>
-          <button
-            onClick={
-              activeTab === 'ai' ? handleAiSave :
-              activeTab === 'ocr' ? handleOcrSave :
-              activeTab === 'mcp' ? handleMcpSave :
-              activeTab === 'general' ? handleGeneralSave :
-              onClose
-            }
-            className="save-btn"
-          >
-            {t('settings.save')}
-          </button>
+          <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
+          {activeTab !== 'general' && (
+            <button
+              onClick={
+                activeTab === 'ai' ? handleAiSave :
+                activeTab === 'ocr' ? handleOcrSave :
+                activeTab === 'mcp' ? handleMcpSave :
+                handleClose
+              }
+              className="save-btn"
+            >
+              {t('settings.save')}
+            </button>
+          )}
         </div>
       </div>
     </div>

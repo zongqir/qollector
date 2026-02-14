@@ -1,6 +1,7 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X, Tag } from 'lucide-react';
-import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import { getTags, getSourceApp, getSourceDisplay } from '../../utils/tagHelpers';
 
 function ItemTags({
   item, selectedTags, onTagClick,
@@ -43,11 +44,12 @@ function ItemTags({
       ))}
       {getSourceApp(item.metadata) !== 'Unknown' && (() => {
         const sourceTag = `来源:${getSourceApp(item.metadata)}`;
+        const sourceDisplay = getSourceDisplay(item.metadata);
         return (
           <span
             className={`tag source-tag ${selectedTags.includes(sourceTag) ? 'selected' : ''}`}
             onClick={(e) => onTagClick(sourceTag, e)}
-            title={t('item.clickToFilterSource')}
+            title={sourceDisplay || getSourceApp(item.metadata)}
           >
             {getSourceApp(item.metadata)}
           </span>
@@ -131,4 +133,4 @@ function ItemTags({
   );
 }
 
-export default ItemTags;
+export default memo(ItemTags);

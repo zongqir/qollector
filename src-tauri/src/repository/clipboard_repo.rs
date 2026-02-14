@@ -129,6 +129,41 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    /// 轻量查询：排除 embedding 和 original_content 大字段
+    pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT id, type, content, '' as original_content, content_hash,
+                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    metadata, is_pinned, is_favorite, is_deleted,
+                    created_at, updated_at
+             FROM clipboard_items WHERE is_deleted = 0
+             ORDER BY is_pinned DESC, updated_at DESC LIMIT ?"
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
+    /// 分页查询（用于 loadMore）
+    pub async fn get_recent_paged(&self, limit: i32, offset: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT id, type, content, '' as original_content, content_hash,
+                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    metadata, is_pinned, is_favorite, is_deleted,
+                    created_at, updated_at
+             FROM clipboard_items WHERE is_deleted = 0
+             ORDER BY is_pinned DESC, updated_at DESC LIMIT ? OFFSET ?"
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
     pub async fn search(&self, query: &str, filters: &SearchFilters, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let mut sql = String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0");
 

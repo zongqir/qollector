@@ -4,7 +4,7 @@
   align-items: center;
   gap: 4px;
   padding: 0;
-  background: linear-gradient(to right, #fafafa, #f5f5f5);
+  background: var(--bg-toolbar);
   border-radius: 6px;
   margin: 0;
   height: 0;
@@ -12,7 +12,7 @@
   opacity: 0;
   overflow: hidden;
   transition: opacity 0.2s ease-out, height 0.2s ease-out, padding 0.2s ease-out, margin 0.2s ease-out;
-  will-change: opacity, height; /* 优化动画性能 */
+  will-change: opacity, height;
 }
 
 .item-card:hover .item-toolbar {
@@ -22,26 +22,26 @@
   margin: 8px 0;
 }
 
-/* 置顶卡片的工具栏 - 淡蓝色 */
+/* 置顶卡片的工具栏 */
 .item-card.pinned .item-toolbar {
-  background: linear-gradient(to right, #e8f0fe, #dce7fd);
+  background: var(--toolbar-pinned-bg);
 }
 
-/* 收藏卡片的工具栏 - 淡金色 */
+/* 收藏卡片的工具栏 */
 .item-card.favorite .item-toolbar {
-  background: linear-gradient(to right, #fff8e1, #fff3d0);
+  background: var(--toolbar-favorite-bg);
 }
 
-/* 同时置顶和收藏的工具栏 - 淡紫色 */
+/* 同时置顶和收藏的工具栏 */
 .item-card.pinned.favorite .item-toolbar {
-  background: linear-gradient(to right, #f0e8ff, #e8dcff);
+  background: var(--toolbar-pinned-fav-bg);
 }
 
 /* 工具栏右侧提示 */
 .toolbar-hint {
   margin-left: auto;
   font-size: 10px;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 400;
   white-space: nowrap;
   padding-left: 12px;
@@ -52,22 +52,22 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: white;
-  border: 1px solid #e8e8e8;
+  background: var(--btn-bg);
+  border: 1px solid var(--border-btn);
   border-radius: 5px;
   cursor: pointer;
   font-size: 11px;
   transition: all 0.2s;
   flex-shrink: 0;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
   white-space: nowrap;
 }
 
 .toolbar-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border-color: #d0d0d0;
+  box-shadow: 0 2px 6px var(--shadow-md);
+  border-color: var(--border-color);
 }
 
 .toolbar-btn:disabled {
@@ -84,9 +84,9 @@
 
 /* 置顶按钮 */
 .toolbar-btn.pin-btn {
-  background: white;
-  border-color: #e8e8e8;
-  color: #666;
+  background: var(--btn-bg);
+  border-color: var(--border-btn);
+  color: var(--text-secondary);
 }
 
 .toolbar-btn.pin-btn:hover:not(:disabled) {
@@ -121,7 +121,7 @@
 
 /* OCR按钮 */
 .toolbar-btn.ocr-btn {
-  background: #e8f5e9;
+  background: var(--ocr-btn-bg);
   border-color: #4caf5030;
   color: #4caf50;
 }
@@ -134,12 +134,10 @@
 
 /* 备注按钮 */
 .toolbar-btn.note-btn.has-note {
-  background: #fff9e6;
+  background: var(--note-btn-has-bg);
   border-color: #ffc107;
   color: #f57c00;
 }
-
-/* TOOLBAR_CONTINUED */
 
 .toolbar-btn.note-btn:hover:not(:disabled) {
   background: #ffc107;
@@ -149,9 +147,9 @@
 
 /* 收藏按钮 */
 .toolbar-btn.favorite-btn {
-  background: white;
-  border-color: #e8e8e8;
-  color: #666;
+  background: var(--btn-bg);
+  border-color: var(--border-btn);
+  color: var(--text-secondary);
 }
 
 .toolbar-btn.favorite-btn:hover:not(:disabled) {
@@ -177,18 +175,15 @@
   100% { transform: scale(1); }
 }
 
-
 /* 工具栏分隔符 */
 .toolbar-divider {
   width: 1px;
   height: 16px;
-  background: #e0e0e0;
+  background: var(--divider-color);
   margin: 0 4px;
 }
 
-/* TOOLBAR_CONTINUED_2 */
-
-/* 移除旧的内联按钮样式 */
+/* 内联 AI 按钮 */
 .ai-tag-icon-btn-inline {
   position: absolute;
   top: 8px;
@@ -199,13 +194,13 @@
   width: 28px;
   height: 24px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--float-btn-bg);
   border: 1px solid #667eea30;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow-md);
 }
 
 .ai-tag-icon-btn-inline .ai-icon {
@@ -233,14 +228,12 @@
   cursor: not-allowed;
 }
 
-/* TOOLBAR_CONTINUED_3 */
-
 .ai-tag-icon-btn-inline .ai-loading {
   font-size: 12px;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-/* 置顶按钮 - 内联在内容区域左上角（AI按钮右侧） */
+/* 置顶按钮 - 内联 */
 .pin-icon-btn {
   position: absolute;
   top: 8px;
@@ -251,15 +244,15 @@
   width: 28px;
   height: 24px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
+  background: var(--float-btn-bg);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   z-index: 10;
   font-size: 14px;
   opacity: 0.5;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow-md);
 }
 
 .pin-icon-btn:hover {
@@ -267,6 +260,10 @@
   background: #fff3e0;
   border-color: #ff9800;
   transform: scale(1.05);
+}
+
+.dark-mode .pin-icon-btn:hover {
+  background: rgba(255, 152, 0, 0.15);
 }
 
 .pin-icon-btn.pinned {

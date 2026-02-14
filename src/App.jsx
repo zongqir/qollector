@@ -1,8 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import Settings from './Settings';
+import LockScreen from './LockScreen';
 import DragDrop from './DragDrop';
 import EditModal from './EditModal';
 import { getTags, getSourceApp } from './utils/tagHelpers';
@@ -11,9 +14,10 @@ import { useFilters } from './hooks/useFilters';
 import { useNoteEdit } from './hooks/useNoteEdit';
 import { useTagManagement } from './hooks/useTagManagement';
 import { useEditModal } from './hooks/useEditModal';
+import { useTheme } from './hooks/useTheme';
 import { openImagePreview } from './services/windowService';
 import { initOcrService } from './services/ocrService';
-import { copyItemToClipboard, getRecentItems } from './services/clipboardService';
+import { copyItemToClipboard, getRecentItemsLight, getMoreItems } from './services/clipboardService';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from './services/aiService';
 import TitleBar from './components/TitleBar';
 import SearchBar from './components/SearchBar';
@@ -21,8 +25,11 @@ import ItemCard from './components/ItemCard';
 
 function App() {
   const { t, i18n } = useTranslation();
+  const PAGE_SIZE = 50;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
@@ -37,6 +44,11 @@ function App() {
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
   const [copiedItemId, setCopiedItemId] = useState(null);
+  const [isLocked, setIsLocked] = useState(true);
+  const [hasPassword, setHasPassword] = useState(false);
+
+  // Theme hook
+  const { themeMode, setThemeMode } = useTheme('system');
 
   // Custom hooks
   const { searchQuery, setSearchQuery, debouncedSearchQuery } = useSearch();
@@ -93,48 +105,76 @@ function App() {
     initOcrService();
     loadConfigs();
 
-    // 每3秒自动刷新一次
-    const interval = setInterval(() => {
+    // 监听 Rust 后端的剪贴板变更事件，替代轮询
+    let unlistenPromise = listen('clipboard-changed', () => {
       loadItems();
-    }, 3000);
+    });
 
     return () => {
-      clearInterval(interval);
+      unlistenPromise.then(unlisten => unlisten());
     };
   }, []); // 移除 showTagFilter 依赖
 
   const loadConfigs = async () => {
     try {
-      const [aiConfig, ocrConfig, generalConfig] = await Promise.all([
+      const [aiConfig, ocrConfig, generalConfig, hasLock] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
-        invoke('get_general_config')
+        invoke('get_general_config'),
+        invoke('has_lock_password')
       ]);
       setAiEnabled(aiConfig.enabled || false);
       setOcrEnabled(ocrConfig.enabled || false);
       setMaxPinnedItems(generalConfig.max_pinned_items || 3);
+      if (generalConfig.theme_mode) {
+        setThemeMode(generalConfig.theme_mode);
+      }
+      setHasPassword(hasLock);
+      if (!hasLock) {
+        setIsLocked(false);
+      }
     } catch (error) {
       console.error('加载配置失败:', error);
     }
   };
 
-  const loadItems = async () => {
-    try {
-      const result = await getRecentItems(100);
-      setItems(result);
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+  const processedItemIdsRef = useRef(processedItemIds);
+  processedItemIdsRef.current = processedItemIds;
 
-      if (!loading) {
-        autoGenerateAITagsSvc(result, processedItemIds, setProcessedItemIds);
+  const loadItems = useCallback(async () => {
+    try {
+      const result = await getRecentItemsLight(PAGE_SIZE);
+      setItems(result);
+      setHasMore(result.length >= PAGE_SIZE);
+
+      if (!loadingRef.current) {
+        autoGenerateAITagsSvc(result, processedItemIdsRef.current, setProcessedItemIds);
       }
 
-      if (loading) setLoading(false);
+      if (loadingRef.current) setLoading(false);
     } catch (error) {
       console.error(t('error.loadFailed', { error }));
-      if (loading) setLoading(false);
+      if (loadingRef.current) setLoading(false);
     }
-  };
+  }, [t]);
 
-  const handleCopy = async (item, e) => {
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await getMoreItems(PAGE_SIZE, items.length);
+      if (more.length < PAGE_SIZE) setHasMore(false);
+      setItems(prev => [...prev, ...more]);
+    } catch (error) {
+      console.error('加载更多失败:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, items.length]);
+
+  const handleCopy = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -147,10 +187,13 @@ function App() {
       console.error(t('error.copyFailed', { error }));
       alert(t('error.copyFailed', { error }));
     }
-  };
+  }, [t]);
 
   // 处理内容区域的点击，区分单击和双击
-  const handleContentClick = (item, e) => {
+  const handleCopyRef = useRef(handleCopy);
+  handleCopyRef.current = handleCopy;
+
+  const handleContentClick = useCallback((item, e) => {
     e.stopPropagation();
 
     // 清除之前的定时器
@@ -162,13 +205,15 @@ function App() {
     // 设置延迟执行单击操作（300ms）
     clickTimerRef.current = setTimeout(() => {
       // 所有类型都执行复制
-      handleCopy(item, e);
+      handleCopyRef.current(item, e);
       clickTimerRef.current = null;
     }, 300);
-  };
+  }, []);
 
   // 处理双击
-  const handleContentDoubleClick = (item, e, isImage = false) => {
+  const openEditModalRef = useRef(null);
+
+  const handleContentDoubleClick = useCallback((item, e, isImage = false) => {
     e.stopPropagation();
 
     // 清除单击定时器，防止单击操作执行
@@ -182,11 +227,11 @@ function App() {
       openImagePreview(item.image_paths, t);
     } else {
       // 文本双击打开编辑弹窗
-      openEditModal(item);
+      openEditModalRef.current(item);
     }
-  };
+  }, [t]);
 
-  const togglePin = async (item, e) => {
+  const togglePin = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -204,7 +249,7 @@ function App() {
       console.error(t('error.togglePinFailed', { error }));
       alert(t('error.togglePinFailed', { error }));
     }
-  };
+  }, [items, maxPinnedItems, t, loadItems]);
 
   const toggleWindowAlwaysOnTop = async () => {
     try {
@@ -225,6 +270,7 @@ function App() {
     showEditModal, editModalMode, editingItem,
     openEditModal, handleEditModalSave, handleEditModalCancel,
   } = useEditModal(loadItems, t);
+  openEditModalRef.current = openEditModal;
 
   const {
     editingNoteId, editNote, setEditNote,
@@ -236,7 +282,7 @@ function App() {
     startAddTag, cancelAddTag, addTagToItem, handleTagInputKeyDown,
   } = useTagManagement(loadItems, t);
 
-  const generateAITags = async (item) => {
+  const generateAITags = useCallback(async (item) => {
     if (!item.content) return;
 
     setGeneratingAI(item.id);
@@ -248,9 +294,9 @@ function App() {
     } finally {
       setGeneratingAI(null);
     }
-  };
+  }, [loadItems]);
 
-  const handleOCR = async (item) => {
+  const handleOCR = useCallback(async (item) => {
     if (!item.image_paths) return;
 
     setOcrProcessing(item.id);
@@ -270,10 +316,10 @@ function App() {
     } finally {
       setOcrProcessing(null);
     }
-  };
+  }, [t, loadItems]);
 
   // 切换收藏状态
-  const toggleFavorite = async (item, e) => {
+  const toggleFavorite = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -283,28 +329,34 @@ function App() {
     } catch (error) {
       console.error('切换收藏失败:', error);
     }
-  };
+  }, [loadItems]);
 
   // 打开链接或文件
-  const handleOpenItem = async (item) => {
+  const handleOpenItem = useCallback(async (item) => {
     try {
       await invoke('open_item', { id: item.id });
     } catch (error) {
       console.error(t('error.openFailed', { error }));
       alert(t('error.openFailed', { error }));
     }
-  };
+  }, [t]);
+
+  // 处理拖曳添加后的类型切换
+  const handleTypeAdded = useCallback((type) => {
+    // 自动切换到对应的类型 tab
+    setSelectedType(type);
+  }, [setSelectedType]);
 
 
-  const toggleExpand = (itemId, e) => {
+  const toggleExpand = useCallback((itemId, e) => {
     if (e) {
       e.stopPropagation();
     }
-    setExpandedItemId(expandedItemId === itemId ? null : itemId);
-  };
+    setExpandedItemId(prev => prev === itemId ? null : itemId);
+  }, []);
 
   // 拖出功能：处理拖拽开始
-  const handleDragStart = (item, e) => {
+  const handleDragStart = useCallback((item, e) => {
     // 设置纯文本数据
     const text = item.type_ === 'text' ? (item.content || '') :
                  item.type_ === 'file' ? (item.content || '') :
@@ -321,7 +373,7 @@ function App() {
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 0, 0);
     setTimeout(() => document.body.removeChild(dragEl), 0);
-  };
+  }, []);
 
 
   // 获取所有唯一标签（包括来源标签和类型标签）- 使用 useMemo 缓存
@@ -464,13 +516,31 @@ function App() {
     });
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  // 直接使用 filteredItems，不使用虚拟滚动
-  const visibleItems = filteredItems;
+  // 虚拟滚动
+  const virtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => contentRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+  });
+
+  // 滚动到底部时自动加载更多
+  const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
+  useEffect(() => {
+    if (!lastVirtualItem) return;
+    if (lastVirtualItem.index >= filteredItems.length - 5) {
+      loadMore();
+    }
+  }, [lastVirtualItem?.index, filteredItems.length, loadMore]);
+
+  if (isLocked && hasPassword) {
+    return <LockScreen onUnlock={() => setIsLocked(false)} />;
+  }
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
-      <DragDrop onItemAdded={loadItems} />
+      {showSettings && <Settings onClose={() => setShowSettings(false)} themeMode={themeMode} onThemeModeChange={setThemeMode} onConfigChange={loadConfigs} />}
+      <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
 
       {showEditModal && (
         <EditModal
@@ -514,46 +584,61 @@ function App() {
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
-          <div className="items-list">
-            {visibleItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                expandedItemId={expandedItemId}
-                copiedItemId={copiedItemId}
-                selectedTags={selectedTags}
-                addingTagItemId={addingTagItemId}
-                newTagInput={newTagInput}
-                onNewTagInputChange={setNewTagInput}
-                onTagInputKeyDown={handleTagInputKeyDown}
-                onStartAddTag={startAddTag}
-                onCancelAddTag={cancelAddTag}
-                onAddTagToItem={addTagToItem}
-                filteredUserTags={filteredUserTags}
-                onTagClick={handleTagClick}
-                editingNoteId={editingNoteId}
-                editNote={editNote}
-                onEditNoteChange={setEditNote}
-                onStartEditNote={startEditNote}
-                onSaveNote={saveNote}
-                onCancelNoteEdit={cancelNoteEdit}
-                onDragStart={handleDragStart}
-                onTogglePin={togglePin}
-                onToggleFavorite={toggleFavorite}
-                onGenerateAITags={generateAITags}
-                generatingAI={generatingAI}
-                aiEnabled={aiEnabled}
-                onHandleOCR={handleOCR}
-                ocrProcessing={ocrProcessing}
-                ocrEnabled={ocrEnabled}
-                onToggleExpand={toggleExpand}
-                onOpenItem={handleOpenItem}
-                onContentClick={handleContentClick}
-                onContentDoubleClick={handleContentDoubleClick}
-                language={i18n.language}
-                maxPinnedItems={maxPinnedItems}
-              />
-            ))}
+          <div className="items-list" style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const item = filteredItems[virtualRow.index];
+              return (
+                <div
+                  key={item.id}
+                  ref={virtualizer.measureElement}
+                  data-index={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <ItemCard
+                    item={item}
+                    expandedItemId={expandedItemId}
+                    copiedItemId={copiedItemId}
+                    selectedTags={selectedTags}
+                    addingTagItemId={addingTagItemId}
+                    newTagInput={newTagInput}
+                    onNewTagInputChange={setNewTagInput}
+                    onTagInputKeyDown={handleTagInputKeyDown}
+                    onStartAddTag={startAddTag}
+                    onCancelAddTag={cancelAddTag}
+                    onAddTagToItem={addTagToItem}
+                    filteredUserTags={filteredUserTags}
+                    onTagClick={handleTagClick}
+                    editingNoteId={editingNoteId}
+                    editNote={editNote}
+                    onEditNoteChange={setEditNote}
+                    onStartEditNote={startEditNote}
+                    onSaveNote={saveNote}
+                    onCancelNoteEdit={cancelNoteEdit}
+                    onDragStart={handleDragStart}
+                    onTogglePin={togglePin}
+                    onToggleFavorite={toggleFavorite}
+                    onGenerateAITags={generateAITags}
+                    generatingAI={generatingAI}
+                    aiEnabled={aiEnabled}
+                    onHandleOCR={handleOCR}
+                    ocrProcessing={ocrProcessing}
+                    ocrEnabled={ocrEnabled}
+                    onToggleExpand={toggleExpand}
+                    onOpenItem={handleOpenItem}
+                    onContentClick={handleContentClick}
+                    onContentDoubleClick={handleContentDoubleClick}
+                    language={i18n.language}
+                    maxPinnedItems={maxPinnedItems}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

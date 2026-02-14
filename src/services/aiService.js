@@ -24,6 +24,12 @@ export const generateAITagsForItem = async (item) => {
 };
 
 export const autoGenerateAITags = async (items, processedItemIds, setProcessedItemIds) => {
+  // 防止 processedItemIds 无限增长导致内存泄漏
+  if (processedItemIds.size > 200) {
+    setProcessedItemIds(new Set());
+    return;
+  }
+
   let processedCount = 0;
   const maxConcurrent = 3;
 

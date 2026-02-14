@@ -6,7 +6,7 @@
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #555;
+  color: var(--text-secondary);
   margin-bottom: 6px;
   margin-top: 12px;
 }
@@ -24,6 +24,8 @@
   font-family: inherit;
   resize: vertical;
   min-height: 100px;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .edit-textarea:focus {
@@ -51,14 +53,21 @@
 .tag-input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 14px;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .tag-input:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.tag-input::placeholder,
+.edit-textarea::placeholder {
+  color: var(--text-tertiary);
 }
 
 .tag-add-btn {

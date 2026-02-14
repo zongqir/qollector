@@ -1,7 +1,7 @@
 .header {
   padding: 16px 24px;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 3px var(--shadow-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -19,7 +19,7 @@
 .type-filter-group {
   display: flex;
   gap: 0;
-  background: #f5f5f5;
+  background: var(--filter-group-bg);
   padding: 4px;
   border-radius: 12px;
   flex-shrink: 0;
@@ -33,7 +33,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
   transition: all 0.2s ease;
   white-space: nowrap;
   display: flex;
@@ -47,9 +47,9 @@
 }
 
 .type-filter-btn.active {
-  background: white;
+  background: var(--filter-btn-active-bg);
   color: #667eea;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 4px var(--shadow-md);
   font-weight: 600;
 }
 
@@ -63,9 +63,9 @@
 /* 收藏筛选按钮 */
 .favorites-filter-btn {
   padding: 8px 14px;
-  background: white;
-  color: #666;
-  border: 2px solid #e0e0e0;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
@@ -79,7 +79,7 @@
 
 .favorites-filter-btn:hover {
   border-color: #ffa726;
-  background: #fff9e6;
+  background: var(--fav-filter-hover-bg);
 }
 
 .favorites-filter-btn.active {
@@ -89,12 +89,11 @@
   box-shadow: 0 2px 8px rgba(255, 167, 38, 0.3);
 }
 
-
 .settings-btn {
   padding: 8px 14px;
-  background: white;
+  background: var(--btn-bg);
   color: #667eea;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
@@ -104,12 +103,8 @@
 
 .settings-btn:hover {
   border-color: #667eea;
-  background: #f8f9ff;
+  background: var(--settings-hover-bg);
 }
-
-/* SEARCH_BAR_CONTINUED */
-
-/* 移除旧的窗口置顶按钮样式 */
 
 /* 窗口较窄时隐藏设置按钮 */
 @media (max-width: 768px) {
@@ -121,10 +116,12 @@
 .search-input {
   width: 100%;
   padding: 10px 40px 10px 15px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 25px;
   font-size: 14px;
   transition: all 0.3s;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .search-input:focus {
@@ -133,19 +130,23 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
 .clear-search {
   position: absolute;
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  background: #e0e0e0;
+  background: var(--clear-search-bg);
   border: none;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   cursor: pointer;
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -153,6 +154,6 @@
 }
 
 .clear-search:hover {
-  background: #d0d0d0;
-  color: #333;
+  background: var(--clear-search-hover-bg);
+  color: var(--text-primary);
 }

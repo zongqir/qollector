@@ -14,6 +14,27 @@ pub async fn get_recent_items(
 }
 
 #[tauri::command]
+pub async fn get_recent_items_light(
+    manager: State<'_, Arc<ClipboardManager>>,
+    limit: i32,
+) -> Result<Vec<ClipboardItem>, String> {
+    manager.get_recent_light(limit)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_more_items(
+    manager: State<'_, Arc<ClipboardManager>>,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<ClipboardItem>, String> {
+    manager.get_recent_paged(limit, offset)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn copy_item(
     manager: State<'_, Arc<ClipboardManager>>,
     item: ClipboardItem,

@@ -1,0 +1,252 @@
+/* ========== 主题变量系统 ========== */
+:root {
+  /* 基础背景 */
+  --bg-primary: #f7f7f7;
+  --bg-secondary: #ffffff;
+  --bg-card: #fafafa;
+  --bg-card-hover: #f5f5f5;
+  --bg-input: #ffffff;
+  --bg-toolbar: linear-gradient(to right, #fafafa, #f5f5f5);
+
+  /* 文字颜色 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-on-accent: #ffffff;
+
+  /* 边框 */
+  --border-color: #e0e0e0;
+  --border-light: #e5e5e5;
+  --border-input: #dddddd;
+  --border-btn: #e8e8e8;
+
+  /* 阴影 */
+  --shadow-sm: rgba(0, 0, 0, 0.05);
+  --shadow-md: rgba(0, 0, 0, 0.08);
+  --shadow-lg: rgba(0, 0, 0, 0.12);
+  --shadow-xl: rgba(0, 0, 0, 0.2);
+  --shadow-overlay: rgba(0, 0, 0, 0.5);
+
+  /* 卡片特殊背景 */
+  --card-pinned-bg: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+  --card-pinned-hover: linear-gradient(135deg, #e8f0fe 0%, #dce7fd 100%);
+  --card-favorite-bg: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%);
+  --card-favorite-hover: linear-gradient(135deg, #fff8e1 0%, #fff3d0 100%);
+  --card-pinned-fav-bg: linear-gradient(135deg, #f8f0ff 0%, #f0e8ff 100%);
+  --card-pinned-fav-hover: linear-gradient(135deg, #f0e8ff 0%, #e8dcff 100%);
+
+  /* 工具栏特殊背景 */
+  --toolbar-pinned-bg: linear-gradient(to right, #e8f0fe, #dce7fd);
+  --toolbar-favorite-bg: linear-gradient(to right, #fff8e1, #fff3d0);
+  --toolbar-pinned-fav-bg: linear-gradient(to right, #f0e8ff, #e8dcff);
+
+  /* 功能色 - 按钮 hover 等 */
+  --btn-bg: #ffffff;
+  --btn-hover-bg: rgba(0, 0, 0, 0.05);
+  --btn-active-bg: #f5f5f5;
+
+  /* 搜索栏 */
+  --filter-group-bg: #f5f5f5;
+  --filter-btn-active-bg: #ffffff;
+
+  /* 设置面板 */
+  --modal-bg: #ffffff;
+  --info-box-bg: #f5f5f5;
+  --code-block-bg: #f5f5f5;
+
+  /* 备注编辑 */
+  --note-edit-bg: linear-gradient(135deg, #f5f7fa, #f0f2f5);
+  --note-edit-border: #b0b8c4;
+  --note-input-bg: #ffffff;
+
+  /* 标签相关 */
+  --tag-add-bg: linear-gradient(135deg, #ffffff, #f8f9ff);
+  --tag-input-bg: #ffffff;
+  --tag-suggestion-bg: #ffffff;
+  --tag-suggestion-hover: linear-gradient(90deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+  --tag-dropdown-bg: #ffffff;
+  --tag-dropdown-border: #f0f0f0;
+  --tag-dropdown-footer-bg: #fafafa;
+
+  /* 快速输入 */
+  --quick-input-bg: #ffffff;
+  --quick-input-header-bg: linear-gradient(135deg, #667eea08, #764ba208);
+  --quick-input-footer-bg: #fafafa;
+  --hint-item-bg: #ffffff;
+
+  /* 编辑弹窗 */
+  --edit-modal-bg: #ffffff;
+  --edit-modal-tag-bg: #f0f0f0;
+  --edit-modal-tag-add-bg: #f0f0f0;
+
+  /* 展开按钮激活 */
+  --expand-active-bg: #e3f2fd;
+
+  /* OCR 按钮 */
+  --ocr-btn-bg: #e8f5e9;
+
+  /* 备注按钮有备注 */
+  --note-btn-has-bg: #fff9e6;
+
+  /* 浮动按钮背景 */
+  --float-btn-bg: rgba(255, 255, 255, 0.95);
+
+  /* 清除搜索按钮 */
+  --clear-search-bg: #e0e0e0;
+  --clear-search-hover-bg: #d0d0d0;
+
+  /* 滚动条 */
+  --scrollbar-thumb: rgba(102, 126, 234, 0.3);
+  --scrollbar-thumb-hover: rgba(102, 126, 234, 0.5);
+
+  /* 分隔线 */
+  --divider-color: #e0e0e0;
+
+  /* 取消按钮 */
+  --cancel-btn-bg: #f0f0f0;
+  --cancel-btn-hover-bg: #e0e0e0;
+
+  /* OCR 分隔线 */
+  --ocr-divider: #d0d0d0;
+
+  /* 收藏按钮 hover */
+  --fav-filter-hover-bg: #fff9e6;
+
+  /* 设置按钮 hover */
+  --settings-hover-bg: #f8f9ff;
+
+  /* textarea focus */
+  --textarea-focus-bg: #fafafa;
+
+  /* 备注 hover 按钮 */
+  --note-hover-bg: #f5f7fa;
+
+  /* 标签 check 边框 */
+  --tag-check-border: #dddddd;
+}
+
+/* ========== 深色主题 ========== */
+.dark-mode {
+  /* 基础背景 */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-card: #1e2746;
+  --bg-card-hover: #243050;
+  --bg-input: #1e2746;
+  --bg-toolbar: linear-gradient(to right, #1e2746, #1a2340);
+
+  /* 文字颜色 */
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-tertiary: #718096;
+
+  /* 边框 */
+  --border-color: #2d3a5c;
+  --border-light: #2d3a5c;
+  --border-input: #2d3a5c;
+  --border-btn: #2d3a5c;
+
+  /* 阴影 */
+  --shadow-sm: rgba(0, 0, 0, 0.2);
+  --shadow-md: rgba(0, 0, 0, 0.3);
+  --shadow-lg: rgba(0, 0, 0, 0.4);
+  --shadow-xl: rgba(0, 0, 0, 0.5);
+  --shadow-overlay: rgba(0, 0, 0, 0.7);
+
+  /* 卡片特殊背景 */
+  --card-pinned-bg: linear-gradient(135deg, #1a2a4a 0%, #1e3a5f 100%);
+  --card-pinned-hover: linear-gradient(135deg, #1e3a5f 0%, #234570 100%);
+  --card-favorite-bg: linear-gradient(135deg, #3a2f1a 0%, #4a3a1e 100%);
+  --card-favorite-hover: linear-gradient(135deg, #4a3a1e 0%, #5a4528 100%);
+  --card-pinned-fav-bg: linear-gradient(135deg, #2a1a4a 0%, #352560 100%);
+  --card-pinned-fav-hover: linear-gradient(135deg, #352560 0%, #402e70 100%);
+
+  /* 工具栏特殊背景 */
+  --toolbar-pinned-bg: linear-gradient(to right, #1a2a4a, #1e3a5f);
+  --toolbar-favorite-bg: linear-gradient(to right, #3a2f1a, #4a3a1e);
+  --toolbar-pinned-fav-bg: linear-gradient(to right, #2a1a4a, #352560);
+
+  /* 功能色 - 按钮 hover 等 */
+  --btn-bg: #1e2746;
+  --btn-hover-bg: rgba(255, 255, 255, 0.06);
+  --btn-active-bg: #243050;
+
+  /* 搜索栏 */
+  --filter-group-bg: #1e2746;
+  --filter-btn-active-bg: #243050;
+
+  /* 设置面板 */
+  --modal-bg: #16213e;
+  --info-box-bg: #1e2746;
+  --code-block-bg: #1a1a2e;
+
+  /* 备注编辑 */
+  --note-edit-bg: linear-gradient(135deg, #1e2746, #1a2340);
+  --note-edit-border: #3d4f7c;
+  --note-input-bg: #1a1a2e;
+
+  /* 标签相关 */
+  --tag-add-bg: linear-gradient(135deg, #1e2746, #1a2340);
+  --tag-input-bg: #1a1a2e;
+  --tag-suggestion-bg: #16213e;
+  --tag-suggestion-hover: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.08));
+  --tag-dropdown-bg: #16213e;
+  --tag-dropdown-border: #2d3a5c;
+  --tag-dropdown-footer-bg: #1a1a2e;
+
+  /* 快速输入 */
+  --quick-input-bg: #16213e;
+  --quick-input-header-bg: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  --quick-input-footer-bg: #1a1a2e;
+  --hint-item-bg: #1e2746;
+
+  /* 编辑弹窗 */
+  --edit-modal-bg: #16213e;
+  --edit-modal-tag-bg: #1e2746;
+  --edit-modal-tag-add-bg: #1e2746;
+
+  /* 展开按钮激活 */
+  --expand-active-bg: #1a2a4a;
+
+  /* OCR 按钮 */
+  --ocr-btn-bg: rgba(76, 175, 80, 0.15);
+
+  /* 备注按钮有备注 */
+  --note-btn-has-bg: rgba(255, 193, 7, 0.15);
+
+  /* 浮动按钮背景 */
+  --float-btn-bg: rgba(30, 39, 70, 0.95);
+
+  /* 清除搜索按钮 */
+  --clear-search-bg: #2d3a5c;
+  --clear-search-hover-bg: #3d4f7c;
+
+  /* 滚动条 */
+  --scrollbar-thumb: rgba(102, 126, 234, 0.4);
+  --scrollbar-thumb-hover: rgba(102, 126, 234, 0.6);
+
+  /* 分隔线 */
+  --divider-color: #2d3a5c;
+
+  /* 取消按钮 */
+  --cancel-btn-bg: #1e2746;
+  --cancel-btn-hover-bg: #243050;
+
+  /* OCR 分隔线 */
+  --ocr-divider: #2d3a5c;
+
+  /* 收藏按钮 hover */
+  --fav-filter-hover-bg: rgba(255, 167, 38, 0.1);
+
+  /* 设置按钮 hover */
+  --settings-hover-bg: rgba(102, 126, 234, 0.1);
+
+  /* textarea focus */
+  --textarea-focus-bg: #1e2746;
+
+  /* 备注 hover 按钮 */
+  --note-hover-bg: rgba(102, 126, 234, 0.08);
+
+  /* 标签 check 边框 */
+  --tag-check-border: #3d4f7c;
+}

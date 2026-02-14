@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, FileText } from 'lucide-react';
 import { getContentPreview, getFileList, getFileName } from '../../utils/formatters';
@@ -51,4 +52,4 @@ function ItemContent({
   );
 }
 
-export default ItemContent;
+export default memo(ItemContent);

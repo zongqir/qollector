@@ -5,7 +5,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--shadow-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -24,9 +24,9 @@
 }
 
 .quick-input-modal {
-  background: white;
+  background: var(--quick-input-bg);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px var(--shadow-xl);
   width: 90%;
   max-width: 600px;
   overflow: hidden;
@@ -52,15 +52,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e5e5e5;
-  background: linear-gradient(135deg, #667eea08, #764ba208);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--quick-input-header-bg);
 }
 
 .quick-input-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -72,7 +72,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: #999;
+  color: var(--text-tertiary);
   font-size: 20px;
   cursor: pointer;
   border-radius: 8px;
@@ -83,8 +83,8 @@
 }
 
 .quick-input-close:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
   transform: rotate(90deg);
 }
 
@@ -98,25 +98,23 @@
   resize: none;
   outline: none;
   min-height: 200px;
-  color: #333;
-  background: white;
+  color: var(--text-primary);
+  background: var(--quick-input-bg);
   will-change: contents;
 }
 
 .quick-input-textarea:focus {
-  background: #fafafa;
+  background: var(--textarea-focus-bg);
 }
 
 .quick-input-textarea::placeholder {
-  color: #999;
+  color: var(--text-tertiary);
 }
-
-/* QUICK_INPUT_CONTINUED */
 
 .quick-input-footer {
   padding: 16px 24px;
-  border-top: 1px solid #e5e5e5;
-  background: #fafafa;
+  border-top: 1px solid var(--border-light);
+  background: var(--quick-input-footer-bg);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -128,19 +126,19 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .hint-item {
   padding: 4px 8px;
-  background: white;
+  background: var(--hint-item-bg);
   border-radius: 4px;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border-light);
   font-family: monospace;
 }
 
 .hint-divider {
-  color: #ddd;
+  color: var(--border-color);
 }
 
 .quick-input-actions {
@@ -159,14 +157,14 @@
 }
 
 .quick-input-btn.cancel {
-  background: white;
-  color: #666;
-  border: 1px solid #e0e0e0;
+  background: var(--cancel-btn-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .quick-input-btn.cancel:hover {
-  background: #f5f5f5;
-  border-color: #d0d0d0;
+  background: var(--cancel-btn-hover-bg);
+  border-color: var(--border-color);
 }
 
 .quick-input-btn.submit {

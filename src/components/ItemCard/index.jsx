@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDate, getTimelineColor } from '../../utils/formatters';
 import { getSourceApp } from '../../utils/tagHelpers';
@@ -95,4 +96,4 @@ function ItemCard({
   );
 }
 
-export default ItemCard;
+export default memo(ItemCard);

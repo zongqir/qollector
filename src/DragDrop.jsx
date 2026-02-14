@@ -1,111 +1,82 @@
 import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import './DragDrop.css';
 
-function DragDrop({ onItemAdded }) {
+function DragDrop({ onItemAdded, onTypeAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
+  const onItemAddedRef = useRef(onItemAdded);
+  onItemAddedRef.current = onItemAdded;
+  const onTypeAddedRef = useRef(onTypeAdded);
+  onTypeAddedRef.current = onTypeAdded;
 
   useEffect(() => {
-    const handleDragEnter = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter.current++;
-      setIsDragging(true);
-    };
+    let unlisten;
 
-    const handleDragOver = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.dataTransfer.dropEffect = 'copy';
-    };
+    // 监听 Tauri 的文件拖放事件
+    const setupFileDrop = async () => {
+      const appWindow = getCurrentWindow();
 
-    const handleDragLeave = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter.current--;
-      if (dragCounter.current === 0) {
-        setIsDragging(false);
-      }
-    };
+      unlisten = await appWindow.onDragDropEvent(async (event) => {
+        console.log('拖放事件:', event);
 
-    const handleDrop = async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter.current = 0;
-      setIsDragging(false);
+        if (event.payload.type === 'over') {
+          setIsDragging(true);
+        } else if (event.payload.type === 'leave') {
+          setIsDragging(false);
+        } else if (event.payload.type === 'drop') {
+          setIsDragging(false);
+          const paths = event.payload.paths;
 
-      // 处理文本
-      const text = e.dataTransfer.getData('text/plain');
-      if (text && text.trim()) {
-        try {
-          await invoke('add_clipboard_item_manual', {
-            contentType: 'text',
-            content: text,
-          });
-          console.log('文本已添加');
-          if (onItemAdded) onItemAdded();
-        } catch (err) {
-          console.error('添加文本失败:', err);
-        }
-        return;
-      }
+          if (paths && paths.length > 0) {
+            for (const filePath of paths) {
+              console.log('处理文件路径:', filePath);
 
-      // 处理文件
-      const files = e.dataTransfer.files;
-      if (files && files.length > 0) {
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          console.log('处理文件:', file.name, file.type, file.size);
+              // 判断文件类型
+              const ext = filePath.split('.').pop().toLowerCase();
+              const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
 
-          if (file.type.startsWith('image/')) {
-            // 图片：读取为 base64
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-              try {
-                const base64 = ev.target.result.split(',')[1];
-                await invoke('add_clipboard_item_manual', {
-                  contentType: 'image',
-                  content: base64,
-                });
-                console.log('图片已添加');
-                if (onItemAdded) onItemAdded();
-              } catch (err) {
-                console.error('添加图片失败:', err);
+              if (imageExts.includes(ext)) {
+                // 图片文件：直接传文件路径
+                try {
+                  await invoke('add_image_file', { filePath });
+                  console.log('图片已添加:', filePath);
+                  if (onItemAddedRef.current) onItemAddedRef.current();
+                  if (onTypeAddedRef.current) onTypeAddedRef.current('image');
+                } catch (err) {
+                  console.error('添加图片失败:', err);
+                }
+              } else {
+                // 其他文件：保存文件路径
+                try {
+                  await invoke('add_clipboard_item_manual', {
+                    contentType: 'file',
+                    content: filePath,
+                  });
+                  console.log('文件路径已添加:', filePath);
+                  if (onItemAddedRef.current) onItemAddedRef.current();
+                  if (onTypeAddedRef.current) onTypeAddedRef.current('file');
+                } catch (err) {
+                  console.error('添加文件失败:', err);
+                }
               }
-            };
-            reader.readAsDataURL(file);
-          } else {
-            // 普通文件：存储文件名
-            try {
-              await invoke('add_clipboard_item_manual', {
-                contentType: 'text',
-                content: t('dragDrop.fileInfo', { name: file.name, size: formatSize(file.size) }),
-              });
-              console.log(t('dragDrop.fileAdded'));
-              if (onItemAdded) onItemAdded();
-            } catch (err) {
-              console.error(t('dragDrop.addFailed', { error: err }));
             }
           }
         }
-      }
+      });
     };
 
-    window.addEventListener('dragenter', handleDragEnter);
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('drop', handleDrop);
+    setupFileDrop();
 
     return () => {
-      window.removeEventListener('dragenter', handleDragEnter);
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('drop', handleDrop);
+      if (unlisten) {
+        unlisten();
+      }
     };
-  }, [onItemAdded]);
+  }, []);
 
   return (
     <>

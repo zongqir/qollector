@@ -13,13 +13,13 @@
   align-items: center;
   justify-content: center;
   padding: 2px 8px;
-  border: 1px dashed #c0c0c0;
-  background: linear-gradient(135deg, #ffffff, #f8f9ff);
+  border: 1px dashed var(--border-color);
+  background: var(--tag-add-bg);
   border-radius: 4px;
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;
-  color: #999;
+  color: var(--text-tertiary);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   line-height: 1;
@@ -53,13 +53,18 @@
   border-radius: 4px;
   font-size: 12px;
   outline: none;
-  background: white;
+  background: var(--tag-input-bg);
+  color: var(--text-primary);
   transition: all 0.2s;
 }
 
 .add-tag-input:focus {
   border-color: #5568d3;
   box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+.add-tag-input::placeholder {
+  color: var(--text-tertiary);
 }
 
 /* 标签确认和取消按钮 */
@@ -106,15 +111,15 @@
   box-shadow: 0 3px 8px rgba(158, 158, 158, 0.3);
 }
 
-/* 标签建议下拉 - 改进样式 */
+/* 标签建议下拉 */
 .tag-suggestions {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--tag-suggestion-bg);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px var(--shadow-lg), 0 2px 4px var(--shadow-md);
   max-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -138,7 +143,7 @@
   padding: 10px 16px;
   cursor: pointer;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
   transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
   border-left: 3px solid transparent;
   font-weight: 500;
@@ -155,7 +160,7 @@
 }
 
 .tag-suggestion-item:hover {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+  background: var(--tag-suggestion-hover);
   border-left-color: #667eea;
   color: #667eea;
 }
@@ -164,16 +169,10 @@
   opacity: 1;
 }
 
-.tag-suggestion-item:hover::before {
-  opacity: 1;
-}
-
 .tag-suggestion-item:active {
   background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.08));
   transform: scale(0.98);
 }
-
-/* TAGS_CONTINUED */
 
 .tag-suggestion-item:first-child {
   border-radius: 7px 7px 0 0;
@@ -220,8 +219,6 @@
   background: linear-gradient(135deg, #6d28d9, #5b21b6);
   box-shadow: 0 4px 12px rgba(109, 40, 217, 0.5);
 }
-
-/* TAGS_CONTINUED_2 */
 
 /* 用户标签样式 - 蓝色高饱和 */
 .tag.user-tag {
@@ -293,5 +290,3 @@
 .tag-remove:hover {
   opacity: 1;
 }
-
-/* 移除旧的备注样式 */

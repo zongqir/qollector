@@ -4,11 +4,16 @@ pub mod windows {
     use crate::core::models::{ClipboardContent, WindowMetadata};
     use async_trait::async_trait;
     use std::sync::{Arc, Mutex};
+    use std::collections::HashMap;
     use windows::Win32::Foundation::*;
     use windows::Win32::System::DataExchange::*;
     use windows::Win32::UI::WindowsAndMessaging::*;
     use windows::core::w;
     use std::sync::mpsc;
+    use once_cell::sync::Lazy;
+
+    /// 友好应用名缓存：key = exe 路径, value = 友好名称
+    static APP_NAME_CACHE: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
     // Wrapper to make HWND Send
     #[derive(Clone, Copy)]
@@ -107,9 +112,12 @@ pub mod windows {
 
                             println!("Clipboard change detected (sequence: {})", sequence);
 
+                            // 立即获取前台窗口信息（时序修复：在轮询线程中获取，避免窗口切换）
+                            let metadata = Self::get_active_window_info_static();
+
                             if let Ok(content) = Self::get_clipboard_content_sync() {
                                 rt.block_on(async {
-                                    if let Err(e) = callback(content).await {
+                                    if let Err(e) = callback(content, metadata).await {
                                         eprintln!("Callback error: {:?}", e);
                                     }
                                 });
@@ -164,32 +172,7 @@ pub mod windows {
         }
 
         fn get_active_window_info(&self) -> Result<WindowMetadata, ClipboardError> {
-            unsafe {
-                let hwnd = GetForegroundWindow();
-                if hwnd.is_invalid() {
-                    return Ok(WindowMetadata {
-                        source_app: "Unknown".to_string(),
-                        window_title: "".to_string(),
-                        source_url: None,
-                    });
-                }
-
-                let mut title = vec![0u16; 256];
-                let len = GetWindowTextW(hwnd, &mut title);
-                let window_title = String::from_utf16_lossy(&title[..len as usize]);
-
-                let mut process_id = 0;
-                GetWindowThreadProcessId(hwnd, Some(&mut process_id));
-
-                let source_app = Self::get_process_name(process_id)
-                    .unwrap_or_else(|_| "Unknown".to_string());
-
-                Ok(WindowMetadata {
-                    source_app,
-                    window_title,
-                    source_url: None,
-                })
-            }
+            Ok(Self::get_active_window_info_static())
         }
 
         async fn clear(&self) -> Result<(), ClipboardError> {
@@ -392,17 +375,150 @@ pub mod windows {
                     Ok(_) => {
                         let _ = CloseHandle(handle);
                         let path = String::from_utf16_lossy(&name[..size as usize]);
-                        Ok(std::path::Path::new(&path)
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("Unknown")
-                            .to_string())
+                        Ok(path)
                     }
                     Err(_) => {
                         let _ = CloseHandle(handle);
                         Ok("Unknown".to_string())
                     }
                 }
+            }
+        }
+
+        /// 获取前台窗口信息（静态方法，可在轮询线程中调用）
+        fn get_active_window_info_static() -> WindowMetadata {
+            unsafe {
+                let hwnd = GetForegroundWindow();
+                if hwnd.is_invalid() {
+                    return WindowMetadata {
+                        source_app: "Unknown".to_string(),
+                        window_title: "".to_string(),
+                        source_url: None,
+                    };
+                }
+
+                let mut title = vec![0u16; 256];
+                let len = GetWindowTextW(hwnd, &mut title);
+                let window_title = String::from_utf16_lossy(&title[..len as usize]);
+
+                let mut process_id = 0;
+                GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+
+                let exe_path = Self::get_process_name(process_id)
+                    .unwrap_or_else(|_| "Unknown".to_string());
+
+                let source_app = Self::get_friendly_app_name(&exe_path, &window_title);
+
+                WindowMetadata {
+                    source_app,
+                    window_title,
+                    source_url: None,
+                }
+            }
+        }
+
+        /// 获取友好应用名（带缓存）
+        /// 优先级：ProductName (exe版本信息) → 窗口标题提取 → 进程文件名
+        fn get_friendly_app_name(exe_path: &str, window_title: &str) -> String {
+            if exe_path == "Unknown" || exe_path.is_empty() {
+                return "Unknown".to_string();
+            }
+
+            // 检查缓存
+            if let Ok(cache) = APP_NAME_CACHE.lock() {
+                if let Some(name) = cache.get(exe_path) {
+                    return name.clone();
+                }
+            }
+
+            // 优先级1：从 exe 版本信息读取 ProductName
+            if let Some(product_name) = Self::get_product_name_from_exe(exe_path) {
+                if !product_name.is_empty() {
+                    if let Ok(mut cache) = APP_NAME_CACHE.lock() {
+                        cache.insert(exe_path.to_string(), product_name.clone());
+                    }
+                    return product_name;
+                }
+            }
+
+            // 优先级2：从窗口标题提取应用名（取最后一个 " - " 后的部分）
+            if let Some(pos) = window_title.rfind(" - ") {
+                let candidate = window_title[pos + 3..].trim();
+                if !candidate.is_empty() && candidate.len() < 50 {
+                    let name = candidate.to_string();
+                    if let Ok(mut cache) = APP_NAME_CACHE.lock() {
+                        cache.insert(exe_path.to_string(), name.clone());
+                    }
+                    return name;
+                }
+            }
+
+            // 优先级3：进程文件名兜底
+            let file_name = std::path::Path::new(exe_path)
+                .file_stem()
+                .and_then(|n| n.to_str())
+                .unwrap_or("Unknown")
+                .to_string();
+
+            if let Ok(mut cache) = APP_NAME_CACHE.lock() {
+                cache.insert(exe_path.to_string(), file_name.clone());
+            }
+            file_name
+        }
+
+        /// 从 exe 文件的版本信息中读取 ProductName
+        fn get_product_name_from_exe(exe_path: &str) -> Option<String> {
+            use windows::Win32::Storage::FileSystem::*;
+            use windows::core::PCWSTR;
+
+            unsafe {
+                let wide_path: Vec<u16> = exe_path.encode_utf16().chain(std::iter::once(0)).collect();
+                let path_pcwstr = PCWSTR(wide_path.as_ptr());
+
+                // 获取版本信息大小
+                let size = GetFileVersionInfoSizeW(path_pcwstr, None);
+                if size == 0 {
+                    return None;
+                }
+
+                // 分配缓冲区并获取版本信息
+                let mut buffer = vec![0u8; size as usize];
+                if GetFileVersionInfoW(path_pcwstr, 0, size, buffer.as_mut_ptr() as *mut _).is_err() {
+                    return None;
+                }
+
+                // 尝试多个代码页
+                let code_pages = [
+                    "040904b0", // US English, Unicode
+                    "040904E4", // US English, Multilingual
+                    "080404b0", // Chinese Simplified, Unicode
+                ];
+
+                for code_page in &code_pages {
+                    let query = format!("\\StringFileInfo\\{}\\ProductName\0", code_page);
+                    let wide_query: Vec<u16> = query.encode_utf16().collect();
+                    let query_pcwstr = PCWSTR(wide_query.as_ptr());
+
+                    let mut value_ptr: *mut std::ffi::c_void = std::ptr::null_mut();
+                    let mut value_len: u32 = 0;
+
+                    if VerQueryValueW(
+                        buffer.as_ptr() as *const _,
+                        query_pcwstr,
+                        &mut value_ptr,
+                        &mut value_len,
+                    ).as_bool() && value_len > 0 && !value_ptr.is_null() {
+                        let slice = std::slice::from_raw_parts(value_ptr as *const u16, value_len as usize);
+                        // 去掉末尾的 null
+                        let end = slice.iter().position(|&c| c == 0).unwrap_or(slice.len());
+                        let name = String::from_utf16_lossy(&slice[..end]).trim().to_string();
+                        if !name.is_empty() {
+                            return Some(name);
+                        }
+                    }
+                }
+
+                None
             }
         }
     }

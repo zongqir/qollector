@@ -7,6 +7,8 @@ use crate::ocr::OcrService;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use std::path::PathBuf;
+use tauri::AppHandle;
+use tauri::Emitter;
 
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
@@ -16,6 +18,7 @@ pub struct ClipboardManager {
     ai_config: Arc<Mutex<AIConfig>>,
     ocr_config: Arc<Mutex<Option<OcrService>>>,
     ai_semaphore: Arc<Semaphore>, // AI请求串行化控制
+    app_handle: AppHandle,
 }
 
 impl ClipboardManager {
@@ -26,6 +29,7 @@ impl ClipboardManager {
         app_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
+        app_handle: AppHandle,
     ) -> Self {
         let image_dir = app_dir.join("images");
         std::fs::create_dir_all(&image_dir).expect("Failed to create images directory");
@@ -38,37 +42,39 @@ impl ClipboardManager {
             ai_config,
             ocr_config,
             ai_semaphore: Arc::new(Semaphore::new(1)), // 只允许1个AI请求同时执行
+            app_handle,
         }
     }
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
         let repo = self.repository.clone();
         let config_repo = self.config_repo.clone();
-        let platform = self.platform.clone();
         let image_dir = self.image_dir.clone();
         let ai_config = self.ai_config.clone();
         let ocr_config = self.ocr_config.clone();
         let ai_semaphore = self.ai_semaphore.clone();
+        let app_handle = self.app_handle.clone();
 
-        let callback: ClipboardCallback = Box::new(move |content| {
+        let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
             let config_repo = config_repo.clone();
-            let platform = platform.clone();
             let image_dir = image_dir.clone();
             let ai_config = ai_config.clone();
             let ocr_config = ocr_config.clone();
             let ai_semaphore = ai_semaphore.clone();
+            let app_handle = app_handle.clone();
 
             Box::pin(async move {
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
                     repo,
                     config_repo,
-                    platform,
+                    metadata,
                     image_dir,
                     ai_config,
                     ocr_config,
                     ai_semaphore,
+                    app_handle,
                 ).await {
                     eprintln!("Error handling clipboard change: {}", e);
                 }
@@ -85,20 +91,14 @@ impl ClipboardManager {
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
         config_repo: Arc<ConfigRepository>,
-        platform: Arc<dyn PlatformClipboard>,
+        metadata: WindowMetadata,
         image_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
         ai_semaphore: Arc<Semaphore>,
+        app_handle: AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
-
-        let metadata = platform.get_active_window_info()
-            .unwrap_or_else(|_| WindowMetadata {
-                source_app: "Unknown".to_string(),
-                window_title: "".to_string(),
-                source_url: None,
-            });
 
         let item = match content {
             ClipboardContent::Text(text) => {
@@ -213,6 +213,8 @@ impl ClipboardManager {
         if let Some(existing) = repo_lock.find_by_hash(&item.content_hash).await? {
             println!("Duplicate detected, moving to top: {}", existing.id);
             repo_lock.touch(&existing.id).await?;
+            drop(repo_lock);
+            let _ = app_handle.emit("clipboard-changed", ());
             return Ok(());
         }
 
@@ -224,6 +226,7 @@ impl ClipboardManager {
 
         repo_lock.insert(&item).await?;
         drop(repo_lock); // 释放锁
+        let _ = app_handle.emit("clipboard-changed", ());
         println!("Clipboard item saved successfully!");
 
         // 后台异步处理AI标签和OCR
@@ -372,6 +375,16 @@ impl ClipboardManager {
         repo.get_recent(limit).await
     }
 
+    pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent_light(limit).await
+    }
+
+    pub async fn get_recent_paged(&self, limit: i32, offset: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent_paged(limit, offset).await
+    }
+
     pub async fn copy_to_clipboard(&self, item: &ClipboardItem) -> Result<(), ClipboardError> {
         let content = if item.type_ == "image" {
             // Load original image from file
@@ -475,12 +488,6 @@ impl ClipboardManager {
         if let Some(mut item) = repo.find_by_id(id).await? {
             // 切换收藏状态
             item.is_favorite = !item.is_favorite;
-
-            // 更新时间戳
-            item.updated_at = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64;
 
             repo.update(&item).await?;
             Ok(item.is_favorite)
@@ -588,5 +595,41 @@ impl ClipboardManager {
             "pinned": pinned_count,
             "favorite": favorite_count
         }))
+    }
+
+    /// 清空所有剪贴板数据
+    pub async fn clear_all_items(&self) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        sqlx::query("DELETE FROM clipboard_items")
+            .execute(repo.pool())
+            .await?;
+        Ok(())
+    }
+
+    /// 获取所有未删除的条目（导出用）
+    pub async fn get_all_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY created_at ASC"
+        )
+        .fetch_all(repo.pool())
+        .await?;
+        Ok(items)
+    }
+
+    /// 按 content_hash 去重插入（导入用），返回是否实际插入
+    pub async fn insert_item_if_not_exists(&self, item: &ClipboardItem) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let existing = repo.find_by_hash(&item.content_hash).await?;
+        if existing.is_some() {
+            return Ok(false);
+        }
+        repo.insert(item).await?;
+        Ok(true)
+    }
+
+    /// 获取图片存储目录
+    pub fn image_dir(&self) -> &std::path::Path {
+        &self.image_dir
     }
 }

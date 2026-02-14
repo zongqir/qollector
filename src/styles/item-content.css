@@ -5,7 +5,7 @@
   border-radius: 0;
   font-size: 14px;
   line-height: 1.7;
-  color: #333;
+  color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-all;
   max-height: 80px;
@@ -13,7 +13,7 @@
   position: relative;
   transition: max-height 0.3s ease-out;
   border: none;
-  will-change: max-height; /* 优化展开动画 */
+  will-change: max-height;
 }
 
 .item-content.clickable {
@@ -74,7 +74,7 @@
 
 /* 展开按钮激活状态 */
 .toolbar-btn.expand-btn.active {
-  background: #e3f2fd;
+  background: var(--expand-active-bg);
   border-color: #2196f3;
   color: #1976d2;
 }

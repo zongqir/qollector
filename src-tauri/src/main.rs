@@ -13,21 +13,50 @@ use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
-use platform::clipboard_trait::PlatformClipboard;
 use commands::clipboard_commands::*;
 use commands::ai_commands::*;
 use commands::ocr_commands::*;
 use commands::drag_drop_commands::*;
 use commands::mcp_commands::*;
 use commands::general_commands::*;
+use commands::lock_commands::*;
+use commands::export_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
 
-#[cfg(target_os = "windows")]
-use platform::windows::windows::WindowsClipboard;
-
 fn main() {
+    // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
+    // ClipBox 是剪贴板管理器，大量 Web 功能用不到，全部关掉
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
+        // === 进程与内存 ===
+        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 堆上限 128MB + 精简模式
+        "--renderer-process-limit=1",            // 限制渲染进程数
+        // === 禁用不需要的 Chromium 功能 ===
+        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP",
+        "--disable-background-networking",       // 后台网络
+        "--disable-component-update",            // 组件更新
+        "--disable-domain-reliability",          // 域名监控
+        "--no-pings",                            // 超链接审计
+        "--disable-breakpad",                    // 崩溃报告
+        // === 禁用 Web API（ClipBox 不需要） ===
+        "--disable-speech-api",                  // 语音识别/合成
+        "--disable-notifications",               // 系统通知（用 Tauri 原生通知）
+        "--disable-webgl",                       // WebGL（不做 3D 渲染）
+        "--disable-webgl2",                      // WebGL2
+        "--disable-client-side-phishing-detection", // 钓鱼检测
+        "--disable-sync",                        // 账号同步
+        "--disable-translate",                   // 翻译功能
+        "--disable-default-apps",                // 默认应用
+        "--disable-extensions",                  // 扩展系统
+        "--disable-hang-monitor",                // 挂起监控
+        "--disable-popup-blocking",              // 弹窗拦截
+        "--disable-prompt-on-repost",            // 重复提交提示
+        // === GPU 缓存 ===
+        "--disable-gpu-shader-disk-cache",       // 着色器缓存
+        "--gpu-disk-cache-size-kb=1",            // GPU 磁盘缓存最小化
+    ].join(" "));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 当尝试启动第二个实例时，聚焦到现有窗口
@@ -59,6 +88,9 @@ fn main() {
                 eprintln!("警告: 无法获取主窗口");
             }
 
+            // 启动时恢复数据库文件头
+            core::db_obfuscate::deobfuscate_db(&db_path);
+
             tauri::async_runtime::block_on(async move {
                 let repository = ClipboardRepository::new(db_path)
                     .await
@@ -72,13 +104,8 @@ fn main() {
                     .expect("Failed to initialize config table");
                 println!("Config repository initialized");
 
-                #[cfg(target_os = "windows")]
-                let platform: Arc<dyn PlatformClipboard> = Arc::new(
-                    WindowsClipboard::new().expect("Failed to initialize clipboard")
-                );
-
-                #[cfg(not(target_os = "windows"))]
-                panic!("Unsupported platform");
+                let platform = platform::create_platform()
+                    .expect("Failed to initialize clipboard");
 
                 // 加载或初始化 AI 配置
                 let ai_config = config_repo.load_ai_config().await
@@ -138,6 +165,7 @@ fn main() {
                     app_dir,
                     ai_config_arc,
                     ocr_service_arc,
+                    app.app_handle().clone(),
                 ));
 
                 println!("Starting clipboard monitoring...");
@@ -198,10 +226,17 @@ fn main() {
                         });
                     }
                 }
+
+                // 退出时混淆数据库文件头
+                let app_dir = app_handle.path().app_data_dir().expect("Failed to get app data dir");
+                let db_path = app_dir.join("clipbox.db");
+                core::db_obfuscate::obfuscate_db(&db_path);
             }
         })
         .invoke_handler(tauri::generate_handler![
             get_recent_items,
+            get_recent_items_light,
+            get_more_items,
             copy_item,
             update_item,
             delete_item,
@@ -231,6 +266,12 @@ fn main() {
             get_mcp_current_port,
             get_general_config,
             update_general_config,
+            has_lock_password,
+            verify_lock_password,
+            set_lock_password,
+            reset_all_data,
+            export_data,
+            import_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -306,7 +306,11 @@ impl AIService {
             get_system_prompt(language)
         };
 
-        let prompt = format!("{}\n\n内容：{}", system_prompt, sanitized);
+        let content_label = match language {
+            "en-US" | "en" => "Content",
+            _ => "内容",
+        };
+        let prompt = format!("{}\n\n{}：{}", system_prompt, content_label, sanitized);
 
         let model = self.config.get_current_model();
         let request = ChatRequest {
