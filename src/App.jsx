@@ -285,6 +285,16 @@ function App() {
     }
   };
 
+  // 打开链接或文件
+  const handleOpenItem = async (item) => {
+    try {
+      await invoke('open_item', { id: item.id });
+    } catch (error) {
+      console.error(t('error.openFailed', { error }));
+      alert(t('error.openFailed', { error }));
+    }
+  };
+
 
   const toggleExpand = (itemId, e) => {
     if (e) {
@@ -537,6 +547,7 @@ function App() {
                 ocrProcessing={ocrProcessing}
                 ocrEnabled={ocrEnabled}
                 onToggleExpand={toggleExpand}
+                onOpenItem={handleOpenItem}
                 onContentClick={handleContentClick}
                 onContentDoubleClick={handleContentDoubleClick}
                 language={i18n.language}

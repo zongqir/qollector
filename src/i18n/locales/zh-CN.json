@@ -81,7 +81,10 @@
     "cancelNote": "取消 (Esc)",
     "favorite": "收藏",
     "unfavorite": "取消收藏",
-    "favorited": "已收藏"
+    "favorited": "已收藏",
+    "open": "打开",
+    "openLink": "打开链接",
+    "openFile": "打开文件"
   },
   "edit": {
     "content": "内容:",
@@ -223,7 +226,8 @@
     "aiTagFailed": "AI 标签生成失败",
     "ocrFailed": "OCR 识别失败: {{error}}",
     "addTagFailed": "添加标签失败: {{error}}",
-    "previewFailed": "打开预览窗口失败: {{error}}"
+    "previewFailed": "打开预览窗口失败: {{error}}",
+    "openFailed": "打开失败: {{error}}"
   },
   "preview": {
     "title": "图片预览",

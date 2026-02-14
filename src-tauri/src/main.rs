@@ -222,6 +222,7 @@ fn main() {
             add_clipboard_item_manual,
             add_image_file,
             toggle_favorite_item,
+            open_item,
             get_mcp_config,
             get_mcp_port,
             update_mcp_config,

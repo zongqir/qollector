@@ -81,7 +81,10 @@
     "cancelNote": "Cancel (Esc)",
     "favorite": "Favorite",
     "unfavorite": "Unfavorite",
-    "favorited": "Favorited"
+    "favorited": "Favorited",
+    "open": "Open",
+    "openLink": "Open Link",
+    "openFile": "Open File"
   },
   "edit": {
     "content": "Content:",
@@ -223,7 +226,8 @@
     "aiTagFailed": "AI tag generation failed",
     "ocrFailed": "OCR recognition failed: {{error}}",
     "addTagFailed": "Add tag failed: {{error}}",
-    "previewFailed": "Open preview window failed: {{error}}"
+    "previewFailed": "Open preview window failed: {{error}}",
+    "openFailed": "Open failed: {{error}}"
   },
   "preview": {
     "title": "Image Preview",

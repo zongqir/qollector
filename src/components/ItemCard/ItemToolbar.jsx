@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp } from 'lucide-react';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
-  maxPinnedItems,
+  maxPinnedItems, onOpenItem,
 }) {
   const { t } = useTranslation();
 
@@ -28,6 +28,10 @@ function ItemToolbar({
   // 判断是否显示 OCR 按钮
   // OCR 功能开启 + 图片类型 + 没有 OCR 文本
   const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
+
+  // 判断是否显示打开按钮
+  // 链接或文件类型
+  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file';
 
   return (
     <div className="item-toolbar">
@@ -83,6 +87,19 @@ function ItemToolbar({
           >
             <Search size={14} className="toolbar-btn-icon" />
             <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
+          </button>
+        </>
+      )}
+      {shouldShowOpenButton && (
+        <>
+          <div className="toolbar-divider"></div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenItem(item); }}
+            className="toolbar-btn open-btn"
+            title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+          >
+            <ExternalLink size={14} className="toolbar-btn-icon" />
+            <span>{t('item.open')}</span>
           </button>
         </>
       )}
