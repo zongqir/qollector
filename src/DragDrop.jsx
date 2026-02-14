@@ -8,6 +8,10 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
+  const onItemAddedRef = useRef(onItemAdded);
+  onItemAddedRef.current = onItemAdded;
+  const onTypeAddedRef = useRef(onTypeAdded);
+  onTypeAddedRef.current = onTypeAdded;
 
   useEffect(() => {
     let unlisten;
@@ -40,8 +44,8 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
                 try {
                   await invoke('add_image_file', { filePath });
                   console.log('图片已添加:', filePath);
-                  if (onItemAdded) onItemAdded();
-                  if (onTypeAdded) onTypeAdded('image');
+                  if (onItemAddedRef.current) onItemAddedRef.current();
+                  if (onTypeAddedRef.current) onTypeAddedRef.current('image');
                 } catch (err) {
                   console.error('添加图片失败:', err);
                 }
@@ -53,8 +57,8 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
                     content: filePath,
                   });
                   console.log('文件路径已添加:', filePath);
-                  if (onItemAdded) onItemAdded();
-                  if (onTypeAdded) onTypeAdded('file');
+                  if (onItemAddedRef.current) onItemAddedRef.current();
+                  if (onTypeAddedRef.current) onTypeAddedRef.current('file');
                 } catch (err) {
                   console.error('添加文件失败:', err);
                 }
@@ -72,7 +76,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
         unlisten();
       }
     };
-  }, [onItemAdded, onTypeAdded, t]);
+  }, []);
 
   return (
     <>

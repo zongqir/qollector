@@ -7,6 +7,8 @@ use crate::ocr::OcrService;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use std::path::PathBuf;
+use tauri::AppHandle;
+use tauri::Emitter;
 
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
@@ -16,6 +18,7 @@ pub struct ClipboardManager {
     ai_config: Arc<Mutex<AIConfig>>,
     ocr_config: Arc<Mutex<Option<OcrService>>>,
     ai_semaphore: Arc<Semaphore>, // AI请求串行化控制
+    app_handle: AppHandle,
 }
 
 impl ClipboardManager {
@@ -26,6 +29,7 @@ impl ClipboardManager {
         app_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
+        app_handle: AppHandle,
     ) -> Self {
         let image_dir = app_dir.join("images");
         std::fs::create_dir_all(&image_dir).expect("Failed to create images directory");
@@ -38,6 +42,7 @@ impl ClipboardManager {
             ai_config,
             ocr_config,
             ai_semaphore: Arc::new(Semaphore::new(1)), // 只允许1个AI请求同时执行
+            app_handle,
         }
     }
 
@@ -48,6 +53,7 @@ impl ClipboardManager {
         let ai_config = self.ai_config.clone();
         let ocr_config = self.ocr_config.clone();
         let ai_semaphore = self.ai_semaphore.clone();
+        let app_handle = self.app_handle.clone();
 
         let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
@@ -56,6 +62,7 @@ impl ClipboardManager {
             let ai_config = ai_config.clone();
             let ocr_config = ocr_config.clone();
             let ai_semaphore = ai_semaphore.clone();
+            let app_handle = app_handle.clone();
 
             Box::pin(async move {
                 if let Err(e) = Self::handle_clipboard_change(
@@ -67,6 +74,7 @@ impl ClipboardManager {
                     ai_config,
                     ocr_config,
                     ai_semaphore,
+                    app_handle,
                 ).await {
                     eprintln!("Error handling clipboard change: {}", e);
                 }
@@ -88,6 +96,7 @@ impl ClipboardManager {
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
         ai_semaphore: Arc<Semaphore>,
+        app_handle: AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
@@ -204,6 +213,8 @@ impl ClipboardManager {
         if let Some(existing) = repo_lock.find_by_hash(&item.content_hash).await? {
             println!("Duplicate detected, moving to top: {}", existing.id);
             repo_lock.touch(&existing.id).await?;
+            drop(repo_lock);
+            let _ = app_handle.emit("clipboard-changed", ());
             return Ok(());
         }
 
@@ -215,6 +226,7 @@ impl ClipboardManager {
 
         repo_lock.insert(&item).await?;
         drop(repo_lock); // 释放锁
+        let _ = app_handle.emit("clipboard-changed", ());
         println!("Clipboard item saved successfully!");
 
         // 后台异步处理AI标签和OCR

@@ -130,6 +130,7 @@ fn main() {
                     app_dir,
                     ai_config_arc,
                     ocr_service_arc,
+                    app.app_handle().clone(),
                 ));
 
                 println!("Starting clipboard monitoring...");

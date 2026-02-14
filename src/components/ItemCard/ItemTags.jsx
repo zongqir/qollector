@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X, Tag } from 'lucide-react';
 import { getTags, getSourceApp, getSourceDisplay } from '../../utils/tagHelpers';
@@ -132,4 +133,4 @@ function ItemTags({
   );
 }
 
-export default ItemTags;
+export default memo(ItemTags);

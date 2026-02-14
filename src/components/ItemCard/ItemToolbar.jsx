@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
@@ -128,4 +129,4 @@ function ItemToolbar({
   );
 }
 
-export default ItemToolbar;
+export default memo(ItemToolbar);

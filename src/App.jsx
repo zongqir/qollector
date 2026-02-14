@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import Settings from './Settings';
@@ -100,13 +101,13 @@ function App() {
     initOcrService();
     loadConfigs();
 
-    // 每3秒自动刷新一次
-    const interval = setInterval(() => {
+    // 监听 Rust 后端的剪贴板变更事件，替代轮询
+    let unlistenPromise = listen('clipboard-changed', () => {
       loadItems();
-    }, 3000);
+    });
 
     return () => {
-      clearInterval(interval);
+      unlistenPromise.then(unlisten => unlisten());
     };
   }, []); // 移除 showTagFilter 依赖
 
@@ -133,23 +134,28 @@ function App() {
     }
   };
 
-  const loadItems = async () => {
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
+  const processedItemIdsRef = useRef(processedItemIds);
+  processedItemIdsRef.current = processedItemIds;
+
+  const loadItems = useCallback(async () => {
     try {
       const result = await getRecentItems(100);
       setItems(result);
 
-      if (!loading) {
-        autoGenerateAITagsSvc(result, processedItemIds, setProcessedItemIds);
+      if (!loadingRef.current) {
+        autoGenerateAITagsSvc(result, processedItemIdsRef.current, setProcessedItemIds);
       }
 
-      if (loading) setLoading(false);
+      if (loadingRef.current) setLoading(false);
     } catch (error) {
       console.error(t('error.loadFailed', { error }));
-      if (loading) setLoading(false);
+      if (loadingRef.current) setLoading(false);
     }
-  };
+  }, [t]);
 
-  const handleCopy = async (item, e) => {
+  const handleCopy = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -162,10 +168,13 @@ function App() {
       console.error(t('error.copyFailed', { error }));
       alert(t('error.copyFailed', { error }));
     }
-  };
+  }, [t]);
 
   // 处理内容区域的点击，区分单击和双击
-  const handleContentClick = (item, e) => {
+  const handleCopyRef = useRef(handleCopy);
+  handleCopyRef.current = handleCopy;
+
+  const handleContentClick = useCallback((item, e) => {
     e.stopPropagation();
 
     // 清除之前的定时器
@@ -177,13 +186,15 @@ function App() {
     // 设置延迟执行单击操作（300ms）
     clickTimerRef.current = setTimeout(() => {
       // 所有类型都执行复制
-      handleCopy(item, e);
+      handleCopyRef.current(item, e);
       clickTimerRef.current = null;
     }, 300);
-  };
+  }, []);
 
   // 处理双击
-  const handleContentDoubleClick = (item, e, isImage = false) => {
+  const openEditModalRef = useRef(null);
+
+  const handleContentDoubleClick = useCallback((item, e, isImage = false) => {
     e.stopPropagation();
 
     // 清除单击定时器，防止单击操作执行
@@ -197,11 +208,11 @@ function App() {
       openImagePreview(item.image_paths, t);
     } else {
       // 文本双击打开编辑弹窗
-      openEditModal(item);
+      openEditModalRef.current(item);
     }
-  };
+  }, [t]);
 
-  const togglePin = async (item, e) => {
+  const togglePin = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -219,7 +230,7 @@ function App() {
       console.error(t('error.togglePinFailed', { error }));
       alert(t('error.togglePinFailed', { error }));
     }
-  };
+  }, [items, maxPinnedItems, t, loadItems]);
 
   const toggleWindowAlwaysOnTop = async () => {
     try {
@@ -240,6 +251,7 @@ function App() {
     showEditModal, editModalMode, editingItem,
     openEditModal, handleEditModalSave, handleEditModalCancel,
   } = useEditModal(loadItems, t);
+  openEditModalRef.current = openEditModal;
 
   const {
     editingNoteId, editNote, setEditNote,
@@ -251,7 +263,7 @@ function App() {
     startAddTag, cancelAddTag, addTagToItem, handleTagInputKeyDown,
   } = useTagManagement(loadItems, t);
 
-  const generateAITags = async (item) => {
+  const generateAITags = useCallback(async (item) => {
     if (!item.content) return;
 
     setGeneratingAI(item.id);
@@ -263,9 +275,9 @@ function App() {
     } finally {
       setGeneratingAI(null);
     }
-  };
+  }, [loadItems]);
 
-  const handleOCR = async (item) => {
+  const handleOCR = useCallback(async (item) => {
     if (!item.image_paths) return;
 
     setOcrProcessing(item.id);
@@ -285,10 +297,10 @@ function App() {
     } finally {
       setOcrProcessing(null);
     }
-  };
+  }, [t, loadItems]);
 
   // 切换收藏状态
-  const toggleFavorite = async (item, e) => {
+  const toggleFavorite = useCallback(async (item, e) => {
     if (e) {
       e.stopPropagation();
     }
@@ -298,34 +310,34 @@ function App() {
     } catch (error) {
       console.error('切换收藏失败:', error);
     }
-  };
+  }, [loadItems]);
 
   // 打开链接或文件
-  const handleOpenItem = async (item) => {
+  const handleOpenItem = useCallback(async (item) => {
     try {
       await invoke('open_item', { id: item.id });
     } catch (error) {
       console.error(t('error.openFailed', { error }));
       alert(t('error.openFailed', { error }));
     }
-  };
+  }, [t]);
 
   // 处理拖曳添加后的类型切换
-  const handleTypeAdded = (type) => {
+  const handleTypeAdded = useCallback((type) => {
     // 自动切换到对应的类型 tab
     setSelectedType(type);
-  };
+  }, [setSelectedType]);
 
 
-  const toggleExpand = (itemId, e) => {
+  const toggleExpand = useCallback((itemId, e) => {
     if (e) {
       e.stopPropagation();
     }
-    setExpandedItemId(expandedItemId === itemId ? null : itemId);
-  };
+    setExpandedItemId(prev => prev === itemId ? null : itemId);
+  }, []);
 
   // 拖出功能：处理拖拽开始
-  const handleDragStart = (item, e) => {
+  const handleDragStart = useCallback((item, e) => {
     // 设置纯文本数据
     const text = item.type_ === 'text' ? (item.content || '') :
                  item.type_ === 'file' ? (item.content || '') :
@@ -342,7 +354,7 @@ function App() {
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 0, 0);
     setTimeout(() => document.body.removeChild(dragEl), 0);
-  };
+  }, []);
 
 
   // 获取所有唯一标签（包括来源标签和类型标签）- 使用 useMemo 缓存
