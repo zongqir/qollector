@@ -49,8 +49,15 @@ pub async fn generate_ai_tags(
         return Ok(Vec::new());
     }
 
+    // 获取当前语言配置
+    let language = state.config_repo.load_general_config().await
+        .ok()
+        .flatten()
+        .map(|c| c.language)
+        .unwrap_or_else(|| "zh-CN".to_string());
+
     let service = AIService::new(config);
-    match service.generate_tags(&content).await {
+    match service.generate_tags(&content, &language).await {
         Ok(tags) => Ok(tags),
         Err(e) => {
             eprintln!("AI标签生成失败(静默): {}", e);
@@ -60,9 +67,19 @@ pub async fn generate_ai_tags(
 }
 
 #[tauri::command]
-pub async fn test_ai_connection(config: AIConfig) -> Result<bool, String> {
+pub async fn test_ai_connection(
+    state: State<'_, AIState>,
+    config: AIConfig,
+) -> Result<bool, String> {
+    // 获取当前语言配置
+    let language = state.config_repo.load_general_config().await
+        .ok()
+        .flatten()
+        .map(|c| c.language)
+        .unwrap_or_else(|| "zh-CN".to_string());
+
     let service = AIService::new(config);
-    match service.generate_tags("测试").await {
+    match service.generate_tags("测试", &language).await {
         Ok(_) => Ok(true),
         Err(e) => Err(e.to_string()),
     }

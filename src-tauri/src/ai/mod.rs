@@ -1,6 +1,38 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
+
+// 系统提示词配置（打包进 EXE）
+const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
+
+#[derive(Debug, Deserialize)]
+struct SystemPrompts {
+    #[serde(rename = "zh-CN")]
+    zh_cn: PromptConfig,
+    #[serde(rename = "en-US")]
+    en_us: PromptConfig,
+}
+
+#[derive(Debug, Deserialize)]
+struct PromptConfig {
+    system_prompt: String,
+}
+
+// 懒加载系统提示词
+static SYSTEM_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
+    serde_json::from_str(SYSTEM_PROMPTS_JSON)
+        .expect("Failed to parse system prompts JSON")
+});
+
+/// 获取系统提示词（根据语言）
+pub fn get_system_prompt(language: &str) -> &'static str {
+    match language {
+        "zh-CN" | "zh" => &SYSTEM_PROMPTS.zh_cn.system_prompt,
+        "en-US" | "en" => &SYSTEM_PROMPTS.en_us.system_prompt,
+        _ => &SYSTEM_PROMPTS.zh_cn.system_prompt, // 默认中文
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum AIError {
@@ -97,6 +129,8 @@ pub struct AIConfig {
     pub current_provider: AIProvider,
     pub credentials: HashMap<String, AICredentials>,  // key 是 provider 的字符串表示
     pub enabled: bool,
+    #[serde(default)]
+    pub custom_prompt: Option<String>,  // 用户自定义提示词（未来功能）
 }
 
 impl AIConfig {
@@ -142,6 +176,7 @@ impl Default for AIConfig {
             current_provider: AIProvider::SiliconFlow,
             credentials: HashMap::new(),
             enabled: false,
+            custom_prompt: None,
         }
     }
 }
@@ -170,6 +205,7 @@ impl AIConfig {
             current_provider: legacy.provider.clone(),
             credentials: HashMap::new(),
             enabled: legacy.enabled,
+            custom_prompt: None,
         };
 
         // 将旧的 api_key 和 model 迁移到 credentials
@@ -237,7 +273,7 @@ impl AIService {
         }
     }
 
-    pub async fn generate_tags(&self, content: &str) -> Result<Vec<String>, AIError> {
+    pub async fn generate_tags(&self, content: &str, language: &str) -> Result<Vec<String>, AIError> {
         let api_key = self.config.get_current_api_key();
 
         // 只要有API key就尝试生成,不检查enabled标志
@@ -246,7 +282,7 @@ impl AIService {
         }
 
         // Sanitize and truncate content (考虑 UTF-8 字符边界)
-        let max_len = 500;
+        let max_len = 1000;  // 增加到1000字符，因为不用担心token限制
         let truncated = if content.len() <= max_len {
             content
         } else {
@@ -263,10 +299,14 @@ impl AIService {
             return Ok(Vec::new());
         }
 
-        let prompt = format!(
-            "请为以下内容生成3-5个简短的中文标签，用于分类和检索。只返回标签，用逗号分隔，不要其他解释。\n\n内容：{}",
-            sanitized
-        );
+        // 获取提示词：优先使用用户自定义，否则使用系统提示词
+        let system_prompt = if let Some(custom) = &self.config.custom_prompt {
+            custom.as_str()
+        } else {
+            get_system_prompt(language)
+        };
+
+        let prompt = format!("{}\n\n内容：{}", system_prompt, sanitized);
 
         let model = self.config.get_current_model();
         let request = ChatRequest {
@@ -284,6 +324,7 @@ impl AIService {
         println!("=== AI Request Debug ===");
         println!("URL: {}", url);
         println!("Model: {}", model);
+        println!("Language: {}", language);
         println!("API Key (first 10 chars): {}", &api_key[..10.min(api_key.len())]);
         println!("Prompt length: {}", prompt.len());
         println!("Request body: {}", serde_json::to_string_pretty(&request).unwrap_or_default());

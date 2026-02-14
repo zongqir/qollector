@@ -134,6 +134,7 @@ fn main() {
                 let manager = Arc::new(ClipboardManager::new(
                     platform,
                     repository,
+                    config_repo.clone(),
                     app_dir,
                     ai_config_arc,
                     ocr_service_arc,

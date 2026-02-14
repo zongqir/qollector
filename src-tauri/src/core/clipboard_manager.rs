@@ -1,6 +1,7 @@
 use crate::core::models::{ClipboardItem, ClipboardContent, WindowMetadata};
 use crate::platform::clipboard_trait::{PlatformClipboard, ClipboardError, ClipboardCallback};
 use crate::repository::clipboard_repo::ClipboardRepository;
+use crate::repository::config_repo::ConfigRepository;
 use crate::ai::{AIConfig, AIService};
 use crate::ocr::OcrService;
 use std::sync::{Arc, Mutex};
@@ -10,6 +11,7 @@ use std::path::PathBuf;
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
     repository: Arc<TokioMutex<ClipboardRepository>>,
+    config_repo: Arc<ConfigRepository>,
     image_dir: PathBuf,
     ai_config: Arc<Mutex<AIConfig>>,
     ocr_config: Arc<Mutex<Option<OcrService>>>,
@@ -20,6 +22,7 @@ impl ClipboardManager {
     pub fn new(
         platform: Arc<dyn PlatformClipboard>,
         repository: ClipboardRepository,
+        config_repo: Arc<ConfigRepository>,
         app_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
@@ -30,6 +33,7 @@ impl ClipboardManager {
         Self {
             platform,
             repository: Arc::new(TokioMutex::new(repository)),
+            config_repo,
             image_dir,
             ai_config,
             ocr_config,
@@ -39,6 +43,7 @@ impl ClipboardManager {
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
         let repo = self.repository.clone();
+        let config_repo = self.config_repo.clone();
         let platform = self.platform.clone();
         let image_dir = self.image_dir.clone();
         let ai_config = self.ai_config.clone();
@@ -47,6 +52,7 @@ impl ClipboardManager {
 
         let callback: ClipboardCallback = Box::new(move |content| {
             let repo = repo.clone();
+            let config_repo = config_repo.clone();
             let platform = platform.clone();
             let image_dir = image_dir.clone();
             let ai_config = ai_config.clone();
@@ -57,6 +63,7 @@ impl ClipboardManager {
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
                     repo,
+                    config_repo,
                     platform,
                     image_dir,
                     ai_config,
@@ -77,6 +84,7 @@ impl ClipboardManager {
     async fn handle_clipboard_change(
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
+        config_repo: Arc<ConfigRepository>,
         platform: Arc<dyn PlatformClipboard>,
         image_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
@@ -220,6 +228,7 @@ impl ClipboardManager {
 
         // 后台异步处理AI标签和OCR
         let repo_clone = repo.clone();
+        let config_repo_clone = config_repo.clone();
         let ai_config_clone = ai_config.clone();
         let ocr_config_clone = ocr_config.clone();
         let ai_semaphore_clone = ai_semaphore.clone();
@@ -268,8 +277,15 @@ impl ClipboardManager {
                             let _permit = ai_semaphore_clone.acquire().await.unwrap();
                             println!("🔒 获取AI请求锁，基于OCR文字生成标签: item_id={}", item_id);
 
+                            // 获取当前语言配置
+                            let language = config_repo_clone.load_general_config().await
+                                .ok()
+                                .flatten()
+                                .map(|c| c.language)
+                                .unwrap_or_else(|| "zh-CN".to_string());
+
                             let service = AIService::new(ai_config);
-                            match service.generate_tags(&ocr_text).await {
+                            match service.generate_tags(&ocr_text, &language).await {
                                 Ok(tags) if !tags.is_empty() => {
                                     let ai_tags: Vec<String> = tags.iter()
                                         .map(|t| format!("AI:{}", t))
@@ -309,8 +325,15 @@ impl ClipboardManager {
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!("🔒 获取AI请求锁，生成标签: item_id={}, type={}", item_id, item_type);
 
+                        // 获取当前语言配置
+                        let language = config_repo_clone.load_general_config().await
+                            .ok()
+                            .flatten()
+                            .map(|c| c.language)
+                            .unwrap_or_else(|| "zh-CN".to_string());
+
                         let service = AIService::new(ai_config);
-                        match service.generate_tags(content).await {
+                        match service.generate_tags(content, &language).await {
                             Ok(tags) if !tags.is_empty() => {
                                 let ai_tags: Vec<String> = tags.iter()
                                     .map(|t| format!("AI:{}", t))

@@ -47,6 +47,7 @@ function Settings({ onClose }) {
   });
   const [generalConfig, setGeneralConfig] = useState({
     max_pinned_items: 3,
+    language: 'zh-CN',
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -68,6 +69,8 @@ function Settings({ onClose }) {
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
+    // 同时更新到 generalConfig
+    setGeneralConfig({ ...generalConfig, language: lng });
   };
 
   useEffect(() => {

@@ -4,12 +4,20 @@ use serde::{Deserialize, Serialize};
 pub struct GeneralConfig {
     /// 最大置顶数量（默认3，最大10）
     pub max_pinned_items: usize,
+    /// 界面语言（zh-CN 或 en-US）
+    #[serde(default = "default_language")]
+    pub language: String,
+}
+
+fn default_language() -> String {
+    "zh-CN".to_string()
 }
 
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
             max_pinned_items: 3,
+            language: "zh-CN".to_string(),
         }
     }
 }
