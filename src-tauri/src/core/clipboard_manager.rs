@@ -44,16 +44,14 @@ impl ClipboardManager {
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
         let repo = self.repository.clone();
         let config_repo = self.config_repo.clone();
-        let platform = self.platform.clone();
         let image_dir = self.image_dir.clone();
         let ai_config = self.ai_config.clone();
         let ocr_config = self.ocr_config.clone();
         let ai_semaphore = self.ai_semaphore.clone();
 
-        let callback: ClipboardCallback = Box::new(move |content| {
+        let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
             let config_repo = config_repo.clone();
-            let platform = platform.clone();
             let image_dir = image_dir.clone();
             let ai_config = ai_config.clone();
             let ocr_config = ocr_config.clone();
@@ -64,7 +62,7 @@ impl ClipboardManager {
                     content,
                     repo,
                     config_repo,
-                    platform,
+                    metadata,
                     image_dir,
                     ai_config,
                     ocr_config,
@@ -85,20 +83,13 @@ impl ClipboardManager {
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
         config_repo: Arc<ConfigRepository>,
-        platform: Arc<dyn PlatformClipboard>,
+        metadata: WindowMetadata,
         image_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
         ai_semaphore: Arc<Semaphore>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
-
-        let metadata = platform.get_active_window_info()
-            .unwrap_or_else(|_| WindowMetadata {
-                source_app: "Unknown".to_string(),
-                window_title: "".to_string(),
-                source_url: None,
-            });
 
         let item = match content {
             ClipboardContent::Text(text) => {
