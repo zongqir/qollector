@@ -13,7 +13,6 @@ use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
-use platform::clipboard_trait::PlatformClipboard;
 use commands::clipboard_commands::*;
 use commands::ai_commands::*;
 use commands::ocr_commands::*;
@@ -23,9 +22,6 @@ use commands::general_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
-
-#[cfg(target_os = "windows")]
-use platform::windows::windows::WindowsClipboard;
 
 fn main() {
     tauri::Builder::default()
@@ -72,13 +68,8 @@ fn main() {
                     .expect("Failed to initialize config table");
                 println!("Config repository initialized");
 
-                #[cfg(target_os = "windows")]
-                let platform: Arc<dyn PlatformClipboard> = Arc::new(
-                    WindowsClipboard::new().expect("Failed to initialize clipboard")
-                );
-
-                #[cfg(not(target_os = "windows"))]
-                panic!("Unsupported platform");
+                let platform = platform::create_platform()
+                    .expect("Failed to initialize clipboard");
 
                 // 加载或初始化 AI 配置
                 let ai_config = config_repo.load_ai_config().await
