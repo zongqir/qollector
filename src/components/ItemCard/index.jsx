@@ -30,9 +30,16 @@ function ItemCard({
   const isCopied = copiedItemId === item.id;
   const timelineColor = getTimelineColor(item.created_at);
 
+  // 根据状态添加不同的 className
+  const cardClasses = [
+    'item-card',
+    item.is_pinned && 'pinned',
+    item.is_favorite && 'favorite',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className="item-card"
+      className={cardClasses}
       style={{ '--timeline-color': timelineColor }}
       title={`${formatDate(item.created_at, language)} · ${getSourceApp(item.metadata)}`}
     >

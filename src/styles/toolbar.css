@@ -22,6 +22,21 @@
   margin: 8px 0;
 }
 
+/* 置顶卡片的工具栏 - 淡蓝色 */
+.item-card.pinned .item-toolbar {
+  background: linear-gradient(to right, #e8f0fe, #dce7fd);
+}
+
+/* 收藏卡片的工具栏 - 淡金色 */
+.item-card.favorite .item-toolbar {
+  background: linear-gradient(to right, #fff8e1, #fff3d0);
+}
+
+/* 同时置顶和收藏的工具栏 - 淡紫色 */
+.item-card.pinned.favorite .item-toolbar {
+  background: linear-gradient(to right, #f0e8ff, #e8dcff);
+}
+
 /* 工具栏右侧提示 */
 .toolbar-hint {
   margin-left: auto;
