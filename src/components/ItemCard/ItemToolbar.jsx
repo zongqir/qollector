@@ -6,6 +6,7 @@ function ItemToolbar({
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
+  maxPinnedItems,
 }) {
   const { t } = useTranslation();
 
@@ -43,10 +44,10 @@ function ItemToolbar({
       <button
         onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
         className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-        title={item.is_pinned ? t('item.unpin') : t('item.pin')}
+        title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
       >
         <Pin size={14} className="toolbar-btn-icon" />
-        <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
+        <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 5 })}</span>
       </button>
       <div className="toolbar-divider"></div>
       <button

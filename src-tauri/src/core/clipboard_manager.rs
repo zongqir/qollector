@@ -409,7 +409,7 @@ impl ClipboardManager {
         repo.update_ocr_text(id, ocr_text).await
     }
 
-    pub async fn toggle_pin(&self, id: &str) -> Result<bool, sqlx::Error> {
+    pub async fn toggle_pin(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
         // 获取当前项目
@@ -422,10 +422,10 @@ impl ClipboardManager {
                 // 检查当前置顶数量
                 let pinned_items = repo.get_pinned_items().await?;
 
-                // 如果已经有5个置顶项,取消最早置顶的那个
-                if pinned_items.len() >= 5 {
+                // 如果已经达到置顶上限,取消最早置顶的那个
+                if pinned_items.len() >= max_pinned {
                     if let Some(oldest_pinned) = pinned_items.first() {
-                        println!("已达到置顶上限(5个),取消最早置顶的项: {}", oldest_pinned.id);
+                        println!("已达到置顶上限({}个),取消最早置顶的项: {}", max_pinned, oldest_pinned.id);
                         repo.unpin(&oldest_pinned.id).await?;
                     }
                 }

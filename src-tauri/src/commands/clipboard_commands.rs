@@ -47,8 +47,9 @@ pub async fn delete_item(
 pub async fn toggle_pin_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
+    max_pinned: Option<usize>,
 ) -> Result<bool, String> {
-    manager.toggle_pin(&id)
+    manager.toggle_pin(&id, max_pinned.unwrap_or(5))
         .await
         .map_err(|e| e.to_string())
 }

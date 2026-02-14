@@ -23,6 +23,7 @@ function ItemCard({
   // content actions
   onContentClick, onContentDoubleClick,
   language,
+  maxPinnedItems,
 }) {
   const { t } = useTranslation();
   const isExpanded = expandedItemId === item.id;
@@ -49,6 +50,7 @@ function ItemCard({
         onStartEditNote={onStartEditNote}
         onToggleExpand={onToggleExpand}
         isExpanded={isExpanded}
+        maxPinnedItems={maxPinnedItems}
       />
       <ItemContent
         item={item}

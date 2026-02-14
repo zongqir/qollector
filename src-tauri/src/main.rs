@@ -7,6 +7,7 @@ mod commands;
 mod ai;
 mod ocr;
 mod mcp;
+mod config;
 
 use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
@@ -18,6 +19,7 @@ use commands::ai_commands::*;
 use commands::ocr_commands::*;
 use commands::drag_drop_commands::*;
 use commands::mcp_commands::*;
+use commands::general_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
@@ -176,6 +178,7 @@ fn main() {
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
+                app.manage(Arc::new(TokioMutex::new(config_repo)));
             });
 
             Ok(())
@@ -225,6 +228,8 @@ fn main() {
             test_mcp_connection,
             shutdown_mcp_server,
             get_mcp_current_port,
+            get_general_config,
+            update_general_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

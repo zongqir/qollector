@@ -45,6 +45,9 @@ function Settings({ onClose }) {
     port: 38470,
     mode: 'http',
   });
+  const [generalConfig, setGeneralConfig] = useState({
+    max_pinned_items: 3,
+  });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
@@ -103,6 +106,7 @@ function Settings({ onClose }) {
           setAvailableModels(models);
 
           // 设置 API Key 和模型
+          // 注意：这里只在初次加载时设置，不要在每次 credentials 变化时都覆盖
           setCurrentAiApiKey(creds?.api_key || '');
 
           // 如果有保存的模型，使用保存的；否则使用默认模型
@@ -121,7 +125,7 @@ function Settings({ onClose }) {
       };
       loadModels();
     }
-  }, [aiConfig.current_provider]);
+  }, [aiConfig.current_provider]); // 只依赖 current_provider，不依赖 credentials
 
   // 当 OCR 配置加载或供应商切换时，更新当前凭证
   useEffect(() => {
@@ -136,16 +140,18 @@ function Settings({ onClose }) {
   const loadConfigs = async () => {
     try {
       console.log('📥 加载配置...');
-      const [ai, ocr, mcp, mcpPort] = await Promise.all([
+      const [ai, ocr, mcp, mcpPort, general] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
         invoke('get_mcp_config'),
-        invoke('get_mcp_port').catch(() => 38470)
+        invoke('get_mcp_port').catch(() => 38470),
+        invoke('get_general_config')
       ]);
       console.log('后端返回的 AI 配置:', ai);
       console.log('后端返回的 OCR 配置:', ocr);
       console.log('后端返回的 MCP 配置:', mcp);
       console.log('MCP 实际端口:', mcpPort);
+      console.log('后端返回的通用配置:', general);
 
       // 设置 AI 配置
       setAiConfig(ai);
@@ -163,6 +169,7 @@ function Settings({ onClose }) {
       setOcrConfig(ocr);
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
+      setGeneralConfig(general);
       console.log('✅ 配置加载完成');
     } catch (error) {
       console.error('❌ 加载配置失败:', error);
@@ -233,6 +240,16 @@ function Settings({ onClose }) {
       onClose();
     } catch (error) {
       console.error('保存 MCP 配置失败:', error);
+      alert('保存失败: ' + error);
+    }
+  };
+
+  const handleGeneralSave = async () => {
+    try {
+      await invoke('update_general_config', { config: generalConfig });
+      onClose();
+    } catch (error) {
+      console.error('保存通用配置失败:', error);
       alert('保存失败: ' + error);
     }
   };
@@ -338,72 +355,55 @@ function Settings({ onClose }) {
   };
 
   const handleAiProviderChange = async (value) => {
-    // 先保存当前供应商的凭证
-    const oldProviderKey = getProviderKey(aiConfig.current_provider);
-    const updatedCredentials = {
-      ...aiConfig.credentials,
-      [oldProviderKey]: {
-        api_key: currentAiApiKey,
-        model: currentAiModel,
-      },
-    };
-
-    // 获取新供应商的模型列表和默认模型
     try {
+      // 1. 先保存当前供应商的配置到数据库
+      const oldProviderKey = getProviderKey(aiConfig.current_provider);
+      const configToSave = {
+        ...aiConfig,
+        credentials: {
+          ...aiConfig.credentials,
+          [oldProviderKey]: {
+            api_key: currentAiApiKey,
+            model: currentAiModel,
+          },
+        },
+      };
+      await invoke('update_ai_config', { config: configToSave });
+
+      // 2. 构造新的 provider
+      let newProvider;
+      if (value === 'Custom') {
+        newProvider = { Custom: { name: customName || '自定义', base_url: customUrl || '' } };
+      } else {
+        newProvider = value;
+      }
+
+      // 3. 切换到新供应商并保存
+      const newConfig = {
+        ...configToSave,
+        current_provider: newProvider,
+      };
+      await invoke('update_ai_config', { config: newConfig });
+
+      // 4. 从数据库重新加载配置
+      const loadedConfig = await invoke('get_ai_config');
+      setAiConfig(loadedConfig);
+
+      // 5. 加载新供应商的模型列表
       const models = await invoke('get_ai_models', { provider: value });
       const defaultModel = await invoke('get_default_ai_model', { provider: value });
       setAvailableModels(models);
 
-      // 构造新的 provider
-      let newProvider;
-      let newProviderKey;
+      // 6. 从加载的配置中读取新供应商的凭证
+      const newProviderKey = getProviderKey(loadedConfig.current_provider);
+      const newCreds = loadedConfig.credentials[newProviderKey];
 
-      if (value === 'Custom') {
-        // Custom 需要对象格式
-        newProvider = { Custom: { name: customName || '自定义', base_url: customUrl || '' } };
-        newProviderKey = `custom_${customName || '自定义'}`;
-      } else {
-        // 其他供应商使用字符串格式（与后端一致）
-        newProvider = value;
-        newProviderKey = value.toLowerCase();
-      }
-
-      // 获取新供应商的已保存凭证
-      const newCreds = updatedCredentials[newProviderKey];
-
-      setAiConfig({
-        ...aiConfig,
-        current_provider: newProvider,
-        credentials: updatedCredentials,
-      });
-
-      // 更新 UI 显示的凭证
       setCurrentAiApiKey(newCreds?.api_key || '');
       setCurrentAiModel(newCreds?.model || defaultModel);
+
     } catch (error) {
-      console.error('获取模型列表失败:', error);
-      // 如果失败，仍然切换供应商
-      let newProvider;
-      let newProviderKey;
-
-      if (value === 'Custom') {
-        newProvider = { Custom: { name: customName || '自定义', base_url: customUrl || '' } };
-        newProviderKey = `custom_${customName || '自定义'}`;
-      } else {
-        newProvider = value;
-        newProviderKey = value.toLowerCase();
-      }
-
-      const newCreds = updatedCredentials[newProviderKey];
-
-      setAiConfig({
-        ...aiConfig,
-        current_provider: newProvider,
-        credentials: updatedCredentials,
-      });
-
-      setCurrentAiApiKey(newCreds?.api_key || '');
-      setCurrentAiModel(newCreds?.model || '');
+      console.error('切换供应商失败:', error);
+      alert('切换失败: ' + error);
     }
   };
 
@@ -455,6 +455,31 @@ function Settings({ onClose }) {
                 <option value="en-US">English</option>
               </select>
               <small className="setting-hint">{t('settings.general.languageHint')}</small>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.general.maxPinnedItems')}</label>
+              <input
+                type="number"
+                value={generalConfig.max_pinned_items}
+                onChange={(e) => {
+                  let value = parseInt(e.target.value) || 3;
+                  if (value < 1) value = 1;
+                  if (value > 10) value = 10;
+                  setGeneralConfig({ ...generalConfig, max_pinned_items: value });
+                }}
+                min="1"
+                max="10"
+                className="setting-input"
+              />
+              <small className="setting-hint">
+                {t('settings.general.maxPinnedItemsHint')}
+                {generalConfig.max_pinned_items > 5 && (
+                  <span style={{ color: '#ff9800', display: 'block', marginTop: '4px' }}>
+                    {t('settings.general.maxPinnedItemsWarning')}
+                  </span>
+                )}
+              </small>
             </div>
           </div>
         )}
@@ -841,6 +866,7 @@ function Settings({ onClose }) {
               activeTab === 'ai' ? handleAiSave :
               activeTab === 'ocr' ? handleOcrSave :
               activeTab === 'mcp' ? handleMcpSave :
+              activeTab === 'general' ? handleGeneralSave :
               onClose
             }
             className="save-btn"

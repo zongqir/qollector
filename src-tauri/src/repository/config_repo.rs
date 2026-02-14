@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use crate::ai::AIConfig;
 use crate::ocr::OcrConfig;
 use crate::mcp::McpConfig;
+use crate::config::GeneralConfig;
 
 /// 配置仓库，负责持久化应用配置
 pub struct ConfigRepository {
@@ -172,6 +173,47 @@ impl ConfigRepository {
         if let Some((value,)) = row {
             let config: McpConfig = serde_json::from_str(&value)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// 保存通用配置
+    pub async fn save_general_config(&self, config: &GeneralConfig) -> Result<(), sqlx::Error> {
+        let value = serde_json::to_string(config)
+            .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('general_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// 加载通用配置
+    pub async fn load_general_config(&self) -> Result<Option<GeneralConfig>, sqlx::Error> {
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT value FROM app_config WHERE key = 'general_config'"
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some((value,)) = row {
+            let mut config: GeneralConfig = serde_json::from_str(&value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            config.validate();
             Ok(Some(config))
         } else {
             Ok(None)

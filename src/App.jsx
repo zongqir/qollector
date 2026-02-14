@@ -11,7 +11,6 @@ import { useFilters } from './hooks/useFilters';
 import { useNoteEdit } from './hooks/useNoteEdit';
 import { useTagManagement } from './hooks/useTagManagement';
 import { useEditModal } from './hooks/useEditModal';
-import { useVirtualScroll } from './hooks/useVirtualScroll';
 import { openImagePreview } from './services/windowService';
 import { initOcrService } from './services/ocrService';
 import { copyItemToClipboard, getRecentItems } from './services/clipboardService';
@@ -34,6 +33,7 @@ function App() {
   const [pinBeforeMini, setPinBeforeMini] = useState(false);
   const [processedItemIds, setProcessedItemIds] = useState(new Set());
   const [expandedItemId, setExpandedItemId] = useState(null);
+  const [maxPinnedItems, setMaxPinnedItems] = useState(3);
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
   const [copiedItemId, setCopiedItemId] = useState(null);
@@ -105,12 +105,14 @@ function App() {
 
   const loadConfigs = async () => {
     try {
-      const [aiConfig, ocrConfig] = await Promise.all([
+      const [aiConfig, ocrConfig, generalConfig] = await Promise.all([
         invoke('get_ai_config'),
-        invoke('get_ocr_config')
+        invoke('get_ocr_config'),
+        invoke('get_general_config')
       ]);
       setAiEnabled(aiConfig.enabled || false);
       setOcrEnabled(ocrConfig.enabled || false);
+      setMaxPinnedItems(generalConfig.max_pinned_items || 3);
     } catch (error) {
       console.error('加载配置失败:', error);
     }
@@ -191,12 +193,12 @@ function App() {
     try {
       if (!item.is_pinned) {
         const pinnedCount = items.filter(i => i.is_pinned).length;
-        if (pinnedCount >= 5) {
-          console.log(t('error.pinLimitReached'));
+        if (pinnedCount >= maxPinnedItems) {
+          console.log(t('error.pinLimitReached', { max: maxPinnedItems }));
         }
       }
 
-      await invoke('toggle_pin_item', { id: item.id });
+      await invoke('toggle_pin_item', { id: item.id, maxPinned: maxPinnedItems });
       await loadItems();
     } catch (error) {
       console.error(t('error.togglePinFailed', { error }));
@@ -452,13 +454,8 @@ function App() {
     });
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  const visibleRange = useVirtualScroll(contentRef, filteredItems.length);
-
-  // 可见的项目列表
-  const visibleItems = useMemo(() => {
-    if (filteredItems.length < 30) return filteredItems;
-    return filteredItems.slice(visibleRange.start, visibleRange.end);
-  }, [filteredItems, visibleRange]);
+  // 直接使用 filteredItems，不使用虚拟滚动
+  const visibleItems = filteredItems;
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
@@ -543,6 +540,7 @@ function App() {
                 onContentClick={handleContentClick}
                 onContentDoubleClick={handleContentDoubleClick}
                 language={i18n.language}
+                maxPinnedItems={maxPinnedItems}
               />
             ))}
           </div>

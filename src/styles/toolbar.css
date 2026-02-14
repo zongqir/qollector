@@ -68,10 +68,23 @@
 }
 
 /* 置顶按钮 */
+.toolbar-btn.pin-btn {
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border-color: #ff9800;
+  color: #f57c00;
+}
+
+.toolbar-btn.pin-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  border-color: #ff9800;
+  color: white;
+}
+
 .toolbar-btn.pin-btn.active {
   background: linear-gradient(135deg, #ff9800, #f57c00);
   border-color: #ff9800;
   color: white;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.4);
 }
 
 .toolbar-btn.pin-btn.active .toolbar-btn-icon {
@@ -121,21 +134,22 @@
 
 /* 收藏按钮 */
 .toolbar-btn.favorite-btn {
-  background: white;
-  border-color: #e8e8e8;
-  color: #999;
+  background: linear-gradient(135deg, #fff9e6, #ffecb3);
+  border-color: #ffa726;
+  color: #f57c00;
 }
 
 .toolbar-btn.favorite-btn:hover:not(:disabled) {
-  background: #fff9e6;
+  background: linear-gradient(135deg, #ffa726, #f57c00);
   border-color: #ffa726;
-  color: #f57c00;
+  color: white;
 }
 
 .toolbar-btn.favorite-btn.active {
   background: linear-gradient(135deg, #ffa726, #f57c00);
   border-color: #ffa726;
   color: white;
+  box-shadow: 0 2px 8px rgba(255, 167, 38, 0.4);
 }
 
 .toolbar-btn.favorite-btn.active .toolbar-btn-icon {
