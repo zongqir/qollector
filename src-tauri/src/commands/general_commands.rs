@@ -1,15 +1,13 @@
 use crate::config::GeneralConfig;
 use crate::repository::config_repo::ConfigRepository;
+use crate::commands::ai_commands::AIState;
 use tauri::State;
-use std::sync::Arc;
-use tokio::sync::Mutex as TokioMutex;
 
 #[tauri::command]
 pub async fn get_general_config(
-    config_repo: State<'_, Arc<TokioMutex<ConfigRepository>>>,
+    ai_state: State<'_, AIState>,
 ) -> Result<GeneralConfig, String> {
-    let repo = config_repo.lock().await;
-    let config = repo.load_general_config()
+    let config = ai_state.config_repo.load_general_config()
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
@@ -18,12 +16,11 @@ pub async fn get_general_config(
 
 #[tauri::command]
 pub async fn update_general_config(
-    config_repo: State<'_, Arc<TokioMutex<ConfigRepository>>>,
+    ai_state: State<'_, AIState>,
     mut config: GeneralConfig,
 ) -> Result<(), String> {
     config.validate();
-    let repo = config_repo.lock().await;
-    repo.save_general_config(&config)
+    ai_state.config_repo.save_general_config(&config)
         .await
         .map_err(|e| e.to_string())?;
     Ok(())

@@ -179,7 +179,6 @@ fn main() {
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
-                app.manage(Arc::new(TokioMutex::new(config_repo)));
             });
 
             Ok(())
