@@ -5,15 +5,12 @@ import { getImageThumbnail, getImageOriginal } from '../../utils/imageHelpers';
 
 function ItemContent({
   item, isExpanded, isCopied,
-  onClick, onDoubleClick,
 }) {
   const { t } = useTranslation();
 
   return (
     <div
-      className={`item-content clickable ${isExpanded ? 'expanded' : ''} ${isCopied ? 'copied' : ''}`}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
+      className={`item-content ${isExpanded ? 'expanded' : ''} ${isCopied ? 'copied' : ''}`}
     >
       {isCopied && (
         <div className="copy-success-toast">

@@ -44,7 +44,7 @@
   },
   "item": {
     "pinned": "已置顶",
-    "pin": "置顶 (最多5个)",
+    "pin": "置顶 (最多{{max}}个)",
     "unpin": "取消置顶",
     "copy": "复制",
     "copied": "已复制",
@@ -81,7 +81,10 @@
     "cancelNote": "取消 (Esc)",
     "favorite": "收藏",
     "unfavorite": "取消收藏",
-    "favorited": "已收藏"
+    "favorited": "已收藏",
+    "open": "打开",
+    "openLink": "打开链接",
+    "openFile": "打开文件"
   },
   "edit": {
     "content": "内容:",
@@ -111,6 +114,8 @@
       "apiKeyPlaceholder": "输入 API Key",
       "model": "模型",
       "modelPlaceholder": "例如: Qwen/Qwen2.5-7B-Instruct",
+      "modelHint": "根据供应商自动加载可用模型",
+      "volcanoModelHint": "输入火山引擎的 Endpoint ID（在控制台创建推理接入点后获得）",
       "customName": "服务名称",
       "customNamePlaceholder": "例如: OpenAI",
       "customUrl": "API 地址",
@@ -154,7 +159,10 @@
     },
     "general": {
       "language": "语言",
-      "languageHint": "切换界面语言"
+      "languageHint": "切换界面语言",
+      "maxPinnedItems": "最大置顶数量",
+      "maxPinnedItemsHint": "可设置 1-10 个，默认 3 个",
+      "maxPinnedItemsWarning": "⚠️ 超过 5 个置顶项可能影响使用体验"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",
@@ -214,11 +222,12 @@
     "saveFailed": "保存失败: {{error}}",
     "togglePinFailed": "切换置顶失败: {{error}}",
     "toggleWindowPinFailed": "切换窗口置顶失败: {{error}}",
-    "pinLimitReached": "已达到置顶上限(5个)，自动取消最早置顶的项",
+    "pinLimitReached": "已达到置顶上限({{max}}个)，自动取消最早置顶的项",
     "aiTagFailed": "AI 标签生成失败",
     "ocrFailed": "OCR 识别失败: {{error}}",
     "addTagFailed": "添加标签失败: {{error}}",
-    "previewFailed": "打开预览窗口失败: {{error}}"
+    "previewFailed": "打开预览窗口失败: {{error}}",
+    "openFailed": "打开失败: {{error}}"
   },
   "preview": {
     "title": "图片预览",

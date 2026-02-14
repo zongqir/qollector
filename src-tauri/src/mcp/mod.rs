@@ -5,6 +5,8 @@ pub mod config;
 pub mod protocol;
 pub mod server;
 pub mod tools;
+pub mod port_manager;
+pub mod lock_file;
 
 pub use config::McpConfig;
 pub use server::McpServer;

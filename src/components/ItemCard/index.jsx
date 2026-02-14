@@ -17,23 +17,33 @@ function ItemCard({
   onStartEditNote, onSaveNote, onCancelNoteEdit,
   // toolbar actions
   onDragStart, onTogglePin, onToggleFavorite,
-  onGenerateAITags, generatingAI,
-  onHandleOCR, ocrProcessing,
-  onToggleExpand,
+  onGenerateAITags, generatingAI, aiEnabled,
+  onHandleOCR, ocrProcessing, ocrEnabled,
+  onToggleExpand, onOpenItem,
   // content actions
   onContentClick, onContentDoubleClick,
   language,
+  maxPinnedItems,
 }) {
   const { t } = useTranslation();
   const isExpanded = expandedItemId === item.id;
   const isCopied = copiedItemId === item.id;
   const timelineColor = getTimelineColor(item.created_at);
 
+  // 根据状态添加不同的 className
+  const cardClasses = [
+    'item-card',
+    item.is_pinned && 'pinned',
+    item.is_favorite && 'favorite',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className="item-card"
+      className={cardClasses}
       style={{ '--timeline-color': timelineColor }}
       title={`${formatDate(item.created_at, language)} · ${getSourceApp(item.metadata)}`}
+      onClick={(e) => onContentClick(item, e)}
+      onDoubleClick={(e) => onContentDoubleClick(item, e, item.type_ === 'image')}
     >
       <ItemToolbar
         item={item}
@@ -42,18 +52,20 @@ function ItemCard({
         onToggleFavorite={onToggleFavorite}
         onGenerateAITags={onGenerateAITags}
         generatingAI={generatingAI}
+        aiEnabled={aiEnabled}
         onHandleOCR={onHandleOCR}
         ocrProcessing={ocrProcessing}
+        ocrEnabled={ocrEnabled}
         onStartEditNote={onStartEditNote}
         onToggleExpand={onToggleExpand}
         isExpanded={isExpanded}
+        maxPinnedItems={maxPinnedItems}
+        onOpenItem={onOpenItem}
       />
       <ItemContent
         item={item}
         isExpanded={isExpanded}
         isCopied={isCopied}
-        onClick={(e) => onContentClick(item, e)}
-        onDoubleClick={(e) => onContentDoubleClick(item, e, item.type_ === 'image')}
       />
       <div className="item-footer">
         <NoteDisplay

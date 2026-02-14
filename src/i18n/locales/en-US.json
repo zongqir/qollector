@@ -44,7 +44,7 @@
   },
   "item": {
     "pinned": "Pinned",
-    "pin": "Pin (Max 5)",
+    "pin": "Pin (Max {{max}})",
     "unpin": "Unpin",
     "copy": "Copy",
     "copied": "Copied",
@@ -81,7 +81,10 @@
     "cancelNote": "Cancel (Esc)",
     "favorite": "Favorite",
     "unfavorite": "Unfavorite",
-    "favorited": "Favorited"
+    "favorited": "Favorited",
+    "open": "Open",
+    "openLink": "Open Link",
+    "openFile": "Open File"
   },
   "edit": {
     "content": "Content:",
@@ -111,6 +114,8 @@
       "apiKeyPlaceholder": "Enter API Key",
       "model": "Model",
       "modelPlaceholder": "e.g., Qwen/Qwen2.5-7B-Instruct",
+      "modelHint": "Available models loaded automatically based on provider",
+      "volcanoModelHint": "Enter your Volcano Engine Endpoint ID (obtained after creating an inference endpoint in the console)",
       "customName": "Service Name",
       "customNamePlaceholder": "e.g., OpenAI",
       "customUrl": "API URL",
@@ -154,7 +159,10 @@
     },
     "general": {
       "language": "Language",
-      "languageHint": "Switch interface language"
+      "languageHint": "Switch interface language",
+      "maxPinnedItems": "Max Pinned Items",
+      "maxPinnedItemsHint": "Can be set to 1-10, default is 3",
+      "maxPinnedItemsWarning": "⚠️ More than 5 pinned items may affect user experience"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
@@ -214,11 +222,12 @@
     "saveFailed": "Save failed: {{error}}",
     "togglePinFailed": "Toggle pin failed: {{error}}",
     "toggleWindowPinFailed": "Toggle window pin failed: {{error}}",
-    "pinLimitReached": "Pin limit reached (5 max), oldest pinned item unpinned automatically",
+    "pinLimitReached": "Pin limit reached ({{max}} max), oldest pinned item unpinned automatically",
     "aiTagFailed": "AI tag generation failed",
     "ocrFailed": "OCR recognition failed: {{error}}",
     "addTagFailed": "Add tag failed: {{error}}",
-    "previewFailed": "Open preview window failed: {{error}}"
+    "previewFailed": "Open preview window failed: {{error}}",
+    "openFailed": "Open failed: {{error}}"
   },
   "preview": {
     "title": "Image Preview",

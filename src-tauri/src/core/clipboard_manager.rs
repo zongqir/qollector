@@ -1,6 +1,7 @@
 use crate::core::models::{ClipboardItem, ClipboardContent, WindowMetadata};
 use crate::platform::clipboard_trait::{PlatformClipboard, ClipboardError, ClipboardCallback};
 use crate::repository::clipboard_repo::ClipboardRepository;
+use crate::repository::config_repo::ConfigRepository;
 use crate::ai::{AIConfig, AIService};
 use crate::ocr::OcrService;
 use std::sync::{Arc, Mutex};
@@ -10,6 +11,7 @@ use std::path::PathBuf;
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
     repository: Arc<TokioMutex<ClipboardRepository>>,
+    config_repo: Arc<ConfigRepository>,
     image_dir: PathBuf,
     ai_config: Arc<Mutex<AIConfig>>,
     ocr_config: Arc<Mutex<Option<OcrService>>>,
@@ -20,6 +22,7 @@ impl ClipboardManager {
     pub fn new(
         platform: Arc<dyn PlatformClipboard>,
         repository: ClipboardRepository,
+        config_repo: Arc<ConfigRepository>,
         app_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
@@ -30,6 +33,7 @@ impl ClipboardManager {
         Self {
             platform,
             repository: Arc::new(TokioMutex::new(repository)),
+            config_repo,
             image_dir,
             ai_config,
             ocr_config,
@@ -39,6 +43,7 @@ impl ClipboardManager {
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
         let repo = self.repository.clone();
+        let config_repo = self.config_repo.clone();
         let platform = self.platform.clone();
         let image_dir = self.image_dir.clone();
         let ai_config = self.ai_config.clone();
@@ -47,6 +52,7 @@ impl ClipboardManager {
 
         let callback: ClipboardCallback = Box::new(move |content| {
             let repo = repo.clone();
+            let config_repo = config_repo.clone();
             let platform = platform.clone();
             let image_dir = image_dir.clone();
             let ai_config = ai_config.clone();
@@ -57,6 +63,7 @@ impl ClipboardManager {
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
                     repo,
+                    config_repo,
                     platform,
                     image_dir,
                     ai_config,
@@ -77,6 +84,7 @@ impl ClipboardManager {
     async fn handle_clipboard_change(
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
+        config_repo: Arc<ConfigRepository>,
         platform: Arc<dyn PlatformClipboard>,
         image_dir: PathBuf,
         ai_config: Arc<Mutex<AIConfig>>,
@@ -94,9 +102,19 @@ impl ClipboardManager {
 
         let item = match content {
             ClipboardContent::Text(text) => {
+                // 检查是否为空白内容
                 if text.trim().is_empty() {
-                    println!("Clipboard text is empty, skipping");
-                    return Ok(());
+                    // 统计换行符数量
+                    let newline_count = text.matches('\n').count();
+
+                    // 如果换行符少于3个，认为是无意义的短空白，跳过
+                    if newline_count < 3 {
+                        println!("Clipboard text is empty or too short (newlines: {}), skipping", newline_count);
+                        return Ok(());
+                    }
+
+                    // 超过3行的空白可能有意义，保留
+                    println!("Clipboard text is blank but has {} newlines, keeping", newline_count);
                 }
                 println!("Creating clipboard item for text: {} chars", text.len());
                 ClipboardItem::new_text(text, metadata)
@@ -210,6 +228,7 @@ impl ClipboardManager {
 
         // 后台异步处理AI标签和OCR
         let repo_clone = repo.clone();
+        let config_repo_clone = config_repo.clone();
         let ai_config_clone = ai_config.clone();
         let ocr_config_clone = ocr_config.clone();
         let ai_semaphore_clone = ai_semaphore.clone();
@@ -253,13 +272,20 @@ impl ClipboardManager {
                     // 步骤2: 基于OCR文字生成AI标签（串行化）
                     if !ocr_text.is_empty() {
                         let ai_config = ai_config_clone.lock().unwrap().clone();
-                        if !ai_config.api_key.is_empty() {
+                        if !ai_config.get_current_api_key().is_empty() {
                             // 获取信号量许可，确保AI请求串行执行
                             let _permit = ai_semaphore_clone.acquire().await.unwrap();
                             println!("🔒 获取AI请求锁，基于OCR文字生成标签: item_id={}", item_id);
 
+                            // 获取当前语言配置
+                            let language = config_repo_clone.load_general_config().await
+                                .ok()
+                                .flatten()
+                                .map(|c| c.language)
+                                .unwrap_or_else(|| "zh-CN".to_string());
+
                             let service = AIService::new(ai_config);
-                            match service.generate_tags(&ocr_text).await {
+                            match service.generate_tags(&ocr_text, &language).await {
                                 Ok(tags) if !tags.is_empty() => {
                                     let ai_tags: Vec<String> = tags.iter()
                                         .map(|t| format!("AI:{}", t))
@@ -294,13 +320,20 @@ impl ClipboardManager {
                 // 文本/文件：直接生成AI标签（串行化）
                 if let Some(content) = item_content.as_ref() {
                     let ai_config = ai_config_clone.lock().unwrap().clone();
-                    if !ai_config.api_key.is_empty() {
+                    if !ai_config.get_current_api_key().is_empty() {
                         // 获取信号量许可，确保AI请求串行执行
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!("🔒 获取AI请求锁，生成标签: item_id={}, type={}", item_id, item_type);
 
+                        // 获取当前语言配置
+                        let language = config_repo_clone.load_general_config().await
+                            .ok()
+                            .flatten()
+                            .map(|c| c.language)
+                            .unwrap_or_else(|| "zh-CN".to_string());
+
                         let service = AIService::new(ai_config);
-                        match service.generate_tags(content).await {
+                        match service.generate_tags(content, &language).await {
                             Ok(tags) if !tags.is_empty() => {
                                 let ai_tags: Vec<String> = tags.iter()
                                     .map(|t| format!("AI:{}", t))
@@ -399,7 +432,7 @@ impl ClipboardManager {
         repo.update_ocr_text(id, ocr_text).await
     }
 
-    pub async fn toggle_pin(&self, id: &str) -> Result<bool, sqlx::Error> {
+    pub async fn toggle_pin(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
         // 获取当前项目
@@ -412,10 +445,10 @@ impl ClipboardManager {
                 // 检查当前置顶数量
                 let pinned_items = repo.get_pinned_items().await?;
 
-                // 如果已经有5个置顶项,取消最早置顶的那个
-                if pinned_items.len() >= 5 {
+                // 如果已经达到置顶上限,取消最早置顶的那个
+                if pinned_items.len() >= max_pinned {
                     if let Some(oldest_pinned) = pinned_items.first() {
-                        println!("已达到置顶上限(5个),取消最早置顶的项: {}", oldest_pinned.id);
+                        println!("已达到置顶上限({}个),取消最早置顶的项: {}", max_pinned, oldest_pinned.id);
                         repo.unpin(&oldest_pinned.id).await?;
                     }
                 }
@@ -521,28 +554,28 @@ impl ClipboardManager {
 
         // 获取总数
         let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         // 按类型统计
         let text_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let image_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let pinned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let favorite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         Ok(serde_json::json!({

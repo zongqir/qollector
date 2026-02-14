@@ -2,15 +2,18 @@ use tauri::State;
 use std::sync::{Mutex, Arc};
 use crate::ocr::{OcrService, OcrConfig};
 use crate::core::clipboard_manager::ClipboardManager;
+use crate::repository::config_repo::ConfigRepository;
 
 pub struct OcrState {
     pub service: Mutex<Option<OcrService>>,
+    pub config_repo: Arc<ConfigRepository>,
 }
 
 impl OcrState {
-    pub fn new() -> Self {
+    pub fn new(config_repo: Arc<ConfigRepository>) -> Self {
         Self {
             service: Mutex::new(None),
+            config_repo,
         }
     }
 }
@@ -30,6 +33,10 @@ pub async fn init_ocr_service(
     // 同步更新 ClipboardManager 中的配置
     manager.update_ocr_service(Some(service));
 
+    // 持久化到数据库
+    state.config_repo.save_ocr_config(&config).await
+        .map_err(|e| format!("保存配置失败: {}", e))?;
+
     Ok(format!("OCR service initialized with provider: {}", provider_name))
 }
 
@@ -41,8 +48,8 @@ pub async fn get_ocr_config(
     let service_guard = state.service.lock().unwrap();
     if let Some(service) = service_guard.as_ref() {
         let config = service.get_config().clone();
-        println!("返回已保存的配置: {:?}", config.provider);
-        println!("  API Key 长度: {}", config.api_key.as_ref().map(|k| k.len()).unwrap_or(0));
+        println!("返回已保存的配置: {:?}", config.current_provider);
+        println!("  API Key 长度: {}", config.get_current_api_key().map(|k| k.len()).unwrap_or(0));
         Ok(config)
     } else {
         println!("返回默认配置");
@@ -58,8 +65,8 @@ pub async fn update_ocr_config(
 ) -> Result<String, String> {
     println!("收到 OCR 配置更新请求:");
     println!("  enabled: {}", config.enabled);
-    println!("  provider: {:?}", config.provider);
-    println!("  api_key: {:?}", config.api_key.as_ref().map(|k| format!("{}...", &k[..10.min(k.len())])));
+    println!("  provider: {:?}", config.current_provider);
+    println!("  api_key: {:?}", config.get_current_api_key().map(|k| format!("{}...", &k[..10.min(k.len())])));
     println!("  language: {}", config.language);
     println!("  auto_ocr: {}", config.auto_ocr);
 
@@ -75,6 +82,10 @@ pub async fn update_ocr_config(
 
         // 同步更新 ClipboardManager 中的配置
         manager.update_ocr_service(Some(service));
+
+        // 持久化到数据库
+        state.config_repo.save_ocr_config(&config).await
+            .map_err(|e| format!("保存配置失败: {}", e))?;
 
         println!("OCR 配置更新成功");
         Ok("OCR config updated".to_string())

@@ -1,16 +1,67 @@
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp } from 'lucide-react';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
-  onGenerateAITags, generatingAI,
-  onHandleOCR, ocrProcessing,
+  onGenerateAITags, generatingAI, aiEnabled,
+  onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
+  maxPinnedItems, onOpenItem,
 }) {
   const { t } = useTranslation();
 
+  // 检查是否已有 AI 标签
+  const hasAITags = () => {
+    if (!item.tags) return false;
+    try {
+      const tags = JSON.parse(item.tags);
+      return tags.some(tag => tag.startsWith('AI:'));
+    } catch {
+      return false;
+    }
+  };
+
+  // 判断是否显示 AI 标签按钮
+  // AI 功能开启 + 文本类型 + 有内容 + 没有 AI 标签
+  const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags();
+
+  // 判断是否显示 OCR 按钮
+  // OCR 功能开启 + 图片类型 + 没有 OCR 文本
+  const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
+
+  // 判断是否显示打开按钮
+  // 链接或文件类型
+  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file';
+
   return (
     <div className="item-toolbar">
+      <button
+        onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
+        className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
+        title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
+      >
+        <Pin size={14} className="toolbar-btn-icon" />
+        <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 5 })}</span>
+      </button>
+      <div className="toolbar-divider"></div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleFavorite(item, e); }}
+        className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
+        title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+      >
+        <Star size={14} className="toolbar-btn-icon" fill={item.is_favorite ? 'currentColor' : 'none'} />
+        <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
+      </button>
+      <div className="toolbar-divider"></div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onStartEditNote(item); }}
+        className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
+        title={item.user_note ? t('item.editNote') : t('item.addNote')}
+      >
+        <StickyNote size={14} className="toolbar-btn-icon" />
+        <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
+      </button>
+      <div className="toolbar-divider"></div>
       <span
         draggable="true"
         onDragStart={(e) => onDragStart(item, e)}
@@ -20,25 +71,7 @@ function ItemToolbar({
         <GripVertical size={14} className="toolbar-btn-icon" />
         <span>{t('toolbar.dragOut')}</span>
       </span>
-      <div className="toolbar-divider"></div>
-      <button
-        onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
-        className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-        title={item.is_pinned ? t('item.unpin') : t('item.pin')}
-      >
-        <Pin size={14} className="toolbar-btn-icon" />
-        <span>{item.is_pinned ? t('item.pinned') : t('item.pin')}</span>
-      </button>
-      <div className="toolbar-divider"></div>
-      <button
-        onClick={(e) => onToggleFavorite(item, e)}
-        className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
-        title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
-      >
-        <Star size={14} className="toolbar-btn-icon" fill={item.is_favorite ? 'currentColor' : 'none'} />
-        <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-      </button>
-      {item.type_ === 'text' && item.content && (
+      {shouldShowAIButton && (
         <>
           <div className="toolbar-divider"></div>
           <button
@@ -52,7 +85,7 @@ function ItemToolbar({
           </button>
         </>
       )}
-      {item.type_ === 'image' && !item.ocr_text && (
+      {shouldShowOCRButton && (
         <>
           <div className="toolbar-divider"></div>
           <button
@@ -66,15 +99,19 @@ function ItemToolbar({
           </button>
         </>
       )}
-      <div className="toolbar-divider"></div>
-      <button
-        onClick={(e) => { e.stopPropagation(); onStartEditNote(item); }}
-        className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
-        title={item.user_note ? t('item.editNote') : t('item.addNote')}
-      >
-        <StickyNote size={14} className="toolbar-btn-icon" />
-        <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
-      </button>
+      {shouldShowOpenButton && (
+        <>
+          <div className="toolbar-divider"></div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenItem(item); }}
+            className="toolbar-btn open-btn"
+            title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+          >
+            <ExternalLink size={14} className="toolbar-btn-icon" />
+            <span>{t('item.open')}</span>
+          </button>
+        </>
+      )}
       <div className="toolbar-divider"></div>
       <button
         onClick={(e) => onToggleExpand(item.id, e)}

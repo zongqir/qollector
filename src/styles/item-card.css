@@ -32,12 +32,40 @@
   z-index: 1;
 }
 
+/* 置顶卡片 - 淡蓝色背景 */
+.item-card.pinned {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+}
+
+.item-card.pinned:hover {
+  background: linear-gradient(135deg, #e8f0fe 0%, #dce7fd 100%);
+}
+
+/* 收藏卡片 - 淡金色背景 */
+.item-card.favorite {
+  background: linear-gradient(135deg, #fffbf0 0%, #fff8e1 100%);
+}
+
+.item-card.favorite:hover {
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3d0 100%);
+}
+
+/* 同时置顶和收藏 - 淡紫色背景（混合效果） */
+.item-card.pinned.favorite {
+  background: linear-gradient(135deg, #f8f0ff 0%, #f0e8ff 100%);
+}
+
+.item-card.pinned.favorite:hover {
+  background: linear-gradient(135deg, #f0e8ff 0%, #e8dcff 100%);
+}
+
 /* 当卡片内有下拉框时提升层级 */
 .item-card:has(.tag-suggestions) {
   z-index: 100;
 }
 
-.item-card:hover {
+/* 普通卡片的 hover 效果 */
+.item-card:not(.pinned):not(.favorite):hover {
   background: #f5f5f5;
   transform: translateY(-1px);
 }

@@ -70,11 +70,17 @@ struct ResponseMessage {
 
 impl DeepSeekOcr {
     pub fn new(api_key: String, base_url: Option<String>) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Self {
             api_key,
             base_url: base_url.unwrap_or_else(|| "https://api.deepseek.com/v1".to_string()),
             model: "deepseek-chat".to_string(),
-            client: reqwest::Client::new(),
+            client,
         }
     }
 
