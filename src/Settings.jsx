@@ -20,7 +20,7 @@ const OCR_PROVIDERS = [
   { value: 'Baidu', label: '百度 OCR' },
 ];
 
-function Settings({ onClose }) {
+function Settings({ onClose, themeMode, onThemeModeChange }) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('ai');
 
@@ -48,6 +48,7 @@ function Settings({ onClose }) {
   const [generalConfig, setGeneralConfig] = useState({
     max_pinned_items: 3,
     language: 'zh-CN',
+    theme_mode: themeMode || 'system',
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -458,6 +459,24 @@ function Settings({ onClose }) {
                 <option value="en-US">English</option>
               </select>
               <small className="setting-hint">{t('settings.general.languageHint')}</small>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.general.theme')}</label>
+              <select
+                value={generalConfig.theme_mode || 'system'}
+                onChange={(e) => {
+                  const newMode = e.target.value;
+                  setGeneralConfig({ ...generalConfig, theme_mode: newMode });
+                  if (onThemeModeChange) onThemeModeChange(newMode);
+                }}
+                className="setting-select"
+              >
+                <option value="system">{t('settings.general.themeSystem')}</option>
+                <option value="light">{t('settings.general.themeLight')}</option>
+                <option value="dark">{t('settings.general.themeDark')}</option>
+              </select>
+              <small className="setting-hint">{t('settings.general.themeHint')}</small>
             </div>
 
             <div className="setting-item">

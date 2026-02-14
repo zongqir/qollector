@@ -162,7 +162,12 @@
       "languageHint": "切换界面语言",
       "maxPinnedItems": "最大置顶数量",
       "maxPinnedItemsHint": "可设置 1-10 个，默认 3 个",
-      "maxPinnedItemsWarning": "⚠️ 超过 5 个置顶项可能影响使用体验"
+      "maxPinnedItemsWarning": "⚠️ 超过 5 个置顶项可能影响使用体验",
+      "theme": "主题",
+      "themeSystem": "跟随系统",
+      "themeLight": "浅色",
+      "themeDark": "深色",
+      "themeHint": "选择界面主题，跟随系统会自动适配"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

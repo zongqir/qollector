@@ -1,11 +1,11 @@
 /* 自定义标题栏 */
 .titlebar {
   height: 32px;
-  background: white;
+  background: var(--bg-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--border-light);
   user-select: none;
 }
 
@@ -19,7 +19,7 @@
 
 .titlebar-title {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
@@ -34,7 +34,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: #666;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -48,7 +48,7 @@
 }
 
 .titlebar-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--btn-hover-bg);
 }
 
 .titlebar-btn:active {
@@ -63,7 +63,7 @@
 
 /* 置顶按钮 */
 .titlebar-btn.pin-btn {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .titlebar-btn.pin-btn:hover {
@@ -96,10 +96,9 @@
   color: #4caf50;
 }
 
-/* 快速添加按钮 */
 /* Mini 模式按钮 */
 .titlebar-btn.mini-btn {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .titlebar-btn.mini-btn:hover {

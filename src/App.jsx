@@ -11,6 +11,7 @@ import { useFilters } from './hooks/useFilters';
 import { useNoteEdit } from './hooks/useNoteEdit';
 import { useTagManagement } from './hooks/useTagManagement';
 import { useEditModal } from './hooks/useEditModal';
+import { useTheme } from './hooks/useTheme';
 import { openImagePreview } from './services/windowService';
 import { initOcrService } from './services/ocrService';
 import { copyItemToClipboard, getRecentItems } from './services/clipboardService';
@@ -37,6 +38,9 @@ function App() {
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
   const [copiedItemId, setCopiedItemId] = useState(null);
+
+  // Theme hook
+  const { themeMode, setThemeMode } = useTheme('system');
 
   // Custom hooks
   const { searchQuery, setSearchQuery, debouncedSearchQuery } = useSearch();
@@ -113,6 +117,9 @@ function App() {
       setAiEnabled(aiConfig.enabled || false);
       setOcrEnabled(ocrConfig.enabled || false);
       setMaxPinnedItems(generalConfig.max_pinned_items || 3);
+      if (generalConfig.theme_mode) {
+        setThemeMode(generalConfig.theme_mode);
+      }
     } catch (error) {
       console.error('加载配置失败:', error);
     }
@@ -475,7 +482,7 @@ function App() {
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} themeMode={themeMode} onThemeModeChange={setThemeMode} />}
       <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
 
       {showEditModal && (

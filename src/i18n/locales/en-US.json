@@ -162,7 +162,12 @@
       "languageHint": "Switch interface language",
       "maxPinnedItems": "Max Pinned Items",
       "maxPinnedItemsHint": "Can be set to 1-10, default is 3",
-      "maxPinnedItemsWarning": "⚠️ More than 5 pinned items may affect user experience"
+      "maxPinnedItemsWarning": "⚠️ More than 5 pinned items may affect user experience",
+      "theme": "Theme",
+      "themeSystem": "System",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeHint": "Choose interface theme, System follows OS preference"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
