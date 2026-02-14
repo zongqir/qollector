@@ -19,6 +19,7 @@ use commands::ocr_commands::*;
 use commands::drag_drop_commands::*;
 use commands::mcp_commands::*;
 use commands::general_commands::*;
+use commands::lock_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
@@ -222,6 +223,10 @@ fn main() {
             get_mcp_current_port,
             get_general_config,
             update_general_config,
+            has_lock_password,
+            verify_lock_password,
+            set_lock_password,
+            reset_all_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

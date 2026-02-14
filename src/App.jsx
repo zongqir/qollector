@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import Settings from './Settings';
+import LockScreen from './LockScreen';
 import DragDrop from './DragDrop';
 import EditModal from './EditModal';
 import { getTags, getSourceApp } from './utils/tagHelpers';
@@ -38,6 +39,8 @@ function App() {
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
   const [copiedItemId, setCopiedItemId] = useState(null);
+  const [isLocked, setIsLocked] = useState(true);
+  const [hasPassword, setHasPassword] = useState(false);
 
   // Theme hook
   const { themeMode, setThemeMode } = useTheme('system');
@@ -109,16 +112,21 @@ function App() {
 
   const loadConfigs = async () => {
     try {
-      const [aiConfig, ocrConfig, generalConfig] = await Promise.all([
+      const [aiConfig, ocrConfig, generalConfig, hasLock] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
-        invoke('get_general_config')
+        invoke('get_general_config'),
+        invoke('has_lock_password')
       ]);
       setAiEnabled(aiConfig.enabled || false);
       setOcrEnabled(ocrConfig.enabled || false);
       setMaxPinnedItems(generalConfig.max_pinned_items || 3);
       if (generalConfig.theme_mode) {
         setThemeMode(generalConfig.theme_mode);
+      }
+      setHasPassword(hasLock);
+      if (!hasLock) {
+        setIsLocked(false);
       }
     } catch (error) {
       console.error('加载配置失败:', error);
@@ -479,6 +487,10 @@ function App() {
 
   // 直接使用 filteredItems，不使用虚拟滚动
   const visibleItems = filteredItems;
+
+  if (isLocked && hasPassword) {
+    return <LockScreen onUnlock={() => setIsLocked(false)} />;
+  }
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>

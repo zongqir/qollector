@@ -574,4 +574,13 @@ impl ClipboardManager {
             "favorite": favorite_count
         }))
     }
+
+    /// 清空所有剪贴板数据
+    pub async fn clear_all_items(&self) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        sqlx::query("DELETE FROM clipboard_items")
+            .execute(repo.pool())
+            .await?;
+        Ok(())
+    }
 }

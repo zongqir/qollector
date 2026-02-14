@@ -62,6 +62,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [currentAiModel, setCurrentAiModel] = useState('Qwen/Qwen2.5-7B-Instruct');
   const [showAiApiKey, setShowAiApiKey] = useState(false);
 
+  // 应用锁状态
+  const [lockHasPassword, setLockHasPassword] = useState(false);
+  const [lockOldPassword, setLockOldPassword] = useState('');
+  const [lockNewPassword, setLockNewPassword] = useState('');
+  const [lockConfirmPassword, setLockConfirmPassword] = useState('');
+  const [lockError, setLockError] = useState('');
+  const [lockSuccess, setLockSuccess] = useState('');
+
   // 当前 OCR 供应商的凭证（用于 UI 显示和编辑）
   const [currentOcrApiKey, setCurrentOcrApiKey] = useState('');
   const [currentOcrApiSecret, setCurrentOcrApiSecret] = useState('');
@@ -161,6 +169,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       console.log('后端返回的 MCP 配置:', mcp);
       console.log('MCP 实际端口:', mcpPort);
       console.log('后端返回的通用配置:', general);
+
+      // 检查锁屏密码状态
+      const hasLock = await invoke('has_lock_password');
+      setLockHasPassword(hasLock);
 
       // 设置 AI 配置
       setAiConfig(ai);
@@ -567,6 +579,114 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   />
                   {t('settings.general.enableMCP')}
                 </label>
+              </div>
+            </div>
+
+            {/* 高级设置 - 应用锁 */}
+            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {t('lock.settingsTitle')}
+                <span style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}>Pro</span>
+              </label>
+              <small className="setting-hint" style={{ marginBottom: '8px', display: 'block' }}>
+                {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
+              </small>
+
+              {lockHasPassword && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+                  <input
+                    type="password"
+                    value={lockOldPassword}
+                    onChange={(e) => { setLockOldPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                    placeholder={t('lock.oldPassword')}
+                    className="setting-input"
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="password"
+                  value={lockNewPassword}
+                  onChange={(e) => { setLockNewPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                  placeholder={lockHasPassword ? t('lock.newPassword') : t('lock.setPassword')}
+                  className="setting-input"
+                />
+                {lockNewPassword && (
+                  <input
+                    type="password"
+                    value={lockConfirmPassword}
+                    onChange={(e) => { setLockConfirmPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                    placeholder={t('lock.confirmPassword')}
+                    className="setting-input"
+                  />
+                )}
+              </div>
+
+              {lockError && <small style={{ color: '#ef4444', marginTop: '4px' }}>{lockError}</small>}
+              {lockSuccess && <small style={{ color: '#22c55e', marginTop: '4px' }}>{lockSuccess}</small>}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  className="test-btn"
+                  onClick={async () => {
+                    setLockError('');
+                    setLockSuccess('');
+                    // 设置新密码
+                    if (lockNewPassword) {
+                      if (lockNewPassword !== lockConfirmPassword) {
+                        setLockError(t('lock.mismatch'));
+                        return;
+                      }
+                      try {
+                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: lockNewPassword });
+                        setLockSuccess(t('lock.setSuccess'));
+                        setLockHasPassword(true);
+                        setLockOldPassword('');
+                        setLockNewPassword('');
+                        setLockConfirmPassword('');
+                      } catch (err) {
+                        setLockError(String(err));
+                      }
+                    }
+                  }}
+                  disabled={!lockNewPassword || !lockConfirmPassword}
+                >
+                  {lockHasPassword ? t('lock.changePassword') : t('lock.enableLock')}
+                </button>
+                {lockHasPassword && (
+                  <button
+                    className="test-btn"
+                    style={{ background: '#ef4444', color: '#fff' }}
+                    onClick={async () => {
+                      setLockError('');
+                      setLockSuccess('');
+                      if (!lockOldPassword) {
+                        setLockError(t('lock.needOldPassword'));
+                        return;
+                      }
+                      try {
+                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: '' });
+                        setLockSuccess(t('lock.removeSuccess'));
+                        setLockHasPassword(false);
+                        setLockOldPassword('');
+                        setLockNewPassword('');
+                        setLockConfirmPassword('');
+                      } catch (err) {
+                        setLockError(String(err));
+                      }
+                    }}
+                  >
+                    {t('lock.removeLock')}
+                  </button>
+                )}
               </div>
             </div>
           </div>

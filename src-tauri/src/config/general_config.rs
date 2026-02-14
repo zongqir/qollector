@@ -10,6 +10,9 @@ pub struct GeneralConfig {
     /// 主题模式（light / dark / system）
     #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
+    /// 锁屏密码哈希（None 表示未设置密码）
+    #[serde(default)]
+    pub lock_password_hash: Option<String>,
 }
 
 fn default_language() -> String {
@@ -26,6 +29,7 @@ impl Default for GeneralConfig {
             max_pinned_items: 3,
             language: "zh-CN".to_string(),
             theme_mode: "system".to_string(),
+            lock_password_hash: None,
         }
     }
 }

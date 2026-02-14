@@ -256,5 +256,30 @@
     "pinItem": "Pin this item",
     "saveHint": "Save (Ctrl+Enter)",
     "cancelHint": "Cancel (Esc)"
+  },
+  "lock": {
+    "title": "App Locked",
+    "placeholder": "Enter password...",
+    "unlock": "Unlock",
+    "wrongPassword": "Wrong password",
+    "forgot": "Forgot password?",
+    "resetTitle": "Reset All Data",
+    "resetDesc": "If you forgot your password, you can only unlock by resetting all data.",
+    "resetWarning": "This will erase all clipboard history and remove the password. This cannot be undone!",
+    "resetConfirm": "Confirm Reset",
+    "settingsTitle": "App Lock",
+    "statusEnabled": "Enabled — password required on launch",
+    "statusDisabled": "Disabled — anyone can open the app",
+    "oldPassword": "Enter current password",
+    "newPassword": "Enter new password",
+    "setPassword": "Set password",
+    "confirmPassword": "Confirm password",
+    "mismatch": "Passwords do not match",
+    "setSuccess": "Password set successfully",
+    "changePassword": "Set Password",
+    "enableLock": "Enable App Lock",
+    "removeLock": "Remove Password",
+    "removeSuccess": "Password removed",
+    "needOldPassword": "Please enter current password"
   }
 }
