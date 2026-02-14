@@ -51,7 +51,7 @@ function ItemToolbar({
       </button>
       <div className="toolbar-divider"></div>
       <button
-        onClick={(e) => onToggleFavorite(item, e)}
+        onClick={(e) => { e.stopPropagation(); onToggleFavorite(item, e); }}
         className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
         title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
       >

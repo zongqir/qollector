@@ -42,6 +42,8 @@ function ItemCard({
       className={cardClasses}
       style={{ '--timeline-color': timelineColor }}
       title={`${formatDate(item.created_at, language)} · ${getSourceApp(item.metadata)}`}
+      onClick={(e) => onContentClick(item, e)}
+      onDoubleClick={(e) => onContentDoubleClick(item, e, item.type_ === 'image')}
     >
       <ItemToolbar
         item={item}
@@ -63,8 +65,6 @@ function ItemCard({
         item={item}
         isExpanded={isExpanded}
         isCopied={isCopied}
-        onClick={(e) => onContentClick(item, e)}
-        onDoubleClick={(e) => onContentDoubleClick(item, e, item.type_ === 'image')}
       />
       <div className="item-footer">
         <NoteDisplay
