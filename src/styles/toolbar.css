@@ -84,9 +84,9 @@
 
 /* 置顶按钮 */
 .toolbar-btn.pin-btn {
-  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-  border-color: #ff9800;
-  color: #f57c00;
+  background: white;
+  border-color: #e8e8e8;
+  color: #666;
 }
 
 .toolbar-btn.pin-btn:hover:not(:disabled) {
@@ -149,9 +149,9 @@
 
 /* 收藏按钮 */
 .toolbar-btn.favorite-btn {
-  background: linear-gradient(135deg, #fff9e6, #ffecb3);
-  border-color: #ffa726;
-  color: #f57c00;
+  background: white;
+  border-color: #e8e8e8;
+  color: #666;
 }
 
 .toolbar-btn.favorite-btn:hover:not(:disabled) {

@@ -44,17 +44,30 @@ body {
   overflow: hidden;
 }
 
-.app.mini-mode .item-toolbar .toolbar-btn:not(.favorite-btn),
+.app.mini-mode .item-toolbar .toolbar-btn:not(.pin-btn):not(.favorite-btn):not(.note-btn) {
+  display: none;
+}
+
 .app.mini-mode .item-toolbar .toolbar-divider {
   display: none;
 }
 
-.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn {
+/* Mini 模式下显示前三个分隔符（置顶、收藏、备注之间） */
+.app.mini-mode .item-toolbar .pin-btn + .toolbar-divider,
+.app.mini-mode .item-toolbar .favorite-btn + .toolbar-divider {
+  display: block;
+}
+
+.app.mini-mode .item-toolbar .toolbar-btn.pin-btn,
+.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn,
+.app.mini-mode .item-toolbar .toolbar-btn.note-btn {
   padding: 2px 6px;
   font-size: 10px;
 }
 
-.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn span:not(.toolbar-btn-icon) {
+.app.mini-mode .item-toolbar .toolbar-btn.pin-btn span:not(.toolbar-btn-icon),
+.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn span:not(.toolbar-btn-icon),
+.app.mini-mode .item-toolbar .toolbar-btn.note-btn span:not(.toolbar-btn-icon) {
   display: none;
 }
 

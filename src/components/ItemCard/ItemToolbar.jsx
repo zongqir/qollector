@@ -35,16 +35,6 @@ function ItemToolbar({
 
   return (
     <div className="item-toolbar">
-      <span
-        draggable="true"
-        onDragStart={(e) => onDragStart(item, e)}
-        className="toolbar-btn drag-handle"
-        title={t('toolbar.dragToApp')}
-      >
-        <GripVertical size={14} className="toolbar-btn-icon" />
-        <span>{t('toolbar.dragOut')}</span>
-      </span>
-      <div className="toolbar-divider"></div>
       <button
         onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
         className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
@@ -62,6 +52,25 @@ function ItemToolbar({
         <Star size={14} className="toolbar-btn-icon" fill={item.is_favorite ? 'currentColor' : 'none'} />
         <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
       </button>
+      <div className="toolbar-divider"></div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onStartEditNote(item); }}
+        className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
+        title={item.user_note ? t('item.editNote') : t('item.addNote')}
+      >
+        <StickyNote size={14} className="toolbar-btn-icon" />
+        <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
+      </button>
+      <div className="toolbar-divider"></div>
+      <span
+        draggable="true"
+        onDragStart={(e) => onDragStart(item, e)}
+        className="toolbar-btn drag-handle"
+        title={t('toolbar.dragToApp')}
+      >
+        <GripVertical size={14} className="toolbar-btn-icon" />
+        <span>{t('toolbar.dragOut')}</span>
+      </span>
       {shouldShowAIButton && (
         <>
           <div className="toolbar-divider"></div>
@@ -103,15 +112,6 @@ function ItemToolbar({
           </button>
         </>
       )}
-      <div className="toolbar-divider"></div>
-      <button
-        onClick={(e) => { e.stopPropagation(); onStartEditNote(item); }}
-        className={`toolbar-btn note-btn ${item.user_note ? 'has-note' : ''}`}
-        title={item.user_note ? t('item.editNote') : t('item.addNote')}
-      >
-        <StickyNote size={14} className="toolbar-btn-icon" />
-        <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
-      </button>
       <div className="toolbar-divider"></div>
       <button
         onClick={(e) => onToggleExpand(item.id, e)}
