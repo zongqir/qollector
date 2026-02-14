@@ -20,11 +20,24 @@ use commands::drag_drop_commands::*;
 use commands::mcp_commands::*;
 use commands::general_commands::*;
 use commands::lock_commands::*;
+use commands::export_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
 
 fn main() {
+    // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
+    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
+        "--js-flags=--max-old-space-size=128",  // V8 堆上限 128MB
+        "--renderer-process-limit=1",            // 限制渲染进程数
+        "--disable-gpu-shader-disk-cache",       // 禁用 GPU 着色器磁盘缓存
+        "--disable-features=RendererCodeIntegrity", // 减少安全校验开销
+        "--disable-background-networking",       // 禁用后台网络请求
+        "--disable-component-update",            // 禁用组件自动更新
+        "--disable-domain-reliability",          // 禁用域名可靠性监控
+        "--no-pings",                            // 禁用超链接审计 ping
+    ].join(" "));
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 当尝试启动第二个实例时，聚焦到现有窗口
@@ -230,6 +243,8 @@ fn main() {
             verify_lock_password,
             set_lock_password,
             reset_all_data,
+            export_data,
+            import_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

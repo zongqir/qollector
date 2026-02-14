@@ -75,6 +75,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [currentOcrApiSecret, setCurrentOcrApiSecret] = useState('');
   const [showOcrApiKey, setShowOcrApiKey] = useState(false);
 
+  // 导入导出状态
+  const [exportIncludeImages, setExportIncludeImages] = useState(false);
+  const [exportEncrypt, setExportEncrypt] = useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportConfirmPassword, setExportConfirmPassword] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [importNeedPassword, setImportNeedPassword] = useState(false);
+  const [importPassword, setImportPassword] = useState('');
+  const [importFilePath, setImportFilePath] = useState(null);
+
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
@@ -423,6 +436,59 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     }
   };
 
+  const handleExport = async () => {
+    if (exportEncrypt) {
+      if (!exportPassword) return;
+      if (exportPassword !== exportConfirmPassword) {
+        setExportResult({ success: false, message: t('export.passwordMismatch') });
+        return;
+      }
+    }
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const path = await invoke('export_data', {
+        includeImages: exportIncludeImages,
+        password: exportEncrypt ? exportPassword : null,
+      });
+      setExportResult({ success: true, message: t('export.exportSuccess', { path }) });
+    } catch (error) {
+      if (error === 'CANCELLED') {
+        setExportResult({ success: false, message: t('export.cancelled') });
+      } else {
+        setExportResult({ success: false, message: t('export.exportFailed', { error }) });
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImport = async (pwd, path) => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await invoke('import_data', { password: pwd || null, filePath: path || null });
+      setImportResult({ success: true, message: t('export.importSuccess', { imported: result.imported, skipped: result.skipped }) });
+      setImportNeedPassword(false);
+      setImportPassword('');
+      setImportFilePath(null);
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      if (typeof error === 'string' && error.startsWith('ENCRYPTED:')) {
+        const encPath = error.substring('ENCRYPTED:'.length);
+        setImportNeedPassword(true);
+        setImportFilePath(encPath);
+        setImportResult({ success: false, message: t('export.importNeedPassword') });
+      } else if (error === 'CANCELLED') {
+        setImportResult({ success: false, message: t('export.cancelled') });
+      } else {
+        setImportResult({ success: false, message: t('export.importFailed', { error }) });
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="settings-overlay">
       <div className="settings-modal">
@@ -688,6 +754,111 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* 数据管理 - 导入导出 */}
+            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {t('export.title')}
+                <span style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  fontWeight: 600,
+                }}>Pro</span>
+              </label>
+
+              {/* 导出选项 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
+                  <span>{t('export.includeImages')}</span>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={exportIncludeImages}
+                      onChange={(e) => setExportIncludeImages(e.target.checked)}
+                    />
+                    <span className="toggle-slider" />
+                  </span>
+                </label>
+                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
+                  <span>{t('export.encrypt')}</span>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={exportEncrypt}
+                      onChange={(e) => { setExportEncrypt(e.target.checked); setExportPassword(''); setExportConfirmPassword(''); }}
+                    />
+                    <span className="toggle-slider" />
+                  </span>
+                </label>
+                {exportEncrypt && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <input
+                      type="password"
+                      value={exportPassword}
+                      onChange={(e) => setExportPassword(e.target.value)}
+                      placeholder={t('export.password')}
+                      className="setting-input"
+                    />
+                    <input
+                      type="password"
+                      value={exportConfirmPassword}
+                      onChange={(e) => setExportConfirmPassword(e.target.value)}
+                      placeholder={t('export.confirmPassword')}
+                      className="setting-input"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                <button
+                  className="test-btn"
+                  onClick={handleExport}
+                  disabled={exporting || importing}
+                >
+                  {exporting ? t('export.exporting') : t('export.export')}
+                </button>
+                <button
+                  className="test-btn"
+                  onClick={() => { setImportNeedPassword(false); setImportPassword(''); setImportFilePath(null); setImportResult(null); handleImport(null, null); }}
+                  disabled={exporting || importing}
+                >
+                  {importing ? t('export.importing') : t('export.import')}
+                </button>
+              </div>
+
+              {/* 加密文件需要密码 */}
+              {importNeedPassword && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                  <input
+                    type="password"
+                    value={importPassword}
+                    onChange={(e) => setImportPassword(e.target.value)}
+                    placeholder={t('export.password')}
+                    className="setting-input"
+                    style={{ flex: 1 }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && importPassword) handleImport(importPassword, importFilePath); }}
+                  />
+                  <button
+                    className="test-btn"
+                    onClick={() => handleImport(importPassword, importFilePath)}
+                    disabled={!importPassword || importing}
+                  >
+                    {t('export.import')}
+                  </button>
+                </div>
+              )}
+
+              {/* 结果提示 */}
+              {(exportResult || importResult) && (
+                <small style={{ color: (exportResult || importResult)?.success ? '#22c55e' : '#ef4444', marginTop: '6px', display: 'block' }}>
+                  {(exportResult || importResult)?.message}
+                </small>
+              )}
             </div>
           </div>
         )}

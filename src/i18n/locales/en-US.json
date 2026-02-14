@@ -281,5 +281,23 @@
     "removeLock": "Remove Password",
     "removeSuccess": "Password removed",
     "needOldPassword": "Please enter current password"
+  },
+  "export": {
+    "title": "Data Management",
+    "export": "Export Data",
+    "import": "Import Data",
+    "includeImages": "Include Images",
+    "encrypt": "Encrypt Export",
+    "password": "Enter password",
+    "confirmPassword": "Confirm password",
+    "exporting": "Exporting...",
+    "importing": "Importing...",
+    "exportSuccess": "Export successful: {{path}}",
+    "importSuccess": "Import complete: {{imported}} added, {{skipped}} skipped",
+    "importNeedPassword": "This file is encrypted, please enter password",
+    "importFailed": "Import failed: {{error}}",
+    "exportFailed": "Export failed: {{error}}",
+    "passwordMismatch": "Passwords do not match",
+    "cancelled": "Cancelled"
   }
 }

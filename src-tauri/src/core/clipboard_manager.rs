@@ -605,4 +605,31 @@ impl ClipboardManager {
             .await?;
         Ok(())
     }
+
+    /// 获取所有未删除的条目（导出用）
+    pub async fn get_all_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY created_at ASC"
+        )
+        .fetch_all(repo.pool())
+        .await?;
+        Ok(items)
+    }
+
+    /// 按 content_hash 去重插入（导入用），返回是否实际插入
+    pub async fn insert_item_if_not_exists(&self, item: &ClipboardItem) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let existing = repo.find_by_hash(&item.content_hash).await?;
+        if existing.is_some() {
+            return Ok(false);
+        }
+        repo.insert(item).await?;
+        Ok(true)
+    }
+
+    /// 获取图片存储目录
+    pub fn image_dir(&self) -> &std::path::Path {
+        &self.image_dir
+    }
 }
