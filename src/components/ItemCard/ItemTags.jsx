@@ -50,7 +50,7 @@ function ItemTags({
             onClick={(e) => onTagClick(sourceTag, e)}
             title={sourceDisplay || getSourceApp(item.metadata)}
           >
-            {sourceDisplay || getSourceApp(item.metadata)}
+            {getSourceApp(item.metadata)}
           </span>
         );
       })()}
