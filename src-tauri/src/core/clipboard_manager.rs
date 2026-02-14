@@ -94,9 +94,19 @@ impl ClipboardManager {
 
         let item = match content {
             ClipboardContent::Text(text) => {
+                // 检查是否为空白内容
                 if text.trim().is_empty() {
-                    println!("Clipboard text is empty, skipping");
-                    return Ok(());
+                    // 统计换行符数量
+                    let newline_count = text.matches('\n').count();
+
+                    // 如果换行符少于3个，认为是无意义的短空白，跳过
+                    if newline_count < 3 {
+                        println!("Clipboard text is empty or too short (newlines: {}), skipping", newline_count);
+                        return Ok(());
+                    }
+
+                    // 超过3行的空白可能有意义，保留
+                    println!("Clipboard text is blank but has {} newlines, keeping", newline_count);
                 }
                 println!("Creating clipboard item for text: {} chars", text.len());
                 ClipboardItem::new_text(text, metadata)
