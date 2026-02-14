@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, oneshot};
 use serde_json::{json, Value};
 use std::net::SocketAddr;
 use warp::Filter;
@@ -8,24 +8,36 @@ use crate::core::clipboard_manager::ClipboardManager;
 use super::config::{McpConfig, McpMode};
 use super::protocol::{McpRequest, McpResponse};
 use super::tools::ClipboardTools;
+use super::port_manager::PortManager;
+use super::lock_file::LockFile;
+use std::path::PathBuf;
 
 /// MCP 服务器
 pub struct McpServer {
     config: Arc<Mutex<McpConfig>>,
     clipboard_manager: Arc<ClipboardManager>,
     tools: ClipboardTools,
+    shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    current_port: Arc<Mutex<Option<u16>>>,
+    lock_file: Arc<Mutex<Option<LockFile>>>,
+    app_dir: PathBuf,
 }
 
 impl McpServer {
     pub fn new(
         config: Arc<Mutex<McpConfig>>,
         clipboard_manager: Arc<ClipboardManager>,
+        app_dir: PathBuf,
     ) -> Self {
         let tools = ClipboardTools::new(clipboard_manager.clone());
         Self {
             config,
             clipboard_manager,
             tools,
+            shutdown_tx: Arc::new(Mutex::new(None)),
+            current_port: Arc::new(Mutex::new(None)),
+            lock_file: Arc::new(Mutex::new(None)),
+            app_dir,
         }
     }
 
@@ -42,33 +54,53 @@ impl McpServer {
 
         match mode {
             McpMode::Http => {
-                // 尝试启动，如果端口被占用则自动切换
+                let port_manager = PortManager::new("clipbox");
                 let mut attempts = 0;
-                let max_attempts = 10;
+                let max_attempts = 5;
 
                 loop {
                     println!("[MCP] 尝试启动 HTTP 服务器 (端口: {})", port);
 
-                    match self.try_start_http(port).await {
-                        Ok(_) => break,
-                        Err(e) if attempts < max_attempts => {
-                            println!("[MCP] 端口 {} 被占用，尝试下一个端口...", port);
-                            port += 1;
-                            attempts += 1;
+                    // 使用智能端口管理器
+                    match port_manager.bind_port(port).await {
+                        Ok(listener) => {
+                            // 端口绑定成功，关闭测试监听器
+                            drop(listener);
 
                             // 更新配置中的端口
                             let mut config = self.config.lock().await;
                             config.port = Some(port);
                             drop(config);
+
+                            // 创建锁文件
+                            match LockFile::new(&self.app_dir, port) {
+                                Ok(lock) => {
+                                    let mut lock_file = self.lock_file.lock().await;
+                                    *lock_file = Some(lock);
+                                }
+                                Err(e) => {
+                                    eprintln!("[MCP] 创建锁文件失败: {}", e);
+                                }
+                            }
+
+                            // 启动实际的 HTTP 服务器
+                            if let Err(e) = self.start_http_server(port).await {
+                                return Err(format!("启动 HTTP 服务器失败: {}", e));
+                            }
+
+                            println!("[MCP] HTTP 服务器成功启动在端口: {}", port);
+                            return Ok(());
+                        }
+                        Err(e) if attempts < max_attempts => {
+                            println!("[MCP] 端口 {} 处理失败: {}，尝试下一个端口...", port, e);
+                            port += 1;
+                            attempts += 1;
                         }
                         Err(e) => {
                             return Err(format!("无法启动 MCP 服务器: {}", e));
                         }
                     }
                 }
-
-                println!("[MCP] HTTP 服务器成功启动在端口: {}", port);
-                Ok(())
             }
             McpMode::Stdio => {
                 Err("GUI 应用不支持 stdio 模式，请使用 HTTP 模式".to_string())
@@ -76,9 +108,24 @@ impl McpServer {
         }
     }
 
-    /// 尝试启动 HTTP 服务器
-    async fn try_start_http(&self, port: u16) -> Result<(), String> {
+    /// 启动 HTTP 服务器（实际的 warp 服务）
+    async fn start_http_server(&self, port: u16) -> Result<(), String> {
         let tools = self.tools.clone();
+
+        // 创建关闭信号通道
+        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+
+        // 保存关闭句柄
+        {
+            let mut tx = self.shutdown_tx.lock().await;
+            *tx = Some(shutdown_tx);
+        }
+
+        // 保存当前端口
+        {
+            let mut port_lock = self.current_port.lock().await;
+            *port_lock = Some(port);
+        }
 
         // POST /mcp - 处理 MCP 请求
         let mcp_route = warp::path("mcp")
@@ -103,21 +150,58 @@ impl McpServer {
             .map(|| warp::reply::json(&json!({ "status": "ok" })));
 
         let routes = mcp_route.or(health_route);
-
         let addr: SocketAddr = ([127, 0, 0, 1], port).into();
 
-        // 尝试绑定端口
-        match tokio::net::TcpListener::bind(addr).await {
-            Ok(_) => {
-                // 端口可用，启动服务器
-                println!("[MCP] HTTP 服务器监听: http://{}", addr);
-                tokio::spawn(async move {
-                    warp::serve(routes).run(addr).await;
+        println!("[MCP] HTTP 服务器监听: http://{}", addr);
+
+        // 启动服务器，支持优雅关闭
+        tokio::spawn(async move {
+            let (_, server) = warp::serve(routes)
+                .bind_with_graceful_shutdown(addr, async {
+                    shutdown_rx.await.ok();
+                    println!("[MCP] 收到关闭信号，正在优雅关闭服务器...");
                 });
-                Ok(())
-            }
-            Err(e) => Err(format!("端口绑定失败: {}", e)),
+
+            server.await;
+            println!("[MCP] 服务器已完全关闭");
+        });
+
+        Ok(())
+    }
+
+    /// 优雅关闭服务器
+    pub async fn shutdown(&self) {
+        println!("[MCP] 开始关闭 MCP 服务器...");
+
+        // 发送关闭信号
+        let mut tx = self.shutdown_tx.lock().await;
+        if let Some(sender) = tx.take() {
+            let _ = sender.send(());
+            println!("[MCP] 已发送关闭信号");
         }
+
+        // 等待端口释放
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 清除锁文件
+        let mut lock_file = self.lock_file.lock().await;
+        if lock_file.take().is_some() {
+            println!("[MCP] 锁文件已清理");
+        }
+
+        // 清除端口记录
+        let mut port_lock = self.current_port.lock().await;
+        if let Some(port) = port_lock.take() {
+            println!("[MCP] 端口 {} 已释放", port);
+        }
+
+        println!("[MCP] MCP 服务器已完全关闭");
+    }
+
+    /// 获取当前运行端口
+    pub async fn get_current_port(&self) -> Option<u16> {
+        let port_lock = self.current_port.lock().await;
+        *port_lock
     }
 
     /// 处理 MCP 请求（静态方法）
@@ -178,5 +262,14 @@ impl McpServer {
             Ok(result) => Ok(McpResponse::success(id, result)),
             Err(e) => Ok(McpResponse::error(id, -32000, e.to_string())),
         }
+    }
+}
+
+/// 实现 Drop trait，确保资源释放
+impl Drop for McpServer {
+    fn drop(&mut self) {
+        println!("[MCP] McpServer 正在销毁，触发清理逻辑...");
+        // 注意：Drop 中不能使用 async，但我们可以尝试发送关闭信号
+        // 实际的优雅关闭应该在 main.rs 中显式调用
     }
 }

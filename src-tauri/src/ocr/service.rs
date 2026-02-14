@@ -25,26 +25,26 @@ impl OcrService {
 
     /// 根据配置创建对应的 OCR 提供者
     fn create_provider(config: &OcrConfig) -> Result<Arc<dyn OcrProvider>, OcrError> {
-        match &config.provider {
+        match &config.current_provider {
             OcrProviderType::Local => {
                 Ok(Arc::new(LocalOcr::new(config.language.clone())))
             }
             OcrProviderType::SiliconFlow => {
-                let api_key = config.api_key.as_ref()
+                let api_key = config.get_current_api_key()
                     .ok_or_else(|| OcrError::ConfigError("硅基流动 API key is required".to_string()))?;
 
                 Ok(Arc::new(SiliconFlowOcr::new(
-                    api_key.clone(),
-                    config.provider.base_url().map(|s| s.to_string()),
+                    api_key,
+                    config.current_provider.base_url().map(|s| s.to_string()),
                 )))
             }
             OcrProviderType::DeepSeek => {
-                let api_key = config.api_key.as_ref()
+                let api_key = config.get_current_api_key()
                     .ok_or_else(|| OcrError::ConfigError("DeepSeek API key is required".to_string()))?;
 
                 Ok(Arc::new(DeepSeekOcr::new(
-                    api_key.clone(),
-                    config.provider.base_url().map(|s| s.to_string()),
+                    api_key,
+                    config.current_provider.base_url().map(|s| s.to_string()),
                 )))
             }
             OcrProviderType::Aliyun => {

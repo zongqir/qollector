@@ -253,7 +253,7 @@ impl ClipboardManager {
                     // 步骤2: 基于OCR文字生成AI标签（串行化）
                     if !ocr_text.is_empty() {
                         let ai_config = ai_config_clone.lock().unwrap().clone();
-                        if !ai_config.api_key.is_empty() {
+                        if !ai_config.get_current_api_key().is_empty() {
                             // 获取信号量许可，确保AI请求串行执行
                             let _permit = ai_semaphore_clone.acquire().await.unwrap();
                             println!("🔒 获取AI请求锁，基于OCR文字生成标签: item_id={}", item_id);
@@ -294,7 +294,7 @@ impl ClipboardManager {
                 // 文本/文件：直接生成AI标签（串行化）
                 if let Some(content) = item_content.as_ref() {
                     let ai_config = ai_config_clone.lock().unwrap().clone();
-                    if !ai_config.api_key.is_empty() {
+                    if !ai_config.get_current_api_key().is_empty() {
                         // 获取信号量许可，确保AI请求串行执行
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!("🔒 获取AI请求锁，生成标签: item_id={}, type={}", item_id, item_type);
@@ -521,28 +521,28 @@ impl ClipboardManager {
 
         // 获取总数
         let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         // 按类型统计
         let text_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let image_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let pinned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         let favorite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0")
-            .fetch_one(&repo.pool)
+            .fetch_one(repo.pool())
             .await?;
 
         Ok(serde_json::json!({

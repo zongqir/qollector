@@ -14,6 +14,17 @@ ClipBox 是一款现代化的跨平台剪贴板管理器，使用 Rust (Tauri v2
 4. 国际化支持：支持多语言切换（简体中文、English），可轻松扩展更多语言。
 5. AI 集成：支持 MCP (Model Context Protocol)，允许 AI 助手直接访问剪贴板数据。
 
+## ⚠️ 重要规则：禁止自动编译
+
+**严格禁止 Claude 执行任何编译命令！**
+
+- ❌ 禁止运行 `cargo build`、`cargo check`、`npm run tauri build` 等任何编译命令
+- ❌ 禁止运行 `npm run tauri dev` 进行测试
+- ✅ 完成代码修改后，只需提示用户运行 `npm run tauri dev` 即可
+- ✅ 用户会自己决定何时编译和测试
+
+**原因：** 编译耗时长（2-10 分钟），浪费用户时间。用户会在合适的时候自行编译。
+
 
 ## 构建与开发命令
 
@@ -356,8 +367,13 @@ Rust 后端采用分层架构：
 SQLite 数据库位于应用数据目录下的 `clipbox.db`：
 
 * **clipboard_items 表**：存储条目 ID、类型（文本/图片/文件）、内容或路径、缩略图 JSON、标签 JSON、用户笔记、元数据以及时间戳。
+* **app_config 表**：存储应用配置（AI、OCR、MCP 设置），以 JSON 格式持久化，重启后自动加载。
 
-**重要提示：** 图片存储在文件系统中，数据库仅以 JSON 格式存储路径。
+**重要提示：**
+- 图片存储在文件系统中，数据库仅以 JSON 格式存储路径。
+- 所有配置（API Key、供应商选择等）都会自动保存到数据库，无需手动备份。
+- **多供应商配置：** 每个 AI/OCR 供应商的凭证独立存储，切换供应商时自动加载对应配置，无需反复填写。详见 `docs/multi-provider-config.md`。
+- 详细配置持久化说明见 `docs/config-persistence.md`。
 
 ### 前端结构
 

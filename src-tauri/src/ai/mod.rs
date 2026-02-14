@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use std::collections::HashMap;
 
 #[derive(Debug, Error)]
 pub enum AIError {
@@ -11,7 +12,7 @@ pub enum AIError {
     ConfigError(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum AIProvider {
     SiliconFlow,
     Volcano,
@@ -37,24 +38,146 @@ impl AIProvider {
             AIProvider::Custom { name, .. } => name,
         }
     }
+
+    /// 获取该供应商支持的模型列表
+    pub fn available_models(&self) -> Vec<String> {
+        match self {
+            AIProvider::SiliconFlow => vec![
+                "Qwen/Qwen2.5-7B-Instruct".to_string(),
+                "Qwen/Qwen2.5-14B-Instruct".to_string(),
+                "Qwen/Qwen2.5-32B-Instruct".to_string(),
+                "Qwen/Qwen2.5-72B-Instruct".to_string(),
+                "deepseek-ai/DeepSeek-V2.5".to_string(),
+                "THUDM/glm-4-9b-chat".to_string(),
+            ],
+            AIProvider::Volcano => vec![
+                "doubao-seed-1-8-251228".to_string(),
+                "ep-20250101-xxxxx".to_string(), // 示例格式
+            ],
+            AIProvider::Alibaba => vec![
+                "qwen-turbo".to_string(),
+                "qwen-plus".to_string(),
+                "qwen-max".to_string(),
+                "qwen-max-longcontext".to_string(),
+            ],
+            AIProvider::Custom { .. } => vec![
+                "gpt-3.5-turbo".to_string(),
+                "gpt-4".to_string(),
+                "gpt-4-turbo".to_string(),
+            ],
+        }
+    }
+
+    /// 获取默认模型
+    pub fn default_model(&self) -> String {
+        match self {
+            AIProvider::SiliconFlow => "Qwen/Qwen2.5-7B-Instruct".to_string(),
+            AIProvider::Volcano => "doubao-seed-1-8-251228".to_string(),
+            AIProvider::Alibaba => "qwen-turbo".to_string(),
+            AIProvider::Custom { .. } => "gpt-3.5-turbo".to_string(),
+        }
+    }
+}
+
+/// AI 供应商的凭证信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AICredentials {
+    pub api_key: String,
+    pub model: String,
+}
+
+impl AICredentials {
+    pub fn new(api_key: String, model: String) -> Self {
+        Self { api_key, model }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIConfig {
-    pub provider: AIProvider,
-    pub api_key: String,
-    pub model: String,
+    pub current_provider: AIProvider,
+    pub credentials: HashMap<String, AICredentials>,  // key 是 provider 的字符串表示
     pub enabled: bool,
+}
+
+impl AIConfig {
+    /// 获取当前供应商的凭证
+    pub fn get_current_credentials(&self) -> Option<&AICredentials> {
+        self.credentials.get(&self.provider_key(&self.current_provider))
+    }
+
+    /// 获取当前供应商的 API Key
+    pub fn get_current_api_key(&self) -> String {
+        self.get_current_credentials()
+            .map(|c| c.api_key.clone())
+            .unwrap_or_default()
+    }
+
+    /// 获取当前供应商的模型
+    pub fn get_current_model(&self) -> String {
+        self.get_current_credentials()
+            .map(|c| c.model.clone())
+            .unwrap_or_else(|| self.current_provider.default_model())
+    }
+
+    /// 设置当前供应商的凭证
+    pub fn set_current_credentials(&mut self, api_key: String, model: String) {
+        let key = self.provider_key(&self.current_provider);
+        self.credentials.insert(key, AICredentials::new(api_key, model));
+    }
+
+    /// 生成供应商的唯一键
+    fn provider_key(&self, provider: &AIProvider) -> String {
+        match provider {
+            AIProvider::SiliconFlow => "siliconflow".to_string(),
+            AIProvider::Volcano => "volcano".to_string(),
+            AIProvider::Alibaba => "alibaba".to_string(),
+            AIProvider::Custom { name, .. } => format!("custom_{}", name),
+        }
+    }
 }
 
 impl Default for AIConfig {
     fn default() -> Self {
         Self {
-            provider: AIProvider::SiliconFlow,
-            api_key: String::new(),
-            model: "Qwen/Qwen2.5-7B-Instruct".to_string(),
+            current_provider: AIProvider::SiliconFlow,
+            credentials: HashMap::new(),
             enabled: false,
         }
+    }
+}
+
+// 用于反序列化旧格式配置的临时结构
+#[derive(Debug, Deserialize)]
+struct LegacyAIConfig {
+    provider: AIProvider,
+    api_key: String,
+    model: String,
+    enabled: bool,
+}
+
+impl AIConfig {
+    /// 从旧格式配置迁移
+    pub fn from_legacy(json_str: &str) -> Result<Self, serde_json::Error> {
+        // 尝试解析为新格式
+        if let Ok(config) = serde_json::from_str::<AIConfig>(json_str) {
+            return Ok(config);
+        }
+
+        // 如果失败，尝试解析为旧格式并迁移
+        let legacy: LegacyAIConfig = serde_json::from_str(json_str)?;
+
+        let mut config = AIConfig {
+            current_provider: legacy.provider.clone(),
+            credentials: HashMap::new(),
+            enabled: legacy.enabled,
+        };
+
+        // 将旧的 api_key 和 model 迁移到 credentials
+        if !legacy.api_key.is_empty() {
+            config.set_current_credentials(legacy.api_key, legacy.model);
+        }
+
+        Ok(config)
     }
 }
 
@@ -102,20 +225,38 @@ pub struct AIService {
 
 impl AIService {
     pub fn new(config: AIConfig) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Self {
             config,
-            client: reqwest::Client::new(),
+            client,
         }
     }
 
     pub async fn generate_tags(&self, content: &str) -> Result<Vec<String>, AIError> {
+        let api_key = self.config.get_current_api_key();
+
         // 只要有API key就尝试生成,不检查enabled标志
-        if self.config.api_key.is_empty() {
+        if api_key.is_empty() {
             return Ok(Vec::new());
         }
 
-        // Sanitize and truncate content
-        let truncated = &content[..content.len().min(500)];
+        // Sanitize and truncate content (考虑 UTF-8 字符边界)
+        let max_len = 500;
+        let truncated = if content.len() <= max_len {
+            content
+        } else {
+            // 找到最后一个有效的字符边界
+            let mut end = max_len;
+            while end > 0 && !content.is_char_boundary(end) {
+                end -= 1;
+            }
+            &content[..end]
+        };
         let sanitized = truncated.replace('\0', "").trim().to_string();
 
         if sanitized.is_empty() {
@@ -127,8 +268,9 @@ impl AIService {
             sanitized
         );
 
+        let model = self.config.get_current_model();
         let request = ChatRequest {
-            model: self.config.model.clone(),
+            model: model.clone(),
             messages: vec![ChatMessage {
                 role: "user".to_string(),
                 content: prompt.clone(),
@@ -137,19 +279,19 @@ impl AIService {
             temperature: 0.7,
         };
 
-        let url = format!("{}/chat/completions", self.config.provider.base_url());
+        let url = format!("{}/chat/completions", self.config.current_provider.base_url());
 
         println!("=== AI Request Debug ===");
         println!("URL: {}", url);
-        println!("Model: {}", self.config.model);
-        println!("API Key (first 10 chars): {}", &self.config.api_key[..10.min(self.config.api_key.len())]);
+        println!("Model: {}", model);
+        println!("API Key (first 10 chars): {}", &api_key[..10.min(api_key.len())]);
         println!("Prompt length: {}", prompt.len());
         println!("Request body: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
 
         let response = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
             .json(&request)
             .send()

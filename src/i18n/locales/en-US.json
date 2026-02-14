@@ -111,6 +111,8 @@
       "apiKeyPlaceholder": "Enter API Key",
       "model": "Model",
       "modelPlaceholder": "e.g., Qwen/Qwen2.5-7B-Instruct",
+      "modelHint": "Available models loaded automatically based on provider",
+      "volcanoModelHint": "Enter your Volcano Engine Endpoint ID (obtained after creating an inference endpoint in the console)",
       "customName": "Service Name",
       "customNamePlaceholder": "e.g., OpenAI",
       "customUrl": "API URL",

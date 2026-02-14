@@ -111,6 +111,8 @@
       "apiKeyPlaceholder": "输入 API Key",
       "model": "模型",
       "modelPlaceholder": "例如: Qwen/Qwen2.5-7B-Instruct",
+      "modelHint": "根据供应商自动加载可用模型",
+      "volcanoModelHint": "输入火山引擎的 Endpoint ID（在控制台创建推理接入点后获得）",
       "customName": "服务名称",
       "customNamePlaceholder": "例如: OpenAI",
       "customUrl": "API 地址",
