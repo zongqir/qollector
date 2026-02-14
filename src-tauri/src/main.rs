@@ -195,6 +195,8 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             get_recent_items,
+            get_recent_items_light,
+            get_more_items,
             copy_item,
             update_item,
             delete_item,

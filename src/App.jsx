@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import Settings from './Settings';
 import LockScreen from './LockScreen';
 import DragDrop from './DragDrop';
@@ -16,7 +17,7 @@ import { useEditModal } from './hooks/useEditModal';
 import { useTheme } from './hooks/useTheme';
 import { openImagePreview } from './services/windowService';
 import { initOcrService } from './services/ocrService';
-import { copyItemToClipboard, getRecentItems } from './services/clipboardService';
+import { copyItemToClipboard, getRecentItemsLight, getMoreItems } from './services/clipboardService';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from './services/aiService';
 import TitleBar from './components/TitleBar';
 import SearchBar from './components/SearchBar';
@@ -24,8 +25,11 @@ import ItemCard from './components/ItemCard';
 
 function App() {
   const { t, i18n } = useTranslation();
+  const PAGE_SIZE = 50;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(null);
   const [ocrProcessing, setOcrProcessing] = useState(null);
@@ -141,8 +145,9 @@ function App() {
 
   const loadItems = useCallback(async () => {
     try {
-      const result = await getRecentItems(100);
+      const result = await getRecentItemsLight(PAGE_SIZE);
       setItems(result);
+      setHasMore(result.length >= PAGE_SIZE);
 
       if (!loadingRef.current) {
         autoGenerateAITagsSvc(result, processedItemIdsRef.current, setProcessedItemIds);
@@ -154,6 +159,20 @@ function App() {
       if (loadingRef.current) setLoading(false);
     }
   }, [t]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const more = await getMoreItems(PAGE_SIZE, items.length);
+      if (more.length < PAGE_SIZE) setHasMore(false);
+      setItems(prev => [...prev, ...more]);
+    } catch (error) {
+      console.error('加载更多失败:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, items.length]);
 
   const handleCopy = useCallback(async (item, e) => {
     if (e) {
@@ -497,8 +516,22 @@ function App() {
     });
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  // 直接使用 filteredItems，不使用虚拟滚动
-  const visibleItems = filteredItems;
+  // 虚拟滚动
+  const virtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => contentRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+  });
+
+  // 滚动到底部时自动加载更多
+  const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
+  useEffect(() => {
+    if (!lastVirtualItem) return;
+    if (lastVirtualItem.index >= filteredItems.length - 5) {
+      loadMore();
+    }
+  }, [lastVirtualItem?.index, filteredItems.length, loadMore]);
 
   if (isLocked && hasPassword) {
     return <LockScreen onUnlock={() => setIsLocked(false)} />;
@@ -551,46 +584,61 @@ function App() {
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
-          <div className="items-list">
-            {visibleItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                expandedItemId={expandedItemId}
-                copiedItemId={copiedItemId}
-                selectedTags={selectedTags}
-                addingTagItemId={addingTagItemId}
-                newTagInput={newTagInput}
-                onNewTagInputChange={setNewTagInput}
-                onTagInputKeyDown={handleTagInputKeyDown}
-                onStartAddTag={startAddTag}
-                onCancelAddTag={cancelAddTag}
-                onAddTagToItem={addTagToItem}
-                filteredUserTags={filteredUserTags}
-                onTagClick={handleTagClick}
-                editingNoteId={editingNoteId}
-                editNote={editNote}
-                onEditNoteChange={setEditNote}
-                onStartEditNote={startEditNote}
-                onSaveNote={saveNote}
-                onCancelNoteEdit={cancelNoteEdit}
-                onDragStart={handleDragStart}
-                onTogglePin={togglePin}
-                onToggleFavorite={toggleFavorite}
-                onGenerateAITags={generateAITags}
-                generatingAI={generatingAI}
-                aiEnabled={aiEnabled}
-                onHandleOCR={handleOCR}
-                ocrProcessing={ocrProcessing}
-                ocrEnabled={ocrEnabled}
-                onToggleExpand={toggleExpand}
-                onOpenItem={handleOpenItem}
-                onContentClick={handleContentClick}
-                onContentDoubleClick={handleContentDoubleClick}
-                language={i18n.language}
-                maxPinnedItems={maxPinnedItems}
-              />
-            ))}
+          <div className="items-list" style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const item = filteredItems[virtualRow.index];
+              return (
+                <div
+                  key={item.id}
+                  ref={virtualizer.measureElement}
+                  data-index={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <ItemCard
+                    item={item}
+                    expandedItemId={expandedItemId}
+                    copiedItemId={copiedItemId}
+                    selectedTags={selectedTags}
+                    addingTagItemId={addingTagItemId}
+                    newTagInput={newTagInput}
+                    onNewTagInputChange={setNewTagInput}
+                    onTagInputKeyDown={handleTagInputKeyDown}
+                    onStartAddTag={startAddTag}
+                    onCancelAddTag={cancelAddTag}
+                    onAddTagToItem={addTagToItem}
+                    filteredUserTags={filteredUserTags}
+                    onTagClick={handleTagClick}
+                    editingNoteId={editingNoteId}
+                    editNote={editNote}
+                    onEditNoteChange={setEditNote}
+                    onStartEditNote={startEditNote}
+                    onSaveNote={saveNote}
+                    onCancelNoteEdit={cancelNoteEdit}
+                    onDragStart={handleDragStart}
+                    onTogglePin={togglePin}
+                    onToggleFavorite={toggleFavorite}
+                    onGenerateAITags={generateAITags}
+                    generatingAI={generatingAI}
+                    aiEnabled={aiEnabled}
+                    onHandleOCR={handleOCR}
+                    ocrProcessing={ocrProcessing}
+                    ocrEnabled={ocrEnabled}
+                    onToggleExpand={toggleExpand}
+                    onOpenItem={handleOpenItem}
+                    onContentClick={handleContentClick}
+                    onContentDoubleClick={handleContentDoubleClick}
+                    language={i18n.language}
+                    maxPinnedItems={maxPinnedItems}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

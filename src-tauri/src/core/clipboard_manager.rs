@@ -375,6 +375,16 @@ impl ClipboardManager {
         repo.get_recent(limit).await
     }
 
+    pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent_light(limit).await
+    }
+
+    pub async fn get_recent_paged(&self, limit: i32, offset: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_recent_paged(limit, offset).await
+    }
+
     pub async fn copy_to_clipboard(&self, item: &ClipboardItem) -> Result<(), ClipboardError> {
         let content = if item.type_ == "image" {
             // Load original image from file

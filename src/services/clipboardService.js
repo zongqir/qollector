@@ -23,3 +23,11 @@ export const deleteItem = async (id) => {
 export const getRecentItems = async (limit = 100) => {
   return invoke('get_recent_items', { limit });
 };
+
+export const getRecentItemsLight = async (limit = 50) => {
+  return invoke('get_recent_items_light', { limit });
+};
+
+export const getMoreItems = async (limit = 50, offset = 0) => {
+  return invoke('get_more_items', { limit, offset });
+};

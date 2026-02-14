@@ -1,5 +1,9 @@
 [-] 提示词切换语言能力设计
-[] OCR我想先去掉本地的 因为很麻烦需要安装依赖 这个先分析下
+[] OCR去掉本地Tesseract前端入口（后端代码保留）：
+   - 前端 Settings.jsx：OCR_PROVIDERS 列表删除 Local 项
+   - 前端 Settings.jsx：删除 localInfo 安装指引 UI 块
+   - 前端 zh-CN.json / en-US.json：删除 settings.ocr.localInfo.* 和 settings.ocr.providers.Local 翻译键
+   - 后端不动（local.rs、OcrProviderType::Local 枚举值全部保留，零成本）
 [-] 设置中支持添加密码锁 可选设置 隐私设计
 [-] 目前来源我认为其实是不太准的
 [] 支持APP级别的禁止保存
@@ -22,3 +26,6 @@
 [] 其他版本的windows有影响吗
 [] 性能还得挑右
 [] 情况是一个拖拽，我拖拽出来的这个东西不仅仅是文字，其实还有一种是文件或者是图片。
+
+
+
