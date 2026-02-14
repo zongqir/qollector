@@ -88,6 +88,9 @@ fn main() {
                 eprintln!("警告: 无法获取主窗口");
             }
 
+            // 启动时恢复数据库文件头
+            core::db_obfuscate::deobfuscate_db(&db_path);
+
             tauri::async_runtime::block_on(async move {
                 let repository = ClipboardRepository::new(db_path)
                     .await
@@ -223,6 +226,11 @@ fn main() {
                         });
                     }
                 }
+
+                // 退出时混淆数据库文件头
+                let app_dir = app_handle.path().app_data_dir().expect("Failed to get app data dir");
+                let db_path = app_dir.join("clipbox.db");
+                core::db_obfuscate::obfuscate_db(&db_path);
             }
         })
         .invoke_handler(tauri::generate_handler![
