@@ -27,15 +27,34 @@ use tokio::sync::Mutex as TokioMutex;
 
 fn main() {
     // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
+    // ClipBox 是剪贴板管理器，大量 Web 功能用不到，全部关掉
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
-        "--js-flags=--max-old-space-size=128",  // V8 堆上限 128MB
+        // === 进程与内存 ===
+        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 堆上限 128MB + 精简模式
         "--renderer-process-limit=1",            // 限制渲染进程数
-        "--disable-gpu-shader-disk-cache",       // 禁用 GPU 着色器磁盘缓存
-        "--disable-features=RendererCodeIntegrity", // 减少安全校验开销
-        "--disable-background-networking",       // 禁用后台网络请求
-        "--disable-component-update",            // 禁用组件自动更新
-        "--disable-domain-reliability",          // 禁用域名可靠性监控
-        "--no-pings",                            // 禁用超链接审计 ping
+        // === 禁用不需要的 Chromium 功能 ===
+        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP",
+        "--disable-background-networking",       // 后台网络
+        "--disable-component-update",            // 组件更新
+        "--disable-domain-reliability",          // 域名监控
+        "--no-pings",                            // 超链接审计
+        "--disable-breakpad",                    // 崩溃报告
+        // === 禁用 Web API（ClipBox 不需要） ===
+        "--disable-speech-api",                  // 语音识别/合成
+        "--disable-notifications",               // 系统通知（用 Tauri 原生通知）
+        "--disable-webgl",                       // WebGL（不做 3D 渲染）
+        "--disable-webgl2",                      // WebGL2
+        "--disable-client-side-phishing-detection", // 钓鱼检测
+        "--disable-sync",                        // 账号同步
+        "--disable-translate",                   // 翻译功能
+        "--disable-default-apps",                // 默认应用
+        "--disable-extensions",                  // 扩展系统
+        "--disable-hang-monitor",                // 挂起监控
+        "--disable-popup-blocking",              // 弹窗拦截
+        "--disable-prompt-on-repost",            // 重复提交提示
+        // === GPU 缓存 ===
+        "--disable-gpu-shader-disk-cache",       // 着色器缓存
+        "--gpu-disk-cache-size-kb=1",            // GPU 磁盘缓存最小化
     ].join(" "));
 
     tauri::Builder::default()

@@ -814,9 +814,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                 <button
                   className="test-btn"
+                  style={{ flex: 'none' }}
                   onClick={handleExport}
                   disabled={exporting || importing}
                 >
@@ -824,6 +825,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </button>
                 <button
                   className="test-btn"
+                  style={{ flex: 'none' }}
                   onClick={() => { setImportNeedPassword(false); setImportPassword(''); setImportFilePath(null); setImportResult(null); handleImport(null, null); }}
                   disabled={exporting || importing}
                 >
