@@ -476,12 +476,6 @@ impl ClipboardManager {
             // 切换收藏状态
             item.is_favorite = !item.is_favorite;
 
-            // 更新时间戳
-            item.updated_at = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64;
-
             repo.update(&item).await?;
             Ok(item.is_favorite)
         } else {

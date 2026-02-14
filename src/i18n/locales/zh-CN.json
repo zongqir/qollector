@@ -167,7 +167,11 @@
       "themeSystem": "跟随系统",
       "themeLight": "浅色",
       "themeDark": "深色",
-      "themeHint": "选择界面主题，跟随系统会自动适配"
+      "themeHint": "选择界面主题，跟随系统会自动适配",
+      "featureModules": "功能模块",
+      "enableAI": "AI 标签",
+      "enableOCR": "OCR 识别",
+      "enableMCP": "MCP 服务"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

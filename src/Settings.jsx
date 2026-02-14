@@ -20,7 +20,7 @@ const OCR_PROVIDERS = [
   { value: 'Baidu', label: '百度 OCR' },
 ];
 
-function Settings({ onClose, themeMode, onThemeModeChange }) {
+function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState('ai');
 
@@ -67,11 +67,16 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
   const [currentOcrApiSecret, setCurrentOcrApiSecret] = useState('');
   const [showOcrApiKey, setShowOcrApiKey] = useState(false);
 
-  const changeLanguage = (lng) => {
+  const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
-    // 同时更新到 generalConfig
-    setGeneralConfig({ ...generalConfig, language: lng });
+    const updated = { ...generalConfig, language: lng };
+    setGeneralConfig(updated);
+    try {
+      await invoke('update_general_config', { config: updated });
+    } catch (error) {
+      console.error('保存语言配置失败:', error);
+    }
   };
 
   useEffect(() => {
@@ -180,6 +185,11 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
     }
   };
 
+  const handleClose = () => {
+    if (onConfigChange) onConfigChange();
+    onClose();
+  };
+
   const handleAiSave = async () => {
     try {
       // 保存当前供应商的凭证到 credentials 对象
@@ -202,7 +212,7 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
       // 更新前端状态，确保下次打开时显示正确
       setAiConfig(configToSave);
 
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 AI 配置失败:', error);
       alert('保存失败: ' + error);
@@ -231,7 +241,7 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
       // 更新前端状态，确保下次打开时显示正确
       setOcrConfig(configToSave);
 
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 OCR 配置失败:', error);
       alert('保存失败: ' + error);
@@ -241,19 +251,9 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
   const handleMcpSave = async () => {
     try {
       await invoke('update_mcp_config', { config: mcpConfig });
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存 MCP 配置失败:', error);
-      alert('保存失败: ' + error);
-    }
-  };
-
-  const handleGeneralSave = async () => {
-    try {
-      await invoke('update_general_config', { config: generalConfig });
-      onClose();
-    } catch (error) {
-      console.error('保存通用配置失败:', error);
       alert('保存失败: ' + error);
     }
   };
@@ -416,7 +416,7 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
       <div className="settings-modal">
         <div className="settings-header">
           <h2>{t('settings.title')}</h2>
-          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+          <button onClick={handleClose} className="close-btn"><X size={20} /></button>
         </div>
 
         <div className="settings-tabs">
@@ -465,10 +465,16 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
               <label>{t('settings.general.theme')}</label>
               <select
                 value={generalConfig.theme_mode || 'system'}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const newMode = e.target.value;
-                  setGeneralConfig({ ...generalConfig, theme_mode: newMode });
+                  const updated = { ...generalConfig, theme_mode: newMode };
+                  setGeneralConfig(updated);
                   if (onThemeModeChange) onThemeModeChange(newMode);
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                  } catch (error) {
+                    console.error('保存主题配置失败:', error);
+                  }
                 }}
                 className="setting-select"
               >
@@ -484,11 +490,17 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
               <input
                 type="number"
                 value={generalConfig.max_pinned_items}
-                onChange={(e) => {
+                onChange={async (e) => {
                   let value = parseInt(e.target.value) || 3;
                   if (value < 1) value = 1;
                   if (value > 10) value = 10;
-                  setGeneralConfig({ ...generalConfig, max_pinned_items: value });
+                  const updated = { ...generalConfig, max_pinned_items: value };
+                  setGeneralConfig(updated);
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                  } catch (error) {
+                    console.error('保存置顶数配置失败:', error);
+                  }
                 }}
                 min="1"
                 max="10"
@@ -502,6 +514,60 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
                   </span>
                 )}
               </small>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.general.featureModules')}</label>
+              <div className="feature-toggles">
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...aiConfig, enabled: e.target.checked };
+                      setAiConfig(updated);
+                      try {
+                        await invoke('update_ai_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 AI 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableAI')}
+                </label>
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={ocrConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...ocrConfig, enabled: e.target.checked };
+                      setOcrConfig(updated);
+                      try {
+                        await invoke('update_ocr_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 OCR 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableOCR')}
+                </label>
+                <label className="setting-label">
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...mcpConfig, enabled: e.target.checked };
+                      setMcpConfig(updated);
+                      try {
+                        await invoke('update_mcp_config', { config: updated });
+                      } catch (error) {
+                        console.error('保存 MCP 配置失败:', error);
+                      }
+                    }}
+                  />
+                  {t('settings.general.enableMCP')}
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -661,17 +727,6 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
               <label className="setting-label">
                 <input
                   type="checkbox"
-                  checked={ocrConfig.enabled}
-                  onChange={(e) => setOcrConfig({ ...ocrConfig, enabled: e.target.checked })}
-                />
-                {t('settings.ocr.enabled')}
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
                   checked={ocrConfig.auto_ocr}
                   onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
                 />
@@ -800,18 +855,6 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
         {activeTab === 'mcp' && (
           <div className="settings-content">
             <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
-                  checked={mcpConfig.enabled}
-                  onChange={(e) => setMcpConfig({ ...mcpConfig, enabled: e.target.checked })}
-                />
-                {t('settings.mcp.enabled')}
-              </label>
-              <small className="setting-hint">{t('settings.mcp.enabledHint')}</small>
-            </div>
-
-            <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
                 type="number"
@@ -882,19 +925,20 @@ function Settings({ onClose, themeMode, onThemeModeChange }) {
         )}
 
         <div className="settings-footer">
-          <button onClick={onClose} className="cancel-btn">{t('settings.cancel')}</button>
-          <button
-            onClick={
-              activeTab === 'ai' ? handleAiSave :
-              activeTab === 'ocr' ? handleOcrSave :
-              activeTab === 'mcp' ? handleMcpSave :
-              activeTab === 'general' ? handleGeneralSave :
-              onClose
-            }
-            className="save-btn"
-          >
-            {t('settings.save')}
-          </button>
+          <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
+          {activeTab !== 'general' && (
+            <button
+              onClick={
+                activeTab === 'ai' ? handleAiSave :
+                activeTab === 'ocr' ? handleOcrSave :
+                activeTab === 'mcp' ? handleMcpSave :
+                handleClose
+              }
+              className="save-btn"
+            >
+              {t('settings.save')}
+            </button>
+          )}
         </div>
       </div>
     </div>

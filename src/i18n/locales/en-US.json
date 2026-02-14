@@ -167,7 +167,11 @@
       "themeSystem": "System",
       "themeLight": "Light",
       "themeDark": "Dark",
-      "themeHint": "Choose interface theme, System follows OS preference"
+      "themeHint": "Choose interface theme, System follows OS preference",
+      "featureModules": "Feature Modules",
+      "enableAI": "AI Tags",
+      "enableOCR": "OCR Recognition",
+      "enableMCP": "MCP Service"
     },
     "mcp": {
       "enabled": "Enable MCP Service",

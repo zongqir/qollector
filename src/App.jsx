@@ -482,7 +482,7 @@ function App() {
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
-      {showSettings && <Settings onClose={() => setShowSettings(false)} themeMode={themeMode} onThemeModeChange={setThemeMode} />}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} themeMode={themeMode} onThemeModeChange={setThemeMode} onConfigChange={loadConfigs} />}
       <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
 
       {showEditModal && (
