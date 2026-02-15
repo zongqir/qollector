@@ -59,6 +59,7 @@ function HistoryStream({ style }) {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
+  const copiedItemId = useAppStore(s => s.copiedItemId);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
@@ -158,7 +159,7 @@ function HistoryStream({ style }) {
       return false;
     });
 
-    // Pin 筛选时�?pinned_at 降序排序
+    // Pin 筛选时�?pinned_at 降序排序
     if (showPinnedOnly) {
       result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
     }
@@ -290,6 +291,7 @@ function HistoryStream({ style }) {
         <CompactCard
           item={item}
           isSelected={isSelected}
+          isCopied={copiedItemId === item.id}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
           onTogglePin={togglePin}
@@ -302,6 +304,7 @@ function HistoryStream({ style }) {
     filteredItems,
     panelMode,
     previewItem?.id,
+    copiedItemId,
     rowGap,
     handleCardClick,
     handleCardDoubleClick,

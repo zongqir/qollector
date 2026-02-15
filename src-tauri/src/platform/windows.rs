@@ -4,6 +4,7 @@ pub mod windows {
     use crate::core::models::{ClipboardContent, WindowMetadata};
     use async_trait::async_trait;
     use std::sync::{Arc, Mutex};
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::collections::HashMap;
     use windows::Win32::Foundation::*;
     use windows::Win32::System::DataExchange::*;
@@ -24,6 +25,7 @@ pub mod windows {
     pub struct WindowsClipboard {
         hwnd: SendHwnd,
         last_sequence: Arc<Mutex<u32>>,
+        skip_next: Arc<AtomicBool>,
     }
 
     unsafe impl Send for WindowsClipboard {}
@@ -77,6 +79,7 @@ pub mod windows {
             Ok(Self {
                 hwnd: SendHwnd(hwnd),
                 last_sequence: Arc::new(Mutex::new(0)),
+                skip_next: Arc::new(AtomicBool::new(false)),
             })
         }
     }
@@ -92,6 +95,7 @@ pub mod windows {
             println!("Clipboard listener registered successfully");
 
             let last_sequence = self.last_sequence.clone();
+            let skip_next = self.skip_next.clone();
 
             // Create a tokio runtime for callbacks
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -109,6 +113,12 @@ pub mod windows {
                         if sequence != *last && *last != 0 {
                             *last = sequence;
                             drop(last);
+
+                            // Skip if this change was triggered by our own set_content
+                            if skip_next.swap(false, Ordering::SeqCst) {
+                                println!("Skipping self-triggered clipboard change (sequence: {})", sequence);
+                                continue;
+                            }
 
                             println!("Clipboard change detected (sequence: {})", sequence);
 
@@ -139,7 +149,10 @@ pub mod windows {
         }
 
         async fn set_content(&self, content: ClipboardContent) -> Result<(), ClipboardError> {
-            // 使用 block_in_place 在当前线程中同步执行，避免跨线程剪贴板问题
+            // Mark to skip the next clipboard change detection
+            self.skip_next.store(true, Ordering::SeqCst);
+
+            // Use block_in_place to run synchronously, avoid cross-thread clipboard issues
             tokio::task::block_in_place(|| {
                 match content {
                     ClipboardContent::Text(text) => {

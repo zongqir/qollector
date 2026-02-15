@@ -173,6 +173,7 @@
 }
 
 .compact-card-body {
+  position: relative;
   margin-bottom: 4px;
 }
 
