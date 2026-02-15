@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, GripVertical } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -22,12 +22,14 @@ function CompactCard({
   onStartExternalDrag,
   onTogglePin,
   onToggleFavorite,
+  onOpenItem,
 }) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
   const canDragOut = item.type_ === 'file' || item.type_ === 'image';
+  const canOpen = item.type_ === 'link' || item.type_ === 'file';
 
   const cardClasses = [
     'compact-card',
@@ -92,6 +94,15 @@ function CompactCard({
               title={t('toolbar.dragToApp')}
             >
               <GripVertical size={10} />
+            </button>
+          )}
+          {canOpen && (
+            <button
+              className="badge-btn badge-open"
+              onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
+              title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+            >
+              <ExternalLink size={10} />
             </button>
           )}
           <button

@@ -57,30 +57,3 @@ export const getFileList = (content) => {
 export const getFileName = (path) => {
   return path.split(/[/\\]/).pop() || path;
 };
-
-/**
- * 根据文件扩展名返回图标信息
- */
-export const getFileIcon = (filename) => {
-  const ext = filename.split('.').pop()?.toLowerCase() || '';
-  const map = {
-    pdf: { icon: 'FileText', color: '#ff3b30', label: 'PDF' },
-    doc: { icon: 'FileText', color: '#007aff', label: 'DOC' },
-    docx: { icon: 'FileText', color: '#007aff', label: 'DOCX' },
-    xls: { icon: 'FileSpreadsheet', color: '#34c759', label: 'XLS' },
-    xlsx: { icon: 'FileSpreadsheet', color: '#34c759', label: 'XLSX' },
-    csv: { icon: 'FileSpreadsheet', color: '#34c759', label: 'CSV' },
-    png: { icon: 'FileImage', color: '#af52de', label: 'PNG' },
-    jpg: { icon: 'FileImage', color: '#af52de', label: 'JPG' },
-    jpeg: { icon: 'FileImage', color: '#af52de', label: 'JPEG' },
-    gif: { icon: 'FileImage', color: '#af52de', label: 'GIF' },
-    svg: { icon: 'FileImage', color: '#af52de', label: 'SVG' },
-    webp: { icon: 'FileImage', color: '#af52de', label: 'WEBP' },
-    zip: { icon: 'FileArchive', color: '#ff9500', label: 'ZIP' },
-    rar: { icon: 'FileArchive', color: '#ff9500', label: 'RAR' },
-    '7z': { icon: 'FileArchive', color: '#ff9500', label: '7Z' },
-    tar: { icon: 'FileArchive', color: '#ff9500', label: 'TAR' },
-    gz: { icon: 'FileArchive', color: '#ff9500', label: 'GZ' },
-  };
-  return map[ext] || { icon: 'File', color: '#8e8e93', label: ext.toUpperCase() || 'FILE' };
-};

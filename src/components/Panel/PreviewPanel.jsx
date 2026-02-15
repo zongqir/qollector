@@ -126,6 +126,7 @@ function PreviewPanel() {
           className="preview-edit-textarea"
           value={editContent}
           onChange={(e) => setEditContent(e.target.value)}
+          wrap="soft"
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.ctrlKey) handleSaveContent();
             if (e.key === 'Escape') setIsEditingContent(false);
@@ -207,7 +208,7 @@ function PreviewPanel() {
       </div>
 
       {/* 内容区 */}
-      <div className="preview-content-area">
+      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''}`}>
         {isCopied && (
           <div className="copy-success-toast">
             <Check size={16} /> {t('item.copied')}
@@ -217,29 +218,33 @@ function PreviewPanel() {
       </div>
 
       {/* 备注区 - 内容下方，作为批注 */}
-      <div className="preview-note-section">
-        <NoteDisplay
-          item={item}
-          editingNoteId={editingNoteId}
-          editNote={editNote}
-          onEditNoteChange={setEditNote}
-          onStartEditNote={startEditNote}
-          onSaveNote={saveNote}
-          onCancelNoteEdit={cancelNoteEdit}
-        />
-        {!item.user_note && editingNoteId !== item.id && (
-          <button className="preview-add-note-btn" onClick={() => startEditNote(item)}>
-            <StickyNote size={12} />
-            <span>{t('item.addNote')}</span>
-          </button>
-        )}
-      </div>
+      {!isEditingContent && (
+        <div className="preview-note-section">
+          <NoteDisplay
+            item={item}
+            editingNoteId={editingNoteId}
+            editNote={editNote}
+            onEditNoteChange={setEditNote}
+            onStartEditNote={startEditNote}
+            onSaveNote={saveNote}
+            onCancelNoteEdit={cancelNoteEdit}
+          />
+          {!item.user_note && editingNoteId !== item.id && (
+            <button className="preview-add-note-btn" onClick={() => startEditNote(item)}>
+              <StickyNote size={12} />
+              <span>{t('item.addNote')}</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* 元信息 - 底部参考 */}
-      <div className="preview-meta">
-        <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
-        <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
-      </div>
+      {!isEditingContent && (
+        <div className="preview-meta">
+          <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
+          <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
+        </div>
+      )}
 
       {/* 工具栏 */}
       <div className="preview-toolbar">

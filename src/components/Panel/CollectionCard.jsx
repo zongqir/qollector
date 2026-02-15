@@ -1,13 +1,35 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, FileText, FileImage, FileSpreadsheet, FileArchive, File, GripVertical } from 'lucide-react';
-import { getContentPreview, getFileList, getFileName, getFileIcon } from '../../utils/formatters';
+import { X, Check, GripVertical, Folder, ExternalLink, Globe } from 'lucide-react';
+import { FileIcon, defaultStyles } from 'react-file-icon';
+import { getContentPreview, getFileList, getFileName } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
 
-const iconComponents = { FileText, FileImage, FileSpreadsheet, FileArchive, File };
+const getExt = (filename) => {
+  const parts = filename.split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
 
-function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, dragListeners }) {
+const isFolder = (path) => {
+  if (path.endsWith('/') || path.endsWith('\\')) return true;
+  const name = path.split(/[/\\]/).pop() || '';
+  return !name.includes('.');
+};
+
+const parseUrl = (url) => {
+  try {
+    const u = new URL(url.trim());
+    const domain = u.hostname.replace(/^www\./, '');
+    const path = u.pathname === '/' ? '' : u.pathname;
+    const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    return { domain, path, favicon };
+  } catch {
+    return null;
+  }
+};
+
+function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem, dragListeners }) {
   const { t } = useTranslation();
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
 
@@ -29,6 +51,32 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, dragL
         </div>
       );
     }
+    if (item.type_ === 'link') {
+      const parsed = parseUrl(item.content);
+      if (parsed) {
+        return (
+          <div className="collection-card-link">
+            <div className="link-header">
+              <img
+                className="link-favicon"
+                src={parsed.favicon}
+                alt=""
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              <span className="link-domain">{parsed.domain}</span>
+              <ExternalLink
+                size={12}
+                className="link-external"
+                onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
+              />
+            </div>
+            {parsed.path && (
+              <div className="link-path">{decodeURIComponent(parsed.path)}</div>
+            )}
+          </div>
+        );
+      }
+    }
     if (item.type_ === 'file') {
       const files = getFileList(item.content);
       const isSingle = files.length === 1;
@@ -36,11 +84,18 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, dragL
         <div className={`collection-card-files ${isSingle ? 'single-file' : ''}`}>
           {files.map((path, idx) => {
             const name = getFileName(path);
-            const { icon, color } = getFileIcon(name);
-            const IconComp = iconComponents[icon] || File;
+            const folder = isFolder(path);
+            const ext = getExt(name);
+            const styleProps = defaultStyles[ext] || {};
             return (
               <div key={idx} className="file-item">
-                <IconComp size={isSingle ? 32 : 20} color={color} className="file-icon" />
+                {folder ? (
+                  <Folder size={isSingle ? 32 : 20} color="#f5c542" fill="#f5c542" className="file-icon" />
+                ) : (
+                  <div className="file-icon" style={{ width: isSingle ? 32 : 20 }}>
+                    <FileIcon extension={ext} {...styleProps} />
+                  </div>
+                )}
                 <span>{name}</span>
               </div>
             );

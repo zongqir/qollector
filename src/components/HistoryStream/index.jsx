@@ -65,6 +65,7 @@ function HistoryStream({ style }) {
   const loadMore = useAppStore(s => s.loadMore);
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
+  const handleOpenItem = useAppStore(s => s.handleOpenItem);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -88,10 +89,10 @@ function HistoryStream({ style }) {
       });
 
       const sourceApp = getSourceApp(item.metadata);
-      if (sourceApp && sourceApp !== 'Unknown') sourceTags.add(`鏉ユ簮:${sourceApp}`);
+      if (sourceApp && sourceApp !== 'Unknown') sourceTags.add(`来源:${sourceApp}`);
 
       if (item.type_) {
-        const typeMap = { text: '绫诲瀷:鏂囨湰', image: '绫诲瀷:鍥剧墖', file: '绫诲瀷:鏂囦欢', link: '绫诲瀷:閾炬帴' };
+        const typeMap = { text: '类型:文本', image: '类型:图片', file: '类型:文件', link: '类型:链接' };
         if (typeMap[item.type_]) typeTags.add(typeMap[item.type_]);
       }
     });
@@ -118,8 +119,8 @@ function HistoryStream({ style }) {
       if (selectedTags.length > 0) {
         const itemTags = getTags(item.tags);
         const sourceApp = getSourceApp(item.metadata);
-        const sourceTag = sourceApp !== 'Unknown' ? `鏉ユ簮:${sourceApp}` : null;
-        const typeMap = { text: '绫诲瀷:鏂囨湰', image: '绫诲瀷:鍥剧墖', file: '绫诲瀷:鏂囦欢', link: '绫诲瀷:閾炬帴' };
+        const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
+        const typeMap = { text: '类型:文本', image: '类型:图片', file: '类型:文件', link: '类型:链接' };
         const typeTag = typeMap[item.type_];
         const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
@@ -273,6 +274,7 @@ function HistoryStream({ style }) {
                     onStartExternalDrag={handleStartExternalDrag}
                     onTogglePin={togglePin}
                     onToggleFavorite={toggleFavorite}
+                    onOpenItem={handleOpenItem}
                   />
                 </div>
               );

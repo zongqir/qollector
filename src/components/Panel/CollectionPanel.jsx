@@ -21,7 +21,7 @@ import useAppStore from '../../store/useAppStore';
 import CollectionCard from './CollectionCard';
 
 // 可排序的卡片包装器
-function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick }) {
+function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem }) {
   const {
     attributes,
     listeners,
@@ -46,6 +46,7 @@ function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick }) {
         onUnpin={onUnpin}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
+        onOpenItem={onOpenItem}
         dragListeners={listeners}
       />
     </div>
@@ -66,6 +67,7 @@ function CollectionPanel() {
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const handleOpenItem = useAppStore(s => s.handleOpenItem);
 
   const pinnedItems = useMemo(() => {
     const pinned = items.filter(i => i.is_pinned);
@@ -229,6 +231,7 @@ function CollectionPanel() {
                 onUnpin={() => togglePin(item)}
                 onClick={() => handleCardClick(item)}
                 onDoubleClick={() => handleCardDoubleClick(item)}
+                onOpenItem={handleOpenItem}
               />
             ))}
           </div>
