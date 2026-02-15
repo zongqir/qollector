@@ -671,4 +671,73 @@ impl ClipboardManager {
     pub fn image_dir(&self) -> &std::path::Path {
         &self.image_dir
     }
+
+    /// Pin the current clipboard content.
+    /// Reads the clipboard, computes the hash, looks up the item in DB
+    /// (with retry to wait for the monitoring thread to finish inserting),
+    /// then pins it.
+    pub async fn pin_current_clipboard(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::core::models::ClipboardContent;
+
+        // 1. Read current clipboard content
+        let content = self.platform.get_content().await
+            .map_err(|e| format!("Failed to read clipboard: {}", e))?;
+
+        // 2. Compute hash (must match monitoring thread logic exactly)
+        let content_hash = match &content {
+            ClipboardContent::Text(text) => {
+                // Text/link: SHA256 (same as ClipboardItem::calculate_hash)
+                use sha2::{Sha256, Digest};
+                let mut hasher = Sha256::new();
+                hasher.update(text.as_bytes());
+                format!("{:x}", hasher.finalize())
+            }
+            ClipboardContent::Image(data) => {
+                // Image: MD5 (same as handle_clipboard_change)
+                format!("{:x}", md5::compute(data))
+            }
+            ClipboardContent::File(paths_str) => {
+                // File: SHA256 on path string (same as handle_clipboard_change)
+                use sha2::{Sha256, Digest};
+                let mut hasher = Sha256::new();
+                hasher.update(paths_str.as_bytes());
+                format!("{:x}", hasher.finalize())
+            }
+        };
+
+        // 3. Load max_pinned from config
+        let max_pinned = self.config_repo.load_general_config().await
+            .ok()
+            .flatten()
+            .map(|c| c.max_pinned_items)
+            .unwrap_or(3);
+
+        // 4. Retry loop: wait for monitoring thread to insert the item
+        let max_retries = 5;
+        for attempt in 0..max_retries {
+            let repo = self.repository.lock().await;
+            if let Some(item) = repo.find_by_hash(&content_hash).await? {
+                // Already pinned? nothing to do
+                if item.is_pinned {
+                    return Ok(item.id);
+                }
+                // Pin it (inline to stay within the same lock)
+                let pinned_items = repo.get_pinned_items().await?;
+                if pinned_items.len() >= max_pinned {
+                    if let Some(oldest) = pinned_items.first() {
+                        repo.unpin(&oldest.id).await?;
+                    }
+                }
+                repo.set_pinned(&item.id, true).await?;
+                return Ok(item.id);
+            }
+            drop(repo);
+
+            if attempt < max_retries - 1 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+        }
+
+        Err(format!("Clipboard item not found in DB after {} retries", max_retries).into())
+    }
 }

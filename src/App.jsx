@@ -1,19 +1,20 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
-import { initOcrService } from './services/ocrService';
 import { openQuickInputWindow } from './services/windowService';
 import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
-import Settings from './Settings';
-import LockScreen from './LockScreen';
 import DragDrop from './DragDrop';
-import EditModal from './EditModal';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
+
+const Settings = lazy(() => import('./Settings'));
+const LockScreen = lazy(() => import('./LockScreen'));
+const EditModal = lazy(() => import('./EditModal'));
 
 function App() {
   const { t } = useTranslation();
@@ -52,7 +53,6 @@ function App() {
   // 初始化
   useEffect(() => {
     loadItems();
-    initOcrService();
     loadConfigs();
 
     const unlistenClipboardPromise = listen('clipboard-changed', () => {
@@ -65,6 +65,37 @@ function App() {
     return () => {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    let raf1 = 0;
+    let raf2 = 0;
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(async () => {
+        const frontendReadyAt = performance.now();
+        console.log(`[Startup:frontend] first_interactive at ${frontendReadyAt.toFixed(1)} ms`);
+
+        try {
+          const metrics = await invoke('get_startup_metrics');
+          const frontendReadyUnixMs = Math.round(performance.timeOrigin + frontendReadyAt);
+          const processToFrontendReadyMs =
+            frontendReadyUnixMs - Number(metrics.processStartedAtUnixMs || 0);
+
+          console.log('[Startup:e2e] backend_metrics', metrics);
+          console.log(
+            `[Startup:e2e] process_to_frontend_ready ${processToFrontendReadyMs} ms`
+          );
+        } catch (error) {
+          console.warn('[Startup:e2e] failed to fetch backend metrics:', error);
+        }
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
     };
   }, []);
 
@@ -156,29 +187,37 @@ function App() {
   }, []);
 
   if (isLocked && hasPassword) {
-    return <LockScreen onUnlock={() => setIsLocked(false)} />;
+    return (
+      <Suspense fallback={null}>
+        <LockScreen onUnlock={() => setIsLocked(false)} />
+      </Suspense>
+    );
   }
 
   return (
     <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
       {showSettings && (
-        <Settings
-          onClose={() => setShowSettings(false)}
-          themeMode={themeMode}
-          onThemeModeChange={setThemeMode}
-          onConfigChange={loadConfigs}
-        />
+        <Suspense fallback={null}>
+          <Settings
+            onClose={() => setShowSettings(false)}
+            themeMode={themeMode}
+            onThemeModeChange={setThemeMode}
+            onConfigChange={loadConfigs}
+          />
+        </Suspense>
       )}
       <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
 
       {showEditModal && (
-        <EditModal
-          item={editingItem}
-          mode={editModalMode}
-          isMiniMode={isMiniMode}
-          onSave={handleEditModalSave}
-          onCancel={handleEditModalCancel}
-        />
+        <Suspense fallback={null}>
+          <EditModal
+            item={editingItem}
+            mode={editModalMode}
+            isMiniMode={isMiniMode}
+            onSave={handleEditModalSave}
+            onCancel={handleEditModalCancel}
+          />
+        </Suspense>
       )}
 
       <TitleBar

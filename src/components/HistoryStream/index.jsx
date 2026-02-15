@@ -155,7 +155,38 @@ function HistoryStream({ style }) {
     getItemKey: (index) => filteredItems[index]?.id ?? index,
     estimateSize: () => 90,
     overscan: 5,
+    useAnimationFrameWithResizeObserver: true,
   });
+
+  useEffect(() => {
+    // Card height changes with mode/layout; force a full re-measure to avoid stale offsets.
+    virtualizer.measure();
+  }, [isMiniMode, virtualizer]);
+
+  useEffect(() => {
+    const scrollEl = contentRef.current;
+    if (!scrollEl || typeof ResizeObserver === 'undefined') return;
+
+    let lastWidth = scrollEl.clientWidth;
+    let rafId = 0;
+    const observer = new ResizeObserver(() => {
+      const nextWidth = scrollEl.clientWidth;
+      if (nextWidth === lastWidth) return;
+      lastWidth = nextWidth;
+
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        virtualizer.measure();
+      });
+    });
+
+    observer.observe(scrollEl);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [virtualizer]);
 
   useEffect(() => {
     const scrollEl = contentRef.current;
@@ -164,7 +195,6 @@ function HistoryStream({ style }) {
     if (scrollEl.scrollTop > maxScrollTop) {
       scrollEl.scrollTop = maxScrollTop;
     }
-    virtualizer.measure();
   }, [filteredItems, virtualizer]);
 
   const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
@@ -240,6 +270,8 @@ function HistoryStream({ style }) {
     }
   }, [panelMode, switchToCollection]);
 
+  const rowGap = isMiniMode ? 3 : 4;
+
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
       <SearchBar
@@ -289,7 +321,7 @@ function HistoryStream({ style }) {
                     left: 0,
                     width: '100%',
                     boxSizing: 'border-box',
-                    paddingBottom: '4px',
+                    paddingBottom: `${rowGap}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                   onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}

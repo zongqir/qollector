@@ -1,0 +1,119 @@
+1. 快捷键（Shortcut）模块：核心重灾区
+QuickClipboard 踩坑： Shift+2 变成 @，注册失败无感知。
+
+✅ Tauri 2 最佳实践：
+依赖库：必须使用官方插件 @tauri-apps/plugin-global-shortcut。
+
+前端录制逻辑（关键）：
+
+输入监听：不要直接把 event.key 发给后端。
+
+标准化转换：建立一个映射层。当用户按下 Shift + 2 时：
+
+监听 KeyboardEvent.code (得到 Digit2)。
+
+前端显示为 "Shift + 2"。
+
+传给 Rust 后端的字符串必须是 Tauri 标准 Accelerator 格式（参考 Electron 格式），即 Shift+2，绝对不能传 Shift+@。
+
+注册校验：
+
+Tauri 的 register 可能会 panic 或报错（取决于 Rust 实现），务必在 Rust 端或 JS 端通过 try-catch 包裹注册逻辑。
+
+冲突检测：Tauri 目前没有原生 API 检测“快捷键是否被其他 APP 占用”，建议在注册失败时明确弹窗提示用户“快捷键注册失败，可能被占用”。
+
+2. 窗口管理与交互：剪贴板应用的灵魂
+QuickClipboard 踩坑： 失去焦点不隐藏、贴边逻辑失效、置顶失效。
+
+✅ Tauri 2 最佳实践：
+多窗口策略：
+
+主窗口（列表）和 预览窗口 建议分离。
+
+使用 WebviewWindow API 在 Rust 端预加载窗口，保持 hide 状态，触发时 show，而不是每次都 new window（太慢）。
+
+失去焦点（Blur）处理：
+
+在 Rust 端监听 Focused(false) 事件来触发隐藏，比前端 JS 监听 blur 更可靠（前端在某些系统级弹窗下可能捕获不到）。
+
+托盘与定位：
+
+使用 @tauri-apps/plugin-positioner。这是开发托盘类应用的神器，能帮你一键把窗口对齐到“托盘图标位置”或“屏幕右下角”，解决 QuickClipboard 手动计算坐标的痛苦。
+
+穿透与点击：
+
+如果做“分词”或“取色”功能，需要设置窗口 ignore_cursor_events。Tauri 2 在 tauri.conf.json 或 Rust builder 中都能动态控制这个属性。
+
+3. 性能优化：拒绝卡顿
+QuickClipboard 踩坑： 大图渲染卡死、本地图片生成缩略图阻塞 UI。
+
+✅ Tauri 2 最佳实践（利用 Rust 优势）：
+图片渲染（绝对不要转 Base64）：
+
+错误做法：读取本地文件 -> 转 Base64 字符串 -> 传给前端 <img>。这会撑爆内存并阻塞 IPC 通道。
+
+Tauri 2 正解：使用 ConvertFileSrc（Asset Protocol）。
+
+在前端直接写 <img src={convertFileSrc('C:/path/to/image.png')} />。Tauri 会像服务器一样流式传输文件，极快且零内存压力。
+
+缩略图生成（Rust Offload）：
+
+不要在 JS 里做。
+
+在 Rust 端引入 image crate。当剪贴板监听到新图片时，在 Rust 线程池中生成缩略图并缓存，前端只请求缩略图路径。
+
+数据库选型：
+
+不要用 JSON 文件存几千条历史记录（读写都会卡）。
+
+使用 @tauri-apps/plugin-sql (SQLite)。Tauri 2 对 SQL 插件支持很好，对于搜索、分页加载（Virtual Scroll）历史记录，SQLite 是必须的。
+
+4. 权限与安全（Tauri 2 特有大坑）
+Tauri 2 引入了 ACL（访问控制列表），这是 1.x 没有的。如果不配好，你的代码跑起来全是 Permission Denied。
+
+✅ Checklist：
+Capabilities 配置：
+
+在 src-tauri/capabilities/default.json 中，你必须显式声明前端可以访问哪些插件和哪些 API。
+
+例如：要读图片，必须配置 fs:allow-read-recursive 到你的图片缓存目录。
+
+IPC 安全：
+
+不要开放 shell:open 给所有 URL，防止用户复制恶意链接后误触被执行。限制 scope 只允许打开 http/https 链接。
+
+5. 剪贴板监听（核心功能）
+QuickClipboard 踩坑： 监听不稳定，富文本解析差。
+
+✅ Tauri 2 最佳实践：
+插件选择：使用 @tauri-apps/plugin-clipboard-manager。
+
+监听策略：
+
+Tauri 的剪贴板监听通常是轮询（Polling）或系统钩子。
+
+注意死循环：当你点击历史记录“回写”到剪贴板时，会触发“剪贴板变更”事件，导致你的 App 以为又来了一条新记录。
+
+解决：在写入剪贴板前，设置一个 isInternalChange = true 的标志位（或在 Rust 端加锁），在监听回调中如果检测到该标志，则忽略这次变更。
+
+6. 开发与调试 Checklist
+在开始写代码前，请把这个清单贴在墙上：
+
+[ ] Rust 侧图片处理：绝不在前端处理超过 1MB 的图片数据。
+
+[ ] 快捷键映射表：准备一份 Key Code -> User Friendly String -> Tauri Accelerator 的三方映射表。
+
+[ ] 防抖动（Debounce）：所有的“保存设置”、“搜索”、“快捷键录入”都必须加防抖。
+
+[ ] 原子化写入：保存配置文件时，使用 tauri-plugin-store（它处理了原子写入），防止电脑突然断电导致配置文件损坏（变成 0kb）。
+
+[ ] Mac/Win 差异化：
+
+Mac 关闭窗口通常是 Hide 而不是 Close。
+
+Ctrl (Win) vs Command (Mac) 的自动替换逻辑。
+
+[ ] 清理资源：在 beforeExit 或窗口销毁时，注销所有全局快捷键，防止开发环境下热重载导致快捷键重复注册报错。
+
+总结一句话：
+QuickClipboard 遇到的很多坑是因为它试图用 Web 思维 解决 系统级问题。在 Tauri 2 中，凡是涉及系统资源（快捷键、文件读写、图片处理、窗口控制），请立刻下沉到 Rust 层或使用官方插件，把前端只作为纯粹的 UI 展示层。

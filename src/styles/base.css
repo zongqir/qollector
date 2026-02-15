@@ -47,7 +47,6 @@ body {
 .app.mini-mode .compact-card {
   padding: 7px 9px;
   border-radius: 8px;
-  margin-bottom: 3px;
   border: 0.5px solid var(--border-light);
 }
 

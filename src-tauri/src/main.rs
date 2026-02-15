@@ -8,6 +8,7 @@ mod ai;
 mod ocr;
 mod mcp;
 mod config;
+mod startup_metrics;
 
 use std::sync::Arc;
 use core::clipboard_manager::ClipboardManager;
@@ -26,6 +27,7 @@ use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
 use std::time::Instant;
+use startup_metrics::StartupMetricsState;
 
 struct StartupMeter {
     scope: &'static str,
@@ -57,6 +59,9 @@ impl StartupMeter {
 }
 
 fn main() {
+    let startup_metrics = Arc::new(StartupMetricsState::new());
+    let startup_metrics_for_setup = startup_metrics.clone();
+
     // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
     // ClipBox 是剪贴板管理器，大量 Web 功能用不到，全部关掉
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
@@ -89,6 +94,7 @@ fn main() {
     ].join(" "));
 
     tauri::Builder::default()
+        .manage(startup_metrics)
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 当尝试启动第二个实例时，聚焦到现有窗口
             if let Some(window) = app.get_webview_window("main") {
@@ -97,7 +103,7 @@ fn main() {
                 println!("[SingleInstance] 检测到重复启动，已聚焦到现有窗口");
             }
         }))
-        .setup(|app| {
+        .setup(move |app| {
             let mut setup_meter = StartupMeter::new("setup");
             let app_dir = app.path().app_data_dir()
                 .expect("Failed to get app data directory");
@@ -126,6 +132,8 @@ fn main() {
             core::db_obfuscate::deobfuscate_db(&db_path);
             setup_meter.mark("db_deobfuscate");
 
+            let app_handle_for_shortcuts = app.app_handle().clone();
+            let startup_metrics_for_core_init = startup_metrics_for_setup.clone();
             tauri::async_runtime::block_on(async move {
                 let mut init_meter = StartupMeter::new("core_init");
                 let repository = ClipboardRepository::new(db_path)
@@ -256,6 +264,7 @@ fn main() {
                 app.manage(ocr_state);
                 app.manage(mcp_state);
                 init_meter.mark("register_states");
+                startup_metrics_for_core_init.mark_core_init_complete();
 
                 let manager_for_monitor = manager.clone();
                 tokio::spawn(async move {
@@ -265,9 +274,65 @@ fn main() {
                     }
                 });
                 init_meter.mark("spawn_clipboard_monitor");
+                startup_metrics_for_core_init.mark_monitor_spawn_complete();
             });
 
             setup_meter.mark("setup_complete");
+            startup_metrics_for_setup.mark_setup_complete();
+
+            // Register global shortcuts
+            #[cfg(desktop)]
+            {
+                use tauri::Emitter;
+                use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
+
+                let app_handle = app_handle_for_shortcuts.clone();
+                app_handle.plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_shortcuts(["ctrl+shift+c", "alt+x"])?
+                        .with_handler(move |app, shortcut, event| {
+                            if event.state != ShortcutState::Pressed {
+                                return;
+                            }
+
+                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyC) {
+                                // Ctrl+Shift+C: pin current clipboard content
+                                let app_handle = app.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    if let Some(manager) = app_handle.try_state::<Arc<ClipboardManager>>() {
+                                        match manager.pin_current_clipboard().await {
+                                            Ok(id) => {
+                                                println!("[Shortcut] Pinned clipboard item: {}", id);
+                                                let _ = app_handle.emit("clipboard-changed", ());
+                                            }
+                                            Err(e) => {
+                                                eprintln!("[Shortcut] Failed to pin clipboard: {}", e);
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+
+                            if shortcut.matches(Modifiers::ALT, Code::KeyX) {
+                                // Alt+X: toggle main window visibility
+                                if let Some(window) = app.get_webview_window("main") {
+                                    let is_visible = window.is_visible().unwrap_or(false);
+                                    let is_minimized = window.is_minimized().unwrap_or(false);
+
+                                    if is_visible && !is_minimized {
+                                        let _ = window.hide();
+                                    } else {
+                                        let _ = window.show();
+                                        let _ = window.unminimize();
+                                        let _ = window.set_focus();
+                                    }
+                                }
+                            }
+                        })
+                        .build(),
+                )?;
+                setup_meter.mark("register_global_shortcuts");
+            }
 
             Ok(())
         })
@@ -328,6 +393,7 @@ fn main() {
             get_mcp_current_port,
             get_general_config,
             update_general_config,
+            get_startup_metrics,
             has_lock_password,
             verify_lock_password,
             set_lock_password,

@@ -1,6 +1,7 @@
 use crate::config::GeneralConfig;
-use crate::repository::config_repo::ConfigRepository;
 use crate::commands::ai_commands::AIState;
+use crate::startup_metrics::{StartupMetricsSnapshot, StartupMetricsState};
+use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
@@ -24,4 +25,11 @@ pub async fn update_general_config(
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_startup_metrics(
+    startup_metrics: State<'_, Arc<StartupMetricsState>>,
+) -> Result<StartupMetricsSnapshot, String> {
+    Ok(startup_metrics.snapshot())
 }
