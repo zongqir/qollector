@@ -312,8 +312,12 @@
     "passwordMismatch": "两次密码不一致",
     "cancelled": "已取消"
   },
+  "multiSelect": {
+    "selected": "已选 {{count}} 项",
+    "mergeCopy": "合并复制",
+    "delete": "删除"
+  },
   "collection": {
-    "title": "搜集箱",
     "emptyTitle": "搜集箱为空",
     "emptyHint": "从左侧点击收集按钮，或拖拽卡片到这里",
     "quickNotePlaceholder": "输入笔记，回车添加到搜集箱...",

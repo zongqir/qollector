@@ -85,6 +85,67 @@
   border-color: var(--accent-color);
 }
 
+.compact-card.multi-selected {
+  background: var(--accent-light);
+  border-color: var(--accent-color);
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+/* ========== multi-select bar ========== */
+.multi-select-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.multi-select-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.multi-select-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.multi-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-btn);
+  border-radius: 6px;
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.multi-select-btn:hover {
+  background: var(--btn-hover-bg);
+}
+
+.multi-select-btn.copy:hover {
+  color: var(--accent-color);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.multi-select-btn.delete {
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.2);
+}
+
+.multi-select-btn.delete:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
 .compact-card.pinned {
   background: var(--card-pinned-bg);
 }

@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo, useCallback, forwardRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
+import { Copy, Trash2 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
@@ -60,6 +61,7 @@ function HistoryStream({ style }) {
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
@@ -79,6 +81,10 @@ function HistoryStream({ style }) {
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
+  const clearSelection = useAppStore(s => s.clearSelection);
+  const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
+  const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -205,6 +211,13 @@ function HistoryStream({ style }) {
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
+    if (e.ctrlKey || e.metaKey) {
+      toggleSelectItem(item.id);
+      return;
+    }
+    if (selectedItemIds.length > 0) {
+      clearSelection();
+    }
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -213,7 +226,7 @@ function HistoryStream({ style }) {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -263,10 +276,31 @@ function HistoryStream({ style }) {
   }, [handleStartExternalDrag, switchToCollection]);
 
   const handleStreamClick = useCallback(() => {
+    if (selectedItemIds.length > 0) {
+      clearSelection();
+      return;
+    }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (selectedItemIds.length === 0) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelectedItems();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        copySelectedItemsMerged();
+      } else if (e.key === 'Escape') {
+        clearSelection();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -280,6 +314,7 @@ function HistoryStream({ style }) {
     const item = filteredItems[index];
     if (!item) return null;
     const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
+    const isMultiSelected = selectedItemIds.includes(item.id);
 
     return (
       <div
@@ -291,6 +326,7 @@ function HistoryStream({ style }) {
         <CompactCard
           item={item}
           isSelected={isSelected}
+          isMultiSelected={isMultiSelected}
           isCopied={copiedItemId === item.id}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
@@ -305,6 +341,7 @@ function HistoryStream({ style }) {
     panelMode,
     previewItem?.id,
     copiedItemId,
+    selectedItemIds,
     rowGap,
     handleCardClick,
     handleCardDoubleClick,
@@ -356,6 +393,24 @@ function HistoryStream({ style }) {
           />
         )}
       </div>
+
+      {selectedItemIds.length > 0 && (
+        <div className="multi-select-bar">
+          <span className="multi-select-count">
+            {t('multiSelect.selected', { count: selectedItemIds.length })}
+          </span>
+          <div className="multi-select-actions">
+            <button className="multi-select-btn copy" onClick={copySelectedItemsMerged}>
+              <Copy size={14} />
+              <span>{t('multiSelect.mergeCopy')}</span>
+            </button>
+            <button className="multi-select-btn delete" onClick={deleteSelectedItems}>
+              <Trash2 size={14} />
+              <span>{t('multiSelect.delete')}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

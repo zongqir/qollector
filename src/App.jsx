@@ -43,6 +43,8 @@ function App() {
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
   const handleEditModalCancel = useAppStore(s => s.handleEditModalCancel);
+  const suspendForMinimize = useAppStore(s => s.suspendForMinimize);
+  const resumeFromMinimize = useAppStore(s => s.resumeFromMinimize);
 
   // Theme
   const { setThemeMode: applyTheme } = useTheme(themeMode);
@@ -98,6 +100,25 @@ function App() {
       cancelAnimationFrame(raf2);
     };
   }, []);
+
+  useEffect(() => {
+    const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
+    if (!isWindowsRuntime) return;
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        suspendForMinimize();
+        return;
+      }
+
+      resumeFromMinimize().catch((error) => {
+        console.error('[MemorySuspend] resume failed:', error);
+      });
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [suspendForMinimize, resumeFromMinimize]);
 
   // Mini 模式
   const MINI_THRESHOLD = 450;

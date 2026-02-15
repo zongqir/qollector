@@ -78,6 +78,7 @@ const useAppStore = create((set, get) => ({
   loadingMore: false,
   itemsRevision: 0,
   processedItemIds: new Set(),
+  isMemorySuspended: false,
 
   // ========== 右栏面板状态机 ==========
   // 'collection' | 'preview'
@@ -93,6 +94,9 @@ const useAppStore = create((set, get) => ({
   showPinnedOnly: false,
   showTagFilter: false,
   tagSearchQuery: '',
+
+  // ========== 多选状态 ==========
+  selectedItemIds: [],
 
   // ========== UI 状态 ==========
   copiedItemId: null,
@@ -197,6 +201,32 @@ const useAppStore = create((set, get) => ({
     } finally {
       set({ loadingMore: false });
     }
+  },
+
+  suspendForMinimize: () => {
+    const state = get();
+    if (state.isMemorySuspended) return;
+
+    set({
+      items: [],
+      hasMore: true,
+      loadingMore: false,
+      itemsRevision: state.itemsRevision + 1,
+      processedItemIds: new Set(),
+      panelMode: 'collection',
+      previewItem: null,
+      isMemorySuspended: true,
+    });
+    console.log('[MemorySuspend] detached heavy list state while minimized');
+  },
+
+  resumeFromMinimize: async () => {
+    const state = get();
+    if (!state.isMemorySuspended) return;
+
+    set({ isMemorySuspended: false, loading: true });
+    console.log('[MemorySuspend] restoring list state after window became visible');
+    await get().loadItems();
   },
 
   loadConfigs: async () => {
@@ -353,6 +383,69 @@ const useAppStore = create((set, get) => ({
       get().cancelAddTag();
     } catch (error) {
       console.error('添加标签失败:', error);
+    }
+  },
+
+  // ========== 多选 Actions ==========
+  toggleSelectItem: (itemId) => {
+    const { selectedItemIds } = get();
+    if (selectedItemIds.includes(itemId)) {
+      set({ selectedItemIds: selectedItemIds.filter(id => id !== itemId) });
+    } else {
+      set({ selectedItemIds: [...selectedItemIds, itemId] });
+    }
+  },
+
+  clearSelection: () => {
+    set({ selectedItemIds: [] });
+  },
+
+  deleteSelectedItems: async () => {
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) return;
+    try {
+      for (const id of selectedItemIds) {
+        await deleteItemSvc(id);
+      }
+      set({
+        items: items.filter(i => !selectedItemIds.includes(i.id)),
+        selectedItemIds: [],
+        panelMode: 'collection',
+        previewItem: null,
+      });
+    } catch (error) {
+      console.error('batch delete failed:', error);
+    }
+  },
+
+  copySelectedItemsMerged: async () => {
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) return;
+    try {
+      const idSet = new Set(selectedItemIds);
+      const selectedItems = items.filter(i => idSet.has(i.id));
+      const merged = selectedItems.map(i => i.content || '').filter(Boolean).join('\n');
+      if (!merged) return;
+      const tempItem = {
+        id: 'temp-merge',
+        type_: 'text',
+        content: merged,
+        is_pinned: false,
+        is_favorite: false,
+        is_deleted: false,
+        tags: '[]',
+        metadata: '{}',
+        image_paths: null,
+        ocr_text: null,
+        user_note: null,
+        created_at: Math.floor(Date.now() / 1000),
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+      await copyItemToClipboard(tempItem);
+      set({ copiedItemId: 'merge-success', selectedItemIds: [] });
+      setTimeout(() => set({ copiedItemId: null }), 1000);
+    } catch (error) {
+      console.error('merge copy failed:', error);
     }
   },
 

@@ -312,8 +312,12 @@
     "passwordMismatch": "Passwords do not match",
     "cancelled": "Cancelled"
   },
+  "multiSelect": {
+    "selected": "{{count}} selected",
+    "mergeCopy": "Merge & Copy",
+    "delete": "Delete"
+  },
   "collection": {
-    "title": "Collection",
     "emptyTitle": "Collection is empty",
     "emptyHint": "Click the collect button on the left, or drag cards here",
     "quickNotePlaceholder": "Type a note, press Enter to add to collection...",

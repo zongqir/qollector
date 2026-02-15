@@ -18,6 +18,7 @@ const TypeIcon = ({ type }) => {
 function CompactCard({
   item,
   isSelected,
+  isMultiSelected,
   isCopied,
   onDragStart,
   onStartExternalDrag,
@@ -37,6 +38,7 @@ function CompactCard({
     item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
+    isMultiSelected && 'multi-selected',
     isCopied && 'copied',
   ].filter(Boolean).join(' ');
 
