@@ -1,7 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { invoke } from '@tauri-apps/api/core';
 import { X, Check, Plus, Pin, PinOff } from 'lucide-react';
+import useAppStore from './store/useAppStore';
 import './EditModal.css';
+
+const NOTE_COLORS = [
+  { id: 'default', bg: 'var(--edit-modal-bg)', dot: '#e2e2e2' },
+  { id: 'yellow',  bg: '#fef9e7', dot: '#fce588' },
+  { id: 'green',   bg: '#eafaf1', dot: '#82deb0' },
+  { id: 'blue',    bg: '#eaf2fa', dot: '#93c5f7' },
+  { id: 'pink',    bg: '#fdf2f8', dot: '#f5a6ce' },
+  { id: 'purple',  bg: '#f3eefa', dot: '#c4a8f0' },
+];
 
 function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const { t } = useTranslation();
@@ -11,27 +22,26 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const [newTag, setNewTag] = useState('');
   const [savedToast, setSavedToast] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
+  const [noteColor, setNoteColor] = useState('default');
+  const textareaRef = useRef(null);
 
   // 拖拽状态
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const dragRef = useRef(null);
   const draggingRef = useRef(false);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const posInitialized = useRef(false);
 
-  // 取消置顶时居中初始化位置
+  // 取消置顶时错位显示
   useEffect(() => {
-    if (!isPinned && pos.x === 0 && pos.y === 0) {
-      const w = Math.min(420, window.innerWidth - 40);
-      const h = Math.min(360, window.innerHeight - 40);
-      setPos({
-        x: Math.round((window.innerWidth - w) / 2),
-        y: Math.round((window.innerHeight - h) / 2),
-      });
+    if (!isPinned && !posInitialized.current) {
+      posInitialized.current = true;
+      setPos({ x: 30, y: 30 });
     }
   }, [isPinned]);
 
   // 拖拽事件
-  const handleDragStart = useCallback((e) => {
+  const handleDragMouseDown = useCallback((e) => {
     if (isPinned) return;
     draggingRef.current = true;
     offsetRef.current = {
@@ -94,13 +104,24 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
     onSave({ content, note, tags });
   };
 
-  const handleSaveAndContinue = useCallback(() => {
+  const handleSaveAndContinue = useCallback(async () => {
     if (!content.trim()) return;
-    onSave({ content, note, tags });
-    setContent('');
-    setSavedToast(true);
-    setTimeout(() => setSavedToast(false), 1500);
-  }, [content, note, tags, onSave]);
+    try {
+      await invoke('add_clipboard_item_manual', {
+        content: content.trim(),
+        contentType: 'text',
+        source: '快速输入',
+        autoFavorite: false,
+      });
+      await useAppStore.getState().loadItems();
+      setContent('');
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 1500);
+      textareaRef.current?.focus();
+    } catch (error) {
+      console.error('保存失败:', error);
+    }
+  }, [content]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
@@ -123,19 +144,35 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const canEdit = isNewMode || (item && item.type_ !== 'image');
 
   if (isNewMode) {
+    const currentColor = NOTE_COLORS.find(c => c.id === noteColor) || NOTE_COLORS[0];
+    const panelStyle = { '--quick-add-bg': currentColor.bg };
+
     const panelContent = (
       <>
-        <div className="quick-add-header" onMouseDown={handleDragStart}>
+        <div className="quick-add-header" onMouseDown={handleDragMouseDown}>
           <span className="quick-add-tip">{t('editModal.quickAddTip')}</span>
-          <button
-            className={`quick-add-pin-btn ${isPinned ? 'active' : ''}`}
-            onClick={() => setIsPinned(!isPinned)}
-            title={isPinned ? t('editModal.unpin') : t('editModal.pin')}
-          >
-            {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
-          </button>
+          <div className="quick-add-header-actions">
+            <div className="quick-add-colors">
+              {NOTE_COLORS.map(c => (
+                <button
+                  key={c.id}
+                  className={`quick-add-color-dot ${noteColor === c.id ? 'active' : ''}`}
+                  style={{ '--dot-color': c.dot }}
+                  onClick={() => setNoteColor(c.id)}
+                />
+              ))}
+            </div>
+            <button
+              className={`quick-add-pin-btn ${isPinned ? 'active' : ''}`}
+              onClick={() => setIsPinned(!isPinned)}
+              title={isPinned ? t('editModal.unpin') : t('editModal.pin')}
+            >
+              {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+          </div>
         </div>
         <textarea
+          ref={textareaRef}
           className="edit-modal-mini-textarea"
           placeholder={t('editModal.contentPlaceholder')}
           value={content}
@@ -177,23 +214,20 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
 
     if (isPinned) {
       return (
-        <div className="edit-modal-mini-fullscreen">
+        <div className="edit-modal-mini-fullscreen" style={panelStyle}>
           {panelContent}
         </div>
       );
     }
 
     return (
-      <>
-        <div className="quick-add-backdrop" onClick={onCancel} />
-        <div
-          ref={dragRef}
-          className="quick-add-floating"
-          style={{ left: pos.x, top: pos.y }}
-        >
-          {panelContent}
-        </div>
-      </>
+      <div
+        ref={dragRef}
+        className="quick-add-floating"
+        style={{ left: pos.x, top: pos.y, ...panelStyle }}
+      >
+        {panelContent}
+      </div>
     );
   }
 
