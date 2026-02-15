@@ -445,6 +445,20 @@ impl ClipboardManager {
         repo.insert(item).await
     }
 
+    /// Insert with hash dedupe in one critical section to avoid races.
+    /// Returns the effective item id (existing or newly inserted).
+    pub async fn insert_item_dedup_touch(&self, item: &ClipboardItem) -> Result<String, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        if let Some(existing) = repo.find_by_hash(&item.content_hash).await? {
+            let _ = repo.touch(&existing.id).await;
+            return Ok(existing.id);
+        }
+
+        repo.insert(item).await?;
+        Ok(item.id.clone())
+    }
+
     pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.find_by_hash(content_hash).await

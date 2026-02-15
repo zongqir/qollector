@@ -1,9 +1,11 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, FileText, GripVertical } from 'lucide-react';
-import { getContentPreview, getFileList, getFileName } from '../../utils/formatters';
+import { X, Check, FileText, FileImage, FileSpreadsheet, FileArchive, File, GripVertical } from 'lucide-react';
+import { getContentPreview, getFileList, getFileName, getFileIcon } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
+
+const iconComponents = { FileText, FileImage, FileSpreadsheet, FileArchive, File };
 
 function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, dragListeners }) {
   const { t } = useTranslation();
@@ -28,14 +30,21 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, dragL
       );
     }
     if (item.type_ === 'file') {
+      const files = getFileList(item.content);
+      const isSingle = files.length === 1;
       return (
-        <div className="collection-card-files">
-          {getFileList(item.content).map((path, idx) => (
-            <div key={idx} className="file-item">
-              <FileText size={16} />
-              <span>{getFileName(path)}</span>
-            </div>
-          ))}
+        <div className={`collection-card-files ${isSingle ? 'single-file' : ''}`}>
+          {files.map((path, idx) => {
+            const name = getFileName(path);
+            const { icon, color } = getFileIcon(name);
+            const IconComp = iconComponents[icon] || File;
+            return (
+              <div key={idx} className="file-item">
+                <IconComp size={isSingle ? 32 : 20} color={color} className="file-icon" />
+                <span>{name}</span>
+              </div>
+            );
+          })}
         </div>
       );
     }

@@ -20,14 +20,15 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
   maxPinnedItemsRef.current = maxPinnedItems;
   const switchToCollectionRef = useRef(switchToCollection);
   switchToCollectionRef.current = switchToCollection;
+  const unlistenRef = useRef(null);
 
   useEffect(() => {
-    let unlisten;
+    let disposed = false;
 
     const setupFileDrop = async () => {
       const appWindow = getCurrentWindow();
 
-      unlisten = await appWindow.onDragDropEvent(async (event) => {
+      const unlisten = await appWindow.onDragDropEvent(async (event) => {
         if (event.payload.type === 'over') {
           setIsDragging(true);
         } else if (event.payload.type === 'leave') {
@@ -81,13 +82,25 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
           }
         }
       });
+
+      if (disposed) {
+        unlisten();
+        return;
+      }
+
+      if (unlistenRef.current) {
+        unlistenRef.current();
+      }
+      unlistenRef.current = unlisten;
     };
 
     setupFileDrop();
 
     return () => {
-      if (unlisten) {
-        unlisten();
+      disposed = true;
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
       }
     };
   }, []);

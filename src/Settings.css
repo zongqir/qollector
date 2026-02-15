@@ -118,6 +118,13 @@
   box-shadow: 0 0.5px 2px rgba(0, 0, 0, 0.08), 0 0 0 0.5px var(--border-light);
 }
 
+.tab-btn.disabled,
+.tab-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ---- 内容区 ---- */
 .settings-content {
   padding: 16px 20px;

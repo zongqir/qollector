@@ -8,6 +8,7 @@
   flex-direction: column;
   gap: 6px;
   container-type: inline-size;
+  z-index: 1;
 }
 
 /* 主行 */

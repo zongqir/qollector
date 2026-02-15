@@ -12,7 +12,7 @@ import {
 import {
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
@@ -219,7 +219,7 @@ function CollectionPanel() {
     <div className="collection-panel" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
       {quickNoteSection}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={pinnedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
           <div className="collection-cards">
             {pinnedItems.map(item => (
               <SortableCard

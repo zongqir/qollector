@@ -22,7 +22,7 @@ const OCR_PROVIDERS = [
 
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState('ai');
+  const [activeTab, setActiveTab] = useState('general');
 
   // AI 配置：新结构
   const [aiConfig, setAiConfig] = useState({
@@ -506,20 +506,23 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             {t('settings.tabs.general')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ai')}
+            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => aiConfig.enabled && setActiveTab('ai')}
+            disabled={!aiConfig.enabled}
           >
             {t('settings.tabs.ai')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ocr')}
+            className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''} ${!ocrConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => ocrConfig.enabled && setActiveTab('ocr')}
+            disabled={!ocrConfig.enabled}
           >
             {t('settings.tabs.ocr')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mcp')}
+            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''} ${!mcpConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => mcpConfig.enabled && setActiveTab('mcp')}
+            disabled={!mcpConfig.enabled}
           >
             {t('settings.tabs.mcp')}
           </button>
@@ -617,6 +620,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     onChange={async (e) => {
                       const updated = { ...aiConfig, enabled: e.target.checked };
                       setAiConfig(updated);
+                      if (!e.target.checked && activeTab === 'ai') setActiveTab('general');
                       try {
                         await invoke('update_ai_config', { config: updated });
                       } catch (error) {
@@ -636,6 +640,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     onChange={async (e) => {
                       const updated = { ...ocrConfig, enabled: e.target.checked };
                       setOcrConfig(updated);
+                      if (!e.target.checked && activeTab === 'ocr') setActiveTab('general');
                       try {
                         await invoke('update_ocr_config', { config: updated });
                       } catch (error) {
@@ -655,6 +660,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     onChange={async (e) => {
                       const updated = { ...mcpConfig, enabled: e.target.checked };
                       setMcpConfig(updated);
+                      if (!e.target.checked && activeTab === 'mcp') setActiveTab('general');
                       try {
                         await invoke('update_mcp_config', { config: updated });
                       } catch (error) {

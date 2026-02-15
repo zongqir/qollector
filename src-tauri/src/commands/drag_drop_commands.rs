@@ -1,4 +1,4 @@
-use crate::core::clipboard_manager::ClipboardManager;
+﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::{ClipboardItem, WindowMetadata};
 use base64::Engine;
 use serde_json::{json, Value};
@@ -88,10 +88,10 @@ pub async fn add_clipboard_item_manual(
     let app_dir = app
         .path()
         .app_data_dir()
-        .map_err(|e| format!("获取应用目录失败: {}", e))?;
+        .map_err(|e| format!("鑾峰彇搴旂敤鐩綍澶辫触: {}", e))?;
 
     let metadata = WindowMetadata {
-        source_app: source.unwrap_or_else(|| "拖拽".to_string()),
+        source_app: source.unwrap_or_else(|| "鎷栨嫿".to_string()),
         window_title: "".to_string(),
         source_url: None,
     };
@@ -99,14 +99,14 @@ pub async fn add_clipboard_item_manual(
     let mut item = match content_type.as_str() {
         "text" => {
             if content.trim().is_empty() {
-                return Err("文本内容为空".to_string());
+                return Err("鏂囨湰鍐呭涓虹┖".to_string());
             }
             ClipboardItem::new_text(content, metadata.clone())
         }
         "file" => {
             let paths = normalize_unique_paths(&content);
             if paths.is_empty() {
-                return Err("文件路径为空".to_string());
+                return Err("鏂囦欢璺緞涓虹┖".to_string());
             }
 
             let file_names: Vec<String> = paths
@@ -121,9 +121,9 @@ pub async fn add_clipboard_item_manual(
                 .collect();
 
             let summary = if paths.len() == 1 {
-                format!("文件: {}", file_names[0])
+                format!("鏂囦欢: {}", file_names[0])
             } else {
-                format!("{} 个文件: {}", paths.len(), file_names.join(", "))
+                format!("{} 涓枃浠? {}", paths.len(), file_names.join(", "))
             };
 
             let content_paths = paths.join("\n");
@@ -161,15 +161,15 @@ pub async fn add_clipboard_item_manual(
         "image" => {
             let image_data = base64::engine::general_purpose::STANDARD
                 .decode(&content)
-                .map_err(|e| format!("Base64 解码失败: {}", e))?;
+                .map_err(|e| format!("Base64 瑙ｇ爜澶辫触: {}", e))?;
 
             let image_dir = app_dir.join("images");
             std::fs::create_dir_all(&image_dir)
-                .map_err(|e| format!("创建图片目录失败: {}", e))?;
+                .map_err(|e| format!("鍒涘缓鍥剧墖鐩綍澶辫触: {}", e))?;
 
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|e| format!("获取时间戳失败: {}", e))?
+                .map_err(|e| format!("鑾峰彇鏃堕棿鎴冲け璐? {}", e))?
                 .as_millis();
             let filename = format!("{}.png", timestamp);
             let thumb_filename = format!("{}_thumb.png", timestamp);
@@ -178,16 +178,16 @@ pub async fn add_clipboard_item_manual(
             let thumb_path = image_dir.join(&thumb_filename);
 
             std::fs::write(&image_path, &image_data)
-                .map_err(|e| format!("保存图片失败: {}", e))?;
+                .map_err(|e| format!("淇濆瓨鍥剧墖澶辫触: {}", e))?;
 
             if let Ok(img) = image::load_from_memory(&image_data) {
                 let thumbnail = img.thumbnail(300, 300);
                 thumbnail
                     .save(&thumb_path)
-                    .map_err(|e| format!("保存缩略图失败: {}", e))?;
+                    .map_err(|e| format!("淇濆瓨缂╃暐鍥惧け璐? {}", e))?;
             } else {
                 std::fs::copy(&image_path, &thumb_path)
-                    .map_err(|e| format!("复制图片失败: {}", e))?;
+                    .map_err(|e| format!("澶嶅埗鍥剧墖澶辫触: {}", e))?;
             }
 
             let image_paths_json = json!({
@@ -207,7 +207,7 @@ pub async fn add_clipboard_item_manual(
             item
         }
         _ => {
-            return Err(format!("不支持的内容类型: {}", content_type));
+            return Err(format!("涓嶆敮鎸佺殑鍐呭绫诲瀷: {}", content_type));
         }
     };
 
@@ -216,21 +216,18 @@ pub async fn add_clipboard_item_manual(
     }
 
     if dedupe_by_hash.unwrap_or(false) {
-        if let Some(existing) = manager
-            .find_by_hash(&item.content_hash)
+        let effective_id = manager
+            .insert_item_dedup_touch(&item)
             .await
-            .map_err(|e| format!("查询重复项失败: {}", e))?
-        {
-            // 更新时间置顶
-            let _ = manager.touch(&existing.id).await;
-            return Ok(existing.id);
-        }
+            .map_err(|e| format!("save failed: {}", e))?;
+        return Ok(effective_id);
     }
+
 
     manager
         .insert_item(&item)
         .await
-        .map_err(|e| format!("保存失败: {}", e))?;
+        .map_err(|e| format!("淇濆瓨澶辫触: {}", e))?;
 
     Ok(item.id)
 }
@@ -245,22 +242,22 @@ pub async fn add_image_file(
     let app_dir = app
         .path()
         .app_data_dir()
-        .map_err(|e| format!("获取应用目录失败: {}", e))?;
+        .map_err(|e| format!("鑾峰彇搴旂敤鐩綍澶辫触: {}", e))?;
 
     let metadata = WindowMetadata {
-        source_app: "拖拽".to_string(),
+        source_app: "鎷栨嫿".to_string(),
         window_title: "".to_string(),
         source_url: None,
     };
 
-    let image_data = std::fs::read(&file_path).map_err(|e| format!("读取图片文件失败: {}", e))?;
+    let image_data = std::fs::read(&file_path).map_err(|e| format!("璇诲彇鍥剧墖鏂囦欢澶辫触: {}", e))?;
 
     let image_dir = app_dir.join("images");
-    std::fs::create_dir_all(&image_dir).map_err(|e| format!("创建图片目录失败: {}", e))?;
+    std::fs::create_dir_all(&image_dir).map_err(|e| format!("鍒涘缓鍥剧墖鐩綍澶辫触: {}", e))?;
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| format!("获取时间戳失败: {}", e))?
+        .map_err(|e| format!("鑾峰彇鏃堕棿鎴冲け璐? {}", e))?
         .as_millis();
     let filename = format!("{}.png", timestamp);
     let thumb_filename = format!("{}_thumb.png", timestamp);
@@ -268,15 +265,15 @@ pub async fn add_image_file(
     let image_path = image_dir.join(&filename);
     let thumb_path = image_dir.join(&thumb_filename);
 
-    std::fs::write(&image_path, &image_data).map_err(|e| format!("保存图片失败: {}", e))?;
+    std::fs::write(&image_path, &image_data).map_err(|e| format!("淇濆瓨鍥剧墖澶辫触: {}", e))?;
 
     if let Ok(img) = image::load_from_memory(&image_data) {
         let thumbnail = img.thumbnail(300, 300);
         thumbnail
             .save(&thumb_path)
-            .map_err(|e| format!("保存缩略图失败: {}", e))?;
+            .map_err(|e| format!("淇濆瓨缂╃暐鍥惧け璐? {}", e))?;
     } else {
-        std::fs::copy(&image_path, &thumb_path).map_err(|e| format!("复制图片失败: {}", e))?;
+        std::fs::copy(&image_path, &thumb_path).map_err(|e| format!("澶嶅埗鍥剧墖澶辫触: {}", e))?;
     }
 
     let image_paths_json = json!({
@@ -291,22 +288,18 @@ pub async fn add_image_file(
 
     if dedupe_by_hash.unwrap_or(false) {
         item.content_hash = format!("{:x}", md5::compute(&image_data));
-
-        if let Some(existing) = manager
-            .find_by_hash(&item.content_hash)
+        let effective_id = manager
+            .insert_item_dedup_touch(&item)
             .await
-            .map_err(|e| format!("查询重复项失败: {}", e))?
-        {
-            // 更新时间置顶
-            let _ = manager.touch(&existing.id).await;
-            return Ok(existing.id);
-        }
+            .map_err(|e| format!("save failed: {}", e))?;
+        return Ok(effective_id);
+
     }
 
     manager
         .insert_item(&item)
         .await
-        .map_err(|e| format!("保存失败: {}", e))?;
+        .map_err(|e| format!("淇濆瓨澶辫触: {}", e))?;
 
     Ok(item.id)
 }
