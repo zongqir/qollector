@@ -223,13 +223,22 @@
   display: none;
 }
 
+.app.mini-mode .header {
+  padding: 8px 10px;
+}
+
 .app.mini-mode .search-input {
-  padding: 5px 24px 5px 10px;
+  padding: 4px 22px 4px 8px;
   font-size: 12px;
   border-radius: 6px;
 }
 
+.app.mini-mode .clear-search {
+  width: 16px;
+  height: 16px;
+}
+
 .app.mini-mode .header-icon-btn {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }

@@ -7,12 +7,30 @@ import { initOcrService } from '../services/ocrService';
 
 const PAGE_SIZE = 50;
 
+const sortByUpdatedAtDesc = (a, b) => {
+  const timeDiff = (b?.updated_at || 0) - (a?.updated_at || 0);
+  if (timeDiff !== 0) return timeDiff;
+  return String(b?.id || '').localeCompare(String(a?.id || ''));
+};
+
+const mergeUniqueById = (baseItems, incomingItems) => {
+  const map = new Map();
+  [...baseItems, ...incomingItems].forEach((item) => {
+    if (!item?.id) return;
+    const prev = map.get(item.id);
+    if (!prev || (item.updated_at || 0) >= (prev.updated_at || 0)) {
+      map.set(item.id, item);
+    }
+  });
+  return Array.from(map.values()).sort(sortByUpdatedAtDesc);
+};
 const useAppStore = create((set, get) => ({
   // ========== 历史数据 ==========
   items: [],
   loading: true,
   hasMore: true,
   loadingMore: false,
+  itemsRevision: 0,
   processedItemIds: new Set(),
 
   // ========== 右栏面板状态机 ==========
@@ -77,8 +95,11 @@ const useAppStore = create((set, get) => ({
     try {
       const result = await getRecentItemsLight(PAGE_SIZE);
       const { loading, processedItemIds } = get();
-      set({ items: result, hasMore: result.length >= PAGE_SIZE });
-
+      set((state) => ({
+        items: mergeUniqueById([], result),
+        hasMore: result.length >= PAGE_SIZE,
+        itemsRevision: state.itemsRevision + 1,
+      }));
       if (!loading) {
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
@@ -95,13 +116,18 @@ const useAppStore = create((set, get) => ({
   },
 
   loadMore: async () => {
-    const { hasMore, loadingMore, items } = get();
+    const { hasMore, loadingMore, items, itemsRevision } = get();
     if (!hasMore || loadingMore) return;
     set({ loadingMore: true });
+    const requestOffset = items.length;
+    const requestRevision = itemsRevision;
     try {
-      const more = await getMoreItems(PAGE_SIZE, items.length);
-      if (more.length < PAGE_SIZE) set({ hasMore: false });
-      set({ items: [...items, ...more] });
+      const more = await getMoreItems(PAGE_SIZE, requestOffset);
+      if (get().itemsRevision !== requestRevision) return;
+      set((state) => ({
+        items: mergeUniqueById(state.items, more),
+        hasMore: more.length >= PAGE_SIZE,
+      }));
     } catch (error) {
       console.error('加载更多失败:', error);
     } finally {
@@ -174,7 +200,6 @@ const useAppStore = create((set, get) => ({
       set({ generatingAI: null });
     }
   },
-
   handleOCR: async (item) => {
     if (!item.image_paths) return;
     set({ ocrProcessing: item.id });

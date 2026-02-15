@@ -152,9 +152,20 @@ function HistoryStream({ style }) {
   const virtualizer = useVirtualizer({
     count: filteredItems.length,
     getScrollElement: () => contentRef.current,
+    getItemKey: (index) => filteredItems[index]?.id ?? index,
     estimateSize: () => 90,
     overscan: 5,
   });
+
+  useEffect(() => {
+    const scrollEl = contentRef.current;
+    if (!scrollEl) return;
+    const maxScrollTop = Math.max(virtualizer.getTotalSize() - scrollEl.clientHeight, 0);
+    if (scrollEl.scrollTop > maxScrollTop) {
+      scrollEl.scrollTop = maxScrollTop;
+    }
+    virtualizer.measure();
+  }, [filteredItems, virtualizer]);
 
   const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
   useEffect(() => {
@@ -265,10 +276,11 @@ function HistoryStream({ style }) {
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = filteredItems[virtualRow.index];
+              if (!item) return null;
               const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
               return (
                 <div
-                  key={item.id}
+                  key={virtualRow.key}
                   ref={virtualizer.measureElement}
                   data-index={virtualRow.index}
                   style={{
@@ -276,6 +288,8 @@ function HistoryStream({ style }) {
                     top: 0,
                     left: 0,
                     width: '100%',
+                    boxSizing: 'border-box',
+                    paddingBottom: '4px',
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                   onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}

@@ -113,7 +113,7 @@ fn main() {
             println!("Database path: {:?}", db_path);
 
             // 获取主窗口并确保拖放已启用
-            if let Some(window) = app.get_webview_window("main") {
+            if let Some(_window) = app.get_webview_window("main") {
                 println!("设置窗口拖放功能...");
                 // Tauri v2 中拖放应该通过配置自动启用
                 // 但我们可以验证窗口是否正确创建
@@ -147,11 +147,15 @@ fn main() {
                 init_meter.mark("create_platform");
 
                 // 加载或初始化 AI 配置
-                let ai_config = config_repo.load_ai_config().await
-                    .expect("Failed to load AI config")
-                    .unwrap_or_default();
+                let (ai_config_opt, ocr_config_opt, mcp_config_opt) = tokio::try_join!(
+                    config_repo.load_ai_config(),
+                    config_repo.load_ocr_config(),
+                    config_repo.load_mcp_config()
+                ).expect("Failed to load startup configs");
+                init_meter.mark("load_startup_configs");
+
+                let ai_config = ai_config_opt.unwrap_or_default();
                 println!("AI config loaded: enabled={}", ai_config.enabled);
-                init_meter.mark("load_ai_config");
 
                 let ai_config_arc = Arc::new(Mutex::new(ai_config.clone()));
                 let ai_state = AIState {
@@ -160,11 +164,8 @@ fn main() {
                 };
 
                 // 加载或初始化 OCR 配置
-                let ocr_config = config_repo.load_ocr_config().await
-                    .expect("Failed to load OCR config")
-                    .unwrap_or_default();
+                let ocr_config = ocr_config_opt.unwrap_or_default();
                 println!("OCR config loaded: enabled={}, provider={:?}", ocr_config.enabled, ocr_config.current_provider);
-                init_meter.mark("load_ocr_config");
 
                 // 初始化 OCR 服务
                 let ocr_service_arc = Arc::new(Mutex::new(None));
@@ -174,11 +175,8 @@ fn main() {
                 };
 
                 // 加载或初始化 MCP 配置
-                let mcp_config = config_repo.load_mcp_config().await
-                    .expect("Failed to load MCP config")
-                    .unwrap_or_default();
+                let mcp_config = mcp_config_opt.unwrap_or_default();
                 println!("MCP config loaded: enabled={}", mcp_config.enabled);
-                init_meter.mark("load_mcp_config");
 
                 let mcp_config_arc = Arc::new(TokioMutex::new(mcp_config.clone()));
 
@@ -194,13 +192,6 @@ fn main() {
                     ocr_service_arc,
                     app.app_handle().clone(),
                 ));
-
-                println!("Starting clipboard monitoring...");
-
-                manager.start_monitoring()
-                    .await
-                    .expect("Failed to start clipboard monitoring");
-                init_meter.mark("start_clipboard_monitor");
 
                 let drag_out_backend = platform::drag_out::create_drag_out_backend();
                 init_meter.mark("create_drag_out_backend");
@@ -259,12 +250,21 @@ fn main() {
                     });
                 }
 
-                app.manage(manager);
+                app.manage(manager.clone());
                 app.manage(drag_out_backend);
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
                 init_meter.mark("register_states");
+
+                let manager_for_monitor = manager.clone();
+                tokio::spawn(async move {
+                    println!("Starting clipboard monitoring...");
+                    if let Err(error) = manager_for_monitor.start_monitoring().await {
+                        eprintln!("Failed to start clipboard monitoring: {}", error);
+                    }
+                });
+                init_meter.mark("spawn_clipboard_monitor");
             });
 
             setup_meter.mark("setup_complete");

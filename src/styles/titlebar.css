@@ -126,3 +126,21 @@
 .titlebar-btn.quick-add-btn:active {
   transform: scale(0.92) rotate(90deg);
 }
+
+/* Mini mode titlebar compact */
+.app.mini-mode .titlebar {
+  height: 32px;
+}
+
+.app.mini-mode .titlebar-drag-area {
+  padding-left: 10px;
+}
+
+.app.mini-mode .titlebar-title {
+  font-size: 12px;
+}
+
+.app.mini-mode .titlebar-btn {
+  width: 32px;
+  height: 32px;
+}
