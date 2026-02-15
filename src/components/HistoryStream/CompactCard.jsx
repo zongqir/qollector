@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link, GripVertical } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -15,11 +15,19 @@ const TypeIcon = ({ type }) => {
   }
 };
 
-function CompactCard({ item, isSelected, onDragStart, onTogglePin, onToggleFavorite }) {
+function CompactCard({
+  item,
+  isSelected,
+  onDragStart,
+  onStartExternalDrag,
+  onTogglePin,
+  onToggleFavorite,
+}) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
+  const canDragOut = item.type_ === 'file' || item.type_ === 'image';
 
   const cardClasses = [
     'compact-card',
@@ -69,6 +77,23 @@ function CompactCard({ item, isSelected, onDragStart, onTogglePin, onToggleFavor
           {formatDate(item.created_at, i18n.language)}
         </span>
         <div className="compact-card-badges">
+          {canDragOut && (
+            <button
+              className="badge-btn badge-dragout"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onStartExternalDrag?.(item);
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              title={t('toolbar.dragToApp')}
+            >
+              <GripVertical size={10} />
+            </button>
+          )}
           <button
             className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
             onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}

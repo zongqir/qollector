@@ -17,6 +17,7 @@ use commands::clipboard_commands::*;
 use commands::ai_commands::*;
 use commands::ocr_commands::*;
 use commands::drag_drop_commands::*;
+use commands::native_drag_commands::*;
 use commands::mcp_commands::*;
 use commands::general_commands::*;
 use commands::lock_commands::*;
@@ -174,6 +175,8 @@ fn main() {
                     .await
                     .expect("Failed to start clipboard monitoring");
 
+                let drag_out_backend = platform::drag_out::create_drag_out_backend();
+
                 // 启动 MCP 服务器 (如果启用)
                 let mcp_state = if mcp_config.enabled {
                     let mcp_server = Arc::new(mcp::McpServer::new(
@@ -204,6 +207,7 @@ fn main() {
                 };
 
                 app.manage(manager);
+                app.manage(drag_out_backend);
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
@@ -256,6 +260,7 @@ fn main() {
             get_ocr_providers,
             add_clipboard_item_manual,
             add_image_file,
+            start_native_file_drag,
             toggle_favorite_item,
             open_item,
             get_mcp_config,

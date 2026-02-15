@@ -258,7 +258,12 @@
     "addTag": "添加",
     "pinItem": "置顶此项",
     "saveHint": "保存 (Ctrl+Enter)",
-    "cancelHint": "取消 (Esc)"
+    "cancelHint": "取消 (Esc)",
+    "quickAddTip": "置顶输入 · 保存后可继续",
+    "saveAndContinue": "保存并继续",
+    "savedToast": "已保存到收藏",
+    "unpin": "取消置顶，可拖动",
+    "pin": "置顶覆盖窗口"
   },
   "lock": {
     "title": "应用已锁定",

@@ -258,7 +258,12 @@
     "addTag": "Add",
     "pinItem": "Pin this item",
     "saveHint": "Save (Ctrl+Enter)",
-    "cancelHint": "Cancel (Esc)"
+    "cancelHint": "Cancel (Esc)",
+    "quickAddTip": "Pinned input · Continue after saving",
+    "saveAndContinue": "Save & Continue",
+    "savedToast": "Saved to collection",
+    "unpin": "Unpin, drag to move",
+    "pin": "Pin to fullscreen"
   },
   "lock": {
     "title": "App Locked",

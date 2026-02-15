@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Star, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check, Layers } from 'lucide-react';
 
@@ -13,6 +14,18 @@ function SearchBar({
   onOpenSettings,
 }) {
   const { t } = useTranslation();
+  const tagWrapperRef = useRef(null);
+
+  useEffect(() => {
+    if (!showTagFilter) return;
+    const handleClickOutside = (e) => {
+      if (tagWrapperRef.current && !tagWrapperRef.current.contains(e.target)) {
+        onToggleTagFilter();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTagFilter, onToggleTagFilter]);
 
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
@@ -50,7 +63,7 @@ function SearchBar({
         </button>
 
         {allTags.length > 0 && (
-          <div className="tag-select-wrapper">
+          <div className="tag-select-wrapper" ref={tagWrapperRef}>
             <button
               onClick={onToggleTagFilter}
               className={`header-icon-btn ${selectedTags.length > 0 ? 'active' : ''}`}

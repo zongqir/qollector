@@ -1,4 +1,5 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import useAppStore from '../../store/useAppStore';
@@ -6,13 +7,40 @@ import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 
+function getExternalFilePaths(item) {
+  if (item.type_ === 'file' && item.content) {
+    return item.content
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  if (item.type_ === 'image' && item.image_paths) {
+    try {
+      const paths = JSON.parse(item.image_paths);
+      const original = paths.original || paths.raw;
+      return original ? [original] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+function getDragText(item, externalPaths) {
+  if (item.type_ === 'text') return item.content || '';
+  if (item.type_ === 'file') return item.content || externalPaths.join('\n');
+  if (item.type_ === 'image') return item.ocr_text || externalPaths[0] || item.content || '';
+  return item.content || '';
+}
+
 function HistoryStream({ style }) {
   const { t } = useTranslation();
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
 
   const items = useAppStore(s => s.items);
-  const loading = useAppStore(s => s.loading);
   const searchQuery = useAppStore(s => s.searchQuery);
   const debouncedSearchQuery = useAppStore(s => s.debouncedSearchQuery);
   const selectedType = useAppStore(s => s.selectedType);
@@ -29,7 +57,6 @@ function HistoryStream({ style }) {
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
   const tagSearchQuery = useAppStore(s => s.tagSearchQuery);
-  const showSettings = useAppStore(s => s.showSettings);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const toggleTagFilter = useAppStore(s => s.toggleTagFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
@@ -39,7 +66,6 @@ function HistoryStream({ style }) {
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
 
-  // 搜索防抖
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -48,30 +74,33 @@ function HistoryStream({ style }) {
     return () => clearTimeout(timer);
   }, [searchQuery, setDebouncedSearchQuery]);
 
-  // 计算所有标签（用于标签筛选面板）
   const allTags = useMemo(() => {
     const userTags = new Set();
     const aiTags = new Set();
     const sourceTags = new Set();
     const typeTags = new Set();
+
     items.forEach(item => {
       const tags = getTags(item.tags);
       tags.forEach(tag => {
         if (tag.startsWith('AI:')) aiTags.add(tag);
         else userTags.add(tag);
       });
+
       const sourceApp = getSourceApp(item.metadata);
       if (sourceApp && sourceApp !== 'Unknown') sourceTags.add(`来源:${sourceApp}`);
+
       if (item.type_) {
         const typeMap = { text: '类型:文本', image: '类型:图片', file: '类型:文件', link: '类型:链接' };
         if (typeMap[item.type_]) typeTags.add(typeMap[item.type_]);
       }
     });
+
     return [
       ...Array.from(typeTags).sort(),
       ...Array.from(userTags).sort(),
       ...Array.from(sourceTags).sort(),
-      ...Array.from(aiTags).sort()
+      ...Array.from(aiTags).sort(),
     ];
   }, [items]);
 
@@ -81,11 +110,11 @@ function HistoryStream({ style }) {
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
 
-  // 过滤条目
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       if (showFavoritesOnly && !item.is_favorite) return false;
       if (selectedType !== 'all' && item.type_ !== selectedType) return false;
+
       if (selectedTags.length > 0) {
         const itemTags = getTags(item.tags);
         const sourceApp = getSourceApp(item.metadata);
@@ -95,6 +124,7 @@ function HistoryStream({ style }) {
         const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
+
       if (!debouncedSearchQuery.trim()) return true;
       const query = debouncedSearchQuery.toLowerCase();
       if (item.content && item.content.toLowerCase().includes(query)) return true;
@@ -107,7 +137,6 @@ function HistoryStream({ style }) {
     });
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  // 虚拟滚动
   const virtualizer = useVirtualizer({
     count: filteredItems.length,
     getScrollElement: () => contentRef.current,
@@ -115,7 +144,6 @@ function HistoryStream({ style }) {
     overscan: 5,
   });
 
-  // 滚动加载更多
   const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
   useEffect(() => {
     if (!lastVirtualItem) return;
@@ -124,7 +152,6 @@ function HistoryStream({ style }) {
     }
   }, [lastVirtualItem?.index, filteredItems.length, loadMore]);
 
-  // 点击卡片 → 预览
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
     if (clickTimerRef.current) {
@@ -137,7 +164,6 @@ function HistoryStream({ style }) {
     }, 250);
   }, [setPanelMode]);
 
-  // 双击卡片 → 复制
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
     if (clickTimerRef.current) {
@@ -147,17 +173,13 @@ function HistoryStream({ style }) {
     handleCopy(item);
   }, [handleCopy]);
 
-  // 拖拽开始 → 强制切回搜集模式
   const handleDragStart = useCallback((item, e) => {
-    const text = item.type_ === 'text' ? (item.content || '') :
-                 item.type_ === 'file' ? (item.content || '') :
-                 item.type_ === 'image' && item.ocr_text ? item.ocr_text :
-                 (item.content || '');
+    const text = getDragText(item, []);
+
     e.dataTransfer.setData('text/plain', text);
     e.dataTransfer.setData('application/x-clipbox-item', JSON.stringify({ id: item.id }));
     e.dataTransfer.effectAllowed = 'copyMove';
 
-    // 拖拽开始 → 强制切回搜集模式（PRD 核心交互）
     switchToCollection();
 
     const dragEl = document.createElement('div');
@@ -168,7 +190,20 @@ function HistoryStream({ style }) {
     setTimeout(() => document.body.removeChild(dragEl), 0);
   }, [switchToCollection]);
 
-  // 点击左栏空白处 → 退出预览
+  const handleStartExternalDrag = useCallback(async (item) => {
+    const paths = getExternalFilePaths(item);
+    if (paths.length === 0) return;
+
+    try {
+      await invoke('start_native_file_drag', {
+        paths,
+        operation: 'copy',
+      });
+    } catch (error) {
+      console.error('native drag out failed:', error);
+    }
+  }, []);
+
   const handleStreamClick = useCallback(() => {
     if (panelMode === 'preview') {
       switchToCollection();
@@ -228,6 +263,7 @@ function HistoryStream({ style }) {
                     item={item}
                     isSelected={isSelected}
                     onDragStart={handleDragStart}
+                    onStartExternalDrag={handleStartExternalDrag}
                     onTogglePin={togglePin}
                     onToggleFavorite={toggleFavorite}
                   />
