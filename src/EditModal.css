@@ -26,14 +26,16 @@
 /* 编辑弹窗主体 */
 .edit-modal {
   background: var(--edit-modal-bg);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px var(--shadow-xl);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px var(--shadow-xl), 0 0 0 1px var(--border-light);
   width: 90%;
   max-width: 600px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.25s ease-out;
 }
 
 @keyframes slideUp {
@@ -406,12 +408,12 @@
 }
 
 .quick-add-pin-btn:hover {
-  background: rgba(102, 126, 234, 0.08);
-  color: #667eea;
+  background: var(--accent-light);
+  color: var(--accent-color);
 }
 
 .quick-add-pin-btn.active {
-  color: #667eea;
+  color: var(--accent-color);
 }
 
 .edit-modal-mini-textarea {
@@ -503,9 +505,9 @@
 }
 
 .quick-add-btn-continue:hover:not(:disabled) {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.06);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  background: var(--accent-light);
 }
 
 .quick-add-btn-continue:disabled {
@@ -521,7 +523,7 @@
   padding: 6px 14px;
   border: none;
   border-radius: 8px;
-  background: #667eea;
+  background: var(--accent-color);
   color: white;
   font-size: 12px;
   cursor: pointer;

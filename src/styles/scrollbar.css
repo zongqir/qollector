@@ -1,5 +1,6 @@
+/* macOS 风格滚动条 */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -8,9 +9,22 @@
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+/* 仅在 hover 时显示滚动条 */
+.history-stream-content::-webkit-scrollbar-thumb,
+.preview-content-area::-webkit-scrollbar-thumb,
+.collection-cards::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.history-stream-content:hover::-webkit-scrollbar-thumb,
+.preview-content-area:hover::-webkit-scrollbar-thumb,
+.collection-cards:hover::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
 }

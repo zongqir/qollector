@@ -35,13 +35,13 @@ export const getTimelineColor = (timestamp) => {
   const created = timestamp * 1000;
   const diffMinutes = (now - created) / (1000 * 60);
 
-  if (diffMinutes < 2) return '#667eea';       // 紫色 - 刚刚
-  if (diffMinutes < 15) return '#5c7cfa';      // 蓝紫 - 几分钟前
-  if (diffMinutes < 60) return '#339af0';      // 蓝色 - 一小时内
-  if (diffMinutes < 360) return '#22b8cf';     // 青色 - 几小时内
-  if (diffMinutes < 1440) return '#51cf66';    // 绿色 - 一天内
-  if (diffMinutes < 4320) return '#fcc419';    // 琥珀 - 几天内
-  return '#dee2e6';                             // 淡灰 - 更早
+  if (diffMinutes < 2) return '#007aff';       // 蓝色 - 刚刚
+  if (diffMinutes < 15) return '#5856d6';      // 紫色 - 几分钟前
+  if (diffMinutes < 60) return '#5ac8fa';      // 青色 - 一小时内
+  if (diffMinutes < 360) return '#34c759';     // 绿色 - 几小时内
+  if (diffMinutes < 1440) return '#ff9500';    // 橙色 - 一天内
+  if (diffMinutes < 4320) return '#ff3b30';    // 红色 - 几天内
+  return '#8e8e93';                             // 灰色 - 更早
 };
 
 export const getContentPreview = (content, maxLength = 100) => {

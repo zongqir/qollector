@@ -5,6 +5,7 @@
   right: 0;
   bottom: 0;
   background: var(--shadow-overlay);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,13 +14,15 @@
 
 .settings-modal {
   background: var(--modal-bg);
-  border-radius: 12px;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 14px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 40px var(--shadow-xl);
+  box-shadow: 0 12px 40px var(--shadow-xl), 0 0 0 1px var(--border-light);
 }
 
 .settings-header {
@@ -59,8 +62,8 @@
 }
 
 .tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
 }
 
 .close-btn {
@@ -135,8 +138,8 @@
 .setting-input:focus,
 .setting-select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
 .setting-input::placeholder {
@@ -215,7 +218,7 @@
 }
 
 .settings-footer .save-btn {
-  background: #667eea;
+  background: var(--accent-color);
   color: white;
 }
 
@@ -232,7 +235,7 @@
 
 .info-box {
   background: var(--info-box-bg);
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--accent-color);
   padding: 12px;
   border-radius: 4px;
   font-size: 13px;
@@ -302,7 +305,7 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background: #667eea;
+  background: var(--accent-color);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {

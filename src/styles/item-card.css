@@ -9,8 +9,9 @@
 .empty {
   text-align: center;
   padding: 60px 20px;
-  font-size: 18px;
-  color: var(--text-secondary);
+  font-size: 16px;
+  color: var(--text-tertiary);
+  font-weight: 500;
 }
 
 .items-list {
@@ -22,17 +23,19 @@
 
 .item-card {
   background: var(--bg-card);
-  border-radius: 20px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 14px;
   padding: 16px;
-  border: none;
-  transition: all 0.2s ease;
+  border: 1px solid var(--border-light);
+  transition: all 0.15s ease;
   cursor: pointer;
   position: relative;
   overflow: visible;
   z-index: 1;
 }
 
-/* 置顶卡片 - 淡蓝色背景 */
+/* 置顶卡片 */
 .item-card.pinned {
   background: var(--card-pinned-bg);
 }
@@ -41,7 +44,7 @@
   background: var(--card-pinned-hover);
 }
 
-/* 收藏卡片 - 淡金色背景 */
+/* 收藏卡片 */
 .item-card.favorite {
   background: var(--card-favorite-bg);
 }
@@ -50,7 +53,7 @@
   background: var(--card-favorite-hover);
 }
 
-/* 同时置顶和收藏 - 淡紫色背景（混合效果） */
+/* 同时置顶和收藏 */
 .item-card.pinned.favorite {
   background: var(--card-pinned-fav-bg);
 }
@@ -59,18 +62,16 @@
   background: var(--card-pinned-fav-hover);
 }
 
-/* 当卡片内有下拉框时提升层级 */
 .item-card:has(.tag-suggestions) {
   z-index: 100;
 }
 
-/* 普通卡片的 hover 效果 */
 .item-card:not(.pinned):not(.favorite):hover {
   background: var(--bg-card-hover);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 12px var(--shadow-sm);
 }
 
-/* 底部区域 - 智能布局：空间够就同行，不够就换行 */
+/* 底部区域 */
 .item-footer {
   display: flex;
   flex-wrap: wrap;

@@ -12,7 +12,9 @@
       "Bash(curl -L \"https://raw.githubusercontent.com/tauri-apps/tauri/v2/examples/api/src-tauri/icons/icon.ico\" -o icon.ico)",
       "Bash(npx @tauri-apps/cli icon icons/icon.svg)",
       "Bash(npm install zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(wc -l \"D:\\\\code\\\\pith\\\\src\"/*.jsx \"D:\\\\code\\\\pith\\\\src\"/*.css)",
+      "Bash(find \"D:\\\\code\\\\pith\\\\src\" -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)"
     ]
   }
 }

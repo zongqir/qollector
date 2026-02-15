@@ -7,37 +7,35 @@
   justify-content: flex-end;
 }
 
-/* 添加标签按钮 - 与标签形状统一 */
 .add-tag-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 2px 8px;
   border: 1px dashed var(--border-color);
-  background: var(--tag-add-bg);
+  background: transparent;
   border-radius: 4px;
   cursor: pointer;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-tertiary);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   position: relative;
   line-height: 1;
   gap: 2px;
 }
 
 .add-tag-btn:hover {
-  border-color: #667eea;
+  border-color: var(--accent-color);
   border-style: solid;
-  background: linear-gradient(135deg, #667eea15, #764ba215);
-  color: #667eea;
+  background: var(--accent-light);
+  color: var(--accent-color);
 }
 
 .add-tag-btn:active {
   transform: scale(0.95);
 }
 
-/* 添加标签输入框容器 */
 .add-tag-input-wrapper {
   position: relative;
   display: inline-flex;
@@ -49,35 +47,33 @@
 .add-tag-input {
   width: 120px;
   padding: 4px 8px;
-  border: 1px solid #667eea;
-  border-radius: 4px;
+  border: none;
+  border-radius: 6px;
   font-size: 12px;
   outline: none;
-  background: var(--tag-input-bg);
+  background: var(--bg-input);
   color: var(--text-primary);
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .add-tag-input:focus {
-  border-color: #5568d3;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
 .add-tag-input::placeholder {
   color: var(--text-tertiary);
 }
 
-/* 标签确认和取消按钮 */
 .tag-btn-confirm,
 .tag-btn-cancel {
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   font-weight: bold;
-  transition: all 0.2s;
+  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,14 +81,12 @@
 }
 
 .tag-btn-confirm {
-  background: linear-gradient(135deg, #4caf50, #45a049);
+  background: #34c759;
   color: white;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 .tag-btn-confirm:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+  background: #2db84e;
 }
 
 .tag-btn-confirm:disabled {
@@ -101,175 +95,149 @@
 }
 
 .tag-btn-cancel {
-  background: linear-gradient(135deg, #9e9e9e, #757575);
-  color: white;
-  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.2);
+  background: var(--cancel-btn-bg);
+  color: var(--text-secondary);
 }
 
 .tag-btn-cancel:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(158, 158, 158, 0.3);
+  background: var(--cancel-btn-hover-bg);
 }
 
-/* 标签建议下拉 */
 .tag-suggestions {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   background: var(--tag-suggestion-bg);
+  backdrop-filter: saturate(180%) blur(20px);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px var(--shadow-lg), 0 2px 4px var(--shadow-md);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px var(--shadow-lg);
   max-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1000;
   min-width: 180px;
-  animation: suggestionsSlideIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: suggestionsSlideIn 0.15s ease;
 }
 
 @keyframes suggestionsSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .tag-suggestion-item {
-  padding: 10px 16px;
+  padding: 8px 14px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-primary);
-  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 3px solid transparent;
+  transition: all 0.1s ease;
+  border-left: 2px solid transparent;
   font-weight: 500;
-  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .tag-suggestion-icon {
-  opacity: 0.6;
-  transition: opacity 0.12s;
+  opacity: 0.5;
+  transition: opacity 0.1s;
   flex-shrink: 0;
 }
 
 .tag-suggestion-item:hover {
   background: var(--tag-suggestion-hover);
-  border-left-color: #667eea;
-  color: #667eea;
+  border-left-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .tag-suggestion-item:hover .tag-suggestion-icon {
   opacity: 1;
 }
 
-.tag-suggestion-item:active {
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.08));
-  transform: scale(0.98);
-}
-
 .tag-suggestion-item:first-child {
-  border-radius: 7px 7px 0 0;
+  border-radius: 9px 9px 0 0;
 }
 
 .tag-suggestion-item:last-child {
-  border-radius: 0 0 7px 7px;
+  border-radius: 0 0 9px 9px;
 }
 
+/* macOS 风格标签 */
 .tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: 3px 10px;
+  border-radius: 10px;
   font-size: 11px;
   font-weight: 600;
-  transition: all 0.2s;
+  transition: all 0.15s;
   border: none;
   cursor: pointer;
   user-select: none;
   color: white;
 }
 
-/* 标签选中状态 */
 .tag.selected {
-  transform: scale(1.08);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* AI标签样式 - 紫色高饱和 */
+/* AI标签 - 紫色 */
 .tag.ai-tag {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  background: #af52de;
 }
 
 .tag.ai-tag:hover {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+  background: #c77deb;
 }
 
 .tag.ai-tag.selected {
-  background: linear-gradient(135deg, #6d28d9, #5b21b6);
-  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.5);
+  background: #9a3dca;
 }
 
-/* 用户标签样式 - 蓝色高饱和 */
+/* 用户标签 - 蓝色 */
 .tag.user-tag {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--accent-color);
 }
 
 .tag.user-tag:hover {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: var(--accent-hover);
 }
 
 .tag.user-tag.selected {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+  background: #0055b3;
 }
 
-/* 来源标签样式 - 橙色高饱和 */
+/* 来源标签 - 橙色 */
 .tag.source-tag {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: #ff9500;
 }
 
 .tag.source-tag:hover {
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+  background: #e68600;
 }
 
 .tag.source-tag.selected {
-  background: linear-gradient(135deg, #ea580c, #c2410c);
-  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.5);
+  background: #cc7700;
 }
 
-/* 类型标签样式 - 青色高饱和 */
+/* 类型标签 - 青色 */
 .tag.type-tag {
-  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  background: #5ac8fa;
 }
 
 .tag.type-tag:hover {
-  background: linear-gradient(135deg, #22d3ee, #06b6d4);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+  background: #4ab8e8;
 }
 
 .tag.type-tag.selected {
-  background: linear-gradient(135deg, #0891b2, #0e7490);
-  box-shadow: 0 4px 12px rgba(8, 145, 178, 0.5);
+  background: #3aa8d8;
 }
 
 .tag.editable {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: var(--accent-color);
   color: white;
   padding-right: 10px;
 }
@@ -283,8 +251,8 @@
   padding: 0;
   margin-left: 2px;
   line-height: 1;
-  opacity: 0.8;
-  transition: opacity 0.2s;
+  opacity: 0.7;
+  transition: opacity 0.15s;
 }
 
 .tag-remove:hover {

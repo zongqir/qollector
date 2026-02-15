@@ -5,10 +5,14 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Microsoft YaHei', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern';
+  letter-spacing: -0.01em;
 }
 
 #root {
@@ -26,12 +30,12 @@ body {
 
 /* Mini 模式 */
 .app.mini-mode .history-stream-content {
-  padding: 8px 10px;
+  padding: 6px 8px;
 }
 
 .app.mini-mode .compact-card {
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .app.mini-mode .compact-card-text {
