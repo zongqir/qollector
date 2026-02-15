@@ -6,7 +6,7 @@ import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 
-function HistoryStream() {
+function HistoryStream({ style }) {
   const { t } = useTranslation();
   const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
@@ -174,7 +174,7 @@ function HistoryStream() {
   }, [panelMode, switchToCollection]);
 
   return (
-    <div className="history-stream" onClick={handleStreamClick}>
+    <div className="history-stream" style={style} onClick={handleStreamClick}>
       <SearchBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

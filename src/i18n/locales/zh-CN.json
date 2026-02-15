@@ -307,6 +307,8 @@
     "emptyTitle": "搜集箱为空",
     "emptyHint": "从左侧点击收集按钮，或拖拽卡片到这里",
     "quickNotePlaceholder": "输入笔记，回车添加到搜集箱...",
+    "expandedNotePlaceholder": "在这里写下你的想法...",
+    "expandedNoteSubmit": "添加到搜集箱",
     "mergeCopy": "合并复制",
     "clearAll": "清空搜集箱",
     "archivedToHistory": "已归档至历史流",

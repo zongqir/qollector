@@ -205,6 +205,42 @@ function PreviewPanel() {
         <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
       </div>
 
+      {/* 标签区 - 紧跟元信息，直接可见可编辑 */}
+      <div className="preview-tags-section">
+        <ItemTags
+          item={item}
+          selectedTags={selectedTags}
+          onTagClick={handleTagClick}
+          addingTagItemId={addingTagItemId}
+          newTagInput={newTagInput}
+          onNewTagInputChange={setNewTagInput}
+          onTagInputKeyDown={handleTagInputKeyDown}
+          onStartAddTag={startAddTag}
+          onCancelAddTag={cancelAddTag}
+          onAddTagToItem={addTagToItem}
+          filteredUserTags={filteredUserTags}
+        />
+      </div>
+
+      {/* 备注区 - 标签下方，内容上方 */}
+      <div className="preview-note-section">
+        <NoteDisplay
+          item={item}
+          editingNoteId={editingNoteId}
+          editNote={editNote}
+          onEditNoteChange={setEditNote}
+          onStartEditNote={startEditNote}
+          onSaveNote={saveNote}
+          onCancelNoteEdit={cancelNoteEdit}
+        />
+        {!item.user_note && editingNoteId !== item.id && (
+          <button className="preview-add-note-btn" onClick={() => startEditNote(item)}>
+            <StickyNote size={12} />
+            <span>{t('item.addNote')}</span>
+          </button>
+        )}
+      </div>
+
       {/* 内容区 */}
       <div className="preview-content-area">
         {isCopied && (
@@ -227,10 +263,6 @@ function PreviewPanel() {
         >
           <Star size={14} fill={item.is_favorite ? 'currentColor' : 'none'} />
           <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-        </button>
-        <button className="preview-tool-btn" onClick={() => startEditNote(item)}>
-          <StickyNote size={14} />
-          <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
         </button>
         {shouldShowAIButton && (
           <button
@@ -263,36 +295,6 @@ function PreviewPanel() {
             <span>{t('panel.editContent')}</span>
           </button>
         )}
-      </div>
-
-      {/* 备注区 */}
-      <div className="preview-note-section">
-        <NoteDisplay
-          item={item}
-          editingNoteId={editingNoteId}
-          editNote={editNote}
-          onEditNoteChange={setEditNote}
-          onStartEditNote={startEditNote}
-          onSaveNote={saveNote}
-          onCancelNoteEdit={cancelNoteEdit}
-        />
-      </div>
-
-      {/* 标签区 */}
-      <div className="preview-tags-section">
-        <ItemTags
-          item={item}
-          selectedTags={selectedTags}
-          onTagClick={handleTagClick}
-          addingTagItemId={addingTagItemId}
-          newTagInput={newTagInput}
-          onNewTagInputChange={setNewTagInput}
-          onTagInputKeyDown={handleTagInputKeyDown}
-          onStartAddTag={startAddTag}
-          onCancelAddTag={cancelAddTag}
-          onAddTagToItem={addTagToItem}
-          filteredUserTags={filteredUserTags}
-        />
       </div>
     </div>
   );

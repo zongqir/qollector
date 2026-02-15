@@ -48,30 +48,6 @@ body {
 }
 
 .app.mini-mode .header {
-  padding: 8px 10px;
-  gap: 0;
-}
-
-.app.mini-mode .search-box {
-  min-width: 0;
-}
-
-.app.mini-mode .search-input {
-  padding: 6px 32px 6px 12px;
-  font-size: 12px;
-  border-radius: 16px;
-}
-
-.app.mini-mode .type-filter-group,
-.app.mini-mode .tag-select-wrapper,
-.app.mini-mode .settings-btn,
-.app.mini-mode .filter-status {
-  display: none;
-}
-
-.app.mini-mode .favorites-filter-btn {
-  padding: 4px 8px;
-  font-size: 12px;
-  border-width: 1px;
-  border-radius: 6px;
+  padding: 6px 8px;
+  gap: 2px;
 }

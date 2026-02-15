@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Copy, Trash2, Plus } from 'lucide-react';
+import { Package, Copy, Trash2, Plus, X, Send } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -56,6 +56,7 @@ function CollectionPanel() {
   const { t } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
   const [pinnedOrder, setPinnedOrder] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const items = useAppStore(s => s.items);
   const addQuickNote = useAppStore(s => s.addQuickNote);
@@ -97,7 +98,18 @@ function CollectionPanel() {
       e.preventDefault();
       await addQuickNote(quickNote);
       setQuickNote('');
+      setIsExpanded(false);
     }
+    if (e.key === 'Escape') {
+      setIsExpanded(false);
+    }
+  }, [quickNote, addQuickNote]);
+
+  const handleExpandedSubmit = useCallback(async () => {
+    if (!quickNote.trim()) return;
+    await addQuickNote(quickNote);
+    setQuickNote('');
+    setIsExpanded(false);
   }, [quickNote, addQuickNote]);
 
   const handleNativeDragOver = useCallback((e) => {
@@ -130,18 +142,61 @@ function CollectionPanel() {
   }, [handleCopy]);
 
   const quickNoteSection = (
-    <div className="collection-quick-note">
-      <div className="quick-note-input-wrapper">
-        <Plus size={16} className="quick-note-icon" />
-        <input
-          type="text"
-          className="quick-note-input"
-          placeholder={t('collection.quickNotePlaceholder')}
-          value={quickNote}
-          onChange={(e) => setQuickNote(e.target.value)}
-          onKeyDown={handleQuickNoteSubmit}
-        />
-      </div>
+    <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
+      {isExpanded ? (
+        <div className="quick-note-expanded">
+          <div className="quick-note-expanded-header">
+            <button
+              className="quick-note-close-btn"
+              onClick={() => setIsExpanded(false)}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <textarea
+            className="quick-note-textarea"
+            placeholder={t('collection.expandedNotePlaceholder')}
+            value={quickNote}
+            onChange={(e) => setQuickNote(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.ctrlKey && quickNote.trim()) {
+                handleExpandedSubmit();
+              }
+              if (e.key === 'Escape') setIsExpanded(false);
+            }}
+            autoFocus
+          />
+          <div className="quick-note-expanded-footer">
+            <span className="quick-note-hint">Ctrl+Enter</span>
+            <button
+              className="quick-note-submit-btn"
+              onClick={handleExpandedSubmit}
+              disabled={!quickNote.trim()}
+            >
+              <Send size={14} />
+              <span>{t('collection.expandedNoteSubmit')}</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="quick-note-input-wrapper">
+          <button
+            className="quick-note-expand-btn"
+            onClick={() => setIsExpanded(true)}
+            title={t('collection.expandedNotePlaceholder')}
+          >
+            <Plus size={16} />
+          </button>
+          <input
+            type="text"
+            className="quick-note-input"
+            placeholder={t('collection.quickNotePlaceholder')}
+            value={quickNote}
+            onChange={(e) => setQuickNote(e.target.value)}
+            onKeyDown={handleQuickNoteSubmit}
+          />
+        </div>
+      )}
     </div>
   );
 

@@ -307,6 +307,8 @@
     "emptyTitle": "Collection is empty",
     "emptyHint": "Click the collect button on the left, or drag cards here",
     "quickNotePlaceholder": "Type a note, press Enter to add to collection...",
+    "expandedNotePlaceholder": "Write down your thoughts here...",
+    "expandedNoteSubmit": "Add to Collection",
     "mergeCopy": "Merge & Copy",
     "clearAll": "Clear Collection",
     "archivedToHistory": "Archived to history",

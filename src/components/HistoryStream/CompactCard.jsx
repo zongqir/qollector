@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pin, Star, FileText, Image, Type, Link } from 'lucide-react';
+import { Star, FileText, Image, Type, Link } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -23,7 +23,6 @@ function CompactCard({ item, isSelected, onDragStart }) {
 
   const cardClasses = [
     'compact-card',
-    item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
   ].filter(Boolean).join(' ');
@@ -69,7 +68,6 @@ function CompactCard({ item, isSelected, onDragStart }) {
           {formatDate(item.created_at, i18n.language)}
         </span>
         <div className="compact-card-badges">
-          {item.is_pinned && <Pin size={12} className="badge-pin" />}
           {item.is_favorite && <Star size={12} className="badge-fav" fill="currentColor" />}
         </div>
       </div>

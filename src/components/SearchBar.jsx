@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { X, Star, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check } from 'lucide-react';
+import { X, Star, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check, Layers } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -14,139 +14,138 @@ function SearchBar({
 }) {
   const { t } = useTranslation();
 
-  const typeIcons = {
-    all: null,
-    text: <FileText size={14} />,
-    image: <Image size={14} />,
-    file: <File size={14} />,
-    link: <Link size={14} />
-  };
+  const typeOptions = [
+    { key: 'all', icon: <Layers size={14} /> },
+    { key: 'text', icon: <FileText size={14} /> },
+    { key: 'image', icon: <Image size={14} /> },
+    { key: 'file', icon: <File size={14} /> },
+    { key: 'link', icon: <Link size={14} /> },
+  ];
 
   return (
-    <header className="header">
-      <div className="search-box">
-        <input
-          type="text"
-          placeholder={t('search.placeholder')}
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="search-input"
-        />
-        {searchQuery && (
-          <button onClick={() => onSearchChange('')} className="clear-search">
-            <X size={16} />
-          </button>
+    <header className="header" onClick={(e) => e.stopPropagation()}>
+      {/* 主行：搜索 + 收藏 + 标签筛选 + 类型筛选 + 设置 */}
+      <div className="header-row">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder={t('search.placeholder')}
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="search-input"
+          />
+          {searchQuery && (
+            <button onClick={() => onSearchChange('')} className="clear-search">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={onToggleFavorites}
+          className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`}
+          title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+        >
+          <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
+        </button>
+
+        {allTags.length > 0 && (
+          <div className="tag-select-wrapper">
+            <button
+              onClick={onToggleTagFilter}
+              className={`header-icon-btn ${selectedTags.length > 0 ? 'active' : ''}`}
+              title={t('toolbar.filterTags')}
+            >
+              <Tag size={15} />
+              {selectedTags.length > 0 && (
+                <span className="icon-btn-badge">{selectedTags.length}</span>
+              )}
+            </button>
+            {showTagFilter && (
+              <div className="tag-dropdown">
+                <div className="tag-dropdown-search">
+                  <input
+                    type="text"
+                    placeholder={t('toolbar.searchTags')}
+                    value={tagSearchQuery}
+                    onChange={(e) => onTagSearchChange(e.target.value)}
+                    className="tag-search-input"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <div className="tag-dropdown-list">
+                  {filteredTagsList.length > 0 ? (
+                    filteredTagsList.map(tag => {
+                      const isAITag = tag.startsWith('AI:');
+                      const isSourceTag = tag.startsWith('来源:');
+                      const isTypeTag = tag.startsWith('类型:');
+                      const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
+                      const displayTag = isAITag ? tag.substring(3) :
+                                        isSourceTag ? tag.substring(3) :
+                                        isTypeTag ? tag.substring(3) :
+                                        tag;
+                      return (
+                        <div
+                          key={tag}
+                          onClick={() => onToggleTag(tag)}
+                          className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                        >
+                          <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
+                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
+                            {isTypeTag && <span className="type-badge">T</span>}
+                            {isAITag && <span className="ai-badge">AI</span>}
+                            {isUserTag && <span className="user-badge">M</span>}
+                            {isSourceTag && <span className="source-badge">S</span>}
+                            {displayTag}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
+                  )}
+                </div>
+                {selectedTags.length > 0 && (
+                  <div className="tag-dropdown-footer">
+                    <button onClick={onClearTags} className="clear-selection-btn">
+                      {t('toolbar.clearAll')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
+
+        <div className="type-filter-group">
+          {typeOptions.map(({ key, icon }) => (
+            <button
+              key={key}
+              onClick={() => onTypeChange(key)}
+              className={`type-filter-btn ${selectedType === key ? 'active' : ''}`}
+              title={t(`search.typeFilter.${key}`)}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onOpenSettings} className="header-icon-btn settings-btn" title={t('settings.title')}>
+          <Settings size={15} />
+        </button>
       </div>
 
+      {/* 筛选状态提示（仅在有标签筛选时显示） */}
       {selectedTags.length > 0 && (
         <div className="filter-status">
           <span className="filter-status-text">
             {t('toolbar.filteringBy', { count: selectedTags.length })}
           </span>
-          <button
-            onClick={onClearTags}
-            className="clear-filter-btn"
-            title={t('toolbar.clearAll')}
-          >
-            <X size={14} /> {t('toolbar.clearFilter')}
+          <button onClick={onClearTags} className="clear-filter-btn" title={t('toolbar.clearAll')}>
+            <X size={12} /> {t('toolbar.clearFilter')}
           </button>
         </div>
       )}
-
-      <div className="type-filter-group">
-        {['all', 'text', 'image', 'file', 'link'].map(type => {
-          return (
-            <button
-              key={type}
-              onClick={() => onTypeChange(type)}
-              className={`type-filter-btn ${selectedType === type ? 'active' : ''}`}
-            >
-              {typeIcons[type] && <span className="type-icon">{typeIcons[type]}</span>}
-              {t(`search.typeFilter.${type}`)}
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        onClick={onToggleFavorites}
-        className={`favorites-filter-btn ${showFavoritesOnly ? 'active' : ''}`}
-        title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
-      >
-        <Star size={16} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
-      </button>
-
-      {allTags.length > 0 && (
-        <div className="tag-select-wrapper">
-          <button
-            onClick={onToggleTagFilter}
-            className={`tag-select-btn ${selectedTags.length > 0 ? 'has-selection' : ''}`}
-          >
-            <Tag size={14} className="tag-icon" />
-            <span className="tag-label">
-              {selectedTags.length > 0 ? t('toolbar.selectedTags', { count: selectedTags.length }) : t('toolbar.filterTags')}
-            </span>
-            {showTagFilter ? <ChevronUp size={14} className="dropdown-arrow" /> : <ChevronDown size={14} className="dropdown-arrow" />}
-          </button>
-          {showTagFilter && (
-            <div className="tag-dropdown">
-              <div className="tag-dropdown-search">
-                <input
-                  type="text"
-                  placeholder={t('toolbar.searchTags')}
-                  value={tagSearchQuery}
-                  onChange={(e) => onTagSearchChange(e.target.value)}
-                  className="tag-search-input"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <div className="tag-dropdown-list">
-                {filteredTagsList.length > 0 ? (
-                  filteredTagsList.map(tag => {
-                    const isAITag = tag.startsWith('AI:');
-                    const isSourceTag = tag.startsWith('来源:');
-                    const isTypeTag = tag.startsWith('类型:');
-                    const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
-                    const displayTag = isAITag ? tag.substring(3) :
-                                      isSourceTag ? tag.substring(3) :
-                                      isTypeTag ? tag.substring(3) :
-                                      tag;
-                    return (
-                      <div
-                        key={tag}
-                        onClick={() => onToggleTag(tag)}
-                        className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                      >
-                        <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
-                        <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
-                          {isTypeTag && <span className="type-badge">T</span>}
-                          {isAITag && <span className="ai-badge">AI</span>}
-                          {isUserTag && <span className="user-badge">M</span>}
-                          {isSourceTag && <span className="source-badge">S</span>}
-                          {displayTag}
-                        </span>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
-                )}
-              </div>
-              {selectedTags.length > 0 && (
-                <div className="tag-dropdown-footer">
-                  <button onClick={onClearTags} className="clear-selection-btn">
-                    {t('toolbar.clearAll')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      <button onClick={onOpenSettings} className="settings-btn">
-        <Settings size={18} />
-      </button>
     </header>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
@@ -114,6 +114,42 @@ function App() {
     setSelectedType(type);
   };
 
+  // ========== 分割线拖拽 ==========
+  const [leftWidth, setLeftWidth] = useState(340);
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    startXRef.current = e.clientX;
+    startWidthRef.current = leftWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [leftWidth]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const delta = e.clientX - startXRef.current;
+      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 220), 600);
+      setLeftWidth(newWidth);
+    };
+    const handleMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   if (isLocked && hasPassword) {
     return <LockScreen onUnlock={() => setIsLocked(false)} />;
   }
@@ -148,8 +184,13 @@ function App() {
       />
 
       <div className="workspace">
-        <HistoryStream />
-        {!isMiniMode && <PolymorphicPanel />}
+        <HistoryStream style={{ width: isMiniMode ? '100%' : `${leftWidth}px` }} />
+        {!isMiniMode && (
+          <>
+            <div className="resize-handle" onMouseDown={handleResizeStart} />
+            <PolymorphicPanel />
+          </>
+        )}
       </div>
     </div>
   );
