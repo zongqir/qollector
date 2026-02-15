@@ -477,17 +477,11 @@ impl ClipboardManager {
     pub async fn toggle_pin(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
-        // 获取当前项目
-        if let Some(mut item) = repo.find_by_id(id).await? {
-            // 切换置顶状态
+        if let Some(item) = repo.find_by_id(id).await? {
             let new_pinned_state = !item.is_pinned;
 
-            // 如果是要置顶(从未置顶变为置顶)
             if new_pinned_state {
-                // 检查当前置顶数量
                 let pinned_items = repo.get_pinned_items().await?;
-
-                // 如果已经达到置顶上限,取消最早置顶的那个
                 if pinned_items.len() >= max_pinned {
                     if let Some(oldest_pinned) = pinned_items.first() {
                         println!("已达到置顶上限({}个),取消最早置顶的项: {}", max_pinned, oldest_pinned.id);
@@ -496,15 +490,8 @@ impl ClipboardManager {
                 }
             }
 
-            item.is_pinned = new_pinned_state;
-            // 更新时间戳
-            item.updated_at = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64;
-
-            repo.update(&item).await?;
-            Ok(item.is_pinned)
+            repo.set_pinned(id, new_pinned_state).await?;
+            Ok(new_pinned_state)
         } else {
             Err(sqlx::Error::RowNotFound)
         }
@@ -513,13 +500,8 @@ impl ClipboardManager {
     pub async fn pin_item(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
-        if let Some(mut item) = repo.find_by_id(id).await? {
+        if let Some(item) = repo.find_by_id(id).await? {
             if item.is_pinned {
-                item.updated_at = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as i64;
-                repo.update(&item).await?;
                 return Ok(true);
             }
 
@@ -530,12 +512,7 @@ impl ClipboardManager {
                 }
             }
 
-            item.is_pinned = true;
-            item.updated_at = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64;
-            repo.update(&item).await?;
+            repo.set_pinned(id, true).await?;
             Ok(true)
         } else {
             Err(sqlx::Error::RowNotFound)

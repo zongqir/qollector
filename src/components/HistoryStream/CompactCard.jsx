@@ -6,7 +6,7 @@ import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 
 const TypeIcon = ({ type }) => {
-  const size = 14;
+  const size = 11;
   switch (type) {
     case 'image': return <Image size={size} />;
     case 'file': return <FileText size={size} />;

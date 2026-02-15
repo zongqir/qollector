@@ -120,7 +120,7 @@ impl ClipboardRepository {
 
     pub async fn get_recent(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY is_pinned DESC, updated_at DESC LIMIT ?"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY updated_at DESC LIMIT ?"
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -137,7 +137,7 @@ impl ClipboardRepository {
                     metadata, is_pinned, is_favorite, is_deleted,
                     created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
-             ORDER BY is_pinned DESC, updated_at DESC LIMIT ?"
+             ORDER BY updated_at DESC LIMIT ?"
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -154,7 +154,7 @@ impl ClipboardRepository {
                     metadata, is_pinned, is_favorite, is_deleted,
                     created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
-             ORDER BY is_pinned DESC, updated_at DESC LIMIT ? OFFSET ?"
+             ORDER BY updated_at DESC LIMIT ? OFFSET ?"
         )
         .bind(limit)
         .bind(offset)
@@ -183,7 +183,7 @@ impl ClipboardRepository {
             sql.push_str(&format!(" AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')", query, query));
         }
 
-        sql.push_str(&format!(" ORDER BY is_pinned DESC, updated_at DESC LIMIT {}", limit));
+        sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
 
         let items = sqlx::query_as::<_, ClipboardItem>(&sql)
             .fetch_all(&self.pool)
@@ -275,6 +275,15 @@ impl ClipboardRepository {
     /// 取消指定项的置顶状态
     pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE clipboard_items SET is_pinned = 0 WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE clipboard_items SET is_pinned = ? WHERE id = ?")
+            .bind(pinned as i32)
             .bind(id)
             .execute(&self.pool)
             .await?;
