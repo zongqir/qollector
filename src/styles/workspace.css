@@ -19,7 +19,7 @@
 
 /* ========== 分割线拖拽手柄 ========== */
 .resize-handle {
-  width: 4px;
+  width: 1px;
   cursor: col-resize;
   background: var(--border-color);
   transition: background 0.15s;
@@ -31,8 +31,8 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -3px;
-  right: -3px;
+  left: -4px;
+  right: -4px;
   bottom: 0;
 }
 
@@ -117,15 +117,41 @@
 
 .compact-card-badges {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-.badge-pin {
+.compact-card:hover .compact-card-badges,
+.compact-card-badges:has(.active) {
+  opacity: 1;
+}
+
+.badge-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.badge-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.badge-btn.badge-pin.active {
   color: #667eea;
 }
 
-.badge-fav {
+.badge-btn.badge-fav.active {
   color: #ffa726;
 }
 

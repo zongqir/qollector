@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import './EditModal.css';
 
-function EditModal({ item, mode, onSave, onCancel }) {
+function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [note, setNote] = useState('');
@@ -67,6 +67,31 @@ function EditModal({ item, mode, onSave, onCancel }) {
 
   const isNewMode = mode === 'new';
   const canEdit = isNewMode || (item && item.type_ !== 'image');
+  const isMiniQuickAdd = isMiniMode && isNewMode;
+
+  if (isMiniQuickAdd) {
+    return (
+      <div className="edit-modal-mini-fullscreen">
+        <textarea
+          className="edit-modal-mini-textarea"
+          placeholder={t('editModal.contentPlaceholder')}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={handleKeyDown}
+          autoFocus
+        />
+        <div className="edit-modal-mini-footer">
+          <button onClick={onCancel} className="edit-modal-btn cancel">
+            {t('edit.cancel')}
+          </button>
+          <span className="hint-item">{t('editModal.saveHint')}</span>
+          <button onClick={handleSave} className="edit-modal-btn submit" disabled={!content.trim()}>
+            {t('edit.save')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="edit-modal-overlay" onClick={onCancel}>

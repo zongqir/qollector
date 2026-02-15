@@ -36,6 +36,8 @@ function HistoryStream({ style }) {
   const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
+  const togglePin = useAppStore(s => s.togglePin);
+  const toggleFavorite = useAppStore(s => s.toggleFavorite);
 
   // 搜索防抖
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
@@ -226,6 +228,8 @@ function HistoryStream({ style }) {
                     item={item}
                     isSelected={isSelected}
                     onDragStart={handleDragStart}
+                    onTogglePin={togglePin}
+                    onToggleFavorite={toggleFavorite}
                   />
                 </div>
               );

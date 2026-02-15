@@ -170,6 +170,7 @@ function App() {
         <EditModal
           item={editingItem}
           mode={editModalMode}
+          isMiniMode={isMiniMode}
           onSave={handleEditModalSave}
           onCancel={handleEditModalCancel}
         />

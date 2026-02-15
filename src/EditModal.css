@@ -299,3 +299,44 @@
 .edit-modal-btn.submit:active {
   transform: scale(0.98);
 }
+
+/* Mini 模式快速添加 - 全屏铺满 */
+.edit-modal-mini-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  background: var(--edit-modal-bg);
+}
+
+.edit-modal-mini-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+  font-family: inherit;
+}
+
+.edit-modal-mini-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.edit-modal-mini-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-light);
+}
+
+.edit-modal-mini-footer .hint-item {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}

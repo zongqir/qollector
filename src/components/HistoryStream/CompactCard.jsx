@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, FileText, Image, Type, Link } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -15,7 +15,7 @@ const TypeIcon = ({ type }) => {
   }
 };
 
-function CompactCard({ item, isSelected, onDragStart }) {
+function CompactCard({ item, isSelected, onDragStart, onTogglePin, onToggleFavorite }) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
   const tags = getTags(item.tags);
@@ -23,6 +23,7 @@ function CompactCard({ item, isSelected, onDragStart }) {
 
   const cardClasses = [
     'compact-card',
+    item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
   ].filter(Boolean).join(' ');
@@ -68,7 +69,20 @@ function CompactCard({ item, isSelected, onDragStart }) {
           {formatDate(item.created_at, i18n.language)}
         </span>
         <div className="compact-card-badges">
-          {item.is_favorite && <Star size={12} className="badge-fav" fill="currentColor" />}
+          <button
+            className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
+            title={t('preview.pin')}
+          >
+            <Pin size={10} />
+          </button>
+          <button
+            className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
+            title={t('preview.favorite')}
+          >
+            <Star size={10} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
         </div>
       </div>
       <div className="compact-card-body">

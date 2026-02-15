@@ -23,13 +23,15 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
         <div className="titlebar-title">{t('app.title')}</div>
       </div>
       <div className="titlebar-buttons">
-        <button
-          onClick={onOpenQuickInput}
-          className="titlebar-btn quick-add-btn"
-          title={t('titlebar.quickAdd')}
-        >
-          <PlusCircle size={16} />
-        </button>
+        {isMiniMode && (
+          <button
+            onClick={onOpenQuickInput}
+            className="titlebar-btn quick-add-btn"
+            title={t('titlebar.quickAdd')}
+          >
+            <PlusCircle size={16} />
+          </button>
+        )}
         <button
           onClick={handleToggleMini}
           className={`titlebar-btn mini-btn ${isMiniMode ? 'active' : ''}`}
