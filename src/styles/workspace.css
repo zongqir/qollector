@@ -999,7 +999,11 @@
 
 .app.mini-mode .history-stream {
   width: 100%;
+  min-width: 0;
   max-width: none;
+  flex: 1;
+  flex-shrink: 1;
+  overflow: hidden;
   border-right: none;
 }
 
