@@ -1,4 +1,4 @@
-/* macOS 风格滚动条 */
+/* macOS 风格滚动�?*/
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -17,14 +17,15 @@
 }
 
 /* 仅在 hover 时显示滚动条 */
-.history-stream-content::-webkit-scrollbar-thumb,
+.history-stream-scroller::-webkit-scrollbar-thumb,
 .preview-content-area::-webkit-scrollbar-thumb,
 .collection-cards::-webkit-scrollbar-thumb {
   background: transparent;
 }
 
-.history-stream-content:hover::-webkit-scrollbar-thumb,
+.history-stream-scroller:hover::-webkit-scrollbar-thumb,
 .preview-content-area:hover::-webkit-scrollbar-thumb,
 .collection-cards:hover::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
 }
+

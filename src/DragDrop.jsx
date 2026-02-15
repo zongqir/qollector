@@ -62,7 +62,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
                   onItemAddedRef.current?.();
                   onTypeAddedRef.current?.('image');
                 } catch (err) {
-                  console.error('娣诲姞鍥剧墖澶辫触:', err);
+                  console.error('添加图片失败:', err);
                 }
               } else {
                 try {
@@ -75,7 +75,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
                   onItemAddedRef.current?.();
                   onTypeAddedRef.current?.('file');
                 } catch (err) {
-                  console.error('娣诲姞鏂囦欢澶辫触:', err);
+                  console.error('添加文件失败:', err);
                 }
               }
             }

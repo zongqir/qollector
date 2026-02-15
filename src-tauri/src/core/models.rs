@@ -18,6 +18,7 @@ pub struct ClipboardItem {
     pub is_pinned: bool,
     pub is_favorite: bool,
     pub is_deleted: bool,
+    pub pinned_at: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -49,6 +50,7 @@ impl ClipboardItem {
             is_pinned: false,
             is_favorite: false,
             is_deleted: false,
+            pinned_at: None,
             created_at: now,
             updated_at: now,
         }
@@ -114,6 +116,7 @@ impl ClipboardItem {
             is_pinned: false,
             is_favorite: false,
             is_deleted: false,
+            pinned_at: None,
             created_at: now,
             updated_at: now,
         }

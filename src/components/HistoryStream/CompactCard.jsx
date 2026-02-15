@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink, Check } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList, parseUrl } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -18,6 +18,8 @@ const TypeIcon = ({ type }) => {
 function CompactCard({
   item,
   isSelected,
+  isMultiSelected,
+  isCopied,
   onDragStart,
   onStartExternalDrag,
   onTogglePin,
@@ -36,6 +38,8 @@ function CompactCard({
     item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
+    isMultiSelected && 'multi-selected',
+    isCopied && 'copied',
   ].filter(Boolean).join(' ');
 
   const renderContent = () => {
@@ -140,6 +144,11 @@ function CompactCard({
         </div>
       </div>
       <div className="compact-card-body">
+        {isCopied && (
+          <div className="copy-success-toast">
+            <Check size={16} /> {t('item.copied')}
+          </div>
+        )}
         {renderContent()}
       </div>
       {userTags.length > 0 && (

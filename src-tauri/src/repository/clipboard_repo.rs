@@ -44,6 +44,7 @@ impl ClipboardRepository {
                 is_pinned INTEGER NOT NULL DEFAULT 0,
                 is_favorite INTEGER NOT NULL DEFAULT 0,
                 is_deleted INTEGER NOT NULL DEFAULT 0,
+                pinned_at INTEGER,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -52,13 +53,18 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
+        // 迁移：为已有表添加 pinned_at 列
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pinned_at INTEGER")
+            .execute(&self.pool)
+            .await;
+
         // 优化索引：添加复合索引提升查询性能
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)")
             .execute(&self.pool)
             .await?;
 
-        // 复合索引：is_deleted + is_pinned + updated_at（覆盖最常用的查询）
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_recent_query ON clipboard_items(is_deleted, is_pinned DESC, updated_at DESC)")
+        // 复合索引：is_deleted + updated_at（覆盖最常用的查询）
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_recent_query ON clipboard_items(is_deleted, updated_at DESC)")
             .execute(&self.pool)
             .await?;
 
@@ -81,8 +87,8 @@ impl ClipboardRepository {
                 id, type, content, original_content, content_hash,
                 image_paths, ocr_text, embedding, tags, user_note,
                 metadata, is_pinned, is_favorite, is_deleted,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                pinned_at, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#
         )
         .bind(&item.id)
@@ -99,6 +105,7 @@ impl ClipboardRepository {
         .bind(item.is_pinned)
         .bind(item.is_favorite)
         .bind(item.is_deleted)
+        .bind(item.pinned_at)
         .bind(item.created_at)
         .bind(item.updated_at)
         .execute(&self.pool)
@@ -135,7 +142,7 @@ impl ClipboardRepository {
             "SELECT id, type, content, '' as original_content, content_hash,
                     image_paths, ocr_text, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    created_at, updated_at
+                    pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ?"
         )
@@ -152,7 +159,7 @@ impl ClipboardRepository {
             "SELECT id, type, content, '' as original_content, content_hash,
                     image_paths, ocr_text, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    created_at, updated_at
+                    pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ? OFFSET ?"
         )
@@ -197,7 +204,7 @@ impl ClipboardRepository {
             r#"
             UPDATE clipboard_items SET
                 content = ?, tags = ?, user_note = ?,
-                is_pinned = ?, is_favorite = ?, updated_at = ?
+                is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
             WHERE id = ?
             "#
         )
@@ -206,6 +213,7 @@ impl ClipboardRepository {
         .bind(&item.user_note)
         .bind(item.is_pinned)
         .bind(item.is_favorite)
+        .bind(item.pinned_at)
         .bind(item.updated_at)
         .bind(&item.id)
         .execute(&self.pool)
@@ -261,10 +269,10 @@ impl ClipboardRepository {
         Ok(item)
     }
 
-    /// 获取所有置顶项,按更新时间排序(最早的在前)
+    /// 获取所有置顶项,按置顶时间排序(最早的在前)
     pub async fn get_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 AND is_pinned = 1 ORDER BY updated_at ASC"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 AND is_pinned = 1 ORDER BY pinned_at ASC"
         )
         .fetch_all(&self.pool)
         .await?;
@@ -274,7 +282,7 @@ impl ClipboardRepository {
 
     /// 取消指定项的置顶状态
     pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE clipboard_items SET is_pinned = 0 WHERE id = ?")
+        sqlx::query("UPDATE clipboard_items SET is_pinned = 0, pinned_at = NULL WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -282,8 +290,10 @@ impl ClipboardRepository {
     }
 
     pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE clipboard_items SET is_pinned = ? WHERE id = ?")
+        let pinned_at = if pinned { Some(chrono::Utc::now().timestamp()) } else { None };
+        sqlx::query("UPDATE clipboard_items SET is_pinned = ?, pinned_at = ? WHERE id = ?")
             .bind(pinned as i32)
+            .bind(pinned_at)
             .bind(id)
             .execute(&self.pool)
             .await?;

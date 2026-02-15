@@ -1,11 +1,20 @@
-import { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useEffect, useMemo, useCallback, forwardRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Virtuoso } from 'react-virtuoso';
+import { Copy, Trash2 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+
+const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
+const toLen = (value) => (typeof value === 'string' ? value.length : 0);
+
+const VirtuosoScroller = forwardRef(function VirtuosoScroller(props, ref) {
+  const { className = '', ...rest } = props;
+  return <div ref={ref} className={`history-stream-scroller ${className}`.trim()} {...rest} />;
+});
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -37,8 +46,9 @@ function getDragText(item, externalPaths) {
 
 function HistoryStream({ style }) {
   const { t } = useTranslation();
-  const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
+  const filterProbeRef = useRef(null);
+  const lastFilterProbeLogAtRef = useRef(0);
 
   const items = useAppStore(s => s.items);
   const searchQuery = useAppStore(s => s.searchQuery);
@@ -46,13 +56,18 @@ function HistoryStream({ style }) {
   const selectedType = useAppStore(s => s.selectedType);
   const selectedTags = useAppStore(s => s.selectedTags);
   const showFavoritesOnly = useAppStore(s => s.showFavoritesOnly);
+  const showPinnedOnly = useAppStore(s => s.showPinnedOnly);
+  const isMiniMode = useAppStore(s => s.isMiniMode);
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
+  const copiedItemId = useAppStore(s => s.copiedItemId);
+  const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const setSelectedTags = useAppStore(s => s.setSelectedTags);
   const setShowFavoritesOnly = useAppStore(s => s.setShowFavoritesOnly);
+  const setShowPinnedOnly = useAppStore(s => s.setShowPinnedOnly);
   const setShowTagFilter = useAppStore(s => s.setShowTagFilter);
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
@@ -66,6 +81,10 @@ function HistoryStream({ style }) {
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
+  const clearSelection = useAppStore(s => s.clearSelection);
+  const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
+  const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -112,8 +131,18 @@ function HistoryStream({ style }) {
   }, [allTags, tagSearchQuery]);
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    const startedAt = performance.now();
+    let scannedItems = 0;
+    let scannedChars = 0;
+    const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
+    const hasSearch = normalizedQuery.length > 0;
+
+    let result = items.filter(item => {
+      scannedItems += 1;
+      scannedChars += toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note);
+
       if (showFavoritesOnly && !item.is_favorite) return false;
+      if (showPinnedOnly && !item.is_pinned) return false;
       if (selectedType !== 'all' && item.type_ !== selectedType) return false;
 
       if (selectedTags.length > 0) {
@@ -126,35 +155,69 @@ function HistoryStream({ style }) {
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
 
-      if (!debouncedSearchQuery.trim()) return true;
-      const query = debouncedSearchQuery.toLowerCase();
-      if (item.content && item.content.toLowerCase().includes(query)) return true;
-      if (item.user_note && item.user_note.toLowerCase().includes(query)) return true;
+      if (!hasSearch) return true;
+      if (item.content && item.content.toLowerCase().includes(normalizedQuery)) return true;
+      if (item.user_note && item.user_note.toLowerCase().includes(normalizedQuery)) return true;
       const tags = getTags(item.tags);
-      if (tags.some(tag => tag.toLowerCase().includes(query))) return true;
-      if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
-      if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
+      if (tags.some(tag => tag.toLowerCase().includes(normalizedQuery))) return true;
+      if (getSourceApp(item.metadata).toLowerCase().includes(normalizedQuery)) return true;
+      if (item.ocr_text && item.ocr_text.toLowerCase().includes(normalizedQuery)) return true;
       return false;
     });
-  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
 
-  const virtualizer = useVirtualizer({
-    count: filteredItems.length,
-    getScrollElement: () => contentRef.current,
-    estimateSize: () => 90,
-    overscan: 5,
-  });
-
-  const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
-  useEffect(() => {
-    if (!lastVirtualItem) return;
-    if (lastVirtualItem.index >= filteredItems.length - 5) {
-      loadMore();
+    // Pin 筛选时�?pinned_at 降序排序
+    if (showPinnedOnly) {
+      result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
     }
-  }, [lastVirtualItem?.index, filteredItems.length, loadMore]);
+
+    filterProbeRef.current = {
+      elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
+      totalItems: items.length,
+      resultItems: result.length,
+      scannedItems,
+      scannedChars,
+      hasSearch,
+      searchChars: normalizedQuery.length,
+      selectedTags: selectedTags.length,
+      selectedType,
+      showFavoritesOnly,
+      showPinnedOnly,
+    };
+
+    return result;
+  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly]);
+
+  useEffect(() => {
+    const probe = filterProbeRef.current;
+    if (!probe) return;
+
+    const now = Date.now();
+    if (now - lastFilterProbeLogAtRef.current < 800) return;
+
+    const shouldLog =
+      probe.hasSearch ||
+      probe.selectedTags > 0 ||
+      probe.selectedType !== 'all' ||
+      probe.showFavoritesOnly ||
+      probe.showPinnedOnly ||
+      probe.totalItems >= 100 ||
+      probe.elapsedMs >= 8;
+
+    if (!shouldLog) return;
+
+    lastFilterProbeLogAtRef.current = now;
+    console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
+  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, items.length]);
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
+    if (e.ctrlKey || e.metaKey) {
+      toggleSelectItem(item.id);
+      return;
+    }
+    if (selectedItemIds.length > 0) {
+      clearSelection();
+    }
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -163,7 +226,7 @@ function HistoryStream({ style }) {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -213,10 +276,81 @@ function HistoryStream({ style }) {
   }, [handleStartExternalDrag, switchToCollection]);
 
   const handleStreamClick = useCallback(() => {
+    if (selectedItemIds.length > 0) {
+      clearSelection();
+      return;
+    }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (selectedItemIds.length === 0) return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelectedItems();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        e.preventDefault();
+        copySelectedItemsMerged();
+      } else if (e.key === 'Escape') {
+        clearSelection();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection]);
+
+  const rowGap = isMiniMode ? 3 : 4;
+
+  const handleEndReached = useCallback(() => {
+    loadMore();
+  }, [loadMore]);
+
+  const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
+
+  const renderVirtualRow = useCallback((index) => {
+    const item = filteredItems[index];
+    if (!item) return null;
+    const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
+    const isMultiSelected = selectedItemIds.includes(item.id);
+
+    return (
+      <div
+        className="history-stream-row"
+        style={{ paddingBottom: `${rowGap}px` }}
+        onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
+        onDoubleClick={(e) => handleCardDoubleClick(item, e)}
+      >
+        <CompactCard
+          item={item}
+          isSelected={isSelected}
+          isMultiSelected={isMultiSelected}
+          isCopied={copiedItemId === item.id}
+          onDragStart={handleDragStart}
+          onStartExternalDrag={handleStartExternalDrag}
+          onTogglePin={togglePin}
+          onToggleFavorite={toggleFavorite}
+          onOpenItem={handleOpenItem}
+        />
+      </div>
+    );
+  }, [
+    filteredItems,
+    panelMode,
+    previewItem?.id,
+    copiedItemId,
+    selectedItemIds,
+    rowGap,
+    handleCardClick,
+    handleCardDoubleClick,
+    handleDragStart,
+    handleStartExternalDrag,
+    togglePin,
+    toggleFavorite,
+    handleOpenItem,
+  ]);
 
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
@@ -227,6 +361,9 @@ function HistoryStream({ style }) {
         onTypeChange={setSelectedType}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
+        showPinnedOnly={showPinnedOnly}
+        onTogglePinned={() => setShowPinnedOnly(!showPinnedOnly)}
+        isMiniMode={isMiniMode}
         selectedTags={selectedTags}
         onClearTags={() => setSelectedTags([])}
         showTagFilter={showTagFilter}
@@ -239,49 +376,41 @@ function HistoryStream({ style }) {
         onOpenSettings={() => setShowSettings(true)}
       />
 
-      <div className="history-stream-content" ref={contentRef}>
+      <div className="history-stream-content">
         {filteredItems.length === 0 ? (
           <div className="empty">
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
-          <div
-            className="history-stream-list"
-            style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const item = filteredItems[virtualRow.index];
-              const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
-              return (
-                <div
-                  key={item.id}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
-                  onDoubleClick={(e) => handleCardDoubleClick(item, e)}
-                >
-                  <CompactCard
-                    item={item}
-                    isSelected={isSelected}
-                    onDragStart={handleDragStart}
-                    onStartExternalDrag={handleStartExternalDrag}
-                    onTogglePin={togglePin}
-                    onToggleFavorite={toggleFavorite}
-                    onOpenItem={handleOpenItem}
-                  />
-                </div>
-              );
-            })}
-          </div>
+          <Virtuoso
+            className="history-stream-virtuoso"
+            components={{ Scroller: VirtuosoScroller }}
+            totalCount={filteredItems.length}
+            computeItemKey={computeItemKey}
+            itemContent={renderVirtualRow}
+            endReached={handleEndReached}
+            increaseViewportBy={{ top: 200, bottom: 400 }}
+          />
         )}
       </div>
+
+      {selectedItemIds.length > 0 && (
+        <div className="multi-select-bar">
+          <span className="multi-select-count">
+            {t('multiSelect.selected', { count: selectedItemIds.length })}
+          </span>
+          <div className="multi-select-actions">
+            <button className="multi-select-btn copy" onClick={copySelectedItemsMerged}>
+              <Copy size={14} />
+              <span>{t('multiSelect.mergeCopy')}</span>
+            </button>
+            <button className="multi-select-btn delete" onClick={deleteSelectedItems}>
+              <Trash2 size={14} />
+              <span>{t('multiSelect.delete')}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

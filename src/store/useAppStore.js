@@ -6,14 +6,79 @@ import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as d
 import { initOcrService } from '../services/ocrService';
 
 const PAGE_SIZE = 50;
+const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 
+const toLen = (value) => (typeof value === 'string' ? value.length : 0);
+
+const summarizeItemsForMemory = (items) => {
+  let totalContentChars = 0;
+  let totalOcrChars = 0;
+  let totalNoteChars = 0;
+  let maxContentChars = 0;
+  let maxOcrChars = 0;
+  let longContentItems = 0;
+  let longOcrItems = 0;
+
+  for (const item of items) {
+    const contentLen = toLen(item?.content);
+    const ocrLen = toLen(item?.ocr_text);
+    const noteLen = toLen(item?.user_note);
+
+    totalContentChars += contentLen;
+    totalOcrChars += ocrLen;
+    totalNoteChars += noteLen;
+
+    if (contentLen > maxContentChars) maxContentChars = contentLen;
+    if (ocrLen > maxOcrChars) maxOcrChars = ocrLen;
+    if (contentLen >= 2000) longContentItems += 1;
+    if (ocrLen >= 2000) longOcrItems += 1;
+  }
+
+  return {
+    items: items.length,
+    totalContentChars,
+    totalOcrChars,
+    totalNoteChars,
+    maxContentChars,
+    maxOcrChars,
+    longContentItems,
+    longOcrItems,
+  };
+};
+
+const logItemsMemoryProbe = (stage, items, extra = {}) => {
+  console.log(`${MEMORY_PROBE_PREFIX} ${stage}`, {
+    ...summarizeItemsForMemory(items),
+    ...extra,
+  });
+};
+
+const sortByUpdatedAtDesc = (a, b) => {
+  const timeDiff = (b?.updated_at || 0) - (a?.updated_at || 0);
+  if (timeDiff !== 0) return timeDiff;
+  return String(b?.id || '').localeCompare(String(a?.id || ''));
+};
+
+const mergeUniqueById = (baseItems, incomingItems) => {
+  const map = new Map();
+  [...baseItems, ...incomingItems].forEach((item) => {
+    if (!item?.id) return;
+    const prev = map.get(item.id);
+    if (!prev || (item.updated_at || 0) >= (prev.updated_at || 0)) {
+      map.set(item.id, item);
+    }
+  });
+  return Array.from(map.values()).sort(sortByUpdatedAtDesc);
+};
 const useAppStore = create((set, get) => ({
   // ========== 历史数据 ==========
   items: [],
   loading: true,
   hasMore: true,
   loadingMore: false,
+  itemsRevision: 0,
   processedItemIds: new Set(),
+  isMemorySuspended: false,
 
   // ========== 右栏面板状态机 ==========
   // 'collection' | 'preview'
@@ -26,8 +91,12 @@ const useAppStore = create((set, get) => ({
   selectedType: 'all',
   selectedTags: [],
   showFavoritesOnly: false,
+  showPinnedOnly: false,
   showTagFilter: false,
   tagSearchQuery: '',
+
+  // ========== 多选状态 ==========
+  selectedItemIds: [],
 
   // ========== UI 状态 ==========
   copiedItemId: null,
@@ -76,8 +145,16 @@ const useAppStore = create((set, get) => ({
     try {
       const result = await getRecentItemsLight(PAGE_SIZE);
       const { loading, processedItemIds } = get();
-      set({ items: result, hasMore: result.length >= PAGE_SIZE });
-
+      const mergedItems = mergeUniqueById([], result);
+      set((state) => ({
+        items: mergedItems,
+        hasMore: result.length >= PAGE_SIZE,
+        itemsRevision: state.itemsRevision + 1,
+      }));
+      logItemsMemoryProbe('loadItems', mergedItems, {
+        fetched: result.length,
+        pageSize: PAGE_SIZE,
+      });
       if (!loading) {
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
@@ -94,18 +171,62 @@ const useAppStore = create((set, get) => ({
   },
 
   loadMore: async () => {
-    const { hasMore, loadingMore, items } = get();
+    const { hasMore, loadingMore, items, itemsRevision } = get();
     if (!hasMore || loadingMore) return;
     set({ loadingMore: true });
+    const requestOffset = items.length;
+    const requestRevision = itemsRevision;
     try {
-      const more = await getMoreItems(PAGE_SIZE, items.length);
-      if (more.length < PAGE_SIZE) set({ hasMore: false });
-      set({ items: [...items, ...more] });
+      const more = await getMoreItems(PAGE_SIZE, requestOffset);
+      if (get().itemsRevision !== requestRevision) return;
+      let mergedItemsSnapshot = null;
+      set((state) => ({
+        items: (() => {
+          const merged = mergeUniqueById(state.items, more);
+          mergedItemsSnapshot = merged;
+          return merged;
+        })(),
+        hasMore: more.length >= PAGE_SIZE,
+      }));
+      if (mergedItemsSnapshot) {
+        logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
+          fetched: more.length,
+          offset: requestOffset,
+          pageSize: PAGE_SIZE,
+          hasMoreAfter: more.length >= PAGE_SIZE,
+        });
+      }
     } catch (error) {
       console.error('加载更多失败:', error);
     } finally {
       set({ loadingMore: false });
     }
+  },
+
+  suspendForMinimize: () => {
+    const state = get();
+    if (state.isMemorySuspended) return;
+
+    set({
+      items: [],
+      hasMore: true,
+      loadingMore: false,
+      itemsRevision: state.itemsRevision + 1,
+      processedItemIds: new Set(),
+      panelMode: 'collection',
+      previewItem: null,
+      isMemorySuspended: true,
+    });
+    console.log('[MemorySuspend] detached heavy list state while minimized');
+  },
+
+  resumeFromMinimize: async () => {
+    const state = get();
+    if (!state.isMemorySuspended) return;
+
+    set({ isMemorySuspended: false, loading: true });
+    console.log('[MemorySuspend] restoring list state after window became visible');
+    await get().loadItems();
   },
 
   loadConfigs: async () => {
@@ -173,7 +294,6 @@ const useAppStore = create((set, get) => ({
       set({ generatingAI: null });
     }
   },
-
   handleOCR: async (item) => {
     if (!item.image_paths) return;
     set({ ocrProcessing: item.id });
@@ -266,11 +386,75 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  // ========== 多选 Actions ==========
+  toggleSelectItem: (itemId) => {
+    const { selectedItemIds } = get();
+    if (selectedItemIds.includes(itemId)) {
+      set({ selectedItemIds: selectedItemIds.filter(id => id !== itemId) });
+    } else {
+      set({ selectedItemIds: [...selectedItemIds, itemId] });
+    }
+  },
+
+  clearSelection: () => {
+    set({ selectedItemIds: [] });
+  },
+
+  deleteSelectedItems: async () => {
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) return;
+    try {
+      for (const id of selectedItemIds) {
+        await deleteItemSvc(id);
+      }
+      set({
+        items: items.filter(i => !selectedItemIds.includes(i.id)),
+        selectedItemIds: [],
+        panelMode: 'collection',
+        previewItem: null,
+      });
+    } catch (error) {
+      console.error('batch delete failed:', error);
+    }
+  },
+
+  copySelectedItemsMerged: async () => {
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) return;
+    try {
+      const idSet = new Set(selectedItemIds);
+      const selectedItems = items.filter(i => idSet.has(i.id));
+      const merged = selectedItems.map(i => i.content || '').filter(Boolean).join('\n');
+      if (!merged) return;
+      const tempItem = {
+        id: 'temp-merge',
+        type_: 'text',
+        content: merged,
+        is_pinned: false,
+        is_favorite: false,
+        is_deleted: false,
+        tags: '[]',
+        metadata: '{}',
+        image_paths: null,
+        ocr_text: null,
+        user_note: null,
+        created_at: Math.floor(Date.now() / 1000),
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+      await copyItemToClipboard(tempItem);
+      set({ copiedItemId: 'merge-success', selectedItemIds: [] });
+      setTimeout(() => set({ copiedItemId: null }), 1000);
+    } catch (error) {
+      console.error('merge copy failed:', error);
+    }
+  },
+
   // ========== 筛选 Actions ==========
   setSearchQuery: (q) => set({ searchQuery: q }),
   setSelectedType: (t) => set({ selectedType: t }),
   setSelectedTags: (tags) => set({ selectedTags: tags }),
   setShowFavoritesOnly: (v) => set({ showFavoritesOnly: v }),
+  setShowPinnedOnly: (v) => set({ showPinnedOnly: v }),
   setShowTagFilter: (v) => set({ showTagFilter: v }),
   setTagSearchQuery: (q) => set({ tagSearchQuery: q }),
 

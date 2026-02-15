@@ -6,6 +6,7 @@ pub mod repository;
 pub mod commands;
 pub mod mcp;
 pub mod config;
+pub mod startup_metrics;
 
 #[cfg(test)]
 mod tests;

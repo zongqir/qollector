@@ -1,11 +1,13 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check, Layers } from 'lucide-react';
+import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check, Layers } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
   selectedType, onTypeChange,
   showFavoritesOnly, onToggleFavorites,
+  showPinnedOnly, onTogglePinned,
+  isMiniMode,
   selectedTags, onClearTags,
   showTagFilter, onToggleTagFilter,
   allTags, filteredTagsList,
@@ -61,6 +63,16 @@ function SearchBar({
         >
           <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
         </button>
+
+        {isMiniMode && (
+          <button
+            onClick={onTogglePinned}
+            className={`header-icon-btn pin-filter-btn ${showPinnedOnly ? 'active pin-active' : ''}`}
+            title={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
+          >
+            <Pin size={15} fill={showPinnedOnly ? 'currentColor' : 'none'} />
+          </button>
+        )}
 
         {allTags.length > 0 && (
           <div className="tag-select-wrapper" ref={tagWrapperRef}>
