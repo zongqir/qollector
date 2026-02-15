@@ -4,7 +4,26 @@
 
 export const formatDate = (timestamp, language) => {
   const date = new Date(timestamp * 1000);
-  return date.toLocaleString(language);
+  const now = new Date();
+  const isCurrentYear = date.getFullYear() === now.getFullYear();
+
+  if (isCurrentYear) {
+    // 本年：MM-DD HH:mm
+    return date.toLocaleString(language, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  // 非本年：YYYY-MM-DD HH:mm
+  return date.toLocaleString(language, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 /**

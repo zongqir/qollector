@@ -664,8 +664,10 @@
   display: flex;
   gap: 12px;
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
+  border-top: 1px solid var(--border-light);
+  justify-content: flex-end;
 }
 
 .preview-content-area {
@@ -706,53 +708,24 @@
 }
 
 /* 预览页内容编辑 */
-.preview-edit-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .preview-edit-textarea {
   width: 100%;
-  min-height: 200px;
-  padding: 12px;
-  border: 1px solid var(--border-input);
-  border-radius: 8px;
-  background: var(--bg-input);
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--text-primary);
   font-size: 14px;
-  line-height: 1.6;
-  resize: vertical;
+  line-height: 1.8;
+  resize: none;
   font-family: inherit;
-}
-
-.preview-edit-textarea:focus {
   outline: none;
-  border-color: #667eea;
 }
 
-.preview-edit-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.preview-edit-btn {
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
-}
-
-.preview-edit-btn.save {
-  background: #667eea;
-  color: white;
-}
-
-.preview-edit-btn.cancel {
-  background: var(--cancel-btn-bg);
-  color: var(--text-secondary);
+.preview-toolbar-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-right: auto;
 }
 
 /* 预览页工具栏 */
@@ -793,7 +766,7 @@
   cursor: not-allowed;
 }
 
-/* 预览页标签区 - 元信息下方，紧凑展示 */
+/* 预览页标签区 - 靠左展示 */
 .preview-tags-section {
   padding: 6px 16px;
   border-bottom: 1px solid var(--border-light);
@@ -801,15 +774,17 @@
 
 .preview-tags-section .item-tags {
   gap: 4px;
+  justify-content: flex-start;
 }
 
-/* 预览页备注区 - 标签下方 */
+/* 预览页备注区 - 内容下方，靠右 */
 .preview-note-section {
   padding: 6px 16px;
-  border-bottom: 1px solid var(--border-light);
+  border-top: 1px solid var(--border-light);
   min-height: 28px;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .preview-note-section .note-display-bar {

@@ -36,6 +36,7 @@
     "noTagsFound": "No matching tags found",
     "selectedTags": "{{count}} tags selected",
     "filterTags": "Filter Tags",
+    "moreTagsHint": "{{count}} more tags, use search to find them",
     "dragToApp": "Drag to other apps",
     "dragOut": "Drag",
     "favorites": "Favorites",

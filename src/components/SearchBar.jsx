@@ -75,32 +75,39 @@ function SearchBar({
                 </div>
                 <div className="tag-dropdown-list">
                   {filteredTagsList.length > 0 ? (
-                    filteredTagsList.map(tag => {
-                      const isAITag = tag.startsWith('AI:');
-                      const isSourceTag = tag.startsWith('来源:');
-                      const isTypeTag = tag.startsWith('类型:');
-                      const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
-                      const displayTag = isAITag ? tag.substring(3) :
-                                        isSourceTag ? tag.substring(3) :
-                                        isTypeTag ? tag.substring(3) :
-                                        tag;
-                      return (
-                        <div
-                          key={tag}
-                          onClick={() => onToggleTag(tag)}
-                          className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                        >
-                          <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
-                          <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
-                            {isTypeTag && <span className="type-badge">T</span>}
-                            {isAITag && <span className="ai-badge">AI</span>}
-                            {isUserTag && <span className="user-badge">M</span>}
-                            {isSourceTag && <span className="source-badge">S</span>}
-                            {displayTag}
-                          </span>
+                    <>
+                      {filteredTagsList.slice(0, 20).map(tag => {
+                        const isAITag = tag.startsWith('AI:');
+                        const isSourceTag = tag.startsWith('来源:');
+                        const isTypeTag = tag.startsWith('类型:');
+                        const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
+                        const displayTag = isAITag ? tag.substring(3) :
+                                          isSourceTag ? tag.substring(3) :
+                                          isTypeTag ? tag.substring(3) :
+                                          tag;
+                        return (
+                          <div
+                            key={tag}
+                            onClick={() => onToggleTag(tag)}
+                            className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                          >
+                            <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
+                            <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
+                              {isTypeTag && <span className="type-badge">T</span>}
+                              {isAITag && <span className="ai-badge">AI</span>}
+                              {isUserTag && <span className="user-badge">M</span>}
+                              {isSourceTag && <span className="source-badge">S</span>}
+                              {displayTag}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {filteredTagsList.length > 20 && (
+                        <div className="tag-dropdown-more-hint">
+                          {t('toolbar.moreTagsHint', { count: filteredTagsList.length - 20 })}
                         </div>
-                      );
-                    })
+                      )}
+                    </>
                   ) : (
                     <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
                   )}

@@ -36,6 +36,7 @@
     "noTagsFound": "未找到匹配的标签",
     "selectedTags": "已选 {{count}} 个标签",
     "filterTags": "筛选标签",
+    "moreTagsHint": "还有 {{count}} 个标签，请使用搜索查找",
     "dragToApp": "拖拽到其他应用",
     "dragOut": "拖出",
     "favorites": "收藏",

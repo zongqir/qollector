@@ -122,26 +122,16 @@ function PreviewPanel() {
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image') {
       return (
-        <div className="preview-edit-content">
-          <textarea
-            className="preview-edit-textarea"
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.ctrlKey) handleSaveContent();
-              if (e.key === 'Escape') setIsEditingContent(false);
-            }}
-            autoFocus
-          />
-          <div className="preview-edit-actions">
-            <button className="preview-edit-btn save" onClick={handleSaveContent}>
-              {t('panel.saveContent')}
-            </button>
-            <button className="preview-edit-btn cancel" onClick={() => setIsEditingContent(false)}>
-              {t('panel.cancelEdit')}
-            </button>
-          </div>
-        </div>
+        <textarea
+          className="preview-edit-textarea"
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.ctrlKey) handleSaveContent();
+            if (e.key === 'Escape') setIsEditingContent(false);
+          }}
+          autoFocus
+        />
       );
     }
 
@@ -199,13 +189,7 @@ function PreviewPanel() {
         </div>
       </div>
 
-      {/* 元信息 */}
-      <div className="preview-meta">
-        <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
-        <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
-      </div>
-
-      {/* 标签区 - 紧跟元信息，直接可见可编辑 */}
+      {/* 标签区 */}
       <div className="preview-tags-section">
         <ItemTags
           item={item}
@@ -219,10 +203,21 @@ function PreviewPanel() {
           onCancelAddTag={cancelAddTag}
           onAddTagToItem={addTagToItem}
           filteredUserTags={filteredUserTags}
+          hideTypeTag
         />
       </div>
 
-      {/* 备注区 - 标签下方，内容上方 */}
+      {/* 内容区 */}
+      <div className="preview-content-area">
+        {isCopied && (
+          <div className="copy-success-toast">
+            <Check size={16} /> {t('item.copied')}
+          </div>
+        )}
+        {renderContent()}
+      </div>
+
+      {/* 备注区 - 内容下方，作为批注 */}
       <div className="preview-note-section">
         <NoteDisplay
           item={item}
@@ -241,59 +236,70 @@ function PreviewPanel() {
         )}
       </div>
 
-      {/* 内容区 */}
-      <div className="preview-content-area">
-        {isCopied && (
-          <div className="copy-success-toast">
-            <Check size={16} /> {t('item.copied')}
-          </div>
-        )}
-        {renderContent()}
+      {/* 元信息 - 底部参考 */}
+      <div className="preview-meta">
+        <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
+        <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
       </div>
 
       {/* 工具栏 */}
       <div className="preview-toolbar">
-        <button className="preview-tool-btn" onClick={() => handleCopy(item)}>
-          <Copy size={14} />
-          <span>{t('item.copy')}</span>
-        </button>
-        <button
-          className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
-          onClick={() => toggleFavorite(item)}
-        >
-          <Star size={14} fill={item.is_favorite ? 'currentColor' : 'none'} />
-          <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-        </button>
-        {shouldShowAIButton && (
-          <button
-            className="preview-tool-btn"
-            onClick={() => generateAITags(item)}
-            disabled={generatingAI === item.id}
-          >
-            <Sparkles size={14} />
-            <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
-          </button>
-        )}
-        {shouldShowOCRButton && (
-          <button
-            className="preview-tool-btn"
-            onClick={() => handleOCR(item)}
-            disabled={ocrProcessing === item.id}
-          >
-            <Search size={14} />
-            <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
-          </button>
-        )}
-        {shouldShowOpenButton && (
-          <button className="preview-tool-btn" onClick={() => handleOpenItem(item)}>
-            <ExternalLink size={14} />
-            <span>{t('item.open')}</span>
-          </button>
-        )}
-        {!isEditingContent && item.type_ !== 'image' && (
-          <button className="preview-tool-btn" onClick={handleStartEditContent}>
-            <span>{t('panel.editContent')}</span>
-          </button>
+        {isEditingContent ? (
+          <>
+            <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
+            <button className="preview-tool-btn" onClick={() => setIsEditingContent(false)}>
+              <span>{t('panel.cancelEdit')}</span>
+            </button>
+            <button className="preview-tool-btn active" onClick={handleSaveContent}>
+              <Check size={14} />
+              <span>{t('panel.saveContent')}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="preview-tool-btn" onClick={() => handleCopy(item)}>
+              <Copy size={14} />
+              <span>{t('item.copy')}</span>
+            </button>
+            <button
+              className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
+              onClick={() => toggleFavorite(item)}
+            >
+              <Star size={14} fill={item.is_favorite ? 'currentColor' : 'none'} />
+              <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
+            </button>
+            {shouldShowAIButton && (
+              <button
+                className="preview-tool-btn"
+                onClick={() => generateAITags(item)}
+                disabled={generatingAI === item.id}
+              >
+                <Sparkles size={14} />
+                <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
+              </button>
+            )}
+            {shouldShowOCRButton && (
+              <button
+                className="preview-tool-btn"
+                onClick={() => handleOCR(item)}
+                disabled={ocrProcessing === item.id}
+              >
+                <Search size={14} />
+                <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
+              </button>
+            )}
+            {shouldShowOpenButton && (
+              <button className="preview-tool-btn" onClick={() => handleOpenItem(item)}>
+                <ExternalLink size={14} />
+                <span>{t('item.open')}</span>
+              </button>
+            )}
+            {item.type_ !== 'image' && (
+              <button className="preview-tool-btn" onClick={handleStartEditContent}>
+                <span>{t('panel.editContent')}</span>
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

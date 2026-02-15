@@ -69,7 +69,8 @@
 .tag-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--tag-dropdown-bg);
   border-radius: 10px;
   box-shadow: 0 8px 24px var(--shadow-lg);
@@ -266,6 +267,15 @@
   text-align: center;
   color: var(--text-tertiary);
   font-size: 13px;
+}
+
+.tag-dropdown-more-hint {
+  padding: 8px 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  border-top: 1px solid var(--tag-dropdown-border);
+  margin-top: 4px;
 }
 
 .tag-dropdown-footer {
