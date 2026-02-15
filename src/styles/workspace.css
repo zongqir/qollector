@@ -53,7 +53,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 10px;
+  padding: 6px 0;
 }
 
 .history-stream-list {
@@ -63,6 +63,8 @@
 
 .history-stream-row {
   box-sizing: border-box;
+  padding-left: 10px;
+  padding-right: 10px;
 }
 
 /* ========== macOS 风格紧凑卡片 ========== */
