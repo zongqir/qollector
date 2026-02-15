@@ -175,6 +175,9 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
             >
               {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
             </button>
+            <button onClick={onCancel} className="quick-add-close-btn" title={t('editModal.cancelHint')}>
+              <X size={14} />
+            </button>
           </div>
         </div>
         <textarea
@@ -193,9 +196,6 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
           </div>
         )}
         <div className="edit-modal-mini-footer">
-          <button onClick={onCancel} className="quick-add-btn-close" title={t('editModal.cancelHint')}>
-            <X size={16} />
-          </button>
           <div className="quick-add-actions">
             <button
               onClick={handleSaveAndContinue}

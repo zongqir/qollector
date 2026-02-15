@@ -145,27 +145,27 @@ function CollectionPanel() {
     <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
       {isExpanded ? (
         <div className="quick-note-expanded">
-          <div className="quick-note-expanded-header">
+          <div className="quick-note-expanded-body">
+            <textarea
+              className="quick-note-textarea"
+              placeholder={t('collection.expandedNotePlaceholder')}
+              value={quickNote}
+              onChange={(e) => setQuickNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.ctrlKey && quickNote.trim()) {
+                  handleExpandedSubmit();
+                }
+                if (e.key === 'Escape') setIsExpanded(false);
+              }}
+              autoFocus
+            />
             <button
               className="quick-note-close-btn"
               onClick={() => setIsExpanded(false)}
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
-          <textarea
-            className="quick-note-textarea"
-            placeholder={t('collection.expandedNotePlaceholder')}
-            value={quickNote}
-            onChange={(e) => setQuickNote(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.ctrlKey && quickNote.trim()) {
-                handleExpandedSubmit();
-              }
-              if (e.key === 'Escape') setIsExpanded(false);
-            }}
-            autoFocus
-          />
           <div className="quick-note-expanded-footer">
             <span className="quick-note-hint">Ctrl+Enter</span>
             <button

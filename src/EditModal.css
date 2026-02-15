@@ -456,17 +456,18 @@
 .edit-modal-mini-footer {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   padding: 10px 14px;
   border-top: 1px solid var(--border-light);
 }
 
-/* 关闭按钮 */
-.quick-add-btn-close {
-  width: 32px;
-  height: 32px;
+/* 右上角关闭按钮 - 和置顶按钮风格一致 */
+.quick-add-close-btn {
+  width: 26px;
+  height: 26px;
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
@@ -477,16 +478,15 @@
   flex-shrink: 0;
 }
 
-.quick-add-btn-close:hover {
-  background: rgba(255, 59, 48, 0.08);
+.quick-add-close-btn:hover {
+  background: rgba(255, 59, 48, 0.1);
   color: #ff3b30;
 }
 
-/* 右侧操作区 */
+/* 操作区 */
 .quick-add-actions {
   display: flex;
   gap: 8px;
-  margin-left: auto;
 }
 
 /* 保存并继续 */
@@ -531,7 +531,7 @@
 }
 
 .quick-add-btn-save:hover:not(:disabled) {
-  background: #5a6fd6;
+  background: var(--accent-hover);
 }
 
 .quick-add-btn-save:active:not(:disabled) {

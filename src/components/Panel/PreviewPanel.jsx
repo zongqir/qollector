@@ -176,7 +176,6 @@ function PreviewPanel() {
       <div className="preview-nav">
         <button className="preview-back-btn" onClick={switchToCollection}>
           <ArrowLeft size={16} />
-          <span>{t('collection.backToCollection')}</span>
         </button>
         <div className="preview-nav-actions">
           <button

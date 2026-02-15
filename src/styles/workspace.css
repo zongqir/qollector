@@ -312,15 +312,18 @@
   border-bottom: 1px solid var(--border-light);
 }
 
-.quick-note-expanded-header {
+.quick-note-expanded-body {
+  position: relative;
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 12px 0;
+  margin: 8px 12px 0;
 }
 
 .quick-note-close-btn {
-  width: 26px;
-  height: 26px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -330,6 +333,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  z-index: 1;
 }
 
 .quick-note-close-btn:hover {
@@ -339,10 +343,9 @@
 
 .quick-note-textarea {
   flex: 1;
-  min-height: 120px;
+  min-height: 100px;
   max-height: 300px;
-  margin: 4px 12px;
-  padding: 10px 12px;
+  padding: 10px 32px 10px 12px;
   border: none;
   border-radius: 8px;
   background: var(--bg-input);
@@ -626,20 +629,21 @@
 .preview-back-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
-  color: var(--accent-color);
-  font-size: 13px;
-  font-weight: 500;
+  color: var(--text-tertiary);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
 .preview-back-btn:hover {
-  background: var(--accent-light);
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
 }
 
 .preview-nav-actions {
@@ -775,15 +779,26 @@
   cursor: not-allowed;
 }
 
-/* 预览页标签区 */
+/* 预览页标签区 - 自适应宽度 */
 .preview-tags-section {
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border-light);
 }
 
 .preview-tags-section .item-tags {
   gap: 4px;
   justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.preview-tags-section .add-tag-input-wrapper {
+  display: inline-flex;
+  max-width: 220px;
+}
+
+.preview-tags-section .add-tag-input {
+  width: 100px;
+  min-width: 60px;
 }
 
 /* 预览页备注区 */
