@@ -43,9 +43,9 @@
     "showAll": "显示全部"
   },
   "item": {
-    "pinned": "已置顶",
-    "pin": "置顶 (最多{{max}}个)",
-    "unpin": "取消置顶",
+    "pinned": "已收集",
+    "pin": "收集 (最多{{max}}个)",
+    "unpin": "移除收集",
     "copy": "复制",
     "copied": "已复制",
     "aiTag": "AI标签",
@@ -60,6 +60,8 @@
     "removeTag": "移除标签",
     "confirmTag": "确认添加",
     "cancelTag": "取消",
+    "clickToPreview": "单击预览",
+    "doubleClickToCopy": "双击复制",
     "clickToCopy": "单击复制",
     "doubleClickToPreview": "双击预览",
     "doubleClickToEdit": "双击编辑",
@@ -299,5 +301,23 @@
     "exportFailed": "导出失败：{{error}}",
     "passwordMismatch": "两次密码不一致",
     "cancelled": "已取消"
+  },
+  "collection": {
+    "title": "搜集箱",
+    "emptyTitle": "搜集箱为空",
+    "emptyHint": "从左侧点击收集按钮，或拖拽卡片到这里",
+    "quickNotePlaceholder": "输入笔记，回车添加到搜集箱...",
+    "mergeCopy": "合并复制",
+    "clearAll": "清空搜集箱",
+    "archivedToHistory": "已归档至历史流",
+    "backToCollection": "返回搜集箱",
+    "addToCollection": "加入搜集",
+    "removeFromCollection": "移除搜集"
+  },
+  "panel": {
+    "preview": "预览详情",
+    "editContent": "编辑内容",
+    "saveContent": "保存",
+    "cancelEdit": "取消"
   }
 }

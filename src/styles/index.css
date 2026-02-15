@@ -1,5 +1,6 @@
 @import './theme.css';
 @import './base.css';
+@import './workspace.css';
 @import './titlebar.css';
 @import './quick-input.css';
 @import './search-bar.css';

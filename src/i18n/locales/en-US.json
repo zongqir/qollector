@@ -43,9 +43,9 @@
     "showAll": "Show All"
   },
   "item": {
-    "pinned": "Pinned",
-    "pin": "Pin (Max {{max}})",
-    "unpin": "Unpin",
+    "pinned": "Collected",
+    "pin": "Collect (Max {{max}})",
+    "unpin": "Remove",
     "copy": "Copy",
     "copied": "Copied",
     "aiTag": "AI Tag",
@@ -60,6 +60,8 @@
     "removeTag": "Remove Tag",
     "confirmTag": "Confirm",
     "cancelTag": "Cancel",
+    "clickToPreview": "Click to preview",
+    "doubleClickToCopy": "Double-click to copy",
     "clickToCopy": "Click to copy",
     "doubleClickToPreview": "Double-click to preview",
     "doubleClickToEdit": "Double-click to edit",
@@ -299,5 +301,23 @@
     "exportFailed": "Export failed: {{error}}",
     "passwordMismatch": "Passwords do not match",
     "cancelled": "Cancelled"
+  },
+  "collection": {
+    "title": "Collection",
+    "emptyTitle": "Collection is empty",
+    "emptyHint": "Click the collect button on the left, or drag cards here",
+    "quickNotePlaceholder": "Type a note, press Enter to add to collection...",
+    "mergeCopy": "Merge & Copy",
+    "clearAll": "Clear Collection",
+    "archivedToHistory": "Archived to history",
+    "backToCollection": "Back to Collection",
+    "addToCollection": "Add to Collection",
+    "removeFromCollection": "Remove from Collection"
+  },
+  "panel": {
+    "preview": "Preview Detail",
+    "editContent": "Edit Content",
+    "saveContent": "Save",
+    "cancelEdit": "Cancel"
   }
 }

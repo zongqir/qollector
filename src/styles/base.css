@@ -25,82 +25,26 @@ body {
 }
 
 /* Mini 模式 */
-.app.mini-mode .content {
+.app.mini-mode .history-stream-content {
   padding: 8px 10px;
 }
 
-.app.mini-mode .item-card {
+.app.mini-mode .compact-card {
   padding: 8px 10px;
   border-radius: 6px;
 }
 
-.app.mini-mode .items-list {
-  gap: 4px;
-}
-
-.app.mini-mode .item-content {
+.app.mini-mode .compact-card-text {
   font-size: 12px;
-  max-height: 40px;
-  overflow: hidden;
+  -webkit-line-clamp: 2;
 }
 
-.app.mini-mode .item-toolbar .toolbar-btn:not(.pin-btn):not(.favorite-btn):not(.note-btn) {
+.app.mini-mode .compact-card-tags {
   display: none;
 }
 
-.app.mini-mode .item-toolbar .toolbar-divider {
-  display: none;
-}
-
-/* Mini 模式下显示前三个分隔符（置顶、收藏、备注之间） */
-.app.mini-mode .item-toolbar .pin-btn + .toolbar-divider,
-.app.mini-mode .item-toolbar .favorite-btn + .toolbar-divider {
-  display: block;
-}
-
-.app.mini-mode .item-toolbar .toolbar-btn.pin-btn,
-.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn,
-.app.mini-mode .item-toolbar .toolbar-btn.note-btn {
-  padding: 2px 6px;
-  font-size: 10px;
-}
-
-.app.mini-mode .item-toolbar .toolbar-btn.pin-btn span:not(.toolbar-btn-icon),
-.app.mini-mode .item-toolbar .toolbar-btn.favorite-btn span:not(.toolbar-btn-icon),
-.app.mini-mode .item-toolbar .toolbar-btn.note-btn span:not(.toolbar-btn-icon) {
-  display: none;
-}
-
-.app.mini-mode .item-tags {
-  display: none;
-}
-
-.app.mini-mode .note-display-bar,
-.app.mini-mode .note-edit-bar {
-  display: none;
-}
-
-.app.mini-mode .clipboard-image {
-  max-height: 60px;
-}
-
-.app.mini-mode .image-content-wrapper {
-  flex-direction: column;
-}
-
-.app.mini-mode .image-content-wrapper.has-ocr .image-container {
-  flex: 1;
-  max-width: 100%;
-  border-right: none;
-  padding-right: 0;
-}
-
-.app.mini-mode .ocr-text-container {
-  display: none;
-}
-
-.app.mini-mode .content-hover-tip {
-  display: none;
+.app.mini-mode .compact-card-image {
+  max-height: 50px;
 }
 
 .app.mini-mode .header {
