@@ -40,7 +40,7 @@ body {
 }
 
 /* Mini mode - macOS widget style */
-.app.mini-mode .history-stream-content {
+.app.mini-mode .history-stream-scroller {
   padding: 4px 6px;
 }
 

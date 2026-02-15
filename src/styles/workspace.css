@@ -42,6 +42,15 @@
 
 .history-stream-content {
   flex: 1;
+  overflow: hidden;
+}
+
+.history-stream-virtuoso {
+  height: 100%;
+}
+
+.history-stream-scroller {
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px 10px;
@@ -50,6 +59,10 @@
 .history-stream-list {
   display: flex;
   flex-direction: column;
+}
+
+.history-stream-row {
+  box-sizing: border-box;
 }
 
 /* ========== macOS 风格紧凑卡片 ========== */

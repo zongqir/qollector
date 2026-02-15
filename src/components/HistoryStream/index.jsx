@@ -1,11 +1,19 @@
-import { useRef, useEffect, useMemo, useCallback } from 'react';
+import { useRef, useEffect, useMemo, useCallback, forwardRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Virtuoso } from 'react-virtuoso';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+
+const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
+const toLen = (value) => (typeof value === 'string' ? value.length : 0);
+
+const VirtuosoScroller = forwardRef(function VirtuosoScroller(props, ref) {
+  const { className = '', ...rest } = props;
+  return <div ref={ref} className={`history-stream-scroller ${className}`.trim()} {...rest} />;
+});
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -37,8 +45,9 @@ function getDragText(item, externalPaths) {
 
 function HistoryStream({ style }) {
   const { t } = useTranslation();
-  const contentRef = useRef(null);
   const clickTimerRef = useRef(null);
+  const filterProbeRef = useRef(null);
+  const lastFilterProbeLogAtRef = useRef(0);
 
   const items = useAppStore(s => s.items);
   const searchQuery = useAppStore(s => s.searchQuery);
@@ -115,7 +124,16 @@ function HistoryStream({ style }) {
   }, [allTags, tagSearchQuery]);
 
   const filteredItems = useMemo(() => {
+    const startedAt = performance.now();
+    let scannedItems = 0;
+    let scannedChars = 0;
+    const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
+    const hasSearch = normalizedQuery.length > 0;
+
     let result = items.filter(item => {
+      scannedItems += 1;
+      scannedChars += toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note);
+
       if (showFavoritesOnly && !item.is_favorite) return false;
       if (showPinnedOnly && !item.is_pinned) return false;
       if (selectedType !== 'all' && item.type_ !== selectedType) return false;
@@ -130,80 +148,59 @@ function HistoryStream({ style }) {
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
 
-      if (!debouncedSearchQuery.trim()) return true;
-      const query = debouncedSearchQuery.toLowerCase();
-      if (item.content && item.content.toLowerCase().includes(query)) return true;
-      if (item.user_note && item.user_note.toLowerCase().includes(query)) return true;
+      if (!hasSearch) return true;
+      if (item.content && item.content.toLowerCase().includes(normalizedQuery)) return true;
+      if (item.user_note && item.user_note.toLowerCase().includes(normalizedQuery)) return true;
       const tags = getTags(item.tags);
-      if (tags.some(tag => tag.toLowerCase().includes(query))) return true;
-      if (getSourceApp(item.metadata).toLowerCase().includes(query)) return true;
-      if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
+      if (tags.some(tag => tag.toLowerCase().includes(normalizedQuery))) return true;
+      if (getSourceApp(item.metadata).toLowerCase().includes(normalizedQuery)) return true;
+      if (item.ocr_text && item.ocr_text.toLowerCase().includes(normalizedQuery)) return true;
       return false;
     });
 
-    // Pin 筛选时按 pinned_at 降序排序
+    // Pin 筛选时�?pinned_at 降序排序
     if (showPinnedOnly) {
       result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
     }
 
+    filterProbeRef.current = {
+      elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
+      totalItems: items.length,
+      resultItems: result.length,
+      scannedItems,
+      scannedChars,
+      hasSearch,
+      searchChars: normalizedQuery.length,
+      selectedTags: selectedTags.length,
+      selectedType,
+      showFavoritesOnly,
+      showPinnedOnly,
+    };
+
     return result;
   }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly]);
 
-  const virtualizer = useVirtualizer({
-    count: filteredItems.length,
-    getScrollElement: () => contentRef.current,
-    getItemKey: (index) => filteredItems[index]?.id ?? index,
-    estimateSize: () => 90,
-    overscan: 5,
-    useAnimationFrameWithResizeObserver: true,
-  });
-
   useEffect(() => {
-    // Card height changes with mode/layout; force a full re-measure to avoid stale offsets.
-    virtualizer.measure();
-  }, [isMiniMode, virtualizer]);
+    const probe = filterProbeRef.current;
+    if (!probe) return;
 
-  useEffect(() => {
-    const scrollEl = contentRef.current;
-    if (!scrollEl || typeof ResizeObserver === 'undefined') return;
+    const now = Date.now();
+    if (now - lastFilterProbeLogAtRef.current < 800) return;
 
-    let lastWidth = scrollEl.clientWidth;
-    let rafId = 0;
-    const observer = new ResizeObserver(() => {
-      const nextWidth = scrollEl.clientWidth;
-      if (nextWidth === lastWidth) return;
-      lastWidth = nextWidth;
+    const shouldLog =
+      probe.hasSearch ||
+      probe.selectedTags > 0 ||
+      probe.selectedType !== 'all' ||
+      probe.showFavoritesOnly ||
+      probe.showPinnedOnly ||
+      probe.totalItems >= 100 ||
+      probe.elapsedMs >= 8;
 
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        virtualizer.measure();
-      });
-    });
+    if (!shouldLog) return;
 
-    observer.observe(scrollEl);
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, [virtualizer]);
-
-  useEffect(() => {
-    const scrollEl = contentRef.current;
-    if (!scrollEl) return;
-    const maxScrollTop = Math.max(virtualizer.getTotalSize() - scrollEl.clientHeight, 0);
-    if (scrollEl.scrollTop > maxScrollTop) {
-      scrollEl.scrollTop = maxScrollTop;
-    }
-  }, [filteredItems, virtualizer]);
-
-  const lastVirtualItem = virtualizer.getVirtualItems().at(-1);
-  useEffect(() => {
-    if (!lastVirtualItem) return;
-    if (lastVirtualItem.index >= filteredItems.length - 5) {
-      loadMore();
-    }
-  }, [lastVirtualItem?.index, filteredItems.length, loadMore]);
+    lastFilterProbeLogAtRef.current = now;
+    console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
+  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, items.length]);
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -272,6 +269,49 @@ function HistoryStream({ style }) {
 
   const rowGap = isMiniMode ? 3 : 4;
 
+  const handleEndReached = useCallback(() => {
+    loadMore();
+  }, [loadMore]);
+
+  const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
+
+  const renderVirtualRow = useCallback((index) => {
+    const item = filteredItems[index];
+    if (!item) return null;
+    const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
+
+    return (
+      <div
+        className="history-stream-row"
+        style={{ paddingBottom: `${rowGap}px` }}
+        onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
+        onDoubleClick={(e) => handleCardDoubleClick(item, e)}
+      >
+        <CompactCard
+          item={item}
+          isSelected={isSelected}
+          onDragStart={handleDragStart}
+          onStartExternalDrag={handleStartExternalDrag}
+          onTogglePin={togglePin}
+          onToggleFavorite={toggleFavorite}
+          onOpenItem={handleOpenItem}
+        />
+      </div>
+    );
+  }, [
+    filteredItems,
+    panelMode,
+    previewItem?.id,
+    rowGap,
+    handleCardClick,
+    handleCardDoubleClick,
+    handleDragStart,
+    handleStartExternalDrag,
+    togglePin,
+    toggleFavorite,
+    handleOpenItem,
+  ]);
+
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
       <SearchBar
@@ -296,50 +336,21 @@ function HistoryStream({ style }) {
         onOpenSettings={() => setShowSettings(true)}
       />
 
-      <div className="history-stream-content" ref={contentRef}>
+      <div className="history-stream-content">
         {filteredItems.length === 0 ? (
           <div className="empty">
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
-          <div
-            className="history-stream-list"
-            style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const item = filteredItems[virtualRow.index];
-              if (!item) return null;
-              const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
-              return (
-                <div
-                  key={virtualRow.key}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    paddingBottom: `${rowGap}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
-                  onDoubleClick={(e) => handleCardDoubleClick(item, e)}
-                >
-                  <CompactCard
-                    item={item}
-                    isSelected={isSelected}
-                    onDragStart={handleDragStart}
-                    onStartExternalDrag={handleStartExternalDrag}
-                    onTogglePin={togglePin}
-                    onToggleFavorite={toggleFavorite}
-                    onOpenItem={handleOpenItem}
-                  />
-                </div>
-              );
-            })}
-          </div>
+          <Virtuoso
+            className="history-stream-virtuoso"
+            components={{ Scroller: VirtuosoScroller }}
+            totalCount={filteredItems.length}
+            computeItemKey={computeItemKey}
+            itemContent={renderVirtualRow}
+            endReached={handleEndReached}
+            increaseViewportBy={{ top: 200, bottom: 400 }}
+          />
         )}
       </div>
     </div>

@@ -6,6 +6,52 @@ import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as d
 import { initOcrService } from '../services/ocrService';
 
 const PAGE_SIZE = 50;
+const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
+
+const toLen = (value) => (typeof value === 'string' ? value.length : 0);
+
+const summarizeItemsForMemory = (items) => {
+  let totalContentChars = 0;
+  let totalOcrChars = 0;
+  let totalNoteChars = 0;
+  let maxContentChars = 0;
+  let maxOcrChars = 0;
+  let longContentItems = 0;
+  let longOcrItems = 0;
+
+  for (const item of items) {
+    const contentLen = toLen(item?.content);
+    const ocrLen = toLen(item?.ocr_text);
+    const noteLen = toLen(item?.user_note);
+
+    totalContentChars += contentLen;
+    totalOcrChars += ocrLen;
+    totalNoteChars += noteLen;
+
+    if (contentLen > maxContentChars) maxContentChars = contentLen;
+    if (ocrLen > maxOcrChars) maxOcrChars = ocrLen;
+    if (contentLen >= 2000) longContentItems += 1;
+    if (ocrLen >= 2000) longOcrItems += 1;
+  }
+
+  return {
+    items: items.length,
+    totalContentChars,
+    totalOcrChars,
+    totalNoteChars,
+    maxContentChars,
+    maxOcrChars,
+    longContentItems,
+    longOcrItems,
+  };
+};
+
+const logItemsMemoryProbe = (stage, items, extra = {}) => {
+  console.log(`${MEMORY_PROBE_PREFIX} ${stage}`, {
+    ...summarizeItemsForMemory(items),
+    ...extra,
+  });
+};
 
 const sortByUpdatedAtDesc = (a, b) => {
   const timeDiff = (b?.updated_at || 0) - (a?.updated_at || 0);
@@ -95,11 +141,16 @@ const useAppStore = create((set, get) => ({
     try {
       const result = await getRecentItemsLight(PAGE_SIZE);
       const { loading, processedItemIds } = get();
+      const mergedItems = mergeUniqueById([], result);
       set((state) => ({
-        items: mergeUniqueById([], result),
+        items: mergedItems,
         hasMore: result.length >= PAGE_SIZE,
         itemsRevision: state.itemsRevision + 1,
       }));
+      logItemsMemoryProbe('loadItems', mergedItems, {
+        fetched: result.length,
+        pageSize: PAGE_SIZE,
+      });
       if (!loading) {
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
@@ -124,10 +175,23 @@ const useAppStore = create((set, get) => ({
     try {
       const more = await getMoreItems(PAGE_SIZE, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
+      let mergedItemsSnapshot = null;
       set((state) => ({
-        items: mergeUniqueById(state.items, more),
+        items: (() => {
+          const merged = mergeUniqueById(state.items, more);
+          mergedItemsSnapshot = merged;
+          return merged;
+        })(),
         hasMore: more.length >= PAGE_SIZE,
       }));
+      if (mergedItemsSnapshot) {
+        logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
+          fetched: more.length,
+          offset: requestOffset,
+          pageSize: PAGE_SIZE,
+          hasMoreAfter: more.length >= PAGE_SIZE,
+        });
+      }
     } catch (error) {
       console.error('加载更多失败:', error);
     } finally {
