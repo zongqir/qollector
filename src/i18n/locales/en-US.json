@@ -87,7 +87,8 @@
     "favorited": "Favorited",
     "open": "Open",
     "openLink": "Open Link",
-    "openFile": "Open File"
+    "openFile": "Open File",
+    "delete": "Delete"
   },
   "edit": {
     "content": "Content:",

@@ -55,8 +55,6 @@
 /* ========== macOS 风格紧凑卡片 ========== */
 .compact-card {
   background: var(--bg-card);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 4px;
@@ -177,6 +175,40 @@
   word-break: break-all;
   white-space: pre-wrap;
   letter-spacing: -0.01em;
+}
+
+.compact-card-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.compact-link-favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.compact-link-fallback {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.compact-link-domain {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.compact-link-path {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .compact-card-image {
@@ -893,6 +925,16 @@
 .preview-tool-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.preview-tool-btn.danger {
+  color: #ff3b30;
+  border-color: rgba(255, 59, 48, 0.2);
+  margin-left: auto;
+}
+
+.preview-tool-btn.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
 }
 
 /* 预览页标签区 - 自适应宽度 */

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink } from 'lucide-react';
-import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList } from '../../utils/formatters';
+import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList, parseUrl } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 
@@ -49,6 +49,24 @@ function CompactCard({
           />
         </div>
       );
+    }
+    if (item.type_ === 'link') {
+      const parsed = parseUrl(item.content);
+      if (parsed) {
+        return (
+          <div className="compact-card-link">
+            <img
+              className="compact-link-favicon"
+              src={parsed.favicon}
+              alt=""
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }}
+            />
+            <Link size={14} className="compact-link-fallback" style={{ display: 'none' }} />
+            <span className="compact-link-domain">{parsed.domain}</span>
+            {parsed.path && <span className="compact-link-path">{decodeURIComponent(parsed.path)}</span>}
+          </div>
+        );
+      }
     }
     if (item.type_ === 'file') {
       const files = getFileList(item.content);

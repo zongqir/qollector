@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import { getTags } from '../utils/tagHelpers';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
-import { getRecentItemsLight, getMoreItems, copyItemToClipboard } from '../services/clipboardService';
+import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
 
 const PAGE_SIZE = 50;
@@ -194,6 +194,20 @@ const useAppStore = create((set, get) => ({
       await invoke('open_item', { id: item.id });
     } catch (error) {
       console.error('打开失败:', error);
+    }
+  },
+
+  deleteItem: async (item) => {
+    try {
+      await deleteItemSvc(item.id);
+      const { items } = get();
+      set({
+        items: items.filter(i => i.id !== item.id),
+        panelMode: 'collection',
+        previewItem: null,
+      });
+    } catch (error) {
+      console.error('删除失败:', error);
     }
   },
 

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy
+  ExternalLink, Check, FileText, Copy, Trash2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate } from '../../utils/formatters';
@@ -24,6 +24,7 @@ function PreviewPanel() {
   const handleOCR = useAppStore(s => s.handleOCR);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const generatingAI = useAppStore(s => s.generatingAI);
   const aiEnabled = useAppStore(s => s.aiEnabled);
@@ -120,7 +121,7 @@ function PreviewPanel() {
   };
 
   const renderContent = () => {
-    if (isEditingContent && item.type_ !== 'image') {
+    if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
       return (
         <textarea
           className="preview-edit-textarea"
@@ -298,11 +299,15 @@ function PreviewPanel() {
                 <span>{t('item.open')}</span>
               </button>
             )}
-            {item.type_ !== 'image' && (
+            {item.type_ !== 'image' && item.type_ !== 'file' && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
                 <span>{t('panel.editContent')}</span>
               </button>
             )}
+            <button className="preview-tool-btn danger" onClick={() => deleteItem(item)}>
+              <Trash2 size={14} />
+              <span>{t('item.delete')}</span>
+            </button>
           </>
         )}
       </div>

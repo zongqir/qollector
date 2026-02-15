@@ -25,6 +25,36 @@ use commands::export_commands::*;
 use tauri::Manager;
 use std::sync::Mutex;
 use tokio::sync::Mutex as TokioMutex;
+use std::time::Instant;
+
+struct StartupMeter {
+    scope: &'static str,
+    started_at: Instant,
+    last_mark_at: Instant,
+}
+
+impl StartupMeter {
+    fn new(scope: &'static str) -> Self {
+        let now = Instant::now();
+        println!("[Startup:{}] begin", scope);
+        Self {
+            scope,
+            started_at: now,
+            last_mark_at: now,
+        }
+    }
+
+    fn mark(&mut self, stage: &'static str) {
+        let now = Instant::now();
+        let step_ms = now.duration_since(self.last_mark_at).as_millis();
+        let total_ms = now.duration_since(self.started_at).as_millis();
+        println!(
+            "[Startup:{}] {} (+{} ms, total {} ms)",
+            self.scope, stage, step_ms, total_ms
+        );
+        self.last_mark_at = now;
+    }
+}
 
 fn main() {
     // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
@@ -68,13 +98,16 @@ fn main() {
             }
         }))
         .setup(|app| {
+            let mut setup_meter = StartupMeter::new("setup");
             let app_dir = app.path().app_data_dir()
                 .expect("Failed to get app data directory");
+            setup_meter.mark("resolve_app_dir");
 
             println!("App data directory: {:?}", app_dir);
 
             std::fs::create_dir_all(&app_dir)
                 .expect("Failed to create app directory");
+            setup_meter.mark("ensure_app_dir");
 
             let db_path = app_dir.join("clipbox.db");
             println!("Database path: {:?}", db_path);
@@ -91,11 +124,14 @@ fn main() {
 
             // 启动时恢复数据库文件头
             core::db_obfuscate::deobfuscate_db(&db_path);
+            setup_meter.mark("db_deobfuscate");
 
             tauri::async_runtime::block_on(async move {
+                let mut init_meter = StartupMeter::new("core_init");
                 let repository = ClipboardRepository::new(db_path)
                     .await
                     .expect("Failed to initialize database");
+                init_meter.mark("open_repository");
 
                 println!("Database initialized successfully");
 
@@ -104,15 +140,18 @@ fn main() {
                 config_repo.init_table().await
                     .expect("Failed to initialize config table");
                 println!("Config repository initialized");
+                init_meter.mark("init_config_repo");
 
                 let platform = platform::create_platform()
                     .expect("Failed to initialize clipboard");
+                init_meter.mark("create_platform");
 
                 // 加载或初始化 AI 配置
                 let ai_config = config_repo.load_ai_config().await
                     .expect("Failed to load AI config")
                     .unwrap_or_default();
                 println!("AI config loaded: enabled={}", ai_config.enabled);
+                init_meter.mark("load_ai_config");
 
                 let ai_config_arc = Arc::new(Mutex::new(ai_config.clone()));
                 let ai_state = AIState {
@@ -125,26 +164,12 @@ fn main() {
                     .expect("Failed to load OCR config")
                     .unwrap_or_default();
                 println!("OCR config loaded: enabled={}, provider={:?}", ocr_config.enabled, ocr_config.current_provider);
+                init_meter.mark("load_ocr_config");
 
                 // 初始化 OCR 服务
-                let ocr_service = if ocr_config.enabled {
-                    match ocr::OcrService::new(ocr_config.clone()) {
-                        Ok(service) => {
-                            println!("OCR service initialized with provider: {}", service.provider_name());
-                            Some(service)
-                        }
-                        Err(e) => {
-                            eprintln!("Failed to initialize OCR service: {}", e);
-                            None
-                        }
-                    }
-                } else {
-                    None
-                };
-
-                let ocr_service_arc = Arc::new(Mutex::new(ocr_service.clone()));
+                let ocr_service_arc = Arc::new(Mutex::new(None));
                 let ocr_state = OcrState {
-                    service: Mutex::new(ocr_service),
+                    service: ocr_service_arc.clone(),
                     config_repo: config_repo.clone(),
                 };
 
@@ -153,6 +178,7 @@ fn main() {
                     .expect("Failed to load MCP config")
                     .unwrap_or_default();
                 println!("MCP config loaded: enabled={}", mcp_config.enabled);
+                init_meter.mark("load_mcp_config");
 
                 let mcp_config_arc = Arc::new(TokioMutex::new(mcp_config.clone()));
 
@@ -174,8 +200,10 @@ fn main() {
                 manager.start_monitoring()
                     .await
                     .expect("Failed to start clipboard monitoring");
+                init_meter.mark("start_clipboard_monitor");
 
                 let drag_out_backend = platform::drag_out::create_drag_out_backend();
+                init_meter.mark("create_drag_out_backend");
 
                 // 启动 MCP 服务器 (如果启用)
                 let mcp_state = if mcp_config.enabled {
@@ -205,13 +233,41 @@ fn main() {
                         server: None,
                     }
                 };
+                init_meter.mark("prepare_mcp_state");
+
+                let ocr_service_slot = ocr_state.service.clone();
+                if ocr_config.enabled {
+                    let ocr_config_for_prewarm = ocr_config.clone();
+                    let manager_for_prewarm = manager.clone();
+                    tokio::spawn(async move {
+                        let started = Instant::now();
+                        match ocr::OcrService::new(ocr_config_for_prewarm) {
+                            Ok(service) => {
+                                let provider = service.provider_name().to_string();
+                                *ocr_service_slot.lock().unwrap() = Some(service.clone());
+                                manager_for_prewarm.update_ocr_service(Some(service));
+                                println!(
+                                    "[Startup:ocr_prewarm] ready in {} ms (provider={})",
+                                    started.elapsed().as_millis(),
+                                    provider
+                                );
+                            }
+                            Err(error) => {
+                                eprintln!("[Startup:ocr_prewarm] failed: {}", error);
+                            }
+                        }
+                    });
+                }
 
                 app.manage(manager);
                 app.manage(drag_out_backend);
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
+                init_meter.mark("register_states");
             });
+
+            setup_meter.mark("setup_complete");
 
             Ok(())
         })

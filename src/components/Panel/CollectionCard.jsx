@@ -1,8 +1,8 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, GripVertical, Folder, ExternalLink, Globe } from 'lucide-react';
+import { X, Check, GripVertical, Folder, ExternalLink } from 'lucide-react';
 import { FileIcon, defaultStyles } from 'react-file-icon';
-import { getContentPreview, getFileList, getFileName } from '../../utils/formatters';
+import { getContentPreview, getFileList, getFileName, parseUrl } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
 
@@ -15,18 +15,6 @@ const isFolder = (path) => {
   if (path.endsWith('/') || path.endsWith('\\')) return true;
   const name = path.split(/[/\\]/).pop() || '';
   return !name.includes('.');
-};
-
-const parseUrl = (url) => {
-  try {
-    const u = new URL(url.trim());
-    const domain = u.hostname.replace(/^www\./, '');
-    const path = u.pathname === '/' ? '' : u.pathname;
-    const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-    return { domain, path, favicon };
-  } catch {
-    return null;
-  }
 };
 
 function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem, dragListeners }) {

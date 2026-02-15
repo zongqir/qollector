@@ -57,3 +57,15 @@ export const getFileList = (content) => {
 export const getFileName = (path) => {
   return path.split(/[/\\]/).pop() || path;
 };
+
+export const parseUrl = (url) => {
+  try {
+    const u = new URL(url.trim());
+    const domain = u.hostname.replace(/^www\./, '');
+    const path = u.pathname === '/' ? '' : u.pathname;
+    const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    return { domain, path, favicon };
+  } catch {
+    return null;
+  }
+};

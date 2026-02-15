@@ -5,14 +5,14 @@ use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
 
 pub struct OcrState {
-    pub service: Mutex<Option<OcrService>>,
+    pub service: Arc<Mutex<Option<OcrService>>>,
     pub config_repo: Arc<ConfigRepository>,
 }
 
 impl OcrState {
     pub fn new(config_repo: Arc<ConfigRepository>) -> Self {
         Self {
-            service: Mutex::new(None),
+            service: Arc::new(Mutex::new(None)),
             config_repo,
         }
     }
