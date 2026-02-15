@@ -88,8 +88,6 @@
 .compact-card.multi-selected {
   background: var(--accent-light);
   border-color: var(--accent-color);
-  outline: 2px solid var(--accent-color);
-  outline-offset: -2px;
 }
 
 /* ========== multi-select bar ========== */
