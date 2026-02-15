@@ -7,7 +7,7 @@ function ItemTags({
   item, selectedTags, onTagClick,
   addingTagItemId, newTagInput, onNewTagInputChange,
   onTagInputKeyDown, onStartAddTag, onCancelAddTag,
-  onAddTagToItem, filteredUserTags,
+  onAddTagToItem, filteredUserTags, hideTypeTag,
 }) {
   const { t } = useTranslation();
   const typeMap = {
@@ -19,7 +19,7 @@ function ItemTags({
 
   return (
     <div className="item-tags">
-      {item.type_ && (() => {
+      {!hideTypeTag && item.type_ && (() => {
         const typeTag = typeMap[item.type_];
         const displayName = t(`search.typeFilter.${item.type_}`);
         return (

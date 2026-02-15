@@ -36,6 +36,7 @@
     "noTagsFound": "No matching tags found",
     "selectedTags": "{{count}} tags selected",
     "filterTags": "Filter Tags",
+    "moreTagsHint": "{{count}} more tags, use search to find them",
     "dragToApp": "Drag to other apps",
     "dragOut": "Drag",
     "favorites": "Favorites",
@@ -43,9 +44,9 @@
     "showAll": "Show All"
   },
   "item": {
-    "pinned": "Pinned",
-    "pin": "Pin (Max {{max}})",
-    "unpin": "Unpin",
+    "pinned": "Collected",
+    "pin": "Collect (Max {{max}})",
+    "unpin": "Remove",
     "copy": "Copy",
     "copied": "Copied",
     "aiTag": "AI Tag",
@@ -60,6 +61,8 @@
     "removeTag": "Remove Tag",
     "confirmTag": "Confirm",
     "cancelTag": "Cancel",
+    "clickToPreview": "Click to preview",
+    "doubleClickToCopy": "Double-click to copy",
     "clickToCopy": "Click to copy",
     "doubleClickToPreview": "Double-click to preview",
     "doubleClickToEdit": "Double-click to edit",
@@ -84,7 +87,8 @@
     "favorited": "Favorited",
     "open": "Open",
     "openLink": "Open Link",
-    "openFile": "Open File"
+    "openFile": "Open File",
+    "delete": "Delete"
   },
   "edit": {
     "content": "Content:",
@@ -103,10 +107,12 @@
     "test": "Test Connection",
     "testing": "Testing...",
     "tabs": {
-      "ai": "AI Tags",
-      "ocr": "OCR Recognition",
+      "ai": "AI",
+      "ocr": "OCR",
       "general": "General",
-      "mcp": "MCP Service"
+      "mcp": "MCP",
+      "data": "Data",
+      "security": "Security"
     },
     "ai": {
       "provider": "AI Provider",
@@ -255,7 +261,12 @@
     "addTag": "Add",
     "pinItem": "Pin this item",
     "saveHint": "Save (Ctrl+Enter)",
-    "cancelHint": "Cancel (Esc)"
+    "cancelHint": "Cancel (Esc)",
+    "quickAddTip": "Quick note · Auto saved to collection",
+    "saveAndContinue": "Save & Continue",
+    "savedToast": "Saved to collection",
+    "unpin": "Unpin, drag to move",
+    "pin": "Pin to fullscreen"
   },
   "lock": {
     "title": "App Locked",
@@ -299,5 +310,25 @@
     "exportFailed": "Export failed: {{error}}",
     "passwordMismatch": "Passwords do not match",
     "cancelled": "Cancelled"
+  },
+  "collection": {
+    "title": "Collection",
+    "emptyTitle": "Collection is empty",
+    "emptyHint": "Click the collect button on the left, or drag cards here",
+    "quickNotePlaceholder": "Type a note, press Enter to add to collection...",
+    "expandedNotePlaceholder": "Write down your thoughts here...",
+    "expandedNoteSubmit": "Add to Collection",
+    "mergeCopy": "Merge & Copy",
+    "clearAll": "Clear Collection",
+    "archivedToHistory": "Archived to history",
+    "backToCollection": "Back to Collection",
+    "addToCollection": "Add to Collection",
+    "removeFromCollection": "Remove from Collection"
+  },
+  "panel": {
+    "preview": "Preview Detail",
+    "editContent": "Edit Content",
+    "saveContent": "Save",
+    "cancelEdit": "Cancel"
   }
 }

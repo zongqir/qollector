@@ -1,7 +1,9 @@
-/* 自定义标题栏 */
+/* macOS 风格标题栏 */
 .titlebar {
-  height: 32px;
+  height: 38px;
   background: var(--bg-secondary);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -14,13 +16,14 @@
   height: 100%;
   display: flex;
   align-items: center;
-  padding-left: 12px;
+  padding-left: 14px;
 }
 
 .titlebar-title {
   font-size: 13px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .titlebar-buttons {
@@ -30,13 +33,13 @@
 }
 
 .titlebar-btn {
-  width: 46px;
-  height: 32px;
+  width: 40px;
+  height: 38px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,36 +47,33 @@
 }
 
 .titlebar-btn svg {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
 }
 
 .titlebar-btn:hover {
   background: var(--btn-hover-bg);
+  color: var(--text-secondary);
 }
 
 .titlebar-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 /* 关闭按钮 */
 .titlebar-btn.close-btn:hover {
-  background: #e81123;
-  color: white;
+  background: rgba(255, 59, 48, 0.12);
+  color: #ff3b30;
 }
 
 /* 置顶按钮 */
-.titlebar-btn.pin-btn {
-  color: var(--text-secondary);
-}
-
 .titlebar-btn.pin-btn:hover {
-  background: rgba(255, 152, 0, 0.1);
-  color: #ff9800;
+  background: rgba(255, 149, 0, 0.1);
+  color: #ff9500;
 }
 
 .titlebar-btn.pin-btn.active {
-  color: #ff9800;
-  background: rgba(255, 152, 0, 0.15);
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.12);
 }
 
 .titlebar-btn.pin-btn.active svg {
@@ -81,52 +81,48 @@
 }
 
 .titlebar-btn.pin-btn.active:hover {
-  background: rgba(255, 152, 0, 0.2);
+  background: rgba(255, 149, 0, 0.18);
 }
 
 /* 最小化按钮 */
 .titlebar-btn.minimize-btn:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: var(--accent-light);
+  color: var(--accent-color);
 }
 
 /* 最大化按钮 */
 .titlebar-btn.maximize-btn:hover {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
+  background: rgba(52, 199, 89, 0.1);
+  color: #34c759;
 }
 
 /* Mini 模式按钮 */
-.titlebar-btn.mini-btn {
-  color: var(--text-secondary);
-}
-
 .titlebar-btn.mini-btn:hover {
-  background: rgba(156, 39, 176, 0.1);
-  color: #9c27b0;
+  background: rgba(175, 82, 222, 0.1);
+  color: #af52de;
 }
 
 .titlebar-btn.mini-btn.active {
-  color: #9c27b0;
-  background: rgba(156, 39, 176, 0.15);
+  color: #af52de;
+  background: rgba(175, 82, 222, 0.12);
 }
 
 .titlebar-btn.mini-btn.active:hover {
-  background: rgba(156, 39, 176, 0.2);
+  background: rgba(175, 82, 222, 0.18);
 }
 
+/* 快速添加按钮 */
 .titlebar-btn.quick-add-btn {
-  color: #667eea;
+  color: var(--accent-color);
   font-weight: 600;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .titlebar-btn.quick-add-btn:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  transform: scale(1.1) rotate(90deg);
+  background: var(--accent-light);
+  color: var(--accent-color);
+  transform: scale(1.08) rotate(90deg);
 }
 
 .titlebar-btn.quick-add-btn:active {
-  transform: scale(0.95) rotate(90deg);
+  transform: scale(0.92) rotate(90deg);
 }

@@ -2,27 +2,33 @@ import { useState, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
+import useAppStore from './store/useAppStore';
 import './DragDrop.css';
 
 function DragDrop({ onItemAdded, onTypeAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
-  const dragCounter = useRef(0);
+  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
+  const switchToCollection = useAppStore(s => s.switchToCollection);
+
   const onItemAddedRef = useRef(onItemAdded);
   onItemAddedRef.current = onItemAdded;
   const onTypeAddedRef = useRef(onTypeAdded);
   onTypeAddedRef.current = onTypeAdded;
 
-  useEffect(() => {
-    let unlisten;
+  const maxPinnedItemsRef = useRef(maxPinnedItems);
+  maxPinnedItemsRef.current = maxPinnedItems;
+  const switchToCollectionRef = useRef(switchToCollection);
+  switchToCollectionRef.current = switchToCollection;
+  const unlistenRef = useRef(null);
 
-    // 监听 Tauri 的文件拖放事件
+  useEffect(() => {
+    let disposed = false;
+
     const setupFileDrop = async () => {
       const appWindow = getCurrentWindow();
 
-      unlisten = await appWindow.onDragDropEvent(async (event) => {
-        console.log('拖放事件:', event);
-
+      const unlisten = await appWindow.onDragDropEvent(async (event) => {
         if (event.payload.type === 'over') {
           setIsDragging(true);
         } else if (event.payload.type === 'leave') {
@@ -31,49 +37,70 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
           setIsDragging(false);
           const paths = event.payload.paths;
 
-          if (paths && paths.length > 0) {
-            for (const filePath of paths) {
-              console.log('处理文件路径:', filePath);
+          const pinDroppedItem = async (id) => {
+            await invoke('pin_item', {
+              id,
+              maxPinned: maxPinnedItemsRef.current,
+            });
+          };
 
-              // 判断文件类型
+          if (paths && paths.length > 0) {
+            switchToCollectionRef.current?.();
+            const uniquePaths = Array.from(new Set(paths.map(p => p.trim()).filter(Boolean)));
+
+            for (const filePath of uniquePaths) {
               const ext = filePath.split('.').pop().toLowerCase();
               const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
 
               if (imageExts.includes(ext)) {
-                // 图片文件：直接传文件路径
                 try {
-                  await invoke('add_image_file', { filePath });
-                  console.log('图片已添加:', filePath);
-                  if (onItemAddedRef.current) onItemAddedRef.current();
-                  if (onTypeAddedRef.current) onTypeAddedRef.current('image');
+                  const itemId = await invoke('add_image_file', {
+                    filePath,
+                    dedupeByHash: true,
+                  });
+                  await pinDroppedItem(itemId);
+                  onItemAddedRef.current?.();
+                  onTypeAddedRef.current?.('image');
                 } catch (err) {
-                  console.error('添加图片失败:', err);
+                  console.error('娣诲姞鍥剧墖澶辫触:', err);
                 }
               } else {
-                // 其他文件：保存文件路径
                 try {
-                  await invoke('add_clipboard_item_manual', {
+                  const itemId = await invoke('add_clipboard_item_manual', {
                     contentType: 'file',
                     content: filePath,
+                    dedupeByHash: true,
                   });
-                  console.log('文件路径已添加:', filePath);
-                  if (onItemAddedRef.current) onItemAddedRef.current();
-                  if (onTypeAddedRef.current) onTypeAddedRef.current('file');
+                  await pinDroppedItem(itemId);
+                  onItemAddedRef.current?.();
+                  onTypeAddedRef.current?.('file');
                 } catch (err) {
-                  console.error('添加文件失败:', err);
+                  console.error('娣诲姞鏂囦欢澶辫触:', err);
                 }
               }
             }
           }
         }
       });
+
+      if (disposed) {
+        unlisten();
+        return;
+      }
+
+      if (unlistenRef.current) {
+        unlistenRef.current();
+      }
+      unlistenRef.current = unlisten;
     };
 
     setupFileDrop();
 
     return () => {
-      if (unlisten) {
-        unlisten();
+      disposed = true;
+      if (unlistenRef.current) {
+        unlistenRef.current();
+        unlistenRef.current = null;
       }
     };
   }, []);
@@ -83,19 +110,13 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
       {isDragging && (
         <div className="drag-overlay">
           <div className="drag-overlay-content">
-            <div className="drag-icon">📥</div>
+            <div className="drag-icon">馃摜</div>
             <div className="drag-text">{t('dragDrop.dropHere')}</div>
           </div>
         </div>
       )}
     </>
   );
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 export default DragDrop;

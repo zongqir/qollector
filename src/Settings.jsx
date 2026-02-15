@@ -22,7 +22,7 @@ const OCR_PROVIDERS = [
 
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState('ai');
+  const [activeTab, setActiveTab] = useState('general');
 
   // AI 配置：新结构
   const [aiConfig, setAiConfig] = useState({
@@ -87,6 +87,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [importNeedPassword, setImportNeedPassword] = useState(false);
   const [importPassword, setImportPassword] = useState('');
   const [importFilePath, setImportFilePath] = useState(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -505,105 +506,121 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             {t('settings.tabs.general')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ai')}
+            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => aiConfig.enabled && setActiveTab('ai')}
+            disabled={!aiConfig.enabled}
           >
             {t('settings.tabs.ai')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ocr')}
+            className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''} ${!ocrConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => ocrConfig.enabled && setActiveTab('ocr')}
+            disabled={!ocrConfig.enabled}
           >
             {t('settings.tabs.ocr')}
           </button>
           <button
-            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mcp')}
+            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''} ${!mcpConfig.enabled ? 'disabled' : ''}`}
+            onClick={() => mcpConfig.enabled && setActiveTab('mcp')}
+            disabled={!mcpConfig.enabled}
           >
             {t('settings.tabs.mcp')}
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
+            onClick={() => setActiveTab('data')}
+          >
+            {t('settings.tabs.data')}
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
+            onClick={() => setActiveTab('security')}
+          >
+            {t('settings.tabs.security')}
           </button>
         </div>
 
         {activeTab === 'general' && (
           <div className="settings-content">
-            <div className="setting-item">
-              <label>{t('settings.general.language')}</label>
-              <select
-                value={i18n.language}
-                onChange={(e) => changeLanguage(e.target.value)}
-                className="setting-select"
-              >
-                <option value="zh-CN">简体中文</option>
-                <option value="en-US">English</option>
-              </select>
-              <small className="setting-hint">{t('settings.general.languageHint')}</small>
+            {/* 外观设置分组 */}
+            <div className="setting-group">
+              <div className="sg-row">
+                <span>{t('settings.general.language')}</span>
+                <select
+                  value={i18n.language}
+                  onChange={(e) => changeLanguage(e.target.value)}
+                  className="setting-select"
+                >
+                  <option value="zh-CN">简体中文</option>
+                  <option value="en-US">English</option>
+                </select>
+              </div>
+              <div className="sg-row">
+                <span>{t('settings.general.theme')}</span>
+                <select
+                  value={generalConfig.theme_mode || 'system'}
+                  onChange={async (e) => {
+                    const newMode = e.target.value;
+                    const updated = { ...generalConfig, theme_mode: newMode };
+                    setGeneralConfig(updated);
+                    if (onThemeModeChange) onThemeModeChange(newMode);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('保存主题配置失败:', error);
+                    }
+                  }}
+                  className="setting-select"
+                >
+                  <option value="system">{t('settings.general.themeSystem')}</option>
+                  <option value="light">{t('settings.general.themeLight')}</option>
+                  <option value="dark">{t('settings.general.themeDark')}</option>
+                </select>
+              </div>
+              <div className="sg-row">
+                <span>{t('settings.general.maxPinnedItems')}</span>
+                <input
+                  type="number"
+                  value={generalConfig.max_pinned_items}
+                  onChange={async (e) => {
+                    let value = parseInt(e.target.value) || 3;
+                    if (value < 1) value = 1;
+                    if (value > 10) value = 10;
+                    const updated = { ...generalConfig, max_pinned_items: value };
+                    setGeneralConfig(updated);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('保存置顶数配置失败:', error);
+                    }
+                  }}
+                  min="1"
+                  max="10"
+                  className="setting-input-small"
+                />
+              </div>
             </div>
-
-            <div className="setting-item">
-              <label>{t('settings.general.theme')}</label>
-              <select
-                value={generalConfig.theme_mode || 'system'}
-                onChange={async (e) => {
-                  const newMode = e.target.value;
-                  const updated = { ...generalConfig, theme_mode: newMode };
-                  setGeneralConfig(updated);
-                  if (onThemeModeChange) onThemeModeChange(newMode);
-                  try {
-                    await invoke('update_general_config', { config: updated });
-                  } catch (error) {
-                    console.error('保存主题配置失败:', error);
-                  }
-                }}
-                className="setting-select"
-              >
-                <option value="system">{t('settings.general.themeSystem')}</option>
-                <option value="light">{t('settings.general.themeLight')}</option>
-                <option value="dark">{t('settings.general.themeDark')}</option>
-              </select>
-              <small className="setting-hint">{t('settings.general.themeHint')}</small>
-            </div>
-
-            <div className="setting-item">
-              <label>{t('settings.general.maxPinnedItems')}</label>
-              <input
-                type="number"
-                value={generalConfig.max_pinned_items}
-                onChange={async (e) => {
-                  let value = parseInt(e.target.value) || 3;
-                  if (value < 1) value = 1;
-                  if (value > 10) value = 10;
-                  const updated = { ...generalConfig, max_pinned_items: value };
-                  setGeneralConfig(updated);
-                  try {
-                    await invoke('update_general_config', { config: updated });
-                  } catch (error) {
-                    console.error('保存置顶数配置失败:', error);
-                  }
-                }}
-                min="1"
-                max="10"
-                className="setting-input"
-              />
+            {generalConfig.max_pinned_items > 5 && (
               <small className="setting-hint">
-                {t('settings.general.maxPinnedItemsHint')}
-                {generalConfig.max_pinned_items > 5 && (
-                  <span style={{ color: '#ff9800', display: 'block', marginTop: '4px' }}>
-                    {t('settings.general.maxPinnedItemsWarning')}
-                  </span>
-                )}
+                <span className="setting-warning">
+                  {t('settings.general.maxPinnedItemsWarning')}
+                </span>
               </small>
-            </div>
+            )}
 
-            <div className="setting-item">
-              <label>{t('settings.general.featureModules')}</label>
-              <div className="feature-toggles">
-                <label className="setting-label">
+            {/* 功能模块分组 */}
+            <div className="setting-group-title">{t('settings.general.featureModules')}</div>
+            <div className="feature-toggles">
+              <label className="setting-toggle-row">
+                <span>{t('settings.general.enableAI')}</span>
+                <span className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={aiConfig.enabled}
                     onChange={async (e) => {
                       const updated = { ...aiConfig, enabled: e.target.checked };
                       setAiConfig(updated);
+                      if (!e.target.checked && activeTab === 'ai') setActiveTab('general');
                       try {
                         await invoke('update_ai_config', { config: updated });
                       } catch (error) {
@@ -611,15 +628,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                   />
-                  {t('settings.general.enableAI')}
-                </label>
-                <label className="setting-label">
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span>{t('settings.general.enableOCR')}</span>
+                <span className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={ocrConfig.enabled}
                     onChange={async (e) => {
                       const updated = { ...ocrConfig, enabled: e.target.checked };
                       setOcrConfig(updated);
+                      if (!e.target.checked && activeTab === 'ocr') setActiveTab('general');
                       try {
                         await invoke('update_ocr_config', { config: updated });
                       } catch (error) {
@@ -627,15 +648,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                   />
-                  {t('settings.general.enableOCR')}
-                </label>
-                <label className="setting-label">
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span>{t('settings.general.enableMCP')}</span>
+                <span className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={mcpConfig.enabled}
                     onChange={async (e) => {
                       const updated = { ...mcpConfig, enabled: e.target.checked };
                       setMcpConfig(updated);
+                      if (!e.target.checked && activeTab === 'mcp') setActiveTab('general');
                       try {
                         await invoke('update_mcp_config', { config: updated });
                       } catch (error) {
@@ -643,224 +668,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                   />
-                  {t('settings.general.enableMCP')}
-                </label>
-              </div>
-            </div>
-
-            {/* 高级设置 - 应用锁 */}
-            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {t('lock.settingsTitle')}
-                <span style={{
-                  fontSize: '10px',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: '#fff',
-                  fontWeight: 600,
-                }}>Pro</span>
+                  <span className="toggle-slider" />
+                </span>
               </label>
-              <small className="setting-hint" style={{ marginBottom: '8px', display: 'block' }}>
-                {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
-              </small>
-
-              {lockHasPassword && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
-                  <input
-                    type="password"
-                    value={lockOldPassword}
-                    onChange={(e) => { setLockOldPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
-                    placeholder={t('lock.oldPassword')}
-                    className="setting-input"
-                  />
-                </div>
-              )}
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input
-                  type="password"
-                  value={lockNewPassword}
-                  onChange={(e) => { setLockNewPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
-                  placeholder={lockHasPassword ? t('lock.newPassword') : t('lock.setPassword')}
-                  className="setting-input"
-                />
-                {lockNewPassword && (
-                  <input
-                    type="password"
-                    value={lockConfirmPassword}
-                    onChange={(e) => { setLockConfirmPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
-                    placeholder={t('lock.confirmPassword')}
-                    className="setting-input"
-                  />
-                )}
-              </div>
-
-              {lockError && <small style={{ color: '#ef4444', marginTop: '4px' }}>{lockError}</small>}
-              {lockSuccess && <small style={{ color: '#22c55e', marginTop: '4px' }}>{lockSuccess}</small>}
-
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                <button
-                  className="test-btn"
-                  onClick={async () => {
-                    setLockError('');
-                    setLockSuccess('');
-                    // 设置新密码
-                    if (lockNewPassword) {
-                      if (lockNewPassword !== lockConfirmPassword) {
-                        setLockError(t('lock.mismatch'));
-                        return;
-                      }
-                      try {
-                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: lockNewPassword });
-                        setLockSuccess(t('lock.setSuccess'));
-                        setLockHasPassword(true);
-                        setLockOldPassword('');
-                        setLockNewPassword('');
-                        setLockConfirmPassword('');
-                      } catch (err) {
-                        setLockError(String(err));
-                      }
-                    }
-                  }}
-                  disabled={!lockNewPassword || !lockConfirmPassword}
-                >
-                  {lockHasPassword ? t('lock.changePassword') : t('lock.enableLock')}
-                </button>
-                {lockHasPassword && (
-                  <button
-                    className="test-btn"
-                    style={{ background: '#ef4444', color: '#fff' }}
-                    onClick={async () => {
-                      setLockError('');
-                      setLockSuccess('');
-                      if (!lockOldPassword) {
-                        setLockError(t('lock.needOldPassword'));
-                        return;
-                      }
-                      try {
-                        await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: '' });
-                        setLockSuccess(t('lock.removeSuccess'));
-                        setLockHasPassword(false);
-                        setLockOldPassword('');
-                        setLockNewPassword('');
-                        setLockConfirmPassword('');
-                      } catch (err) {
-                        setLockError(String(err));
-                      }
-                    }}
-                  >
-                    {t('lock.removeLock')}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 数据管理 - 导入导出 */}
-            <div className="setting-item" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {t('export.title')}
-                <span style={{
-                  fontSize: '10px',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: '#fff',
-                  fontWeight: 600,
-                }}>Pro</span>
-              </label>
-
-              {/* 导出选项 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
-                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
-                  <span>{t('export.includeImages')}</span>
-                  <span className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={exportIncludeImages}
-                      onChange={(e) => setExportIncludeImages(e.target.checked)}
-                    />
-                    <span className="toggle-slider" />
-                  </span>
-                </label>
-                <label className="setting-label" style={{ justifyContent: 'space-between' }}>
-                  <span>{t('export.encrypt')}</span>
-                  <span className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={exportEncrypt}
-                      onChange={(e) => { setExportEncrypt(e.target.checked); setExportPassword(''); setExportConfirmPassword(''); }}
-                    />
-                    <span className="toggle-slider" />
-                  </span>
-                </label>
-                {exportEncrypt && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <input
-                      type="password"
-                      value={exportPassword}
-                      onChange={(e) => setExportPassword(e.target.value)}
-                      placeholder={t('export.password')}
-                      className="setting-input"
-                    />
-                    <input
-                      type="password"
-                      value={exportConfirmPassword}
-                      onChange={(e) => setExportConfirmPassword(e.target.value)}
-                      placeholder={t('export.confirmPassword')}
-                      className="setting-input"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                <button
-                  className="test-btn"
-                  style={{ flex: 'none' }}
-                  onClick={handleExport}
-                  disabled={exporting || importing}
-                >
-                  {exporting ? t('export.exporting') : t('export.export')}
-                </button>
-                <button
-                  className="test-btn"
-                  style={{ flex: 'none' }}
-                  onClick={() => { setImportNeedPassword(false); setImportPassword(''); setImportFilePath(null); setImportResult(null); handleImport(null, null); }}
-                  disabled={exporting || importing}
-                >
-                  {importing ? t('export.importing') : t('export.import')}
-                </button>
-              </div>
-
-              {/* 加密文件需要密码 */}
-              {importNeedPassword && (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                  <input
-                    type="password"
-                    value={importPassword}
-                    onChange={(e) => setImportPassword(e.target.value)}
-                    placeholder={t('export.password')}
-                    className="setting-input"
-                    style={{ flex: 1 }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && importPassword) handleImport(importPassword, importFilePath); }}
-                  />
-                  <button
-                    className="test-btn"
-                    onClick={() => handleImport(importPassword, importFilePath)}
-                    disabled={!importPassword || importing}
-                  >
-                    {t('export.import')}
-                  </button>
-                </div>
-              )}
-
-              {/* 结果提示 */}
-              {(exportResult || importResult) && (
-                <small style={{ color: (exportResult || importResult)?.success ? '#22c55e' : '#ef4444', marginTop: '6px', display: 'block' }}>
-                  {(exportResult || importResult)?.message}
-                </small>
-              )}
             </div>
           </div>
         )}
@@ -891,11 +701,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     value={customName}
                     onChange={(e) => {
                       setCustomName(e.target.value);
-                      // 更新 aiConfig 中的 Custom 对象
                       const currentCustom = typeof aiConfig.current_provider === 'object' && aiConfig.current_provider.Custom
                         ? aiConfig.current_provider.Custom
                         : { name: customName, base_url: customUrl };
-
                       setAiConfig({
                         ...aiConfig,
                         current_provider: {
@@ -914,11 +722,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     value={customUrl}
                     onChange={(e) => {
                       setCustomUrl(e.target.value);
-                      // 更新 aiConfig 中的 Custom 对象
                       const currentCustom = typeof aiConfig.current_provider === 'object' && aiConfig.current_provider.Custom
                         ? aiConfig.current_provider.Custom
                         : { name: customName, base_url: customUrl };
-
                       setAiConfig({
                         ...aiConfig,
                         current_provider: {
@@ -935,34 +741,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
             <div className="setting-item">
               <label>{t('settings.ai.apiKey')}</label>
-              <div style={{ position: 'relative' }}>
+              <div className="password-input-wrapper">
                 <input
                   type={showAiApiKey ? "text" : "password"}
                   value={currentAiApiKey}
                   onChange={(e) => setCurrentAiApiKey(e.target.value)}
                   placeholder={t('settings.ai.apiKeyPlaceholder')}
                   className="setting-input"
-                  style={{ paddingRight: '40px' }}
                 />
                 {currentAiApiKey && (
                   <button
                     type="button"
                     onClick={() => setShowAiApiKey(!showAiApiKey)}
-                    style={{
-                      position: 'absolute',
-                      right: '8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: 'var(--text-secondary)',
-                    }}
+                    className="password-toggle-btn"
                   >
-                    {showAiApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showAiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 )}
               </div>
@@ -984,20 +777,17 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </small>
                 </>
               ) : (
-                <>
-                  <select
-                    value={currentAiModel}
-                    onChange={(e) => setCurrentAiModel(e.target.value)}
-                    className="setting-select"
-                  >
-                    {availableModels.map((model) => (
-                      <option key={model} value={model}>
-                        {model}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="setting-hint">{t('settings.ai.modelHint')}</small>
-                </>
+                <select
+                  value={currentAiModel}
+                  onChange={(e) => setCurrentAiModel(e.target.value)}
+                  className="setting-select"
+                >
+                  {availableModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 
@@ -1016,14 +806,17 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
         {activeTab === 'ocr' && (
           <div className="settings-content">
-            <div className="setting-item">
-              <label className="setting-label">
-                <input
-                  type="checkbox"
-                  checked={ocrConfig.auto_ocr}
-                  onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
-                />
-                {t('settings.ocr.autoOcr')}
+            <div className="setting-group">
+              <label className="sg-row setting-toggle-row">
+                <span>{t('settings.ocr.autoOcr')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={ocrConfig.auto_ocr}
+                    onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </span>
               </label>
             </div>
 
@@ -1085,34 +878,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             {ocrConfig.current_provider !== 'Local' && (
               <div className="setting-item">
                 <label>{t('settings.ocr.apiKey')}</label>
-                <div style={{ position: 'relative' }}>
+                <div className="password-input-wrapper">
                   <input
                     type={showOcrApiKey ? "text" : "password"}
                     value={currentOcrApiKey}
                     onChange={(e) => setCurrentOcrApiKey(e.target.value)}
                     placeholder={t('settings.ocr.apiKeyPlaceholder')}
                     className="setting-input"
-                    style={{ paddingRight: '40px' }}
                   />
                   {currentOcrApiKey && (
                     <button
                       type="button"
                       onClick={() => setShowOcrApiKey(!showOcrApiKey)}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        color: 'var(--text-secondary)',
-                      }}
+                      className="password-toggle-btn"
                     >
-                      {showOcrApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showOcrApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   )}
                 </div>
@@ -1161,7 +941,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               <small className="setting-hint">
                 {t('settings.mcp.portHint')}
                 {actualMcpPort !== mcpConfig.port && (
-                  <span style={{ color: '#ff9800', marginLeft: '8px' }}>
+                  <span className="setting-warning-inline">
                     {t('settings.mcp.actualPort', { port: actualMcpPort })}
                   </span>
                 )}
@@ -1205,21 +985,207 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   }
 }`;
                     navigator.clipboard.writeText(config);
-                    alert(t('settings.mcp.configCopied'));
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
                   }}
-                  className="test-btn"
-                  style={{ marginTop: '8px' }}
+                  className={`test-btn${copySuccess ? ' copy-done' : ''}`}
                 >
-                  {t('settings.mcp.copyConfig')}
+                  {copySuccess ? '✓ ' + t('settings.mcp.configCopied') : t('settings.mcp.copyConfig')}
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {activeTab === 'data' && (
+          <div className="settings-content">
+            <div className="setting-options-group">
+              <label className="setting-toggle-row">
+                <span>{t('export.includeImages')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={exportIncludeImages}
+                    onChange={(e) => setExportIncludeImages(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span>{t('export.encrypt')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={exportEncrypt}
+                    onChange={(e) => { setExportEncrypt(e.target.checked); setExportPassword(''); setExportConfirmPassword(''); }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              {exportEncrypt && (
+                <div className="setting-password-group">
+                  <input
+                    type="password"
+                    value={exportPassword}
+                    onChange={(e) => setExportPassword(e.target.value)}
+                    placeholder={t('export.password')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="password"
+                    value={exportConfirmPassword}
+                    onChange={(e) => setExportConfirmPassword(e.target.value)}
+                    placeholder={t('export.confirmPassword')}
+                    className="setting-input"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="setting-btn-row">
+              <button
+                className="test-btn"
+                onClick={handleExport}
+                disabled={exporting || importing}
+              >
+                {exporting ? t('export.exporting') : t('export.export')}
+              </button>
+              <button
+                className="test-btn secondary"
+                onClick={() => { setImportNeedPassword(false); setImportPassword(''); setImportFilePath(null); setImportResult(null); handleImport(null, null); }}
+                disabled={exporting || importing}
+              >
+                {importing ? t('export.importing') : t('export.import')}
+              </button>
+            </div>
+
+            {importNeedPassword && (
+              <div className="setting-inline-row">
+                <input
+                  type="password"
+                  value={importPassword}
+                  onChange={(e) => setImportPassword(e.target.value)}
+                  placeholder={t('export.password')}
+                  className="setting-input"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && importPassword) handleImport(importPassword, importFilePath); }}
+                />
+                <button
+                  className="test-btn"
+                  onClick={() => handleImport(importPassword, importFilePath)}
+                  disabled={!importPassword || importing}
+                >
+                  {t('export.import')}
+                </button>
+              </div>
+            )}
+
+            {(exportResult || importResult) && (
+              <small className={`setting-status ${(exportResult || importResult)?.success ? 'success' : 'error'}`}>
+                {(exportResult || importResult)?.message}
+              </small>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'security' && (
+          <div className="settings-content">
+            <small className="setting-hint-block">
+              {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
+            </small>
+
+            {lockHasPassword && (
+              <div className="setting-password-group with-margin">
+                <input
+                  type="password"
+                  value={lockOldPassword}
+                  onChange={(e) => { setLockOldPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                  placeholder={t('lock.oldPassword')}
+                  className="setting-input"
+                />
+              </div>
+            )}
+
+            <div className="setting-password-group">
+              <input
+                type="password"
+                value={lockNewPassword}
+                onChange={(e) => { setLockNewPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                placeholder={lockHasPassword ? t('lock.newPassword') : t('lock.setPassword')}
+                className="setting-input"
+              />
+              {lockNewPassword && (
+                <input
+                  type="password"
+                  value={lockConfirmPassword}
+                  onChange={(e) => { setLockConfirmPassword(e.target.value); setLockError(''); setLockSuccess(''); }}
+                  placeholder={t('lock.confirmPassword')}
+                  className="setting-input"
+                />
+              )}
+            </div>
+
+            {lockError && <small className="setting-status error">{lockError}</small>}
+            {lockSuccess && <small className="setting-status success">{lockSuccess}</small>}
+
+            <div className="setting-btn-row">
+              <button
+                className="test-btn"
+                onClick={async () => {
+                  setLockError('');
+                  setLockSuccess('');
+                  if (lockNewPassword) {
+                    if (lockNewPassword !== lockConfirmPassword) {
+                      setLockError(t('lock.mismatch'));
+                      return;
+                    }
+                    try {
+                      await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: lockNewPassword });
+                      setLockSuccess(t('lock.setSuccess'));
+                      setLockHasPassword(true);
+                      setLockOldPassword('');
+                      setLockNewPassword('');
+                      setLockConfirmPassword('');
+                    } catch (err) {
+                      setLockError(String(err));
+                    }
+                  }
+                }}
+                disabled={!lockNewPassword || !lockConfirmPassword}
+              >
+                {lockHasPassword ? t('lock.changePassword') : t('lock.enableLock')}
+              </button>
+              {lockHasPassword && (
+                <button
+                  className="test-btn danger"
+                  onClick={async () => {
+                    setLockError('');
+                    setLockSuccess('');
+                    if (!lockOldPassword) {
+                      setLockError(t('lock.needOldPassword'));
+                      return;
+                    }
+                    try {
+                      await invoke('set_lock_password', { oldPassword: lockOldPassword, newPassword: '' });
+                      setLockSuccess(t('lock.removeSuccess'));
+                      setLockHasPassword(false);
+                      setLockOldPassword('');
+                      setLockNewPassword('');
+                      setLockConfirmPassword('');
+                    } catch (err) {
+                      setLockError(String(err));
+                    }
+                  }}
+                >
+                  {t('lock.removeLock')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="settings-footer">
           <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
-          {activeTab !== 'general' && (
+          {(activeTab === 'ai' || activeTab === 'ocr' || activeTab === 'mcp') && (
             <button
               onClick={
                 activeTab === 'ai' ? handleAiSave :

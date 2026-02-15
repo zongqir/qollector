@@ -1,0 +1,206 @@
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: transparent;
+}
+
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.quick-window-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--quick-add-bg, var(--quick-input-bg));
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  transition: background 0.2s ease;
+}
+
+.quick-window-header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--quick-input-header-bg);
+  user-select: none;
+  cursor: grab;
+}
+
+.quick-window-header:active {
+  cursor: grabbing;
+}
+
+.quick-window-header-left {
+  min-width: 0;
+}
+
+.quick-window-tip {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+.quick-window-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-window-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 2px;
+}
+
+.quick-window-color-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background: var(--dot-color);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.quick-window-color-dot:hover {
+  transform: scale(1.25);
+}
+
+.quick-window-color-dot.active {
+  transform: scale(1.25);
+}
+
+.quick-window-color-dot.active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.5l2.5 2.5 4.5-5' stroke='%23667eea' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/11px no-repeat;
+}
+
+.quick-window-icon-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-window-icon-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent-color);
+}
+
+.quick-window-icon-btn.active {
+  color: var(--accent-color);
+}
+
+.quick-window-icon-btn.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
+  color: #ff3b30;
+}
+
+.quick-window-textarea {
+  flex: 1;
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 14px 15px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  background: transparent;
+  font-family: inherit;
+}
+
+.quick-window-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.quick-window-footer {
+  border-top: 1px solid var(--border-light);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 46px;
+}
+
+.quick-window-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #51cf66;
+  font-size: 12px;
+}
+
+.quick-window-footer-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.quick-window-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-window-btn.secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.quick-window-btn.secondary:hover:not(:disabled) {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.quick-window-btn.primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.quick-window-btn.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.quick-window-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

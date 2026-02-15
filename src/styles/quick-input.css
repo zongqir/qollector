@@ -61,10 +61,8 @@
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--accent-color);
+  font-weight: 700;
 }
 
 .quick-input-close {
@@ -168,14 +166,12 @@
 }
 
 .quick-input-btn.submit {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: var(--accent-color);
   color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .quick-input-btn.submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: var(--accent-hover);
 }
 
 .quick-input-btn.submit:active {

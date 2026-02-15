@@ -1,133 +1,46 @@
+/* macOS Spotlight 风格搜索栏 */
 .header {
-  padding: 16px 24px;
+  padding: 10px 12px;
   background: var(--bg-secondary);
-  box-shadow: 0 1px 3px var(--shadow-sm);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
+  container-type: inline-size;
+  z-index: 1;
 }
 
-.search-box {
-  flex: 1;
-  position: relative;
-  min-width: 200px;
-}
-
-/* 类型筛选组 - 胶囊式单选 */
-.type-filter-group {
-  display: flex;
-  gap: 0;
-  background: var(--filter-group-bg);
-  padding: 4px;
-  border-radius: 12px;
-  flex-shrink: 0;
-}
-
-.type-filter-btn {
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
-  white-space: nowrap;
+/* 主行 */
+.header-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.type-filter-btn:hover:not(.active) {
-  background: rgba(102, 126, 234, 0.08);
-  color: #667eea;
-}
-
-.type-filter-btn.active {
-  background: var(--filter-btn-active-bg);
-  color: #667eea;
-  box-shadow: 0 2px 4px var(--shadow-md);
-  font-weight: 600;
-}
-
-/* 小屏隐藏类型筛选 */
-@media (max-width: 900px) {
-  .type-filter-group {
-    display: none;
-  }
-}
-
-/* 收藏筛选按钮 */
-.favorites-filter-btn {
-  padding: 8px 14px;
-  background: var(--btn-bg);
-  color: var(--text-secondary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-weight: 500;
-}
-
-.favorites-filter-btn:hover {
-  border-color: #ffa726;
-  background: var(--fav-filter-hover-bg);
-}
-
-.favorites-filter-btn.active {
-  background: linear-gradient(135deg, #ffa726, #f57c00);
-  color: white;
-  border-color: #ffa726;
-  box-shadow: 0 2px 8px rgba(255, 167, 38, 0.3);
-}
-
-.settings-btn {
-  padding: 8px 14px;
-  background: var(--btn-bg);
-  color: #667eea;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.settings-btn:hover {
-  border-color: #667eea;
-  background: var(--settings-hover-bg);
-}
-
-/* 窗口较窄时隐藏设置按钮 */
-@media (max-width: 768px) {
-  .settings-btn {
-    display: none;
-  }
+/* 搜索框 - Spotlight 风格 */
+.search-box {
+  flex: 1;
+  position: relative;
+  min-width: 80px;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 40px 10px 15px;
-  border: 2px solid var(--border-color);
-  border-radius: 25px;
-  font-size: 14px;
-  transition: all 0.3s;
+  padding: 7px 30px 7px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.2s ease;
   background: var(--bg-input);
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: var(--bg-input);
+  box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
 .search-input::placeholder {
@@ -136,24 +49,178 @@
 
 .clear-search {
   position: absolute;
-  right: 10px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--clear-search-bg);
   border: none;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 14px;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.15s;
 }
 
 .clear-search:hover {
   background: var(--clear-search-hover-bg);
   color: var(--text-primary);
+}
+
+/* 图标按钮 - macOS 风格 */
+.header-icon-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.header-icon-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-secondary);
+}
+
+.header-icon-btn.active {
+  color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.header-icon-btn.fav-active {
+  color: #ff9500;
+  background: rgba(255, 149, 0, 0.1);
+}
+
+.header-icon-btn.fav-active:hover {
+  background: rgba(255, 149, 0, 0.15);
+}
+
+.icon-btn-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--accent-color);
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* 类型筛选组 - macOS 分段控件风格 */
+.type-filter-group {
+  display: flex;
+  gap: 1px;
+  background: var(--filter-group-bg);
+  padding: 2px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.type-filter-btn {
+  width: 28px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.type-filter-btn:hover:not(.active) {
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.type-filter-btn.active {
+  background: var(--filter-btn-active-bg);
+  color: var(--accent-color);
+  box-shadow: 0 1px 3px var(--shadow-sm);
+}
+
+/* 设置按钮 */
+.settings-btn {
+  border-color: transparent;
+}
+
+@container (max-width: 380px) {
+  .settings-btn {
+    display: none;
+  }
+}
+
+/* 标签筛选下拉 */
+.tag-select-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* 筛选状态提示 */
+.filter-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.filter-status-text {
+  flex: 1;
+}
+
+.clear-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent-light);
+  color: var(--accent-color);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.clear-filter-btn:hover {
+  background: var(--accent-medium);
+}
+
+/* Mini 模式隐藏低优先级 */
+.app.mini-mode .type-filter-group,
+.app.mini-mode .tag-select-wrapper,
+.app.mini-mode .settings-btn {
+  display: none;
+}
+
+.app.mini-mode .search-input {
+  padding: 5px 24px 5px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.app.mini-mode .header-icon-btn {
+  width: 26px;
+  height: 26px;
 }

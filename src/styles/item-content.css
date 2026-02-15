@@ -11,7 +11,7 @@
   max-height: 80px;
   overflow: hidden;
   position: relative;
-  transition: max-height 0.3s ease-out;
+  transition: max-height 0.2s ease-out;
   border: none;
   will-change: max-height;
 }
@@ -21,50 +21,19 @@
   position: relative;
 }
 
-/* 展开状态 */
 .item-content.expanded {
   max-height: 600px;
   overflow-y: auto;
 }
 
-/* 复制成功状态 */
 .item-content.copied {
-  animation: copyFlash 0.6s ease-out;
+  animation: copyFlash 0.5s ease-out;
 }
 
 @keyframes copyFlash {
   0% { background: transparent; }
-  50% { background: rgba(76, 175, 80, 0.15); }
+  50% { background: rgba(52, 199, 89, 0.1); }
   100% { background: transparent; }
-}
-
-/* 复制成功提示 */
-.copy-success-toast {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(76, 175, 80, 0.95);
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
-  z-index: 100;
-  pointer-events: none;
-  animation: toastFadeIn 0.3s ease-out;
-}
-
-@keyframes toastFadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
 }
 
 .item-content.clickable:active {
@@ -72,9 +41,8 @@
   background: transparent;
 }
 
-/* 展开按钮激活状态 */
 .toolbar-btn.expand-btn.active {
   background: var(--expand-active-bg);
-  border-color: #2196f3;
-  color: #1976d2;
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }

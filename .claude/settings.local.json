@@ -10,7 +10,11 @@
       "Bash(curl -L \"https://raw.githubusercontent.com/tauri-apps/tauri/dev/tooling/cli/templates/app/app-icon.png\" -o icons/icon.png)",
       "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n$bmp = New-Object System.Drawing.Bitmap\\(32, 32\\)\n$g = [System.Drawing.Graphics]::FromImage\\($bmp\\)\n$g.Clear\\([System.Drawing.Color]::Blue\\)\n$g.Dispose\\(\\)\n$icon = [System.Drawing.Icon]::FromHandle\\($bmp.GetHicon\\(\\)\\)\n$stream = [System.IO.File]::Create\\(''icon.ico''\\)\n$icon.Save\\($stream\\)\n$stream.Close\\(\\)\nWrite-Host ''Icon created''\n\")",
       "Bash(curl -L \"https://raw.githubusercontent.com/tauri-apps/tauri/v2/examples/api/src-tauri/icons/icon.ico\" -o icon.ico)",
-      "Bash(npx @tauri-apps/cli icon icons/icon.svg)"
+      "Bash(npx @tauri-apps/cli icon icons/icon.svg)",
+      "Bash(npm install zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities)",
+      "mcp__ide__getDiagnostics",
+      "Bash(wc -l \"D:\\\\code\\\\pith\\\\src\"/*.jsx \"D:\\\\code\\\\pith\\\\src\"/*.css)",
+      "Bash(find \"D:\\\\code\\\\pith\\\\src\" -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)"
     ]
   }
 }

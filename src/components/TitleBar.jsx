@@ -1,7 +1,7 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
-import { PlusCircle, Minimize2, Maximize2, X, Pin, Maximize, RectangleVertical } from 'lucide-react';
+import { SquarePen, Minimize2, Maximize2, X, Pin, Shrink, Expand } from 'lucide-react';
 
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
@@ -28,14 +28,14 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
           className="titlebar-btn quick-add-btn"
           title={t('titlebar.quickAdd')}
         >
-          <PlusCircle size={16} />
+          <SquarePen size={15} />
         </button>
         <button
           onClick={handleToggleMini}
           className={`titlebar-btn mini-btn ${isMiniMode ? 'active' : ''}`}
           title={isMiniMode ? t('titlebar.exitMini') : t('titlebar.miniMode')}
         >
-          {isMiniMode ? <Maximize size={14} /> : <RectangleVertical size={14} />}
+          {isMiniMode ? <Expand size={14} /> : <Shrink size={14} />}
         </button>
         <button
           onClick={onToggleAlwaysOnTop}

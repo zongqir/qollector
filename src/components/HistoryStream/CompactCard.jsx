@@ -1,0 +1,159 @@
+import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink } from 'lucide-react';
+import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList, parseUrl } from '../../utils/formatters';
+import { getSourceApp, getTags } from '../../utils/tagHelpers';
+import { getImageThumbnail } from '../../utils/imageHelpers';
+
+const TypeIcon = ({ type }) => {
+  const size = 11;
+  switch (type) {
+    case 'image': return <Image size={size} />;
+    case 'file': return <FileText size={size} />;
+    case 'link': return <Link size={size} />;
+    default: return <Type size={size} />;
+  }
+};
+
+function CompactCard({
+  item,
+  isSelected,
+  onDragStart,
+  onStartExternalDrag,
+  onTogglePin,
+  onToggleFavorite,
+  onOpenItem,
+}) {
+  const { t, i18n } = useTranslation();
+  const timelineColor = getTimelineColor(item.created_at);
+  const tags = getTags(item.tags);
+  const userTags = tags.filter(tag => !tag.startsWith('AI:'));
+  const canDragOut = item.type_ === 'file' || item.type_ === 'image';
+  const canOpen = item.type_ === 'link' || item.type_ === 'file';
+
+  const cardClasses = [
+    'compact-card',
+    item.is_pinned && 'pinned',
+    item.is_favorite && 'favorite',
+    isSelected && 'selected',
+  ].filter(Boolean).join(' ');
+
+  const renderContent = () => {
+    if (item.type_ === 'image' && item.image_paths) {
+      return (
+        <div className="compact-card-image">
+          <img
+            src={getImageThumbnail(item.image_paths)}
+            alt=""
+            loading="lazy"
+          />
+        </div>
+      );
+    }
+    if (item.type_ === 'link') {
+      const parsed = parseUrl(item.content);
+      if (parsed) {
+        return (
+          <div className="compact-card-link">
+            <img
+              className="compact-link-favicon"
+              src={parsed.favicon}
+              alt=""
+              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }}
+            />
+            <Link size={14} className="compact-link-fallback" style={{ display: 'none' }} />
+            <span className="compact-link-domain">{parsed.domain}</span>
+            {parsed.path && <span className="compact-link-path">{decodeURIComponent(parsed.path)}</span>}
+          </div>
+        );
+      }
+    }
+    if (item.type_ === 'file') {
+      const files = getFileList(item.content);
+      return (
+        <div className="compact-card-text">
+          {files.map(f => getFileName(f)).join(', ')}
+        </div>
+      );
+    }
+    return (
+      <div className="compact-card-text">
+        {getContentPreview(item.content)}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      className={cardClasses}
+      style={{ '--timeline-color': timelineColor }}
+      title={`${formatDate(item.created_at, i18n.language)} · ${getSourceApp(item.metadata)}`}
+      draggable="true"
+      onDragStart={(e) => onDragStart && onDragStart(item, e)}
+    >
+      <div className="compact-card-header">
+        <TypeIcon type={item.type_} />
+        <span className="compact-card-time">
+          {formatDate(item.created_at, i18n.language)}
+        </span>
+        <div className="compact-card-badges">
+          {canDragOut && (
+            <button
+              className="badge-btn badge-dragout"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onStartExternalDrag?.(item);
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              title={t('toolbar.dragToApp')}
+            >
+              <GripVertical size={10} />
+            </button>
+          )}
+          {canOpen && (
+            <button
+              className="badge-btn badge-open"
+              onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
+              title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+            >
+              <ExternalLink size={10} />
+            </button>
+          )}
+          <button
+            className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
+            title={t('preview.pin')}
+          >
+            <Pin size={10} />
+          </button>
+          <button
+            className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
+            title={t('preview.favorite')}
+          >
+            <Star size={10} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      </div>
+      <div className="compact-card-body">
+        {renderContent()}
+      </div>
+      {userTags.length > 0 && (
+        <div className="compact-card-tags">
+          {userTags.slice(0, 3).map(tag => (
+            <span key={tag} className="compact-tag">{tag}</span>
+          ))}
+          {userTags.length > 3 && (
+            <span className="compact-tag more">+{userTags.length - 3}</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default memo(CompactCard);

@@ -1,14 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { X, Check, Plus, Pin, PinOff } from 'lucide-react';
+import useAppStore from './store/useAppStore';
 import './EditModal.css';
 
-function EditModal({ item, mode, onSave, onCancel }) {
+const NOTE_COLORS = [
+  { id: 'default', bg: 'var(--edit-modal-bg)', dot: '#e2e2e2' },
+  { id: 'yellow',  bg: '#fef9e7', dot: '#fce588' },
+  { id: 'green',   bg: '#eafaf1', dot: '#82deb0' },
+  { id: 'blue',    bg: '#eaf2fa', dot: '#93c5f7' },
+  { id: 'pink',    bg: '#fdf2f8', dot: '#f5a6ce' },
+  { id: 'purple',  bg: '#f3eefa', dot: '#c4a8f0' },
+];
+
+function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [note, setNote] = useState('');
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState('');
+  const [savedToast, setSavedToast] = useState(false);
+  const [isPinned, setIsPinned] = useState(true);
+  const [noteColor, setNoteColor] = useState('default');
+  const textareaRef = useRef(null);
+
+  // 拖拽状态
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef(null);
+  const draggingRef = useRef(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const posInitialized = useRef(false);
+
+  // 取消置顶时错位显示
+  useEffect(() => {
+    if (!isPinned && !posInitialized.current) {
+      posInitialized.current = true;
+      setPos({ x: 30, y: 30 });
+    }
+  }, [isPinned]);
+
+  // 拖拽事件
+  const handleDragMouseDown = useCallback((e) => {
+    if (isPinned) return;
+    draggingRef.current = true;
+    offsetRef.current = {
+      x: e.clientX - pos.x,
+      y: e.clientY - pos.y,
+    };
+    document.body.style.userSelect = 'none';
+  }, [isPinned, pos]);
+
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!draggingRef.current) return;
+      setPos({
+        x: e.clientX - offsetRef.current.x,
+        y: e.clientY - offsetRef.current.y,
+      });
+    };
+    const handleUp = () => {
+      draggingRef.current = false;
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleUp);
+    };
+  }, []);
 
   useEffect(() => {
     if (mode === 'edit' && item) {
@@ -22,7 +83,6 @@ function EditModal({ item, mode, onSave, onCancel }) {
         setTags([]);
       }
     } else {
-      // 新建模式
       setContent('');
       setNote('');
       setTags([]);
@@ -39,6 +99,35 @@ function EditModal({ item, mode, onSave, onCancel }) {
   const handleRemoveTag = (tagToRemove) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
+
+  const handleSave = () => {
+    onSave({ content, note, tags });
+  };
+
+  const handleSaveAndContinue = useCallback(async () => {
+    if (!content.trim()) return;
+    try {
+      await invoke('add_clipboard_item_manual', {
+        content: content.trim(),
+        contentType: 'text',
+        source: '快速输入',
+        autoFavorite: false,
+      });
+      // 自动置顶刚创建的条目
+      const newItems = await invoke('get_recent_items', { limit: 1 });
+      if (newItems[0]) {
+        const maxPinned = useAppStore.getState().maxPinnedItems;
+        await invoke('toggle_pin_item', { id: newItems[0].id, maxPinned });
+      }
+      await useAppStore.getState().loadItems();
+      setContent('');
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 1500);
+      textareaRef.current?.focus();
+    } catch (error) {
+      console.error('保存失败:', error);
+    }
+  }, [content]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
@@ -57,16 +146,96 @@ function EditModal({ item, mode, onSave, onCancel }) {
     }
   };
 
-  const handleSave = () => {
-    onSave({
-      content,
-      note,
-      tags
-    });
-  };
-
   const isNewMode = mode === 'new';
   const canEdit = isNewMode || (item && item.type_ !== 'image');
+
+  if (isNewMode) {
+    const currentColor = NOTE_COLORS.find(c => c.id === noteColor) || NOTE_COLORS[0];
+    const panelStyle = { '--quick-add-bg': currentColor.bg };
+
+    const panelContent = (
+      <>
+        <div className="quick-add-header" onMouseDown={handleDragMouseDown}>
+          <span className="quick-add-tip">{t('editModal.quickAddTip')}</span>
+          <div className="quick-add-header-actions">
+            <div className="quick-add-colors">
+              {NOTE_COLORS.map(c => (
+                <button
+                  key={c.id}
+                  className={`quick-add-color-dot ${noteColor === c.id ? 'active' : ''}`}
+                  style={{ '--dot-color': c.dot }}
+                  onClick={() => setNoteColor(c.id)}
+                />
+              ))}
+            </div>
+            <button
+              className={`quick-add-pin-btn ${isPinned ? 'active' : ''}`}
+              onClick={() => setIsPinned(!isPinned)}
+              title={isPinned ? t('editModal.unpin') : t('editModal.pin')}
+            >
+              {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+            </button>
+            <button onClick={onCancel} className="quick-add-close-btn" title={t('editModal.cancelHint')}>
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+        <textarea
+          ref={textareaRef}
+          className="edit-modal-mini-textarea"
+          placeholder={t('editModal.contentPlaceholder')}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={handleKeyDown}
+          autoFocus
+        />
+        {savedToast && (
+          <div className="quick-add-toast">
+            <Check size={14} />
+            <span>{t('editModal.savedToast')}</span>
+          </div>
+        )}
+        <div className="edit-modal-mini-footer">
+          <div className="quick-add-actions">
+            <button
+              onClick={handleSaveAndContinue}
+              className="quick-add-btn-continue"
+              disabled={!content.trim()}
+            >
+              <Plus size={15} />
+              <span>{t('editModal.saveAndContinue')}</span>
+            </button>
+            <button
+              onClick={handleSave}
+              className="quick-add-btn-save"
+              disabled={!content.trim()}
+            >
+              <Check size={15} />
+              <span>{t('editModal.saveHint')}</span>
+            </button>
+          </div>
+        </div>
+      </>
+    );
+
+    if (isPinned) {
+      return (
+        <div className="edit-modal-mini-fullscreen" style={panelStyle}>
+          {panelContent}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        ref={dragRef}
+        className="quick-add-floating"
+        style={{ left: pos.x, top: pos.y, ...panelStyle }}
+      >
+        {panelContent}
+      </div>
+    );
+  }
 
   return (
     <div className="edit-modal-overlay" onClick={onCancel}>

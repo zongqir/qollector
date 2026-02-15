@@ -1,4 +1,4 @@
-/* 备注显示条 - 弱化单行样式 */
+/* macOS 风格备注 */
 .note-display-bar {
   display: flex;
   align-items: center;
@@ -7,7 +7,7 @@
   border-radius: 0;
   margin-top: 0;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   border: none;
   position: relative;
   overflow: hidden;
@@ -31,17 +31,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.2s;
+  transition: color 0.15s;
 }
 
-/* 备注编辑条 */
 .note-edit-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
   background: var(--note-edit-bg);
-  border-radius: 8px;
+  border-radius: 10px;
   margin-top: 0;
   border: 1px solid var(--note-edit-border);
   position: relative;
@@ -55,28 +54,27 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--timeline-color, #dee2e6);
+  background: var(--timeline-color, var(--text-tertiary));
 }
 
 .note-edit-input {
   flex: 1;
   padding: 6px 10px;
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  background: var(--note-input-bg);
+  background: var(--bg-input);
   min-height: 28px;
-  transition: all 0.2s;
+  transition: all 0.15s;
   color: var(--text-secondary);
   font-weight: 500;
+  outline: none;
 }
 
 .note-edit-input:focus {
-  outline: none;
-  border-color: #90a4ae;
-  box-shadow: 0 0 0 2px rgba(144, 164, 174, 0.15);
+  box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
 .note-edit-input::placeholder {
@@ -92,7 +90,7 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: bold;
-  transition: all 0.2s;
+  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,28 +98,23 @@
 }
 
 .note-btn-save {
-  background: linear-gradient(135deg, #4caf50, #45a049);
+  background: #34c759;
   color: white;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 .note-btn-save:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+  background: #2db84e;
 }
 
 .note-btn-cancel {
-  background: linear-gradient(135deg, #9e9e9e, #757575);
-  color: white;
-  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.2);
+  background: var(--cancel-btn-bg);
+  color: var(--text-secondary);
 }
 
 .note-btn-cancel:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(158, 158, 158, 0.3);
+  background: var(--cancel-btn-hover-bg);
 }
 
-/* 添加备注按钮 */
 .add-note-btn {
   position: absolute;
   top: 8px;
@@ -133,19 +126,19 @@
   height: 24px;
   padding: 0;
   background: var(--float-btn-bg);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   z-index: 10;
   font-size: 14px;
   opacity: 0.5;
-  box-shadow: 0 2px 4px var(--shadow-md);
+  box-shadow: 0 1px 4px var(--shadow-sm);
 }
 
 .add-note-btn:hover {
   opacity: 1;
   background: var(--note-hover-bg);
   border-color: var(--note-edit-border);
-  transform: scale(1.05);
 }

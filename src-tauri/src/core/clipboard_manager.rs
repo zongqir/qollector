@@ -204,6 +204,11 @@ impl ClipboardManager {
                 let mut item = ClipboardItem::new_text(summary, metadata);
                 item.type_ = "file".to_string();
                 item.content = Some(paths_str.clone());
+                // Use full path payload hash to avoid false collisions on same filename.
+                let mut hasher = sha2::Sha256::new();
+                use sha2::Digest;
+                hasher.update(paths_str.as_bytes());
+                item.content_hash = format!("{:x}", hasher.finalize());
                 item
             }
         };
@@ -440,6 +445,30 @@ impl ClipboardManager {
         repo.insert(item).await
     }
 
+    /// Insert with hash dedupe in one critical section to avoid races.
+    /// Returns the effective item id (existing or newly inserted).
+    pub async fn insert_item_dedup_touch(&self, item: &ClipboardItem) -> Result<String, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        if let Some(existing) = repo.find_by_hash(&item.content_hash).await? {
+            let _ = repo.touch(&existing.id).await;
+            return Ok(existing.id);
+        }
+
+        repo.insert(item).await?;
+        Ok(item.id.clone())
+    }
+
+    pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.find_by_hash(content_hash).await
+    }
+
+    pub async fn touch(&self, id: &str) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.touch(id).await
+    }
+
     pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.update_ocr_text(id, ocr_text).await
@@ -448,17 +477,11 @@ impl ClipboardManager {
     pub async fn toggle_pin(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
-        // 获取当前项目
-        if let Some(mut item) = repo.find_by_id(id).await? {
-            // 切换置顶状态
+        if let Some(item) = repo.find_by_id(id).await? {
             let new_pinned_state = !item.is_pinned;
 
-            // 如果是要置顶(从未置顶变为置顶)
             if new_pinned_state {
-                // 检查当前置顶数量
                 let pinned_items = repo.get_pinned_items().await?;
-
-                // 如果已经达到置顶上限,取消最早置顶的那个
                 if pinned_items.len() >= max_pinned {
                     if let Some(oldest_pinned) = pinned_items.first() {
                         println!("已达到置顶上限({}个),取消最早置顶的项: {}", max_pinned, oldest_pinned.id);
@@ -467,15 +490,30 @@ impl ClipboardManager {
                 }
             }
 
-            item.is_pinned = new_pinned_state;
-            // 更新时间戳
-            item.updated_at = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs() as i64;
+            repo.set_pinned(id, new_pinned_state).await?;
+            Ok(new_pinned_state)
+        } else {
+            Err(sqlx::Error::RowNotFound)
+        }
+    }
 
-            repo.update(&item).await?;
-            Ok(item.is_pinned)
+    pub async fn pin_item(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        if let Some(item) = repo.find_by_id(id).await? {
+            if item.is_pinned {
+                return Ok(true);
+            }
+
+            let pinned_items = repo.get_pinned_items().await?;
+            if pinned_items.len() >= max_pinned {
+                if let Some(oldest_pinned) = pinned_items.first() {
+                    repo.unpin(&oldest_pinned.id).await?;
+                }
+            }
+
+            repo.set_pinned(id, true).await?;
+            Ok(true)
         } else {
             Err(sqlx::Error::RowNotFound)
         }

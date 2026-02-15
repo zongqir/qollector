@@ -1,4 +1,4 @@
-/* 标签下拉选择器样式 */
+/* macOS 风格标签下拉 */
 .tag-select-wrapper {
   position: relative;
 }
@@ -7,25 +7,25 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   background: var(--btn-bg);
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.2s;
+  transition: all 0.15s;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
 .tag-select-btn:hover {
-  border-color: #667eea;
-  background: var(--settings-hover-bg);
+  border-color: var(--accent-color);
+  background: var(--accent-light);
 }
 
 .tag-select-btn.has-selection {
-  border-color: #667eea;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-color: var(--accent-color);
+  background: var(--accent-color);
   color: white;
 }
 
@@ -37,17 +37,14 @@
   white-space: nowrap;
 }
 
-/* 窗口较窄时隐藏标签文字 */
 @media (max-width: 768px) {
   .tag-label {
     display: none;
   }
-
   .tag-select-btn {
     min-width: 40px;
     justify-content: center;
   }
-
   .tag-dropdown {
     right: auto;
     left: 50%;
@@ -55,7 +52,6 @@
     min-width: 260px;
     max-width: calc(100vw - 32px);
   }
-
   .tag-dropdown-list {
     max-height: 240px;
   }
@@ -63,54 +59,50 @@
 
 .dropdown-arrow {
   font-size: 10px;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .tag-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--tag-dropdown-bg);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px var(--shadow-lg);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px var(--shadow-lg), 0 0 0 1px var(--border-light);
   min-width: 280px;
   max-width: 350px;
   overflow: hidden;
   z-index: 10000;
-  animation: dropdownSlide 0.2s ease-out;
+  animation: dropdownSlide 0.15s ease;
 }
 
 @keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .tag-dropdown-search {
-  padding: 12px;
+  padding: 10px;
   border-bottom: 1px solid var(--tag-dropdown-border);
 }
 
 .tag-search-input {
   width: 100%;
-  padding: 8px 12px;
-  border: 2px solid var(--border-btn);
-  border-radius: 6px;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
   font-size: 13px;
-  transition: all 0.2s;
+  transition: all 0.15s;
   background: var(--bg-input);
   color: var(--text-primary);
 }
 
 .tag-search-input:focus {
   outline: none;
-  border-color: #667eea;
-  background: var(--settings-hover-bg);
+  box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
 .tag-search-input::placeholder {
@@ -120,17 +112,17 @@
 .tag-dropdown-list {
   max-height: 300px;
   overflow-y: auto;
-  padding: 6px;
+  padding: 4px;
 }
 
 .tag-dropdown-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.1s;
 }
 
 .tag-dropdown-item:hover {
@@ -138,26 +130,26 @@
 }
 
 .tag-dropdown-item.selected {
-  background: linear-gradient(135deg, #667eea15, #764ba215);
+  background: var(--accent-light);
 }
 
 .tag-check {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--tag-check-border);
-  border-radius: 3px;
+  border: 1.5px solid var(--tag-check-border);
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   color: white;
   flex-shrink: 0;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .tag-dropdown-item.selected .tag-check {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-color: #667eea;
+  background: var(--accent-color);
+  border-color: var(--accent-color);
 }
 
 .tag-text {
@@ -170,95 +162,80 @@
   gap: 6px;
 }
 
-/* AI标签文本样式 */
 .tag-text.ai-tag-text {
-  color: #667eea;
+  color: #af52de;
   font-weight: 500;
 }
 
-/* 用户标签文本样式 */
 .tag-text.user-tag-text {
-  color: #1976d2;
+  color: var(--accent-color);
   font-weight: 500;
 }
 
-/* 来源标签文本样式 */
 .tag-text.source-tag-text {
-  color: #f57c00;
+  color: #ff9500;
   font-weight: 500;
 }
 
-/* 类型标签文本样式 */
 .tag-text.type-tag-text {
-  color: #00897b;
+  color: #5ac8fa;
   font-weight: 500;
 }
 
-/* 标签类型图标 */
-.tag-icon {
-  font-size: 10px;
-  margin-right: 2px;
-  opacity: 0.9;
-}
-
-/* AI徽章 - 紫色渐变 */
 .ai-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #af52de;
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
-/* 用户标签徽章 - 蓝色渐变 */
 .user-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: linear-gradient(135deg, #2196f3, #1976d2);
+  background: var(--accent-color);
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
-/* 来源标签徽章 - 橙色渐变 */
 .source-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: linear-gradient(135deg, #ff9800, #f57c00);
+  background: #ff9500;
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
-/* 类型标签徽章 - 青色渐变 */
 .type-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: linear-gradient(135deg, #00bcd4, #00897b);
+  background: #5ac8fa;
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 
 .tag-dropdown-empty {
@@ -268,78 +245,36 @@
   font-size: 13px;
 }
 
+.tag-dropdown-more-hint {
+  padding: 8px 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  border-top: 1px solid var(--tag-dropdown-border);
+  margin-top: 4px;
+}
+
 .tag-dropdown-footer {
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-top: 1px solid var(--tag-dropdown-border);
   background: var(--tag-dropdown-footer-bg);
 }
 
 .clear-selection-btn {
   width: 100%;
-  padding: 8px;
+  padding: 7px;
   background: var(--btn-bg);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   color: var(--text-secondary);
-  transition: all 0.2s;
+  transition: all 0.15s;
   font-weight: 500;
 }
 
 .clear-selection-btn:hover {
-  background: #ff9800;
+  background: #ff9500;
   color: white;
-  border-color: #ff9800;
-}
-
-/* 筛选状态提示 */
-.filter-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 8px;
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
-  animation: filterStatusSlide 0.3s ease-out;
-  flex-shrink: 0;
-}
-
-@keyframes filterStatusSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.filter-status-text {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.clear-filter-btn {
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.clear-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
-  transform: scale(1.05);
+  border-color: #ff9500;
 }

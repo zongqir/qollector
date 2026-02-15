@@ -5,14 +5,14 @@ use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
 
 pub struct OcrState {
-    pub service: Mutex<Option<OcrService>>,
+    pub service: Arc<Mutex<Option<OcrService>>>,
     pub config_repo: Arc<ConfigRepository>,
 }
 
 impl OcrState {
     pub fn new(config_repo: Arc<ConfigRepository>) -> Self {
         Self {
-            service: Mutex::new(None),
+            service: Arc::new(Mutex::new(None)),
             config_repo,
         }
     }
@@ -45,15 +45,28 @@ pub async fn get_ocr_config(
     state: State<'_, OcrState>,
 ) -> Result<OcrConfig, String> {
     println!("获取 OCR 配置");
-    let service_guard = state.service.lock().unwrap();
-    if let Some(service) = service_guard.as_ref() {
-        let config = service.get_config().clone();
+    let in_memory_config = {
+        let service_guard = state.service.lock().unwrap();
+        service_guard.as_ref().map(|service| service.get_config().clone())
+    };
+
+    if let Some(config) = in_memory_config {
         println!("返回已保存的配置: {:?}", config.current_provider);
         println!("  API Key 长度: {}", config.get_current_api_key().map(|k| k.len()).unwrap_or(0));
-        Ok(config)
-    } else {
-        println!("返回默认配置");
-        Ok(OcrConfig::default())
+        return Ok(config);
+    }
+
+    match state.config_repo.load_ocr_config().await {
+        Ok(Some(config)) => {
+            println!("OCR 服务未初始化，返回数据库配置");
+            println!("  provider: {:?}", config.current_provider);
+            Ok(config)
+        }
+        Ok(None) => {
+            println!("未找到 OCR 配置，返回默认配置");
+            Ok(OcrConfig::default())
+        }
+        Err(e) => Err(format!("加载 OCR 配置失败: {}", e)),
     }
 }
 

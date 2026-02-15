@@ -6,6 +6,7 @@ dist/
 # Rust
 src-tauri/target/
 Cargo.lock
+target-start-up-check/
 
 # IDE
 .vscode/
@@ -26,3 +27,5 @@ Thumbs.db
 # Tauri
 src-tauri/gen/
 node_modules
+
+target-startup-check/
