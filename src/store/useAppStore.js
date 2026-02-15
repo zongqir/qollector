@@ -26,6 +26,7 @@ const useAppStore = create((set, get) => ({
   selectedType: 'all',
   selectedTags: [],
   showFavoritesOnly: false,
+  showPinnedOnly: false,
   showTagFilter: false,
   tagSearchQuery: '',
 
@@ -271,6 +272,7 @@ const useAppStore = create((set, get) => ({
   setSelectedType: (t) => set({ selectedType: t }),
   setSelectedTags: (tags) => set({ selectedTags: tags }),
   setShowFavoritesOnly: (v) => set({ showFavoritesOnly: v }),
+  setShowPinnedOnly: (v) => set({ showPinnedOnly: v }),
   setShowTagFilter: (v) => set({ showTagFilter: v }),
   setTagSearchQuery: (q) => set({ tagSearchQuery: q }),
 

@@ -172,6 +172,7 @@ impl ClipboardManager {
                     is_pinned: false,
                     is_favorite: false,
                     is_deleted: false,
+                    pinned_at: None,
                     created_at: now,
                     updated_at: now,
                 }

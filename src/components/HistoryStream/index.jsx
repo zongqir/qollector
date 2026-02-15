@@ -46,6 +46,8 @@ function HistoryStream({ style }) {
   const selectedType = useAppStore(s => s.selectedType);
   const selectedTags = useAppStore(s => s.selectedTags);
   const showFavoritesOnly = useAppStore(s => s.showFavoritesOnly);
+  const showPinnedOnly = useAppStore(s => s.showPinnedOnly);
+  const isMiniMode = useAppStore(s => s.isMiniMode);
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
 
@@ -53,6 +55,7 @@ function HistoryStream({ style }) {
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const setSelectedTags = useAppStore(s => s.setSelectedTags);
   const setShowFavoritesOnly = useAppStore(s => s.setShowFavoritesOnly);
+  const setShowPinnedOnly = useAppStore(s => s.setShowPinnedOnly);
   const setShowTagFilter = useAppStore(s => s.setShowTagFilter);
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
@@ -112,8 +115,9 @@ function HistoryStream({ style }) {
   }, [allTags, tagSearchQuery]);
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    let result = items.filter(item => {
       if (showFavoritesOnly && !item.is_favorite) return false;
+      if (showPinnedOnly && !item.is_pinned) return false;
       if (selectedType !== 'all' && item.type_ !== selectedType) return false;
 
       if (selectedTags.length > 0) {
@@ -136,7 +140,14 @@ function HistoryStream({ style }) {
       if (item.ocr_text && item.ocr_text.toLowerCase().includes(query)) return true;
       return false;
     });
-  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly]);
+
+    // Pin 筛选时按 pinned_at 降序排序
+    if (showPinnedOnly) {
+      result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
+    }
+
+    return result;
+  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly]);
 
   const virtualizer = useVirtualizer({
     count: filteredItems.length,
@@ -227,6 +238,9 @@ function HistoryStream({ style }) {
         onTypeChange={setSelectedType}
         showFavoritesOnly={showFavoritesOnly}
         onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
+        showPinnedOnly={showPinnedOnly}
+        onTogglePinned={() => setShowPinnedOnly(!showPinnedOnly)}
+        isMiniMode={isMiniMode}
         selectedTags={selectedTags}
         onClearTags={() => setSelectedTags([])}
         showTagFilter={showTagFilter}
