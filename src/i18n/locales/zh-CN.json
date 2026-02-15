@@ -108,8 +108,10 @@
     "tabs": {
       "ai": "AI 标签",
       "ocr": "OCR 识别",
-      "general": "通用设置",
-      "mcp": "MCP 服务"
+      "general": "通用",
+      "mcp": "MCP",
+      "data": "数据",
+      "security": "安全"
     },
     "ai": {
       "provider": "AI 提供商",

@@ -221,6 +221,8 @@ pub async fn add_clipboard_item_manual(
             .await
             .map_err(|e| format!("查询重复项失败: {}", e))?
         {
+            // 更新时间置顶
+            let _ = manager.touch(&existing.id).await;
             return Ok(existing.id);
         }
     }
@@ -295,6 +297,8 @@ pub async fn add_image_file(
             .await
             .map_err(|e| format!("查询重复项失败: {}", e))?
         {
+            // 更新时间置顶
+            let _ = manager.touch(&existing.id).await;
             return Ok(existing.id);
         }
     }

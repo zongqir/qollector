@@ -1,6 +1,36 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
+const isDevServer = () => window.location.hostname === 'localhost';
+
+const resolveSubWindowUrl = (devPath, prodPath = devPath) => (
+  isDevServer() ? `http://localhost:5173/${devPath}` : prodPath
+);
+
+const isWindowsRuntime = () => navigator.userAgent.toLowerCase().includes('windows');
+
+const focusWindowSafely = async (win) => {
+  if (!win) return;
+
+  try {
+    await win.unminimize();
+  } catch {
+    // Ignore unsupported operations on some platforms.
+  }
+
+  try {
+    await win.show();
+  } catch {
+    // Ignore unsupported operations on some platforms.
+  }
+
+  try {
+    await win.setFocus();
+  } catch {
+    // Ignore unsupported operations on some platforms.
+  }
+};
+
 export const openImagePreview = async (imagePath, t) => {
   try {
     let originalPath = imagePath;
@@ -13,13 +43,8 @@ export const openImagePreview = async (imagePath, t) => {
 
     const windowLabel = `preview-${Date.now()}`;
 
-    const isDev = window.location.hostname === 'localhost';
-    const baseUrl = isDev
-      ? 'http://localhost:5173/public/preview.html'
-      : 'preview.html';
-
     const webview = new WebviewWindow(windowLabel, {
-      url: `${baseUrl}?path=${encodeURIComponent(originalPath)}`,
+      url: `${resolveSubWindowUrl('public/preview.html', 'preview.html')}?path=${encodeURIComponent(originalPath)}`,
       title: t('preview.title'),
       width: 800,
       height: 600,
@@ -30,17 +55,55 @@ export const openImagePreview = async (imagePath, t) => {
       skipTaskbar: false
     });
 
-    await webview.once('tauri://created', () => {
+    webview.once('tauri://created', () => {
       console.log(t('preview.created'));
     });
 
-    await webview.once('tauri://error', (e) => {
+    webview.once('tauri://error', (e) => {
       console.error(t('preview.createFailed', { error: e }));
     });
   } catch (error) {
     console.error(t('preview.createFailed', { error }));
     alert(t('error.previewFailed', { error }));
   }
+};
+
+export const QUICK_INPUT_WINDOW_LABEL = 'quick-input';
+
+export const openQuickInputWindow = async (t) => {
+  const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
+  if (existing) {
+    await focusWindowSafely(existing);
+    return existing;
+  }
+
+  const useTransparentFrame = isWindowsRuntime();
+
+  const webview = new WebviewWindow(QUICK_INPUT_WINDOW_LABEL, {
+    url: resolveSubWindowUrl('quick-input.html'),
+    title: t('quickInput.title'),
+    width: 460,
+    height: 360,
+    minWidth: 360,
+    minHeight: 260,
+    center: true,
+    resizable: true,
+    alwaysOnTop: true,
+    decorations: false,
+    transparent: useTransparentFrame,
+    shadow: false,
+    skipTaskbar: false,
+  });
+
+  webview.once('tauri://created', async () => {
+    await focusWindowSafely(webview);
+  });
+
+  webview.once('tauri://error', (e) => {
+    console.error(t('quickInput.failed', { error: e }));
+  });
+
+  return webview;
 };
 
 export const toggleWindowAlwaysOnTop = async (currentState) => {

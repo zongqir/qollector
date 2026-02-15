@@ -42,6 +42,10 @@
             "core:window:allow-set-size",
             "core:window:allow-inner-size",
             "core:window:allow-set-min-size",
+            "core:window:allow-get-all-windows",
+            "core:window:allow-unminimize",
+            "core:window:allow-show",
+            "core:window:allow-set-focus",
             "core:webview:allow-create-webview-window",
             "core:event:default",
             "core:path:default",
@@ -54,6 +58,16 @@
           "permissions": [
             "core:window:allow-close",
             "core:window:allow-set-always-on-top",
+            "core:event:default"
+          ]
+        },
+        {
+          "identifier": "quick-input-capability",
+          "windows": ["quick-input"],
+          "permissions": [
+            "core:window:allow-close",
+            "core:window:allow-set-always-on-top",
+            "core:window:allow-start-dragging",
             "core:event:default"
           ]
         }

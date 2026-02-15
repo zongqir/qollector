@@ -450,6 +450,11 @@ impl ClipboardManager {
         repo.find_by_hash(content_hash).await
     }
 
+    pub async fn touch(&self, id: &str) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.touch(id).await
+    }
+
     pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.update_ocr_text(id, ocr_text).await

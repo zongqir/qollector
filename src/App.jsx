@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
 import { initOcrService } from './services/ocrService';
+import { openQuickInputWindow } from './services/windowService';
+import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
 import Settings from './Settings';
 import LockScreen from './LockScreen';
 import DragDrop from './DragDrop';
@@ -40,7 +42,6 @@ function App() {
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
   const handleEditModalCancel = useAppStore(s => s.handleEditModalCancel);
-  const openEditModal = useAppStore(s => s.openEditModal);
 
   // Theme
   const { setThemeMode: applyTheme } = useTheme(themeMode);
@@ -54,12 +55,16 @@ function App() {
     initOcrService();
     loadConfigs();
 
-    const unlistenPromise = listen('clipboard-changed', () => {
+    const unlistenClipboardPromise = listen('clipboard-changed', () => {
+      loadItems();
+    });
+    const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
     });
 
     return () => {
-      unlistenPromise.then(unlisten => unlisten());
+      unlistenClipboardPromise.then(unlisten => unlisten());
+      unlistenQuickInputPromise.then(unlisten => unlisten());
     };
   }, []);
 
@@ -179,7 +184,11 @@ function App() {
       <TitleBar
         isAlwaysOnTop={isAlwaysOnTop}
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
-        onOpenQuickInput={() => openEditModal()}
+        onOpenQuickInput={() => {
+          openQuickInputWindow(t).catch((error) => {
+            console.error(t('quickInput.failed', { error }));
+          });
+        }}
         isMiniMode={isMiniMode}
         onToggleMiniMode={() => setMiniMode(!isMiniMode)}
       />

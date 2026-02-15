@@ -106,10 +106,12 @@
     "test": "Test Connection",
     "testing": "Testing...",
     "tabs": {
-      "ai": "AI Tags",
-      "ocr": "OCR Recognition",
+      "ai": "AI",
+      "ocr": "OCR",
       "general": "General",
-      "mcp": "MCP Service"
+      "mcp": "MCP",
+      "data": "Data",
+      "security": "Security"
     },
     "ai": {
       "provider": "AI Provider",

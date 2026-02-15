@@ -157,6 +157,8 @@
   line-height: 1.5;
   background: var(--bg-input);
   color: var(--text-primary);
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .edit-modal-textarea:focus {
@@ -173,6 +175,9 @@
 .edit-modal-textarea-content {
   min-height: 220px;
   font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 /* 已有标签显示 - 紧凑 */
@@ -317,7 +322,8 @@
 .quick-add-floating {
   position: fixed;
   z-index: 9999;
-  inset: 30px;
+  width: min(560px, calc(100vw - 60px));
+  height: min(420px, calc(100vh - 60px));
   display: flex;
   flex-direction: column;
   background: var(--quick-add-bg, var(--edit-modal-bg));
