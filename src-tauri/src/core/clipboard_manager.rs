@@ -204,6 +204,11 @@ impl ClipboardManager {
                 let mut item = ClipboardItem::new_text(summary, metadata);
                 item.type_ = "file".to_string();
                 item.content = Some(paths_str.clone());
+                // Use full path payload hash to avoid false collisions on same filename.
+                let mut hasher = sha2::Sha256::new();
+                use sha2::Digest;
+                hasher.update(paths_str.as_bytes());
+                item.content_hash = format!("{:x}", hasher.finalize());
                 item
             }
         };
@@ -440,6 +445,11 @@ impl ClipboardManager {
         repo.insert(item).await
     }
 
+    pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.find_by_hash(content_hash).await
+    }
+
     pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.update_ocr_text(id, ocr_text).await
@@ -476,6 +486,38 @@ impl ClipboardManager {
 
             repo.update(&item).await?;
             Ok(item.is_pinned)
+        } else {
+            Err(sqlx::Error::RowNotFound)
+        }
+    }
+
+    pub async fn pin_item(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
+        let repo = self.repository.lock().await;
+
+        if let Some(mut item) = repo.find_by_id(id).await? {
+            if item.is_pinned {
+                item.updated_at = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64;
+                repo.update(&item).await?;
+                return Ok(true);
+            }
+
+            let pinned_items = repo.get_pinned_items().await?;
+            if pinned_items.len() >= max_pinned {
+                if let Some(oldest_pinned) = pinned_items.first() {
+                    repo.unpin(&oldest_pinned.id).await?;
+                }
+            }
+
+            item.is_pinned = true;
+            item.updated_at = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs() as i64;
+            repo.update(&item).await?;
+            Ok(true)
         } else {
             Err(sqlx::Error::RowNotFound)
         }

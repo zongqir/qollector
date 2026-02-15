@@ -259,7 +259,7 @@
     "pinItem": "Pin this item",
     "saveHint": "Save (Ctrl+Enter)",
     "cancelHint": "Cancel (Esc)",
-    "quickAddTip": "Pinned input · Continue after saving",
+    "quickAddTip": "Quick note · Auto saved to collection",
     "saveAndContinue": "Save & Continue",
     "savedToast": "Saved to collection",
     "unpin": "Unpin, drag to move",

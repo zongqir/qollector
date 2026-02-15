@@ -76,6 +76,17 @@ pub async fn toggle_pin_item(
 }
 
 #[tauri::command]
+pub async fn pin_item(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+    max_pinned: Option<usize>,
+) -> Result<bool, String> {
+    manager.pin_item(&id, max_pinned.unwrap_or(5))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn toggle_favorite_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,

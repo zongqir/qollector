@@ -37,7 +37,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
           const paths = event.payload.paths;
 
           const pinDroppedItem = async (id) => {
-            await invoke('toggle_pin_item', {
+            await invoke('pin_item', {
               id,
               maxPinned: maxPinnedItemsRef.current,
             });
@@ -45,31 +45,36 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
 
           if (paths && paths.length > 0) {
             switchToCollectionRef.current?.();
+            const uniquePaths = Array.from(new Set(paths.map(p => p.trim()).filter(Boolean)));
 
-            for (const filePath of paths) {
+            for (const filePath of uniquePaths) {
               const ext = filePath.split('.').pop().toLowerCase();
               const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
 
               if (imageExts.includes(ext)) {
                 try {
-                  const itemId = await invoke('add_image_file', { filePath });
+                  const itemId = await invoke('add_image_file', {
+                    filePath,
+                    dedupeByHash: true,
+                  });
                   await pinDroppedItem(itemId);
                   onItemAddedRef.current?.();
                   onTypeAddedRef.current?.('image');
                 } catch (err) {
-                  console.error('添加图片失败:', err);
+                  console.error('娣诲姞鍥剧墖澶辫触:', err);
                 }
               } else {
                 try {
                   const itemId = await invoke('add_clipboard_item_manual', {
                     contentType: 'file',
                     content: filePath,
+                    dedupeByHash: true,
                   });
                   await pinDroppedItem(itemId);
                   onItemAddedRef.current?.();
                   onTypeAddedRef.current?.('file');
                 } catch (err) {
-                  console.error('添加文件失败:', err);
+                  console.error('娣诲姞鏂囦欢澶辫触:', err);
                 }
               }
             }
@@ -92,7 +97,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
       {isDragging && (
         <div className="drag-overlay">
           <div className="drag-overlay-content">
-            <div className="drag-icon">📥</div>
+            <div className="drag-icon">馃摜</div>
             <div className="drag-text">{t('dragDrop.dropHere')}</div>
           </div>
         </div>

@@ -245,6 +245,7 @@ fn main() {
             update_item,
             delete_item,
             toggle_pin_item,
+            pin_item,
             get_ai_config,
             update_ai_config,
             generate_ai_tags,

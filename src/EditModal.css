@@ -370,19 +370,16 @@
   cursor: pointer;
   padding: 0;
   background: var(--dot-color);
-  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  transition: transform 0.15s ease;
   position: relative;
 }
 
 .quick-add-color-dot:hover {
-  transform: scale(1.25);
-  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.1), 0 0 0 2px rgba(0, 0, 0, 0.08);
+  transform: scale(1.3);
 }
 
 .quick-add-color-dot.active {
-  transform: scale(1.25);
-  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.1), 0 0 0 2.5px rgba(102, 126, 234, 0.5);
+  transform: scale(1.3);
 }
 
 .quick-add-color-dot.active::after {

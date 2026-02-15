@@ -113,6 +113,12 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
         source: '快速输入',
         autoFavorite: false,
       });
+      // 自动置顶刚创建的条目
+      const newItems = await invoke('get_recent_items', { limit: 1 });
+      if (newItems[0]) {
+        const maxPinned = useAppStore.getState().maxPinnedItems;
+        await invoke('toggle_pin_item', { id: newItems[0].id, maxPinned });
+      }
       await useAppStore.getState().loadItems();
       setContent('');
       setSavedToast(true);
