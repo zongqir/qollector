@@ -107,7 +107,8 @@
     "openFile": "打开文件",
     "revealInFolder": "打开所在文件夹",
     "formatJsonCopy": "格式化复制",
-    "delete": "删除"
+    "delete": "删除",
+    "autoPasted": "已粘贴到前台应用"
   },
   "edit": {
     "content": "内容:",
@@ -205,6 +206,8 @@
       "doubleCopyEmphasisHint": "快速连按两次复制，该内容自动置顶",
       "doubleCopyWindowMs": "连按间隔",
       "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）",
+      "autoPaste": "双击自动粘贴",
+      "autoPasteHint": "开启后，双击条目会自动复制并粘贴到上一个应用，窗口会自动隐藏",
       "autoCleanup": "自动清理旧数据",
       "autoCleanupHint": "超过条数或天数限制的数据会自动删除，收藏和置顶的内容不受影响",
       "cleanupMaxItems": "最多保留条数",

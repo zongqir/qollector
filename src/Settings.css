@@ -199,34 +199,76 @@
 .setting-select {
   width: 100%;
   padding: 8px 12px;
-  border: none;
+  border: 1px solid var(--border-light);
   border-radius: 8px;
   font-size: 13px;
   transition: all 0.15s ease;
   background: var(--bg-input);
   color: var(--text-primary);
-  box-shadow: inset 0 0.5px 2px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0.5px 1.5px rgba(0, 0, 0, 0.08);
 }
 
 .setting-select {
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 28px;
-  background-image: url("data:image/svg+xml,%3Csvg width='8' height='5' viewBox='0 0 8 5' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.5 0.75L4 4.25L7.5 0.75' stroke='%23999' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+  min-height: 34px;
+  border-radius: 9px;
+  padding-right: 30px;
+  font-weight: 510;
+  letter-spacing: 0.01em;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.5) 100%),
+    var(--bg-input);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='9' height='13' viewBox='0 0 9 13' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 4.25L4.5 1.25L7.5 4.25' stroke='%23888' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M1.5 8.75L4.5 11.75L7.5 8.75' stroke='%23888' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.08));
+  background-repeat: no-repeat, no-repeat;
+  background-size: 9px 13px, 1px 58%;
+  background-position: right 10px center, right 28px center;
   cursor: pointer;
+  line-height: 1.25;
+}
+
+.setting-select:hover {
+  border-color: var(--accent-medium);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.setting-select:active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.35) 100%),
+    var(--bg-input);
+  box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.12);
 }
 
 .setting-select option {
-  background: var(--bg-input);
+  background: var(--modal-bg);
   color: var(--text-primary);
+  font-weight: 500;
 }
 
 .setting-input:focus,
 .setting-select:focus {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-medium), inset 0 0.5px 2px rgba(0, 0, 0, 0.06);
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 0 3px var(--accent-medium),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.setting-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--border-light);
+  box-shadow: none;
+}
+
+.setting-select::-ms-expand {
+  display: none;
 }
 
 .setting-input::placeholder {
@@ -236,27 +278,46 @@
 /* 分组行内的 select / input — 紧凑无边框 */
 .sg-row .setting-select,
 .sg-row .setting-input-small {
-  background: transparent;
-  box-shadow: none;
-  text-align: right;
-  color: var(--accent-color);
+  color: var(--text-primary);
   font-size: 13px;
-  font-weight: 500;
-  padding: 2px 0;
-  border: none;
+  font-weight: 510;
+  padding: 4px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
   width: auto;
-  min-width: 80px;
+  min-width: 112px;
+  max-width: 180px;
+  margin-left: auto;
   cursor: pointer;
+  background: var(--modal-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0.5px 1.2px rgba(0, 0, 0, 0.08);
   -webkit-appearance: none;
   appearance: none;
 }
 
 .sg-row .setting-select {
-  padding-right: 14px;
-  background-image: url("data:image/svg+xml,%3Csvg width='6' height='4' viewBox='0 0 6 4' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.5 0.5L3 3.5L5.5 0.5' stroke='%23999' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0 center;
-  background-color: transparent;
+  padding-right: 28px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='8' height='12' viewBox='0 0 8 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.25 3.75L4 1L6.75 3.75' stroke='%23888' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M1.25 8.25L4 11L6.75 8.25' stroke='%23888' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.08));
+  background-repeat: no-repeat, no-repeat;
+  background-size: 8px 12px, 1px 56%;
+  background-position: right 9px center, right 24px center;
+}
+
+.sg-row .setting-select:active,
+.sg-row .setting-input-small:active {
+  box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.12);
+}
+
+.sg-row .setting-select:hover,
+.sg-row .setting-input-small:hover {
+  border-color: var(--accent-medium);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .sg-row .setting-select option {
@@ -266,14 +327,16 @@
 
 .sg-row .setting-select:focus,
 .sg-row .setting-input-small:focus {
-  box-shadow: none;
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 0 3px var(--accent-medium),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   outline: none;
 }
 
 .sg-row .setting-input-small {
-  color: var(--accent-color);
-  font-weight: 500;
-  background: transparent;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 小宽度数字输入框 */
@@ -617,6 +680,31 @@
 .setting-row .setting-select,
 .setting-row .setting-input {
   width: auto;
+}
+
+.setting-row .setting-select {
+  min-width: 132px;
+}
+
+.dark-mode .setting-select {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 100%),
+    var(--bg-input);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='9' height='13' viewBox='0 0 9 13' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 4.25L4.5 1.25L7.5 4.25' stroke='%23A9A9AA' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M1.5 8.75L4.5 11.75L7.5 8.75' stroke='%23A9A9AA' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+}
+
+.dark-mode .setting-select:active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%),
+    var(--bg-input);
+}
+
+.dark-mode .sg-row .setting-select {
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='8' height='12' viewBox='0 0 8 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.25 3.75L4 1L6.75 3.75' stroke='%23A9A9AA' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M1.25 8.25L4 11L6.75 8.25' stroke='%23A9A9AA' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
 }
 
 /* ---- 功能开关组 ---- */

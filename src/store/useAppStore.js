@@ -120,6 +120,8 @@ const useAppStore = create((set, get) => ({
   isLocked: true,
   hasPassword: false,
   collectionPanelEnabled: true,
+  autoPasteOnDoubleClick: false,
+  lastCopyWasAutoPaste: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -298,6 +300,7 @@ const useAppStore = create((set, get) => ({
         hasPassword: hasLock,
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
+        autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
@@ -321,17 +324,22 @@ const useAppStore = create((set, get) => ({
   handleCopyAndAutoPaste: async (item) => {
     try {
       await copyItemToClipboard(item);
-      set({ copiedItemId: item.id });
-      setTimeout(() => set({ copiedItemId: null }), 1000);
+      set({ copiedItemId: item.id, lastCopyWasAutoPaste: false });
+      setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1000);
+
+      if (!get().autoPasteOnDoubleClick) {
+        return;
+      }
 
       try {
         const pasted = await invoke('try_paste_foreground');
-        if (!pasted) {
-          // Non-Windows platforms currently fall back to copy-only.
+        if (pasted) {
+          set({ copiedItemId: item.id, lastCopyWasAutoPaste: true });
+          setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1500);
+        } else {
           console.info('[AutoPaste] Platform not implemented, copied only');
         }
       } catch (error) {
-        // Keep copy success even if paste simulation fails.
         console.warn('[AutoPaste] Paste simulation failed, copied only:', error);
       }
     } catch (error) {

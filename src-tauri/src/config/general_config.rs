@@ -34,6 +34,9 @@ pub struct GeneralConfig {
     /// Whether the collection panel is visible.
     #[serde(default = "default_collection_panel_enabled")]
     pub collection_panel_enabled: bool,
+    /// Double-click auto-paste: copy and paste to foreground app.
+    #[serde(default)]
+    pub auto_paste_on_double_click: bool,
     /// Enable automatic cleanup of old data.
     #[serde(default = "default_auto_cleanup_enabled")]
     pub auto_cleanup_enabled: bool,
@@ -107,6 +110,7 @@ impl Default for GeneralConfig {
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
             collection_panel_enabled: true,
+            auto_paste_on_double_click: false,
             auto_cleanup_enabled: true,
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,

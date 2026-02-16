@@ -13,6 +13,7 @@ import {
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import CodeBlock from '../CodeBlock/CodeBlock';
+import useAppStore from '../../store/useAppStore';
 
 const TypeIcon = ({ type, hasCodeLanguage }) => {
   const size = 11;
@@ -180,7 +181,7 @@ function CompactCard({
       <div className="compact-card-body">
         {isCopied && (
           <div className="copy-success-toast">
-            <Check size={16} /> {t('item.copied')}
+            <Check size={16} /> {useAppStore.getState().lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied')}
           </div>
         )}
         {renderContent()}

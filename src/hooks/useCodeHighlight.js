@@ -46,16 +46,40 @@ export async function loadHighlightJS() {
   return loadingPromise;
 }
 
-const RELEVANCE_THRESHOLD = 7;
+const RELEVANCE_THRESHOLD = 12;
+
+// Languages that highlightAuto frequently assigns to non-code text.
+const UNRELIABLE_LANGUAGES = new Set(['xml', 'markdown', 'css']);
+
+// Quick heuristic: does the text look like it could be code?
+function looksLikeCode(text) {
+  const trimmed = text.trim();
+
+  // Too short to be meaningful code
+  if (trimmed.length < 12) return false;
+
+  // Mostly CJK / non-ASCII prose → almost certainly not code
+  const nonAscii = (trimmed.match(/[^\x00-\x7F]/g) || []).length;
+  if (nonAscii / trimmed.length > 0.3) return false;
+
+  // Code indicators: braces, semicolons, arrows, common keywords, etc.
+  const codeSignals = /[{};=<>()[\]]|=>|->|::|\/\/|\/\*|\*\/|#include|import |from |def |fn |func |class |const |let |var |return |if\s*\(|for\s*\(|while\s*\(|SELECT |INSERT |CREATE |ALTER /;
+  return codeSignals.test(trimmed);
+}
 
 export async function detectLanguage(code) {
   try {
+    if (!looksLikeCode(code)) return null;
+
     const hljs = await loadHighlightJS();
     const result = hljs.highlightAuto(code);
-    if (result.language && result.relevance >= RELEVANCE_THRESHOLD) {
-      return result.language;
-    }
-    return null;
+
+    if (!result.language || result.relevance < RELEVANCE_THRESHOLD) return null;
+
+    // Reject unreliable languages unless the relevance is very high
+    if (UNRELIABLE_LANGUAGES.has(result.language) && result.relevance < 20) return null;
+
+    return result.language;
   } catch {
     return null;
   }

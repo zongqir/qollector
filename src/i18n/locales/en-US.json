@@ -107,7 +107,8 @@
     "openFile": "Open File",
     "revealInFolder": "Reveal in Folder",
     "formatJsonCopy": "Format & Copy",
-    "delete": "Delete"
+    "delete": "Delete",
+    "autoPasted": "Pasted to foreground app"
   },
   "edit": {
     "content": "Content:",
@@ -205,6 +206,8 @@
       "doubleCopyEmphasisHint": "Tap copy twice quickly to auto-pin that content",
       "doubleCopyWindowMs": "Double-tap Interval",
       "doubleCopyWindowMsHint": "How close two copies must be to count (ms)",
+      "autoPaste": "Auto-paste on double-click",
+      "autoPasteHint": "When enabled, double-clicking copies and pastes to the previous app, hiding the window",
       "autoCleanup": "Auto-clean old data",
       "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and pinned items are never removed.",
       "cleanupMaxItems": "Max items to keep",

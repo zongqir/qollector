@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff } from 'lucide-react';
+import useAppStore from './store/useAppStore';
 import './Settings.css';
 
 const AI_PROVIDERS = [
@@ -944,6 +945,30 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             {/* 功能模块分组 */}
             <div className="setting-group-title">{t('settings.general.featureModules')}</div>
             <div className="feature-toggles">
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.autoPaste')}</span>
+                  <span className="toggle-desc">{t('settings.general.autoPasteHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.auto_paste_on_double_click || false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      const updated = { ...generalConfig, auto_paste_on_double_click: checked };
+                      setGeneralConfig(updated);
+                      useAppStore.setState({ autoPasteOnDoubleClick: checked });
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('save auto_paste config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
               <label className="setting-toggle-row">
                 <span className="toggle-label-group">
                   <span className="toggle-label">{t('settings.general.enableAI')}</span>
