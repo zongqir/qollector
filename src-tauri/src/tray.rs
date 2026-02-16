@@ -6,15 +6,19 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+use crate::core::clipboard_manager::ClipboardManager;
+
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_hide = MenuItemBuilder::with_id("toggle", "Show / Hide").build(app)?;
     let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
+    let pause = MenuItemBuilder::with_id("pause", "Pause Monitoring").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
     let menu = MenuBuilder::new(app)
         .item(&show_hide)
         .separator()
         .item(&settings)
+        .item(&pause)
         .separator()
         .item(&quit)
         .build()?;
@@ -26,7 +30,9 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap());
 
-    TrayIconBuilder::new()
+    let pause_item = pause.clone();
+
+    TrayIconBuilder::with_id("main")
         .icon(icon)
         .tooltip("ClipBox")
         .menu(&menu)
@@ -42,6 +48,23 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     let _ = window.set_focus();
                 }
                 let _ = app.emit("open-settings", ());
+            }
+            "pause" => {
+                if let Some(manager) = app.try_state::<Arc<ClipboardManager>>() {
+                    let is_paused = manager.is_paused();
+                    if is_paused {
+                        manager.resume();
+                    } else {
+                        manager.pause();
+                    }
+                    let new_paused = !is_paused;
+                    let text = if new_paused { "Resume Monitoring" } else { "Pause Monitoring" };
+                    let _ = pause_item.set_text(text);
+                    if let Some(tray) = app.tray_by_id("main") {
+                        let tooltip = if new_paused { "ClipBox (Paused)" } else { "ClipBox" };
+                        let _ = tray.set_tooltip(Some(tooltip));
+                    }
+                }
             }
             "quit" => {
                 perform_shutdown(app);

@@ -9,11 +9,6 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "tooltip": "ClipBox",
-      "id": "main"
-    },
     "windows": [
       {
         "label": "main",

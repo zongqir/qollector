@@ -390,6 +390,8 @@
     "show": "Show Window",
     "hide": "Hide Window",
     "settings": "Settings",
+    "pause": "Pause Monitoring",
+    "resume": "Resume Monitoring",
     "quit": "Quit"
   }
 }

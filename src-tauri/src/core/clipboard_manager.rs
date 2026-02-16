@@ -5,6 +5,7 @@ use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, Platfo
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -31,6 +32,7 @@ pub struct ClipboardManager {
     ai_semaphore: Arc<Semaphore>, // AI request serialization control
     double_copy_state: Arc<Mutex<DoubleCopyEmphasisState>>,
     app_handle: AppHandle,
+    pub paused: Arc<AtomicBool>,
 }
 
 impl ClipboardManager {
@@ -56,7 +58,20 @@ impl ClipboardManager {
             ai_semaphore: Arc::new(Semaphore::new(1)), // 鍙厑璁?涓狝I璇锋眰鍚屾椂鎵ц
             double_copy_state: Arc::new(Mutex::new(DoubleCopyEmphasisState::default())),
             app_handle,
+            paused: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn pause(&self) {
+        self.paused.store(true, Ordering::Relaxed);
+    }
+
+    pub fn resume(&self) {
+        self.paused.store(false, Ordering::Relaxed);
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::Relaxed)
     }
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
@@ -68,6 +83,7 @@ impl ClipboardManager {
         let ai_semaphore = self.ai_semaphore.clone();
         let double_copy_state = self.double_copy_state.clone();
         let app_handle = self.app_handle.clone();
+        let paused = self.paused.clone();
 
         let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
@@ -78,8 +94,12 @@ impl ClipboardManager {
             let ai_semaphore = ai_semaphore.clone();
             let double_copy_state = double_copy_state.clone();
             let app_handle = app_handle.clone();
+            let paused = paused.clone();
 
             Box::pin(async move {
+                if paused.load(Ordering::Relaxed) {
+                    return Ok(());
+                }
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
                     repo,
