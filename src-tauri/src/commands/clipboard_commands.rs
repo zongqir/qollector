@@ -1,4 +1,4 @@
-use crate::core::clipboard_manager::ClipboardManager;
+﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
 use std::sync::Arc;
 use tauri::State;
@@ -113,46 +113,56 @@ pub async fn open_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
 ) -> Result<(), String> {
-    // 获取条目
-    let items = manager.get_recent(1000).await.map_err(|e| e.to_string())?;
-    let item = items
-        .iter()
-        .find(|i| i.id == id)
+    let item = manager
+        .get_item_by_id(&id)
+        .await
+        .map_err(|e| e.to_string())?
         .ok_or_else(|| "Item not found".to_string())?;
 
-    // 根据类型决定打开什么
     let target = match item.type_.as_str() {
-        "link" => {
-            // 链接类型,直接打开 content
+        "link" => parse_openable_link(
             item.content
-                .as_ref()
-                .ok_or_else(|| "Link content is empty".to_string())?
-                .clone()
-        }
-        "file" => {
-            // 文件类型,打开 content 中的文件路径
+                .as_deref()
+                .ok_or_else(|| "Link content is empty".to_string())?,
+        )?,
+        "file" => first_file_target(
             item.content
-                .as_ref()
-                .ok_or_else(|| "File path is empty".to_string())?
-                .clone()
-        }
-        _ => {
-            return Err("Only link and file types can be opened".to_string());
-        }
+                .as_deref()
+                .ok_or_else(|| "File path is empty".to_string())?,
+        )?,
+        _ => return Err("Only link and file types can be opened".to_string()),
     };
 
-    // 使用系统默认程序打开
     open_with_system(&target)?;
 
     Ok(())
 }
 
-// 使用系统默认程序打开链接或文件
+fn first_file_target(content: &str) -> Result<String, String> {
+    content
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(ToString::to_string)
+        .ok_or_else(|| "File path is empty".to_string())
+}
+
+fn parse_openable_link(content: &str) -> Result<String, String> {
+    let trimmed = content.trim();
+    let parsed = url::Url::parse(trimmed).map_err(|_| "Invalid link URL".to_string())?;
+    let scheme = parsed.scheme();
+    let supported = matches!(scheme, "http" | "https" | "ftp" | "ftps" | "ws" | "wss");
+    if !supported {
+        return Err("Unsupported link scheme".to_string());
+    }
+    Ok(trimmed.to_string())
+}
+
 fn open_with_system(target: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", target])
+        std::process::Command::new("explorer")
+            .arg(target)
             .spawn()
             .map_err(|e| format!("Failed to open: {}", e))?;
     }

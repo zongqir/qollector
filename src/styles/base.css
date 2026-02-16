@@ -95,6 +95,10 @@ body {
 }
 
 .app.mini-mode .compact-link-domain {
+  font-size: 10px;
+}
+
+.app.mini-mode .compact-link-title {
   font-size: 11px;
 }
 

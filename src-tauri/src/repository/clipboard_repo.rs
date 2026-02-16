@@ -346,6 +346,22 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    pub async fn update_metadata_only(&self, id: &str, metadata: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                metadata = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(metadata)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     pub async fn update_code_language(&self, id: &str, code_language: &str) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"

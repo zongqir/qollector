@@ -69,3 +69,16 @@ export const parseUrl = (url) => {
     return null;
   }
 };
+
+export const getLinkPreviewTitle = (item) => {
+  if (!item?.metadata) return null;
+  try {
+    const metadata = JSON.parse(item.metadata);
+    const title = metadata?.link_preview?.title;
+    if (typeof title !== 'string') return null;
+    const trimmed = title.trim();
+    return trimmed || null;
+  } catch {
+    return null;
+  }
+};

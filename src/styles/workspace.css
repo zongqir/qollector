@@ -263,9 +263,8 @@
 
 .compact-card-link {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  font-size: 13px;
   overflow: hidden;
 }
 
@@ -281,9 +280,29 @@
   color: var(--text-tertiary);
 }
 
+.compact-link-info {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.compact-link-title {
+  max-width: 100%;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .compact-link-domain {
   color: var(--text-primary);
+  font-size: 12px;
   font-weight: 500;
+  opacity: 0.9;
   white-space: nowrap;
 }
 
@@ -779,6 +798,16 @@
 .collection-card-link .link-path {
   font-size: 11px;
   color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-card-link .link-title {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

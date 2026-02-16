@@ -861,7 +861,7 @@ impl ClipboardManager {
 
         // Delete image files for image-type items
         for target in &targets {
-            Self::cleanup_image_files(target);
+            Self::cleanup_image_files(&target.type_, target.image_paths.as_deref());
             // file type: never touch disk files
         }
 
@@ -964,7 +964,7 @@ impl ClipboardManager {
         let repo = self.repository.lock().await;
         // Fetch item before deletion to get image paths
         if let Ok(Some(item)) = repo.find_by_id(id).await {
-            Self::cleanup_image_files(&item);
+            Self::cleanup_image_files(&item.type_, item.image_paths.as_deref());
         }
         repo.delete(id).await?;
         let _ = repo.delete_raw_formats(id).await;
@@ -973,7 +973,10 @@ impl ClipboardManager {
 
     pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
-        repo.insert(item).await
+        repo.insert(item).await?;
+        drop(repo);
+        self.schedule_link_preview_enrichment(item);
+        Ok(())
     }
 
     /// Insert with hash dedupe in one critical section to avoid races.
@@ -990,7 +993,28 @@ impl ClipboardManager {
         }
 
         repo.insert(item).await?;
+        drop(repo);
+        self.schedule_link_preview_enrichment(item);
         Ok(item.id.clone())
+    }
+
+    fn schedule_link_preview_enrichment(&self, item: &ClipboardItem) {
+        if item.type_ != "link" {
+            return;
+        }
+
+        let Some(url) = item.content.clone() else {
+            return;
+        };
+
+        let repo = self.repository.clone();
+        let app_handle = self.app_handle.clone();
+        let item_id = item.id.clone();
+        let metadata = item.metadata.clone();
+
+        tokio::spawn(async move {
+            Self::try_enrich_link_preview(repo, app_handle, item_id, metadata.as_deref(), &url).await;
+        });
     }
 
     pub async fn find_by_hash(
@@ -1202,7 +1226,7 @@ impl ClipboardManager {
         .await
         .unwrap_or_default();
         for item in &image_items {
-            Self::cleanup_image_files(item);
+            Self::cleanup_image_files(&item.type_, item.image_paths.as_deref());
         }
         sqlx::query("DELETE FROM clipboard_items")
             .execute(repo.pool())
@@ -1237,12 +1261,12 @@ impl ClipboardManager {
     }
 
     /// 鑾峰彇鍥剧墖瀛樺偍鐩綍
-    /// Delete image files (original + thumbnail) associated with a clipboard item.
-    fn cleanup_image_files(item: &ClipboardItem) {
-        if item.type_ != "image" {
+    /// Delete image files (original + thumbnail) using type and stored path payload.
+    fn cleanup_image_files(item_type: &str, image_paths: Option<&str>) {
+        if item_type != "image" {
             return;
         }
-        if let Some(paths_str) = &item.image_paths {
+        if let Some(paths_str) = image_paths {
             if let Ok(paths) = serde_json::from_str::<serde_json::Value>(paths_str) {
                 for key in &["original", "thumbnail"] {
                     if let Some(p) = paths[key].as_str() {
