@@ -178,11 +178,16 @@
       "themeDark": "深色",
       "themeHint": "选择「跟随系统」会自动匹配你的系统深浅色设置",
       "featureModules": "可选功能",
-      "enableAI": "AI 自动标签 — 让 AI 为复制内容生成分类标签",
-      "enableOCR": "图片文字识别 — 自动提取图片中的文字",
-      "enableMCP": "MCP 服务 — 让 Claude 等 AI 助手读取你的剪贴板",
-      "doubleCopyEmphasis": "快速连按两次复制，自动置顶该内容",
-      "doubleCopyWindowMs": "连按间隔（毫秒）— 两次复制间隔多久算「连按」"
+      "enableAI": "AI 自动标签",
+      "enableAIHint": "让 AI 为复制内容生成分类标签",
+      "enableOCR": "图片文字识别",
+      "enableOCRHint": "自动提取图片中的文字",
+      "enableMCP": "MCP 服务",
+      "enableMCPHint": "让 Claude 等 AI 助手读取你的剪贴板",
+      "doubleCopyEmphasis": "连按复制自动置顶",
+      "doubleCopyEmphasisHint": "快速连按两次复制，该内容自动置顶",
+      "doubleCopyWindowMs": "连按间隔",
+      "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",
@@ -365,5 +370,9 @@
     "editContent": "编辑内容",
     "saveContent": "保存",
     "cancelEdit": "取消"
+  },
+  "widget": {
+    "title": "快捷投放",
+    "dropHint": "拖放到这里"
   }
 }

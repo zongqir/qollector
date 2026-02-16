@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
-import { openQuickInputWindow } from './services/windowService';
+import { openQuickInputWindow, openWidgetWindow } from './services/windowService';
 import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
 import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
@@ -56,6 +56,9 @@ function App() {
   useEffect(() => {
     loadItems();
     loadConfigs();
+
+    // Auto-launch widget
+    openWidgetWindow().catch(err => console.warn('widget auto-launch failed:', err));
 
     const unlistenClipboardPromise = listen('clipboard-changed', () => {
       loadItems();

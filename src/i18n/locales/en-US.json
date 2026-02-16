@@ -178,11 +178,16 @@
       "themeDark": "Dark",
       "themeHint": "\"System\" automatically matches your OS light/dark setting",
       "featureModules": "Optional Features",
-      "enableAI": "AI Auto-Tags — let AI categorize your copied content",
-      "enableOCR": "Image Text Recognition — extract text from copied images",
-      "enableMCP": "MCP Service — let Claude and other AI assistants read your clipboard",
-      "doubleCopyEmphasis": "Double-tap copy to auto-pin that content",
-      "doubleCopyWindowMs": "Double-tap interval (ms) — how close two copies must be to count"
+      "enableAI": "AI Auto-Tags",
+      "enableAIHint": "Let AI categorize your copied content",
+      "enableOCR": "Image Text Recognition",
+      "enableOCRHint": "Extract text from copied images automatically",
+      "enableMCP": "MCP Service",
+      "enableMCPHint": "Let Claude and other AI assistants read your clipboard",
+      "doubleCopyEmphasis": "Double-tap Copy to Pin",
+      "doubleCopyEmphasisHint": "Tap copy twice quickly to auto-pin that content",
+      "doubleCopyWindowMs": "Double-tap Interval",
+      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
@@ -365,5 +370,9 @@
     "editContent": "Edit Content",
     "saveContent": "Save",
     "cancelEdit": "Cancel"
+  },
+  "widget": {
+    "title": "Quick Drop",
+    "dropHint": "Drop here"
   }
 }
