@@ -80,25 +80,40 @@
   gap: 6px;
 }
 
-.date-dropdown-custom label {
-  font-size: 12px;
-  color: var(--text-secondary);
+.date-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.date-dropdown-custom input[type="date"] {
-  width: 100%;
+.date-input-row label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  min-width: 52px;
+}
+
+.date-input-row input[type="text"] {
+  flex: 1;
   padding: 5px 8px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 12px;
+  font-family: inherit;
   background: var(--bg-input);
   color: var(--text-primary);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.date-dropdown-custom input[type="date"]:focus {
+.date-input-row input[type="text"]:focus {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px var(--accent-medium);
+}
+
+.date-input-row input[type="text"]::placeholder {
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .date-apply-btn {

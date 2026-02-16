@@ -208,20 +208,26 @@ function SearchBar({
               </div>
               {selectedDateRange?.preset === 'custom' && (
                 <div className="date-dropdown-custom">
-                  <label>{t('toolbar.dateStart')}</label>
-                  <input
-                    type="date"
-                    value={customDateStart}
-                    onChange={(e) => onCustomDateStartChange(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <label>{t('toolbar.dateEnd')}</label>
-                  <input
-                    type="date"
-                    value={customDateEnd}
-                    onChange={(e) => onCustomDateEndChange(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
+                  <div className="date-input-row">
+                    <label>{t('toolbar.dateStart')}</label>
+                    <input
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      value={customDateStart}
+                      onChange={(e) => onCustomDateStartChange(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="date-input-row">
+                    <label>{t('toolbar.dateEnd')}</label>
+                    <input
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      value={customDateEnd}
+                      onChange={(e) => onCustomDateEndChange(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
                   <button
                     className="date-apply-btn"
                     disabled={!customDateStart || !customDateEnd}
