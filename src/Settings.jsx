@@ -918,7 +918,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="setting-group-title">{t('settings.general.featureModules')}</div>
             <div className="feature-toggles">
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableAI')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableAI')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableAIHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -938,7 +941,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableOCR')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableOCR')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableOCRHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -958,7 +964,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableMCP')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableMCP')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableMCPHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -1046,12 +1055,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 </div>
               </div>
-              <small className="setting-hint setting-hint-inline">
-                {t('settings.shortcuts.defaultCandidate', {
-                  platform: getPlatformLabel(getShortcutPlatform()),
-                  shortcut: getDefaultSuggestedShortcut('toggle_window_shortcut'),
-                })}
-              </small>
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.ctrlShiftC')}</span>
                 <span className="toggle-switch">
@@ -1113,12 +1116,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 </div>
               </div>
-              <small className="setting-hint setting-hint-inline">
-                {t('settings.shortcuts.defaultCandidate', {
-                  platform: getPlatformLabel(getShortcutPlatform()),
-                  shortcut: getDefaultSuggestedShortcut('copy_pin_shortcut'),
-                })}
-              </small>
             </div>
             {recordingTarget && (
               <small className="setting-hint">{t('settings.shortcuts.recordingHint')}</small>
@@ -1143,7 +1140,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
-                <span>{t('settings.general.doubleCopyEmphasis')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.doubleCopyEmphasis')}</span>
+                  <span className="toggle-desc">{t('settings.general.doubleCopyEmphasisHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -1160,7 +1160,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <div className="sg-row">
-                <span>{t('settings.general.doubleCopyWindowMs')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.doubleCopyWindowMs')}</span>
+                  <span className="toggle-desc">{t('settings.general.doubleCopyWindowMsHint')}</span>
+                </span>
                 <input
                   type="number"
                   value={generalConfig.double_copy_window_ms ?? 900}
