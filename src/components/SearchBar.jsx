@@ -230,7 +230,7 @@ function SearchBar({
                   </div>
                   <button
                     className="date-apply-btn"
-                    disabled={!customDateStart || !customDateEnd}
+                    disabled={!customDateStart && !customDateEnd}
                     onClick={onApplyCustomDateRange}
                   >
                     {t('toolbar.dateApply')}

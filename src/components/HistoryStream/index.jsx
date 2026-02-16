@@ -152,7 +152,7 @@ function HistoryStream({ style }) {
   const handleApplyCustomDateRange = useCallback(() => {
     const start = dateStringToTimestamp(customDateStart);
     const end = dateStringToEndTimestamp(customDateEnd);
-    if (start != null && end != null) {
+    if (start != null || end != null) {
       setSelectedDateRange({ preset: 'custom', start, end });
     }
   }, [customDateStart, customDateEnd, setSelectedDateRange]);
@@ -186,8 +186,9 @@ function HistoryStream({ style }) {
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
 
-      if (selectedDateRange && selectedDateRange.start != null && selectedDateRange.end != null) {
-        if (item.created_at < selectedDateRange.start || item.created_at > selectedDateRange.end) return false;
+      if (selectedDateRange) {
+        if (selectedDateRange.start != null && item.created_at < selectedDateRange.start) return false;
+        if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
       }
 
       if (!hasSearch) return true;
