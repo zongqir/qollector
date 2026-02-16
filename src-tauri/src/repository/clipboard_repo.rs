@@ -198,7 +198,8 @@ impl ClipboardRepository {
             "SELECT id, type, content, '' as original_content, content_hash,
                     image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at
+                    pinned_at, created_at, updated_at,
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ?",
         )
@@ -219,7 +220,8 @@ impl ClipboardRepository {
             "SELECT id, type, content, '' as original_content, content_hash,
                     image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at
+                    pinned_at, created_at, updated_at,
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ? OFFSET ?",
         )

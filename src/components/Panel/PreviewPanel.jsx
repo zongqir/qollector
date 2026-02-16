@@ -170,7 +170,7 @@ function PreviewPanel() {
 
     if (item.code_language && item.content) {
       return (
-        <div onDoubleClick={handleStartEditContent}>
+        <div>
           <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
         </div>
       );
@@ -305,7 +305,7 @@ function PreviewPanel() {
               <Copy size={14} />
               <span>{t('item.copy')}</span>
             </button>
-            {(item.type_ === 'text' || item.type_ === 'link') && item.content && (
+            {item.has_raw_formats && item.content && (
               <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
                 <FileText size={14} />
                 <span>{t('item.copyPlainText')}</span>
@@ -366,7 +366,7 @@ function PreviewPanel() {
                 <span>{t('item.saveAs')}</span>
               </button>
             )}
-            {item.type_ !== 'image' && item.type_ !== 'file' && (
+            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
                 <span>{t('panel.editContent')}</span>
               </button>

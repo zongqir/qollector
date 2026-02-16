@@ -22,6 +22,8 @@ pub struct ClipboardItem {
     pub pinned_at: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
+    #[sqlx(default)]
+    pub has_raw_formats: bool,
 }
 
 impl ClipboardItem {
@@ -55,6 +57,7 @@ impl ClipboardItem {
             pinned_at: None,
             created_at: now,
             updated_at: now,
+            has_raw_formats: false,
         }
     }
 
@@ -122,6 +125,7 @@ impl ClipboardItem {
             pinned_at: None,
             created_at: now,
             updated_at: now,
+            has_raw_formats: false,
         }
     }
 

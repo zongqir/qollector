@@ -247,6 +247,7 @@ impl ClipboardManager {
                     pinned_at: None,
                     created_at: now,
                     updated_at: now,
+                    has_raw_formats: false,
                 }
             }
             ClipboardContent::File(paths_str) => {
