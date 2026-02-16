@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Write, Read};
+use std::io::{Read, Write};
 use std::path::PathBuf;
 
 /// 进程锁文件管理器
@@ -44,15 +44,17 @@ impl LockFile {
         file.write_all(content.as_bytes())
             .map_err(|e| format!("无法写入锁文件: {}", e))?;
 
-        println!("[LockFile] 锁文件已创建: {:?} (PID: {}, Port: {})", path, pid, port);
+        println!(
+            "[LockFile] 锁文件已创建: {:?} (PID: {}, Port: {})",
+            path, pid, port
+        );
 
         Ok(Self { path, port })
     }
 
     /// 读取锁文件中的端口
     fn read_port(path: &PathBuf) -> Result<u16, String> {
-        let mut file = File::open(path)
-            .map_err(|e| format!("无法打开锁文件: {}", e))?;
+        let mut file = File::open(path).map_err(|e| format!("无法打开锁文件: {}", e))?;
 
         let mut content = String::new();
         file.read_to_string(&mut content)
@@ -62,7 +64,8 @@ impl LockFile {
         for line in content.lines() {
             if line.starts_with("port=") {
                 if let Some(port_str) = line.strip_prefix("port=") {
-                    return port_str.parse::<u16>()
+                    return port_str
+                        .parse::<u16>()
                         .map_err(|e| format!("无法解析端口: {}", e));
                 }
             }

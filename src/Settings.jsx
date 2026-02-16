@@ -51,6 +51,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     theme_mode: themeMode || 'system',
     double_copy_emphasis_enabled: true,
     double_copy_window_ms: 900,
+    ctrl_shift_c_shortcut_enabled: false,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -508,6 +509,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             {t('settings.tabs.general')}
           </button>
           <button
+            className={`tab-btn ${activeTab === 'shortcuts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('shortcuts')}
+          >
+            {t('settings.tabs.shortcuts')}
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
             onClick={() => aiConfig.enabled && setActiveTab('ai')}
             disabled={!aiConfig.enabled}
@@ -601,54 +608,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   className="setting-input-small"
                 />
               </div>
-              <label className="sg-row setting-toggle-row">
-                <span>{t('settings.general.doubleCopyEmphasis')}</span>
-                <span className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(generalConfig.double_copy_emphasis_enabled)}
-                    onChange={async (e) => {
-                      const updated = {
-                        ...generalConfig,
-                        double_copy_emphasis_enabled: e.target.checked,
-                      };
-                      setGeneralConfig(updated);
-                      try {
-                        await invoke('update_general_config', { config: updated });
-                      } catch (error) {
-                        console.error('Failed to save double copy emphasis config:', error);
-                      }
-                    }}
-                  />
-                  <span className="toggle-slider" />
-                </span>
-              </label>
-              <div className="sg-row">
-                <span>{t('settings.general.doubleCopyWindowMs')}</span>
-                <input
-                  type="number"
-                  value={generalConfig.double_copy_window_ms ?? 900}
-                  onChange={async (e) => {
-                    let value = parseInt(e.target.value) || 900;
-                    if (value < 300) value = 300;
-                    if (value > 2500) value = 2500;
-                    const updated = {
-                      ...generalConfig,
-                      double_copy_window_ms: value,
-                    };
-                    setGeneralConfig(updated);
-                    try {
-                      await invoke('update_general_config', { config: updated });
-                    } catch (error) {
-                      console.error('Failed to save double copy window config:', error);
-                    }
-                  }}
-                  min="300"
-                  max="2500"
-                  step="50"
-                  className="setting-input-small"
-                />
-              </div>
             </div>
             {generalConfig.max_pinned_items > 5 && (
               <small className="setting-hint">
@@ -722,6 +681,90 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'shortcuts' && (
+          <div className="settings-content">
+            <div className="setting-group-title">{t('settings.shortcuts.globalHotkeys')}</div>
+            <div className="setting-group">
+              <label className="sg-row setting-toggle-row">
+                <span>{t('settings.shortcuts.ctrlShiftC')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(generalConfig.ctrl_shift_c_shortcut_enabled)}
+                    onChange={async (e) => {
+                      const updated = {
+                        ...generalConfig,
+                        ctrl_shift_c_shortcut_enabled: e.target.checked,
+                      };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('Failed to save Ctrl+Shift+C shortcut setting:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+            </div>
+            <small className="setting-hint">{t('settings.shortcuts.ctrlShiftCHint')}</small>
+
+            <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
+            <div className="setting-group">
+              <label className="sg-row setting-toggle-row">
+                <span>{t('settings.general.doubleCopyEmphasis')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(generalConfig.double_copy_emphasis_enabled)}
+                    onChange={async (e) => {
+                      const updated = {
+                        ...generalConfig,
+                        double_copy_emphasis_enabled: e.target.checked,
+                      };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('Failed to save double copy emphasis config:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <div className="sg-row">
+                <span>{t('settings.general.doubleCopyWindowMs')}</span>
+                <input
+                  type="number"
+                  value={generalConfig.double_copy_window_ms ?? 900}
+                  onChange={async (e) => {
+                    let value = parseInt(e.target.value) || 900;
+                    if (value < 300) value = 300;
+                    if (value > 2500) value = 2500;
+                    const updated = {
+                      ...generalConfig,
+                      double_copy_window_ms: value,
+                    };
+                    setGeneralConfig(updated);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('Failed to save double copy window config:', error);
+                    }
+                  }}
+                  min="300"
+                  max="2500"
+                  step="50"
+                  className="setting-input-small"
+                />
+              </div>
+            </div>
+            <small className="setting-hint">{t('settings.shortcuts.emphasisCopyHint')}</small>
           </div>
         )}
 

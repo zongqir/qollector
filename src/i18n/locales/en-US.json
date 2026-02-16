@@ -113,7 +113,8 @@
       "general": "General",
       "mcp": "MCP",
       "data": "Data",
-      "security": "Security"
+      "security": "Security",
+      "shortcuts": "Shortcuts"
     },
     "ai": {
       "provider": "AI Provider",
@@ -203,6 +204,13 @@
         "title": "Usage:",
         "description": "Add to Claude Desktop config file:"
       }
+    },
+    "shortcuts": {
+      "globalHotkeys": "Global Hotkeys",
+      "ctrlShiftC": "Ctrl+Shift+C: Copy and Pin",
+      "ctrlShiftCHint": "Disabled by default to avoid conflicts with other apps.",
+      "emphasisCopy": "Emphasis Copy",
+      "emphasisCopyHint": "Use Ctrl, C, C to emphasize and auto-pin repeated copies from the same app."
     }
   },
   "dragDrop": {

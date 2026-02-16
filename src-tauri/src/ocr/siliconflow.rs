@@ -1,7 +1,7 @@
+use super::{provider::OcrProvider, OcrError, OcrResult};
 use async_trait::async_trait;
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
-use base64::{Engine as _, engine::general_purpose};
-use super::{OcrError, OcrResult, provider::OcrProvider};
 
 /// 硅基流动 OCR 实现
 ///

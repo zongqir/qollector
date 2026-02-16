@@ -1,6 +1,6 @@
 use std::net::TcpListener;
 use std::process::Command;
-use sysinfo::{System, Pid, ProcessesToUpdate};
+use sysinfo::{Pid, ProcessesToUpdate, System};
 
 /// 端口管理器 - 处理端口占用和僵尸进程清理
 pub struct PortManager {
@@ -79,10 +79,7 @@ impl PortManager {
     #[cfg(target_os = "windows")]
     async fn find_port_owner_windows(&self, port: u16) -> Option<u32> {
         // 使用 netstat 查找端口占用
-        let output = Command::new("netstat")
-            .args(&["-ano"])
-            .output()
-            .ok()?;
+        let output = Command::new("netstat").args(&["-ano"]).output().ok()?;
 
         let output_str = String::from_utf8_lossy(&output.stdout);
         let port_str = format!(":{}", port);

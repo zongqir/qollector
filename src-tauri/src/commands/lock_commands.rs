@@ -1,8 +1,8 @@
 use crate::commands::ai_commands::AIState;
-use sha2::{Sha256, Digest};
+use crate::core::clipboard_manager::ClipboardManager;
+use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use tauri::State;
-use crate::core::clipboard_manager::ClipboardManager;
 
 const SALT: &str = "clipbox_lock_salt_2024";
 
@@ -13,10 +13,10 @@ fn hash_password(password: &str) -> String {
 }
 
 #[tauri::command]
-pub async fn has_lock_password(
-    ai_state: State<'_, AIState>,
-) -> Result<bool, String> {
-    let config = ai_state.config_repo.load_general_config()
+pub async fn has_lock_password(ai_state: State<'_, AIState>) -> Result<bool, String> {
+    let config = ai_state
+        .config_repo
+        .load_general_config()
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
@@ -28,7 +28,9 @@ pub async fn verify_lock_password(
     ai_state: State<'_, AIState>,
     password: String,
 ) -> Result<bool, String> {
-    let config = ai_state.config_repo.load_general_config()
+    let config = ai_state
+        .config_repo
+        .load_general_config()
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
@@ -44,7 +46,9 @@ pub async fn set_lock_password(
     old_password: String,
     new_password: String,
 ) -> Result<(), String> {
-    let mut config = ai_state.config_repo.load_general_config()
+    let mut config = ai_state
+        .config_repo
+        .load_general_config()
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
@@ -63,7 +67,9 @@ pub async fn set_lock_password(
         config.lock_password_hash = Some(hash_password(&new_password));
     }
 
-    ai_state.config_repo.save_general_config(&config)
+    ai_state
+        .config_repo
+        .save_general_config(&config)
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
@@ -75,19 +81,21 @@ pub async fn reset_all_data(
     manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<(), String> {
     // 清除密码
-    let mut config = ai_state.config_repo.load_general_config()
+    let mut config = ai_state
+        .config_repo
+        .load_general_config()
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
     config.lock_password_hash = None;
-    ai_state.config_repo.save_general_config(&config)
+    ai_state
+        .config_repo
+        .save_general_config(&config)
         .await
         .map_err(|e| e.to_string())?;
 
     // 清空剪贴板数据
-    manager.clear_all_items()
-        .await
-        .map_err(|e| e.to_string())?;
+    manager.clear_all_items().await.map_err(|e| e.to_string())?;
 
     Ok(())
 }

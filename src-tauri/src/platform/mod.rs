@@ -16,8 +16,8 @@ pub mod macos;
 #[cfg(target_os = "macos")]
 pub mod macos_drag_out;
 
+use clipboard_trait::{ClipboardError, PlatformClipboard};
 use std::sync::Arc;
-use clipboard_trait::{PlatformClipboard, ClipboardError};
 
 pub fn create_platform() -> Result<Arc<dyn PlatformClipboard>, ClipboardError> {
     #[cfg(target_os = "windows")]

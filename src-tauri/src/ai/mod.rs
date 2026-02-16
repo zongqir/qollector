@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use thiserror::Error;
 
 // 系统提示词配置（打包进 EXE）
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
@@ -21,8 +21,7 @@ struct PromptConfig {
 
 // 懒加载系统提示词
 static SYSTEM_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
-    serde_json::from_str(SYSTEM_PROMPTS_JSON)
-        .expect("Failed to parse system prompts JSON")
+    serde_json::from_str(SYSTEM_PROMPTS_JSON).expect("Failed to parse system prompts JSON")
 });
 
 /// 获取系统提示词（根据语言）
@@ -127,16 +126,17 @@ impl AICredentials {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIConfig {
     pub current_provider: AIProvider,
-    pub credentials: HashMap<String, AICredentials>,  // key 是 provider 的字符串表示
+    pub credentials: HashMap<String, AICredentials>, // key 是 provider 的字符串表示
     pub enabled: bool,
     #[serde(default)]
-    pub custom_prompt: Option<String>,  // 用户自定义提示词（未来功能）
+    pub custom_prompt: Option<String>, // 用户自定义提示词（未来功能）
 }
 
 impl AIConfig {
     /// 获取当前供应商的凭证
     pub fn get_current_credentials(&self) -> Option<&AICredentials> {
-        self.credentials.get(&self.provider_key(&self.current_provider))
+        self.credentials
+            .get(&self.provider_key(&self.current_provider))
     }
 
     /// 获取当前供应商的 API Key
@@ -156,7 +156,8 @@ impl AIConfig {
     /// 设置当前供应商的凭证
     pub fn set_current_credentials(&mut self, api_key: String, model: String) {
         let key = self.provider_key(&self.current_provider);
-        self.credentials.insert(key, AICredentials::new(api_key, model));
+        self.credentials
+            .insert(key, AICredentials::new(api_key, model));
     }
 
     /// 生成供应商的唯一键
@@ -267,13 +268,14 @@ impl AIService {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
-        Self {
-            config,
-            client,
-        }
+        Self { config, client }
     }
 
-    pub async fn generate_tags(&self, content: &str, language: &str) -> Result<Vec<String>, AIError> {
+    pub async fn generate_tags(
+        &self,
+        content: &str,
+        language: &str,
+    ) -> Result<Vec<String>, AIError> {
         let api_key = self.config.get_current_api_key();
 
         // 只要有API key就尝试生成,不检查enabled标志
@@ -282,7 +284,7 @@ impl AIService {
         }
 
         // Sanitize and truncate content (考虑 UTF-8 字符边界)
-        let max_len = 1000;  // 增加到1000字符，因为不用担心token限制
+        let max_len = 1000; // 增加到1000字符，因为不用担心token限制
         let truncated = if content.len() <= max_len {
             content
         } else {
@@ -323,15 +325,24 @@ impl AIService {
             temperature: 0.7,
         };
 
-        let url = format!("{}/chat/completions", self.config.current_provider.base_url());
+        let url = format!(
+            "{}/chat/completions",
+            self.config.current_provider.base_url()
+        );
 
         println!("=== AI Request Debug ===");
         println!("URL: {}", url);
         println!("Model: {}", model);
         println!("Language: {}", language);
-        println!("API Key (first 10 chars): {}", &api_key[..10.min(api_key.len())]);
+        println!(
+            "API Key (first 10 chars): {}",
+            &api_key[..10.min(api_key.len())]
+        );
         println!("Prompt length: {}", prompt.len());
-        println!("Request body: {}", serde_json::to_string_pretty(&request).unwrap_or_default());
+        println!(
+            "Request body: {}",
+            serde_json::to_string_pretty(&request).unwrap_or_default()
+        );
 
         let response = self
             .client

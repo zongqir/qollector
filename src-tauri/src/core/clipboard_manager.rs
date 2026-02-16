@@ -1,14 +1,14 @@
-use crate::core::models::{ClipboardItem, ClipboardContent, WindowMetadata};
-use crate::platform::clipboard_trait::{PlatformClipboard, ClipboardError, ClipboardCallback};
+use crate::ai::{AIConfig, AIService};
+use crate::core::models::{ClipboardContent, ClipboardItem, WindowMetadata};
+use crate::ocr::OcrService;
+use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
-use crate::ai::{AIConfig, AIService};
-use crate::ocr::OcrService;
-use std::sync::{Arc, Mutex};
-use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Emitter;
+use tokio::sync::{Mutex as TokioMutex, Semaphore};
 
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 180;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
@@ -91,7 +91,9 @@ impl ClipboardManager {
                     ai_semaphore,
                     double_copy_state,
                     app_handle,
-                ).await {
+                )
+                .await
+                {
                     eprintln!("Error handling clipboard change: {}", e);
                 }
                 Ok(())
@@ -126,12 +128,18 @@ impl ClipboardManager {
 
                     // 濡傛灉鎹㈣绗﹀皯浜?涓紝璁や负鏄棤鎰忎箟鐨勭煭绌虹櫧锛岃烦杩?
                     if newline_count < 3 {
-                        println!("Clipboard text is empty or too short (newlines: {}), skipping", newline_count);
+                        println!(
+                            "Clipboard text is empty or too short (newlines: {}), skipping",
+                            newline_count
+                        );
                         return Ok(());
                     }
 
                     // 瓒呰繃3琛岀殑绌虹櫧鍙兘鏈夋剰涔夛紝淇濈暀
-                    println!("Clipboard text is blank but has {} newlines, keeping", newline_count);
+                    println!(
+                        "Clipboard text is blank but has {} newlines, keeping",
+                        newline_count
+                    );
                 }
                 println!("Creating clipboard item for text: {} chars", text.len());
                 ClipboardItem::new_text(text, metadata)
@@ -171,7 +179,8 @@ impl ClipboardManager {
                 let image_paths_json = serde_json::json!({
                     "original": image_path.to_string_lossy().to_string(),
                     "thumbnail": thumb_path.to_string_lossy().to_string()
-                }).to_string();
+                })
+                .to_string();
 
                 let now = chrono::Utc::now().timestamp();
                 ClipboardItem {
@@ -201,7 +210,8 @@ impl ClipboardManager {
                 let file_count = paths.len();
 
                 // Create a summary of files
-                let file_names: Vec<String> = paths.iter()
+                let file_names: Vec<String> = paths
+                    .iter()
                     .map(|p| {
                         std::path::Path::new(p)
                             .file_name()
@@ -321,8 +331,9 @@ impl ClipboardManager {
                                         Ok(result) if !result.text.trim().is_empty() => {
                                             ocr_text = result.text.clone();
                                             let repo_lock = repo_clone.lock().await;
-                                            let _ =
-                                                repo_lock.update_ocr_text(&item_id, &result.text).await;
+                                            let _ = repo_lock
+                                                .update_ocr_text(&item_id, &result.text)
+                                                .await;
                                             println!(
                                                 "Auto OCR text captured: {} chars",
                                                 result.text.len()
@@ -359,7 +370,8 @@ impl ClipboardManager {
                                             tags.iter().map(|t| format!("AI:{}", t)).collect();
 
                                         let repo_lock = repo_clone.lock().await;
-                                        if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await
+                                        if let Ok(Some(mut item)) =
+                                            repo_lock.find_by_id(&item_id).await
                                         {
                                             let existing_tags: Vec<String> = item
                                                 .tags
@@ -370,13 +382,16 @@ impl ClipboardManager {
                                             let mut all_tags = existing_tags;
                                             all_tags.extend(ai_tags);
 
-                                            item.tags = Some(serde_json::to_string(&all_tags).unwrap());
+                                            item.tags =
+                                                Some(serde_json::to_string(&all_tags).unwrap());
                                             let _ = repo_lock.update(&item).await;
                                             println!("[AI] tags added from OCR text: {:?}", tags);
                                         }
                                     }
                                     Ok(_) => println!("[AI] empty tag result from OCR text"),
-                                    Err(e) => eprintln!("[AI] tag generation from OCR failed: {}", e),
+                                    Err(e) => {
+                                        eprintln!("[AI] tag generation from OCR failed: {}", e)
+                                    }
                                 }
                                 println!("[AI] lock released");
                             }
@@ -451,10 +466,12 @@ impl ClipboardManager {
         let mut state = state.lock().unwrap();
         let same_hash = state.last_hash.as_deref() == Some(content_hash);
         let source_app_valid = !source_app.is_empty() && source_app != "Unknown";
-        let same_source_app = source_app_valid && state.last_source_app.as_deref() == Some(source_app);
+        let same_source_app =
+            source_app_valid && state.last_source_app.as_deref() == Some(source_app);
         let delta_ms = now_ms.saturating_sub(state.last_seen_at_ms);
         let interval_ok = delta_ms >= DOUBLE_COPY_MIN_INTERVAL_MS && delta_ms <= window_ms;
-        let cooldown_ok = now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
+        let cooldown_ok =
+            now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
 
         let should_pin = enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
 
@@ -478,7 +495,11 @@ impl ClipboardManager {
         repo.get_recent_light(limit).await
     }
 
-    pub async fn get_recent_paged(&self, limit: i32, offset: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    pub async fn get_recent_paged(
+        &self,
+        limit: i32,
+        offset: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.get_recent_paged(limit, offset).await
     }
@@ -488,15 +509,20 @@ impl ClipboardManager {
             // Load original image from file
             if let Some(image_paths_str) = &item.image_paths {
                 // Try to parse as JSON first (new format)
-                let image_path = if let Ok(paths) = serde_json::from_str::<serde_json::Value>(image_paths_str) {
-                    paths["original"].as_str().unwrap_or(image_paths_str).to_string()
-                } else {
-                    // Fallback to old format (direct path string)
-                    image_paths_str.clone()
-                };
+                let image_path =
+                    if let Ok(paths) = serde_json::from_str::<serde_json::Value>(image_paths_str) {
+                        paths["original"]
+                            .as_str()
+                            .unwrap_or(image_paths_str)
+                            .to_string()
+                    } else {
+                        // Fallback to old format (direct path string)
+                        image_paths_str.clone()
+                    };
 
-                let data = std::fs::read(&image_path)
-                    .map_err(|e| ClipboardError::PlatformError(format!("Failed to read image: {}", e)))?;
+                let data = std::fs::read(&image_path).map_err(|e| {
+                    ClipboardError::PlatformError(format!("Failed to read image: {}", e))
+                })?;
                 ClipboardContent::Image(data)
             } else {
                 return Err(ClipboardError::UnsupportedType);
@@ -540,7 +566,10 @@ impl ClipboardManager {
 
     /// Insert with hash dedupe in one critical section to avoid races.
     /// Returns the effective item id (existing or newly inserted).
-    pub async fn insert_item_dedup_touch(&self, item: &ClipboardItem) -> Result<String, sqlx::Error> {
+    pub async fn insert_item_dedup_touch(
+        &self,
+        item: &ClipboardItem,
+    ) -> Result<String, sqlx::Error> {
         let repo = self.repository.lock().await;
 
         if let Some(existing) = repo.find_by_hash(&item.content_hash).await? {
@@ -552,7 +581,10 @@ impl ClipboardManager {
         Ok(item.id.clone())
     }
 
-    pub async fn find_by_hash(&self, content_hash: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
+    pub async fn find_by_hash(
+        &self,
+        content_hash: &str,
+    ) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.find_by_hash(content_hash).await
     }
@@ -643,7 +675,11 @@ impl ClipboardManager {
     // ========== MCP 鐩稿叧鏂规硶 ==========
 
     /// 鎼滅储鍓创鏉挎潯鐩?
-    pub async fn search_items(&self, query: &str, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    pub async fn search_items(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         let filters = crate::core::models::SearchFilters::default();
         repo.search(query, &filters, limit as i32).await
@@ -662,19 +698,24 @@ impl ClipboardManager {
     }
 
     /// 娣诲姞鏂囨湰鏉＄洰
-    pub async fn add_text_item(&self, content: &str, notes: Option<&str>) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
-        use sha2::{Sha256, Digest};
+    pub async fn add_text_item(
+        &self,
+        content: &str,
+        notes: Option<&str>,
+    ) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
+        use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
         let hash = format!("{:x}", hasher.finalize());
 
-        let metadata = self.platform.get_active_window_info()
-            .unwrap_or_else(|_| crate::core::models::WindowMetadata {
+        let metadata = self.platform.get_active_window_info().unwrap_or_else(|_| {
+            crate::core::models::WindowMetadata {
                 source_app: "MCP".to_string(),
                 window_title: "".to_string(),
                 source_url: None,
-            });
+            }
+        });
 
         let mut item = ClipboardItem::new_text(content.to_string(), metadata);
         item.content_hash = hash;
@@ -694,30 +735,41 @@ impl ClipboardManager {
         let repo = self.repository.lock().await;
 
         // 鑾峰彇鎬绘暟
-        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let total: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
+                .fetch_one(repo.pool())
+                .await?;
 
         // 鎸夌被鍨嬬粺璁?
-        let text_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let text_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0",
+        )
+        .fetch_one(repo.pool())
+        .await?;
 
-        let image_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let image_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM clipboard_items WHERE type = 'image' AND is_deleted = 0",
+        )
+        .fetch_one(repo.pool())
+        .await?;
 
-        let file_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let file_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM clipboard_items WHERE type = 'file' AND is_deleted = 0",
+        )
+        .fetch_one(repo.pool())
+        .await?;
 
-        let pinned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let pinned_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM clipboard_items WHERE is_pinned = 1 AND is_deleted = 0",
+        )
+        .fetch_one(repo.pool())
+        .await?;
 
-        let favorite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0")
-            .fetch_one(repo.pool())
-            .await?;
+        let favorite_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM clipboard_items WHERE is_favorite = 1 AND is_deleted = 0",
+        )
+        .fetch_one(repo.pool())
+        .await?;
 
         Ok(serde_json::json!({
             "total": total,
@@ -744,7 +796,7 @@ impl ClipboardManager {
     pub async fn get_all_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY created_at ASC"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY created_at ASC",
         )
         .fetch_all(repo.pool())
         .await?;
@@ -752,7 +804,10 @@ impl ClipboardManager {
     }
 
     /// 鎸?content_hash 鍘婚噸鎻掑叆锛堝鍏ョ敤锛夛紝杩斿洖鏄惁瀹為檯鎻掑叆
-    pub async fn insert_item_if_not_exists(&self, item: &ClipboardItem) -> Result<bool, sqlx::Error> {
+    pub async fn insert_item_if_not_exists(
+        &self,
+        item: &ClipboardItem,
+    ) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
         let existing = repo.find_by_hash(&item.content_hash).await?;
         if existing.is_some() {
@@ -855,7 +910,9 @@ impl ClipboardManager {
 
     #[cfg(target_os = "windows")]
     async fn wait_shortcut_modifiers_released(timeout_ms: u64) {
-        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT};
+        use windows::Win32::UI::Input::KeyboardAndMouse::{
+            GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT,
+        };
 
         fn is_pressed(vk: i32) -> bool {
             unsafe { (GetAsyncKeyState(vk) as u16 & 0x8000) != 0 }
@@ -877,7 +934,8 @@ impl ClipboardManager {
     #[cfg(target_os = "windows")]
     fn send_ctrl_c_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use windows::Win32::UI::Input::KeyboardAndMouse::{
-            SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_CONTROL,
+            SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
+            VK_CONTROL,
         };
 
         const VK_C_KEY: u16 = 0x43;
@@ -912,7 +970,9 @@ impl ClipboardManager {
 
         let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
         if sent != inputs.len() as u32 {
-            return Err(format!("SendInput sent {} events, expected {}", sent, inputs.len()).into());
+            return Err(
+                format!("SendInput sent {} events, expected {}", sent, inputs.len()).into(),
+            );
         }
 
         Ok(())
@@ -965,11 +1025,14 @@ impl ClipboardManager {
 
             let content = self.read_clipboard_with_retry(20, 30).await?;
             let content_hash = Self::compute_content_hash(&content);
-            let metadata = self.platform.get_active_window_info().unwrap_or(WindowMetadata {
-                source_app: "Unknown".to_string(),
-                window_title: "".to_string(),
-                source_url: None,
-            });
+            let metadata = self
+                .platform
+                .get_active_window_info()
+                .unwrap_or(WindowMetadata {
+                    source_app: "Unknown".to_string(),
+                    window_title: "".to_string(),
+                    source_url: None,
+                });
 
             if let Err(err) = Self::handle_clipboard_change(
                 content,
@@ -1012,5 +1075,3 @@ impl ClipboardManager {
             .await
     }
 }
-
-

@@ -11,7 +11,8 @@ async fn main() {
 
     let service = AIService::new(config);
 
-    let test_content = "今天学习了 Rust 编程语言，实现了一个剪贴板管理器，使用了 Tauri 框架和 React 前端";
+    let test_content =
+        "今天学习了 Rust 编程语言，实现了一个剪贴板管理器，使用了 Tauri 框架和 React 前端";
 
     println!("测试内容: {}", test_content);
     println!("正在生成标签...\n");

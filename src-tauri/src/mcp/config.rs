@@ -14,16 +14,16 @@ pub struct McpConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum McpMode {
-    Stdio,  // 标准输入输出
-    Http,   // HTTP 服务器 (未来扩展)
+    Stdio, // 标准输入输出
+    Http,  // HTTP 服务器 (未来扩展)
 }
 
 impl Default for McpConfig {
     fn default() -> Self {
         Self {
-            enabled: true,  // 默认开启
-            port: Some(38470),  // 更偏门的默认端口
-            mode: McpMode::Http,  // 默认 HTTP 模式
+            enabled: true,       // 默认开启
+            port: Some(38470),   // 更偏门的默认端口
+            mode: McpMode::Http, // 默认 HTTP 模式
         }
     }
 }

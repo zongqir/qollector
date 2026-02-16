@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use super::{OcrError, OcrResult};
+use async_trait::async_trait;
 
 /// OCR 提供者抽象接口
 ///

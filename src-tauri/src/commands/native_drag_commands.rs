@@ -30,10 +30,7 @@ pub async fn start_native_file_drag(
         return Err("no paths provided".to_string());
     }
 
-    let parsed_paths: Vec<PathBuf> = paths
-        .into_iter()
-        .map(PathBuf::from)
-        .collect();
+    let parsed_paths: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
     let operation = parse_operation(operation)?;
     let request = DragOutRequest {
         paths: parsed_paths,

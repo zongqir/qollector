@@ -113,7 +113,8 @@
       "general": "通用",
       "mcp": "MCP",
       "data": "数据",
-      "security": "安全"
+      "security": "安全",
+      "shortcuts": "快捷键"
     },
     "ai": {
       "provider": "AI 提供商",
@@ -203,6 +204,13 @@
         "title": "使用方法：",
         "description": "在 Claude Desktop 配置文件中添加："
       }
+    },
+    "shortcuts": {
+      "globalHotkeys": "全局快捷键",
+      "ctrlShiftC": "Ctrl+Shift+C：复制并置顶",
+      "ctrlShiftCHint": "默认关闭，避免与其他应用快捷键冲突。",
+      "emphasisCopy": "强调复制",
+      "emphasisCopyHint": "按住 Ctrl 连续按两次 C，可将同应用重复复制内容自动置顶。"
     }
   },
   "dragDrop": {

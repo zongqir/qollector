@@ -1,7 +1,7 @@
+use super::{provider::OcrProvider, OcrError, OcrResult};
 use async_trait::async_trait;
 use std::path::Path;
 use std::process::Command;
-use super::{OcrError, OcrResult, provider::OcrProvider};
 
 /// 本地 Tesseract OCR 实现
 ///
@@ -18,17 +18,17 @@ impl LocalOcr {
     /// 检查 Tesseract 是否已安装
     pub fn check_tesseract_installed() -> bool {
         // 尝试执行 tesseract --version
-        Command::new("tesseract")
-            .arg("--version")
-            .output()
-            .is_ok()
+        Command::new("tesseract").arg("--version").output().is_ok()
     }
 
     /// 执行 OCR 识别
     fn do_recognize(&self, image_path: &str) -> Result<String, OcrError> {
         // 检查文件是否存在
         if !Path::new(image_path).exists() {
-            return Err(OcrError::ImageError(format!("图片文件不存在: {}", image_path)));
+            return Err(OcrError::ImageError(format!(
+                "图片文件不存在: {}",
+                image_path
+            )));
         }
 
         // 创建临时输出文件
@@ -44,16 +44,23 @@ impl LocalOcr {
             .arg("-l")
             .arg(&self.language)
             .output()
-            .map_err(|e| OcrError::EngineError(format!("执行 tesseract 失败: {}. 请确保已安装 Tesseract OCR", e)))?;
+            .map_err(|e| {
+                OcrError::EngineError(format!(
+                    "执行 tesseract 失败: {}. 请确保已安装 Tesseract OCR",
+                    e
+                ))
+            })?;
 
         if !output.status.success() {
             let error_msg = String::from_utf8_lossy(&output.stderr);
-            return Err(OcrError::EngineError(format!("Tesseract 执行失败: {}", error_msg)));
+            return Err(OcrError::EngineError(format!(
+                "Tesseract 执行失败: {}",
+                error_msg
+            )));
         }
 
         // 读取输出文件
-        let text = std::fs::read_to_string(&output_txt)
-            .map_err(|e| OcrError::IoError(e))?;
+        let text = std::fs::read_to_string(&output_txt).map_err(|e| OcrError::IoError(e))?;
 
         // 删除临时文件
         let _ = std::fs::remove_file(&output_txt);
@@ -85,7 +92,8 @@ impl OcrProvider for LocalOcr {
         let temp_file = temp_dir.join(format!("ocr_temp_{}.png", uuid::Uuid::new_v4()));
 
         // 写入临时文件
-        tokio::fs::write(&temp_file, image_data).await
+        tokio::fs::write(&temp_file, image_data)
+            .await
             .map_err(|e| OcrError::IoError(e))?;
 
         // 识别

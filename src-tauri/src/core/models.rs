@@ -123,26 +123,27 @@ impl ClipboardItem {
     }
 
     fn calculate_hash(content: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
     pub fn get_image_paths(&self) -> Option<ImagePaths> {
-        self.image_paths.as_ref().and_then(|json| {
-            serde_json::from_str(json).ok()
-        })
+        self.image_paths
+            .as_ref()
+            .and_then(|json| serde_json::from_str(json).ok())
     }
 
     pub fn get_metadata(&self) -> Option<WindowMetadata> {
-        self.metadata.as_ref().and_then(|json| {
-            serde_json::from_str(json).ok()
-        })
+        self.metadata
+            .as_ref()
+            .and_then(|json| serde_json::from_str(json).ok())
     }
 
     pub fn get_tags(&self) -> Vec<String> {
-        self.tags.as_ref()
+        self.tags
+            .as_ref()
             .and_then(|json| serde_json::from_str(json).ok())
             .unwrap_or_default()
     }

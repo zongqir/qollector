@@ -1,10 +1,15 @@
+use crate::core::models::{ClipboardContent, WindowMetadata};
 use async_trait::async_trait;
 use std::future::Future;
 use std::pin::Pin;
-use crate::core::models::{ClipboardContent, WindowMetadata};
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
-pub type ClipboardCallback = Box<dyn Fn(ClipboardContent, WindowMetadata) -> BoxFuture<'static, Result<(), ClipboardError>> + Send + Sync + 'static>;
+pub type ClipboardCallback = Box<
+    dyn Fn(ClipboardContent, WindowMetadata) -> BoxFuture<'static, Result<(), ClipboardError>>
+        + Send
+        + Sync
+        + 'static,
+>;
 
 #[async_trait]
 pub trait PlatformClipboard: Send + Sync {

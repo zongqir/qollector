@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use serde_json::{json, Value};
+use std::sync::Arc;
 use thiserror::Error;
 
-use crate::core::clipboard_manager::ClipboardManager;
 use super::protocol::McpTool;
+use crate::core::clipboard_manager::ClipboardManager;
 
 #[derive(Error, Debug)]
 pub enum ToolError {
@@ -31,7 +31,8 @@ impl ClipboardTools {
         vec![
             McpTool {
                 name: "clipbox_search".to_string(),
-                description: "搜索剪贴板历史记录。支持按内容、标签、笔记、来源应用搜索。".to_string(),
+                description: "搜索剪贴板历史记录。支持按内容、标签、笔记、来源应用搜索。"
+                    .to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {

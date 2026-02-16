@@ -1,8 +1,8 @@
-use crate::ai::{AIConfig, AIService, AIProvider};
+use crate::ai::{AIConfig, AIProvider, AIService};
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
-use tauri::State;
 use std::sync::{Arc, Mutex};
+use tauri::State;
 
 pub struct AIState {
     pub config: Arc<Mutex<AIConfig>>,
@@ -31,7 +31,10 @@ pub async fn update_ai_config(
     manager.update_ai_config(config.clone());
 
     // 持久化到数据库
-    state.config_repo.save_ai_config(&config).await
+    state
+        .config_repo
+        .save_ai_config(&config)
+        .await
         .map_err(|e| format!("保存配置失败: {}", e))?;
 
     Ok(())
@@ -50,7 +53,10 @@ pub async fn generate_ai_tags(
     }
 
     // 获取当前语言配置
-    let language = state.config_repo.load_general_config().await
+    let language = state
+        .config_repo
+        .load_general_config()
+        .await
         .ok()
         .flatten()
         .map(|c| c.language)
@@ -72,7 +78,10 @@ pub async fn test_ai_connection(
     config: AIConfig,
 ) -> Result<bool, String> {
     // 获取当前语言配置
-    let language = state.config_repo.load_general_config().await
+    let language = state
+        .config_repo
+        .load_general_config()
+        .await
         .ok()
         .flatten()
         .map(|c| c.language)

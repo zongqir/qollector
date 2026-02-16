@@ -19,6 +19,9 @@ pub struct GeneralConfig {
     /// Max interval for two consecutive copies to be treated as emphasis.
     #[serde(default = "default_double_copy_window_ms")]
     pub double_copy_window_ms: u64,
+    /// Enable global Ctrl+Shift+C one-shot copy and pin shortcut.
+    #[serde(default = "default_ctrl_shift_c_shortcut_enabled")]
+    pub ctrl_shift_c_shortcut_enabled: bool,
 }
 
 fn default_language() -> String {
@@ -37,6 +40,10 @@ fn default_double_copy_window_ms() -> u64 {
     900
 }
 
+fn default_ctrl_shift_c_shortcut_enabled() -> bool {
+    false
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -46,6 +53,7 @@ impl Default for GeneralConfig {
             lock_password_hash: None,
             double_copy_emphasis_enabled: true,
             double_copy_window_ms: 900,
+            ctrl_shift_c_shortcut_enabled: false,
         }
     }
 }

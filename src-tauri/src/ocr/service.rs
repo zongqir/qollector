@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use super::{OcrConfig, OcrError, OcrResult, OcrProviderType, provider::OcrProvider};
-use super::local::LocalOcr;
 use super::deepseek::DeepSeekOcr;
+use super::local::LocalOcr;
 use super::siliconflow::SiliconFlowOcr;
+use super::{provider::OcrProvider, OcrConfig, OcrError, OcrProviderType, OcrResult};
+use std::sync::Arc;
 
 /// OCR 服务统一入口
 ///
@@ -17,21 +17,17 @@ impl OcrService {
     /// 创建 OCR 服务实例
     pub fn new(config: OcrConfig) -> Result<Self, OcrError> {
         let provider = Self::create_provider(&config)?;
-        Ok(Self {
-            config,
-            provider,
-        })
+        Ok(Self { config, provider })
     }
 
     /// 根据配置创建对应的 OCR 提供者
     fn create_provider(config: &OcrConfig) -> Result<Arc<dyn OcrProvider>, OcrError> {
         match &config.current_provider {
-            OcrProviderType::Local => {
-                Ok(Arc::new(LocalOcr::new(config.language.clone())))
-            }
+            OcrProviderType::Local => Ok(Arc::new(LocalOcr::new(config.language.clone()))),
             OcrProviderType::SiliconFlow => {
-                let api_key = config.get_current_api_key()
-                    .ok_or_else(|| OcrError::ConfigError("硅基流动 API key is required".to_string()))?;
+                let api_key = config.get_current_api_key().ok_or_else(|| {
+                    OcrError::ConfigError("硅基流动 API key is required".to_string())
+                })?;
 
                 Ok(Arc::new(SiliconFlowOcr::new(
                     api_key,
@@ -39,8 +35,9 @@ impl OcrService {
                 )))
             }
             OcrProviderType::DeepSeek => {
-                let api_key = config.get_current_api_key()
-                    .ok_or_else(|| OcrError::ConfigError("DeepSeek API key is required".to_string()))?;
+                let api_key = config.get_current_api_key().ok_or_else(|| {
+                    OcrError::ConfigError("DeepSeek API key is required".to_string())
+                })?;
 
                 Ok(Arc::new(DeepSeekOcr::new(
                     api_key,
@@ -61,7 +58,10 @@ impl OcrService {
             }
             OcrProviderType::Custom { name, base_url: _ } => {
                 // TODO: 实现自定义 OCR
-                Err(OcrError::ConfigError(format!("自定义 OCR ({}) 尚未实现", name)))
+                Err(OcrError::ConfigError(format!(
+                    "自定义 OCR ({}) 尚未实现",
+                    name
+                )))
             }
         }
     }
