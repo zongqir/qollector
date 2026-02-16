@@ -10,6 +10,7 @@ mod platform;
 mod repository;
 mod shortcuts;
 mod startup_metrics;
+mod tray;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
@@ -364,31 +365,19 @@ fn main() {
                 setup_meter.mark("register_global_shortcuts");
             }
 
+            // Setup system tray
+            tray::setup_tray(&app_handle_for_shortcuts)?;
+            setup_meter.mark("setup_tray");
+
             Ok(())
         })
         .on_window_event(|window, event| {
-            // 监听窗口关闭事件
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
-                println!("[Shutdown] 窗口关闭事件触发");
-
-                // 获取 MCP 状态并关闭服务器
-                let app_handle = window.app_handle();
-                if let Some(mcp_state) = app_handle.try_state::<McpState>() {
-                    if let Some(server) = &mcp_state.server {
-                        let server_clone = Arc::clone(server);
-                        tauri::async_runtime::spawn(async move {
-                            server_clone.shutdown().await;
-                        });
-                    }
+            // Intercept close on main window: hide to tray instead
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
                 }
-
-                // 退出时混淆数据库文件头
-                let app_dir = app_handle
-                    .path()
-                    .app_data_dir()
-                    .expect("Failed to get app data dir");
-                let db_path = app_dir.join("clipbox.db");
-                core::db_obfuscate::obfuscate_db(&db_path);
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -434,7 +423,13 @@ fn main() {
             export_data,
             import_data,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                println!("[Shutdown] Application exiting");
+                tray::perform_shutdown(app);
+            }
+        });
 }
 // test

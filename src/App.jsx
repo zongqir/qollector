@@ -66,10 +66,14 @@ function App() {
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
     });
+    const unlistenOpenSettingsPromise = listen('open-settings', () => {
+      setShowSettings(true);
+    });
 
     return () => {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
+      unlistenOpenSettingsPromise.then(unlisten => unlisten());
     };
   }, []);
 

@@ -9,6 +9,11 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "tooltip": "ClipBox",
+      "id": "main"
+    },
     "windows": [
       {
         "label": "main",
@@ -60,7 +65,9 @@
             "core:webview:allow-create-webview-window",
             "core:event:default",
             "core:path:default",
-            "core:app:default"
+            "core:app:default",
+            "core:tray:default",
+            "core:menu:default"
           ]
         },
         {

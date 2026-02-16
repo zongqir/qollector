@@ -385,5 +385,11 @@
   "widget": {
     "title": "快捷投放",
     "dropHint": "拖放到这里"
+  },
+  "tray": {
+    "show": "显示主窗口",
+    "hide": "隐藏主窗口",
+    "settings": "设置",
+    "quit": "退出"
   }
 }

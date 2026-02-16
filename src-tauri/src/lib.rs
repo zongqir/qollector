@@ -8,6 +8,7 @@ pub mod mcp;
 pub mod config;
 pub mod shortcuts;
 pub mod startup_metrics;
+pub mod tray;
 
 #[cfg(test)]
 mod tests;

@@ -385,5 +385,11 @@
   "widget": {
     "title": "Quick Drop",
     "dropHint": "Drop here"
+  },
+  "tray": {
+    "show": "Show Window",
+    "hide": "Hide Window",
+    "settings": "Settings",
+    "quit": "Quit"
   }
 }

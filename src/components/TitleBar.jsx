@@ -116,7 +116,7 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
         <button
           onClick={async () => {
             const appWindow = getCurrentWindow();
-            await appWindow.close();
+            await appWindow.hide();
           }}
           className="titlebar-btn close-btn"
           title={t('titlebar.close')}
