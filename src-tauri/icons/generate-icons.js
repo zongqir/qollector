@@ -9,11 +9,13 @@ const __dirname = path.dirname(__filename);
 
 const ICON_DIR = __dirname;
 const SVG_FILE = path.join(ICON_DIR, 'icon.svg');
+const SVG_DISCONNECTED = path.join(ICON_DIR, 'icon-disconnected.svg');
 
 async function generateIcons() {
   console.log('Generating icons from icon.svg...\n');
 
   const svgBuffer = fs.readFileSync(SVG_FILE);
+  const svgDisconnectedBuffer = fs.readFileSync(SVG_DISCONNECTED);
 
   // PNG sizes
   const pngSizes = [32, 64, 128, 256, 512];
@@ -133,6 +135,19 @@ async function generateIcons() {
 
   // Clean up iconset directory
   fs.rmSync(iconsetDir, { recursive: true, force: true });
+
+  // Generate disconnected state icons (for tray)
+  console.log('\nGenerating disconnected state icons...');
+
+  const disconnectedSizes = [16, 32, 64, 128, 256];
+  for (const size of disconnectedSizes) {
+    const output = path.join(ICON_DIR, `icon-disconnected-${size}.png`);
+    await sharp(svgDisconnectedBuffer)
+      .resize(size, size)
+      .png()
+      .toFile(output);
+    console.log(`Generated: icon-disconnected-${size}.png`);
+  }
 
   console.log('\nAll icons generated successfully!');
 }

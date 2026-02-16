@@ -101,6 +101,8 @@
     "unfavorite": "Unfavorite",
     "favorited": "Favorited",
     "open": "Open",
+    "saveAs": "Save As",
+    "saveImageAs": "Save Image As",
     "openLink": "Open Link",
     "openFile": "Open File",
     "delete": "Delete"

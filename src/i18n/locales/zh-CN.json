@@ -101,6 +101,8 @@
     "unfavorite": "取消收藏",
     "favorited": "已收藏",
     "open": "打开",
+    "saveAs": "另存为",
+    "saveImageAs": "图片另存为",
     "openLink": "打开链接",
     "openFile": "打开文件",
     "delete": "删除"

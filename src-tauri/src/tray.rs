@@ -63,6 +63,22 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(tray) = app.tray_by_id("main") {
                         let tooltip = if new_paused { "ClipBox (Paused)" } else { "ClipBox" };
                         let _ = tray.set_tooltip(Some(tooltip));
+
+                        // Update tray icon based on pause state
+                        let icon_path = if new_paused {
+                            "icons/icon-disconnected-32.png"
+                        } else {
+                            "icons/icon.png"
+                        };
+
+                        if let Ok(new_icon) = Image::from_path(icon_path)
+                            .or_else(|_| {
+                                let resource_dir = app.path().resource_dir().unwrap_or_default();
+                                Image::from_path(resource_dir.join(icon_path))
+                            })
+                        {
+                            let _ = tray.set_icon(Some(new_icon));
+                        }
                     }
                 }
             }

@@ -376,6 +376,18 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  handleSaveImageAs: async (item) => {
+    if (!item || item.type_ !== 'image') return;
+    try {
+      await invoke('save_image_as', { id: item.id });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || '');
+      if (message !== 'CANCELLED') {
+        console.error('save image as failed:', error);
+      }
+    }
+  },
+
   deleteItem: async (item) => {
     try {
       await deleteItemSvc(item.id);

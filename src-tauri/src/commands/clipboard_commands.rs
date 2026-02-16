@@ -1,5 +1,6 @@
 ﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
+use std::path::Path;
 use std::sync::Arc;
 use tauri::State;
 
@@ -156,6 +157,49 @@ pub async fn open_url(url: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub async fn save_image_as(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<String, String> {
+    let item = manager
+        .get_item_by_id(&id)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Item not found".to_string())?;
+
+    if item.type_ != "image" {
+        return Err("Only image types can be saved".to_string());
+    }
+
+    let source_path = image_source_path(&item)?;
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err("Image file not found".to_string());
+    }
+
+    let suggested_name = source
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "image.png".to_string());
+
+    let extension = source
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("png");
+
+    let save_path = rfd::FileDialog::new()
+        .set_file_name(&suggested_name)
+        .add_filter("Image", &[extension])
+        .save_file()
+        .ok_or_else(|| "CANCELLED".to_string())?;
+
+    std::fs::copy(source, &save_path).map_err(|e| format!("Failed to save image: {}", e))?;
+
+    Ok(save_path.to_string_lossy().to_string())
+}
+
 fn first_file_target(content: &str) -> Result<String, String> {
     content
         .lines()
@@ -173,6 +217,36 @@ fn parse_openable_link(content: &str) -> Result<String, String> {
     if !supported {
         return Err("Unsupported link scheme".to_string());
     }
+    Ok(trimmed.to_string())
+}
+
+fn image_source_path(item: &ClipboardItem) -> Result<String, String> {
+    let image_paths = item
+        .image_paths
+        .as_deref()
+        .ok_or_else(|| "Image path is empty".to_string())?;
+
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(image_paths) {
+        if let Some(path) = value.get("original").and_then(|v| v.as_str()) {
+            let trimmed = path.trim();
+            if !trimmed.is_empty() {
+                return Ok(trimmed.to_string());
+            }
+        }
+
+        if let Some(path) = value.get("raw").and_then(|v| v.as_str()) {
+            let trimmed = path.trim();
+            if !trimmed.is_empty() {
+                return Ok(trimmed.to_string());
+            }
+        }
+    }
+
+    let trimmed = image_paths.trim();
+    if trimmed.is_empty() {
+        return Err("Image path is empty".to_string());
+    }
+
     Ok(trimmed.to_string())
 }
 

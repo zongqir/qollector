@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Trash2
+  ExternalLink, Check, FileText, Copy, Download, Trash2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
@@ -25,6 +25,7 @@ function PreviewPanel() {
   const handleOCR = useAppStore(s => s.handleOCR);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleOpenUrl = useAppStore(s => s.handleOpenUrl);
+  const handleSaveImageAs = useAppStore(s => s.handleSaveImageAs);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const deleteItem = useAppStore(s => s.deleteItem);
@@ -72,6 +73,7 @@ function PreviewPanel() {
     return extractOpenableUrls(item.content);
   }, [item.type_, item.content]);
   const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenableUrls.length > 0;
+  const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
   // 收集并切回搜集箱
@@ -329,6 +331,16 @@ function PreviewPanel() {
               <button className="preview-tool-btn" onClick={handleOpen} title={openButtonTitle}>
                 <ExternalLink size={14} />
                 <span>{t('item.open')}</span>
+              </button>
+            )}
+            {shouldShowSaveImageButton && (
+              <button
+                className="preview-tool-btn"
+                onClick={() => handleSaveImageAs(item)}
+                title={t('item.saveImageAs')}
+              >
+                <Download size={14} />
+                <span>{t('item.saveAs')}</span>
               </button>
             )}
             {item.type_ !== 'image' && item.type_ !== 'file' && (

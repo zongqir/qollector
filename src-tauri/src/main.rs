@@ -409,6 +409,7 @@ fn main() {
             toggle_favorite_item,
             open_item,
             open_url,
+            save_image_as,
             search_items,
             get_mcp_config,
             get_mcp_port,

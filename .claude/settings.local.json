@@ -15,7 +15,17 @@
       "mcp__ide__getDiagnostics",
       "Bash(wc -l \"D:\\\\code\\\\pith\\\\src\"/*.jsx \"D:\\\\code\\\\pith\\\\src\"/*.css)",
       "Bash(find \"D:\\\\code\\\\pith\\\\src\" -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(git commit -m \"feat: add Windows installer config, clear all data, and copy plain text\n\n- Add NSIS bundle configuration for Windows installer\n- Add clear_all_data command to delete all clipboard items and images\n- Add copy_plain_text feature in preview panel for text/link items\n- Update i18n translations \\(zh-CN, en-US\\)\n- Clean up nul file\")",
+      "Bash(python generate_icons.py)",
+      "Bash(pip install cairosvg pillow)",
+      "Bash(python generate_icons_simple.py)",
+      "Bash(npm install --save-dev sharp)",
+      "Bash(node generate-icons.js)",
+      "Bash(git add src-tauri/icons/)",
+      "Bash(git add package.json package-lock.json)",
+      "Bash(git commit -m \"feat: redesign app icon with modern clipboard design\n\n- Replace simple blue square with professional gradient icon\n- Design features: clipboard with document lines, collection boxes, and accent dot\n- Color scheme: purple-blue gradient \\(#667eea to #764ba2\\)\n- Generate all required formats: PNG \\(multiple sizes\\), ICO, ICNS\n- Add Node.js script for automated icon generation from SVG\n- Update all Windows Store icons and macOS iconset\")",
+      "Bash(git commit -m \"refactor: change icon color scheme from purple to blue\n\n- Update gradient: purple-blue \\(#667eea → #764ba2\\) to blue \\(#3b82f6 → #1e40af\\)\n- Change accent dot from red to green for better contrast\n- Regenerate all icon formats with new color scheme\n- More professional and recognizable blue theme\")"
     ]
   }
 }
