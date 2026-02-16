@@ -20,6 +20,8 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--quick-add-bg, var(--quick-input-bg));
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border: none;
   border-radius: 12px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);

@@ -22,8 +22,8 @@
 /* 模态框主体 */
 .settings-modal {
   background: var(--modal-bg);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border-radius: 12px;
   width: 90%;
   max-width: 480px;

@@ -19,7 +19,12 @@
         "fullscreen": false,
         "devtools": true,
         "decorations": false,
-        "dragDropEnabled": true
+        "transparent": true,
+        "dragDropEnabled": true,
+        "windowEffects": {
+          "effects": ["mica", "acrylic", "hudWindow"],
+          "state": "followsWindowActiveState"
+        }
       }
     ],
     "security": {
