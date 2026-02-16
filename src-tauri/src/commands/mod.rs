@@ -7,3 +7,4 @@ pub mod lock_commands;
 pub mod mcp_commands;
 pub mod native_drag_commands;
 pub mod ocr_commands;
+pub mod share_commands;

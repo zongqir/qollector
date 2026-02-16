@@ -133,7 +133,8 @@
       "mcp": "AI Assistant Link",
       "data": "Data",
       "security": "Security",
-      "shortcuts": "Shortcuts"
+      "shortcuts": "Shortcuts",
+      "share": "Share"
     },
     "ai": {
       "provider": "AI Provider",
@@ -259,6 +260,24 @@
       "occupiedHint": "Your previous shortcut is still active. Try another combination like Ctrl+Alt+X or Ctrl+Shift+V.",
       "defaultCandidate": "Default fallback for {{platform}}: {{shortcut}}",
       "occupiedHintOne": "Previous shortcuts are kept active. Suggested fallback on {{platform}}: {{shortcut}}."
+    },
+    "share": {
+      "title": "Share Settings",
+      "provider": "Upload Service",
+      "fileio": "File.io (Default)",
+      "fileioDesc": "No config needed, free, files retained for 30 days",
+      "s3": "Custom S3 Storage",
+      "s3Desc": "Supports AWS S3, Aliyun OSS, Tencent COS, MinIO, etc.",
+      "endpoint": "Endpoint",
+      "region": "Region",
+      "bucket": "Bucket",
+      "accessKey": "Access Key ID",
+      "secretKey": "Secret Access Key",
+      "customDomain": "Custom Domain (optional)",
+      "testConnection": "Test Connection",
+      "testSuccess": "Connection successful",
+      "testFailed": "Connection failed",
+      "networkHint": "For China network, Aliyun OSS is recommended for best stability"
     }
   },
   "dragDrop": {
@@ -417,5 +436,23 @@
     "pause": "Pause Monitoring",
     "resume": "Resume Monitoring",
     "quit": "Quit"
+  },
+  "share": {
+    "title": "Share",
+    "generating": "Generating...",
+    "processing": "Processing...",
+    "failed": "Share failed",
+    "error": "Error",
+    "retry": "Retry",
+    "localQrReady": "Local text mode (offline)",
+    "localQrHint": "Scan to get text content",
+    "cloudHint": "Link valid for 30 days",
+    "cloudHintS3": "Uploaded to custom storage",
+    "uploadSuccess": "Upload successful",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "close": "Close",
+    "button": "Share",
+    "rateLimited": "Rate limited. Try again later or configure S3."
   }
 }

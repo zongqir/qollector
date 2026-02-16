@@ -16,6 +16,7 @@ import HoverPreview from './components/HoverPreview';
 const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
 const EditModal = lazy(() => import('./EditModal'));
+const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
 
 function App() {
   const { t } = useTranslation();
@@ -47,6 +48,14 @@ function App() {
   const handleEditModalCancel = useAppStore(s => s.handleEditModalCancel);
   const suspendForMinimize = useAppStore(s => s.suspendForMinimize);
   const resumeFromMinimize = useAppStore(s => s.resumeFromMinimize);
+
+  // Share state
+  const shareModalItem = useAppStore(s => s.shareModalItem);
+  const shareResult = useAppStore(s => s.shareResult);
+  const shareLoading = useAppStore(s => s.shareLoading);
+  const shareError = useAppStore(s => s.shareError);
+  const closeShareModal = useAppStore(s => s.closeShareModal);
+  const retryShare = useAppStore(s => s.retryShare);
 
   // Theme
   const { setThemeMode: applyTheme } = useTheme(themeMode);
@@ -246,6 +255,19 @@ function App() {
             isMiniMode={isMiniMode}
             onSave={handleEditModalSave}
             onCancel={handleEditModalCancel}
+          />
+        </Suspense>
+      )}
+
+      {shareModalItem && (
+        <Suspense fallback={null}>
+          <ShareModal
+            item={shareModalItem}
+            shareResult={shareResult}
+            shareLoading={shareLoading}
+            shareError={shareError}
+            onClose={closeShareModal}
+            onRetry={retryShare}
           />
         </Suspense>
       )}

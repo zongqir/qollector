@@ -139,6 +139,12 @@ const useAppStore = create((set, get) => ({
   showEditModal: false,
   editModalMode: 'new',
   editingItem: null,
+
+  // ========== 分享 ==========
+  shareModalItem: null,
+  shareResult: null,
+  shareLoading: false,
+  shareError: null,
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
@@ -656,6 +662,33 @@ const useAppStore = create((set, get) => ({
 
   handleEditModalCancel: () => {
     set({ showEditModal: false, editingItem: null });
+  },
+
+  // ========== 分享 Actions ==========
+  openShareModal: async (item) => {
+    set({ shareModalItem: item, shareResult: null, shareLoading: true, shareError: null });
+    try {
+      const result = await invoke('share_clipboard_item', { itemId: item.id });
+      set({ shareResult: result, shareLoading: false });
+    } catch (error) {
+      set({ shareError: String(error), shareLoading: false });
+    }
+  },
+
+  closeShareModal: () => {
+    set({ shareModalItem: null, shareResult: null, shareLoading: false, shareError: null });
+  },
+
+  retryShare: async () => {
+    const item = get().shareModalItem;
+    if (!item) return;
+    set({ shareResult: null, shareLoading: true, shareError: null });
+    try {
+      const result = await invoke('share_clipboard_item', { itemId: item.id });
+      set({ shareResult: result, shareLoading: false });
+    } catch (error) {
+      set({ shareError: String(error), shareLoading: false });
+    }
   },
 
   // ========== UI Actions ==========

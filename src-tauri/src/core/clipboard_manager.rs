@@ -13,10 +13,12 @@ use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use url::Host;
 
+const APP_NAME: &str = "ClipBox";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 180;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
+
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -1155,6 +1157,7 @@ impl ClipboardManager {
                 source_app: "MCP".to_string(),
                 window_title: "".to_string(),
                 source_url: None,
+                is_self: false,
             }
         });
 
@@ -1542,6 +1545,7 @@ impl ClipboardManager {
                     source_app: "Unknown".to_string(),
                     window_title: "".to_string(),
                     source_url: None,
+                    is_self: false,
                 });
 
             if let Err(err) = Self::handle_clipboard_change(

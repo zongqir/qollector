@@ -164,6 +164,7 @@ pub struct WindowMetadata {
     pub source_app: String,
     pub window_title: String,
     pub source_url: Option<String>,
+    pub is_self: bool,
 }
 
 #[derive(Debug, Clone)]

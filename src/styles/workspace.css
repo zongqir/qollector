@@ -26,24 +26,31 @@
 .resize-handle {
   width: 1px;
   cursor: col-resize;
-  background: var(--border-light);
-  transition: background 0.15s;
+  background: transparent;
   flex-shrink: 0;
   position: relative;
 }
 
+/* 扩展点击区域 */
 .resize-handle::after {
   content: '';
   position: absolute;
   top: 0;
+  bottom: 0;
   left: -4px;
   right: -4px;
-  bottom: 0;
 }
 
-.resize-handle:hover,
+/* hover 状态：显示细线 */
+.resize-handle:hover {
+  background: var(--text-tertiary);
+  opacity: 0.2;
+}
+
+/* active 状态：稍微明显 */
 .resize-handle:active {
   background: var(--accent-color);
+  opacity: 0.35;
 }
 
 .history-stream-content {

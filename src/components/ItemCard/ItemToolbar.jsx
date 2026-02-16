@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen } from 'lucide-react';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2 } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
@@ -8,6 +8,7 @@ function ItemToolbar({
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
   maxPinnedItems, onOpenItem, onRevealInFolder,
+  onShare,
 }) {
   const { t } = useTranslation();
 
@@ -126,6 +127,15 @@ function ItemToolbar({
           </button>
         </>
       )}
+      <div className="toolbar-divider"></div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onShare?.(item); }}
+        className="toolbar-btn share-btn"
+        title={t('share.button')}
+      >
+        <Share2 size={14} className="toolbar-btn-icon" />
+        <span>{t('share.button')}</span>
+      </button>
       <div className="toolbar-divider"></div>
       <button
         onClick={(e) => onToggleExpand(item.id, e)}

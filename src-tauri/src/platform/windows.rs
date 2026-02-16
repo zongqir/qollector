@@ -649,6 +649,7 @@ pub mod windows {
                         source_app: "Unknown".to_string(),
                         window_title: "".to_string(),
                         source_url: None,
+                        is_self: false,
                     };
                 }
 
@@ -659,6 +660,10 @@ pub mod windows {
                 let mut process_id = 0;
                 GetWindowThreadProcessId(hwnd, Some(&mut process_id));
 
+                // Check if this is our own process
+                let current_pid = std::process::id();
+                let is_self = process_id == current_pid;
+
                 let exe_path =
                     Self::get_process_name(process_id).unwrap_or_else(|_| "Unknown".to_string());
 
@@ -668,6 +673,7 @@ pub mod windows {
                     source_app,
                     window_title,
                     source_url: None,
+                    is_self,
                 }
             }
         }
