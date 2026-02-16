@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 let hljsInstance = null;
 let loadingPromise = null;
 
-async function loadHighlightJS() {
+export async function loadHighlightJS() {
   if (hljsInstance) return hljsInstance;
   if (loadingPromise) return loadingPromise;
 
@@ -44,6 +44,21 @@ async function loadHighlightJS() {
   })();
 
   return loadingPromise;
+}
+
+const RELEVANCE_THRESHOLD = 7;
+
+export async function detectLanguage(code) {
+  try {
+    const hljs = await loadHighlightJS();
+    const result = hljs.highlightAuto(code);
+    if (result.language && result.relevance >= RELEVANCE_THRESHOLD) {
+      return result.language;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export default function useCodeHighlight() {

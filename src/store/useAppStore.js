@@ -4,6 +4,7 @@ import { getTags } from '../utils/tagHelpers';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
+import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
 
 const PAGE_SIZE = 50;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -194,6 +195,13 @@ const useAppStore = create((set, get) => ({
         fetched: result.length,
         pageSize: PAGE_SIZE,
       });
+      detectAndUpdateCodeLanguage(mergedItems, (id, lang) => {
+        set((state) => ({
+          items: state.items.map((it) =>
+            it.id === id ? { ...it, code_language: lang } : it
+          ),
+        }));
+      });
       if (!loading) {
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
@@ -235,6 +243,13 @@ const useAppStore = create((set, get) => ({
           hasMoreAfter: more.length >= PAGE_SIZE,
         });
       }
+      detectAndUpdateCodeLanguage(more, (id, lang) => {
+        set((state) => ({
+          items: state.items.map((it) =>
+            it.id === id ? { ...it, code_language: lang } : it
+          ),
+        }));
+      });
     } catch (error) {
       console.error('加载更多失败:', error);
     } finally {
