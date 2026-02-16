@@ -199,7 +199,13 @@
       "doubleCopyEmphasis": "Double-tap Copy to Pin",
       "doubleCopyEmphasisHint": "Tap copy twice quickly to auto-pin that content",
       "doubleCopyWindowMs": "Double-tap Interval",
-      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)"
+      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)",
+      "autoCleanup": "Auto-clean old data",
+      "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and pinned items are never removed.",
+      "cleanupMaxItems": "Max items to keep",
+      "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
+      "cleanupMaxAgeDays": "Max days to keep",
+      "cleanupMaxAgeDaysHint": "Records older than this are cleaned up automatically"
     },
     "mcp": {
       "enabled": "Enable MCP Service",

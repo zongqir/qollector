@@ -199,7 +199,13 @@
       "doubleCopyEmphasis": "连按复制自动置顶",
       "doubleCopyEmphasisHint": "快速连按两次复制，该内容自动置顶",
       "doubleCopyWindowMs": "连按间隔",
-      "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）"
+      "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）",
+      "autoCleanup": "自动清理旧数据",
+      "autoCleanupHint": "超过条数或天数限制的数据会自动删除，收藏和置顶的内容不受影响",
+      "cleanupMaxItems": "最多保留条数",
+      "cleanupMaxItemsHint": "超过此数量时，最旧的记录会被自动清理",
+      "cleanupMaxAgeDays": "最多保留天数",
+      "cleanupMaxAgeDaysHint": "超过此天数的记录会被自动清理"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

@@ -5,7 +5,7 @@ use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, Platfo
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -33,6 +33,7 @@ pub struct ClipboardManager {
     double_copy_state: Arc<Mutex<DoubleCopyEmphasisState>>,
     app_handle: AppHandle,
     pub paused: Arc<AtomicBool>,
+    last_cleanup_at: Arc<AtomicI64>,
 }
 
 impl ClipboardManager {
@@ -59,6 +60,7 @@ impl ClipboardManager {
             double_copy_state: Arc::new(Mutex::new(DoubleCopyEmphasisState::default())),
             app_handle,
             paused: Arc::new(AtomicBool::new(false)),
+            last_cleanup_at: Arc::new(AtomicI64::new(0)),
         }
     }
 
@@ -75,6 +77,17 @@ impl ClipboardManager {
     }
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
+        // Spawn one-time startup cleanup
+        {
+            let repo = self.repository.clone();
+            let config_repo = self.config_repo.clone();
+            let image_dir = self.image_dir.clone();
+            let last_cleanup_at = self.last_cleanup_at.clone();
+            tokio::spawn(async move {
+                Self::run_cleanup(repo, config_repo, image_dir, last_cleanup_at).await;
+            });
+        }
+
         let repo = self.repository.clone();
         let config_repo = self.config_repo.clone();
         let image_dir = self.image_dir.clone();
@@ -84,6 +97,7 @@ impl ClipboardManager {
         let double_copy_state = self.double_copy_state.clone();
         let app_handle = self.app_handle.clone();
         let paused = self.paused.clone();
+        let last_cleanup_at = self.last_cleanup_at.clone();
 
         let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
@@ -95,6 +109,7 @@ impl ClipboardManager {
             let double_copy_state = double_copy_state.clone();
             let app_handle = app_handle.clone();
             let paused = paused.clone();
+            let last_cleanup_at = last_cleanup_at.clone();
 
             Box::pin(async move {
                 if paused.load(Ordering::Relaxed) {
@@ -102,10 +117,10 @@ impl ClipboardManager {
                 }
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
-                    repo,
-                    config_repo,
+                    repo.clone(),
+                    config_repo.clone(),
                     metadata,
-                    image_dir,
+                    image_dir.clone(),
                     ai_config,
                     ocr_config,
                     ai_semaphore,
@@ -116,6 +131,12 @@ impl ClipboardManager {
                 {
                     eprintln!("Error handling clipboard change: {}", e);
                 }
+
+                // Debounced cleanup after each clipboard change
+                tokio::spawn(async move {
+                    Self::run_cleanup(repo, config_repo, image_dir, last_cleanup_at).await;
+                });
+
                 Ok(())
             })
         });
@@ -513,6 +534,78 @@ impl ClipboardManager {
         }
 
         should_pin
+    }
+
+    /// Run auto-cleanup if enabled. Returns number of deleted items.
+    pub async fn run_cleanup(
+        repo: Arc<TokioMutex<ClipboardRepository>>,
+        config_repo: Arc<ConfigRepository>,
+        image_dir: PathBuf,
+        last_cleanup_at: Arc<AtomicI64>,
+    ) -> usize {
+        let now = chrono::Utc::now().timestamp();
+        let last = last_cleanup_at.load(Ordering::Relaxed);
+        if now - last < 60 {
+            return 0;
+        }
+        last_cleanup_at.store(now, Ordering::Relaxed);
+
+        let config = config_repo
+            .load_general_config()
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+
+        if !config.auto_cleanup_enabled {
+            return 0;
+        }
+
+        let repo_lock = repo.lock().await;
+        let targets = match repo_lock
+            .cleanup_expired_items(config.cleanup_max_items, config.cleanup_max_age_days)
+            .await
+        {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("[Cleanup] query failed: {}", e);
+                return 0;
+            }
+        };
+        drop(repo_lock);
+
+        let count = targets.len();
+        if count == 0 {
+            return 0;
+        }
+
+        // Delete image files for image-type items
+        for target in &targets {
+            if target.type_ == "image" {
+                if let Some(paths_str) = &target.image_paths {
+                    if let Ok(paths) = serde_json::from_str::<serde_json::Value>(paths_str) {
+                        for key in &["original", "thumbnail"] {
+                            if let Some(p) = paths[key].as_str() {
+                                if let Err(e) = std::fs::remove_file(p) {
+                                    if e.kind() != std::io::ErrorKind::NotFound {
+                                        eprintln!("[Cleanup] failed to delete {}: {}", p, e);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Legacy single-path format
+                        let _ = std::fs::remove_file(paths_str);
+                        let thumb = paths_str.replace(".png", "_thumb.png");
+                        let _ = std::fs::remove_file(&thumb);
+                    }
+                }
+            }
+            // file type: never touch disk files
+        }
+
+        println!("[Cleanup] deleted {} expired items", count);
+        count
     }
 
     pub async fn get_recent(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {

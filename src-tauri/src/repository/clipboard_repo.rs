@@ -3,6 +3,13 @@ use crate::core::tokenizer;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::PathBuf;
 
+/// Lightweight struct returned by cleanup queries.
+pub struct CleanupTarget {
+    pub id: String,
+    pub type_: String,
+    pub image_paths: Option<String>,
+}
+
 pub struct ClipboardRepository {
     pool: SqlitePool,
 }
@@ -628,5 +635,77 @@ impl ClipboardRepository {
             .await?;
 
         Ok(items)
+    }
+
+    // ========== Auto Cleanup ==========
+
+    /// Find and hard-delete expired items. Returns targets for file cleanup.
+    pub async fn cleanup_expired_items(
+        &self,
+        max_items: u32,
+        max_age_days: u32,
+    ) -> Result<Vec<CleanupTarget>, sqlx::Error> {
+        let age_cutoff = chrono::Utc::now().timestamp() - (max_age_days as i64) * 86400;
+
+        // Count non-protected items
+        let (total_unprotected,): (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let excess = if total_unprotected > max_items as i64 {
+            total_unprotected - max_items as i64
+        } else {
+            0
+        };
+
+        // Select candidates: aged out OR excess (oldest first)
+        let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
+            r#"SELECT id, type, image_paths FROM clipboard_items
+               WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0
+               AND (created_at < ? OR id IN (
+                   SELECT id FROM clipboard_items
+                   WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0
+                   ORDER BY created_at ASC
+                   LIMIT ?
+               ))
+               ORDER BY created_at ASC"#,
+        )
+        .bind(age_cutoff)
+        .bind(excess)
+        .fetch_all(&self.pool)
+        .await?;
+
+        if rows.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let targets: Vec<CleanupTarget> = rows
+            .iter()
+            .map(|(id, type_, image_paths)| CleanupTarget {
+                id: id.clone(),
+                type_: type_.clone(),
+                image_paths: image_paths.clone(),
+            })
+            .collect();
+
+        // Hard delete in batches
+        for target in &targets {
+            // Delete FTS entry
+            self.delete_fts(&target.id).await;
+            // Delete raw formats
+            let _ = sqlx::query("DELETE FROM clipboard_raw_formats WHERE item_id = ?")
+                .bind(&target.id)
+                .execute(&self.pool)
+                .await;
+            // Hard delete the item row
+            let _ = sqlx::query("DELETE FROM clipboard_items WHERE id = ?")
+                .bind(&target.id)
+                .execute(&self.pool)
+                .await;
+        }
+
+        Ok(targets)
     }
 }

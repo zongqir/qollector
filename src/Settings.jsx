@@ -55,6 +55,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     copy_pin_shortcut: 'ctrl+shift+c',
     toggle_window_shortcut_enabled: true,
     toggle_window_shortcut: 'alt+x',
+    auto_cleanup_enabled: true,
+    cleanup_max_items: 50000,
+    cleanup_max_age_days: 90,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -1512,6 +1515,65 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
         {activeTab === 'data' && (
           <div className="settings-content">
+            <div className="setting-options-group">
+              <label className="setting-toggle-row">
+                <span>{t('settings.general.autoCleanup')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.auto_cleanup_enabled}
+                    onChange={(e) => {
+                      const updated = { ...generalConfig, auto_cleanup_enabled: e.target.checked };
+                      setGeneralConfig(updated);
+                      invoke('update_general_config', { config: updated });
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <small className="setting-hint">{t('settings.general.autoCleanupHint')}</small>
+
+              {generalConfig.auto_cleanup_enabled && (
+                <>
+                  <div className="setting-inline-row">
+                    <span>{t('settings.general.cleanupMaxItems')}</span>
+                    <input
+                      type="number"
+                      min={100}
+                      max={999999}
+                      value={generalConfig.cleanup_max_items}
+                      onChange={(e) => {
+                        const value = Math.max(100, Math.min(999999, parseInt(e.target.value) || 100));
+                        const updated = { ...generalConfig, cleanup_max_items: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      className="setting-input compact"
+                    />
+                  </div>
+                  <small className="setting-hint">{t('settings.general.cleanupMaxItemsHint')}</small>
+
+                  <div className="setting-inline-row">
+                    <span>{t('settings.general.cleanupMaxAgeDays')}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={3650}
+                      value={generalConfig.cleanup_max_age_days}
+                      onChange={(e) => {
+                        const value = Math.max(1, Math.min(3650, parseInt(e.target.value) || 90));
+                        const updated = { ...generalConfig, cleanup_max_age_days: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      className="setting-input compact"
+                    />
+                  </div>
+                  <small className="setting-hint">{t('settings.general.cleanupMaxAgeDaysHint')}</small>
+                </>
+              )}
+            </div>
+
             <div className="setting-options-group">
               <label className="setting-toggle-row">
                 <span>{t('export.includeImages')}</span>
