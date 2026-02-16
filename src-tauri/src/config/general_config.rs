@@ -22,6 +22,15 @@ pub struct GeneralConfig {
     /// Enable global Ctrl+Shift+C one-shot copy and pin shortcut.
     #[serde(default = "default_ctrl_shift_c_shortcut_enabled")]
     pub ctrl_shift_c_shortcut_enabled: bool,
+    /// Global shortcut for one-shot copy and pin.
+    #[serde(default = "default_copy_pin_shortcut")]
+    pub copy_pin_shortcut: String,
+    /// Enable global show/hide main window shortcut.
+    #[serde(default = "default_toggle_window_shortcut_enabled")]
+    pub toggle_window_shortcut_enabled: bool,
+    /// Global shortcut for show/hide main window.
+    #[serde(default = "default_toggle_window_shortcut")]
+    pub toggle_window_shortcut: String,
 }
 
 fn default_language() -> String {
@@ -44,6 +53,18 @@ fn default_ctrl_shift_c_shortcut_enabled() -> bool {
     false
 }
 
+fn default_copy_pin_shortcut() -> String {
+    "ctrl+shift+c".to_string()
+}
+
+fn default_toggle_window_shortcut_enabled() -> bool {
+    true
+}
+
+fn default_toggle_window_shortcut() -> String {
+    "alt+x".to_string()
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -54,6 +75,9 @@ impl Default for GeneralConfig {
             double_copy_emphasis_enabled: true,
             double_copy_window_ms: 900,
             ctrl_shift_c_shortcut_enabled: false,
+            copy_pin_shortcut: default_copy_pin_shortcut(),
+            toggle_window_shortcut_enabled: true,
+            toggle_window_shortcut: default_toggle_window_shortcut(),
         }
     }
 }
@@ -76,6 +100,14 @@ impl GeneralConfig {
         }
         if self.double_copy_window_ms > 2500 {
             self.double_copy_window_ms = 2500;
+        }
+        self.copy_pin_shortcut = self.copy_pin_shortcut.trim().to_ascii_lowercase();
+        if self.copy_pin_shortcut.is_empty() {
+            self.copy_pin_shortcut = default_copy_pin_shortcut();
+        }
+        self.toggle_window_shortcut = self.toggle_window_shortcut.trim().to_ascii_lowercase();
+        if self.toggle_window_shortcut.is_empty() {
+            self.toggle_window_shortcut = default_toggle_window_shortcut();
         }
     }
 }

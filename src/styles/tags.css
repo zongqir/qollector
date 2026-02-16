@@ -77,12 +77,12 @@
 
 .tag-btn-confirm,
 .tag-btn-cancel {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border: none;
-  border-radius: 11px;
+  border-radius: 9px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -120,18 +120,19 @@
 
 .tag-suggestions {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   background: var(--tag-suggestion-bg);
   backdrop-filter: saturate(180%) blur(20px);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px var(--shadow-lg);
-  max-height: 240px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--shadow-md), 0 1px 3px var(--shadow-sm);
+  max-height: 200px;
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1000;
-  min-width: 180px;
+  min-width: 140px;
+  padding: 4px;
   animation: suggestionsSlideIn 0.15s ease;
 }
 
@@ -141,40 +142,31 @@
 }
 
 .tag-suggestion-item {
-  padding: 8px 14px;
+  padding: 5px 10px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: 12px;
+  color: var(--text-secondary);
   transition: all 0.1s ease;
-  border-left: 2px solid transparent;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  border-radius: 6px;
 }
 
 .tag-suggestion-icon {
-  opacity: 0.5;
+  opacity: 0.4;
   transition: opacity 0.1s;
   flex-shrink: 0;
 }
 
 .tag-suggestion-item:hover {
   background: var(--tag-suggestion-hover);
-  border-left-color: var(--accent-color);
   color: var(--accent-color);
 }
 
 .tag-suggestion-item:hover .tag-suggestion-icon {
-  opacity: 1;
-}
-
-.tag-suggestion-item:first-child {
-  border-radius: 9px 9px 0 0;
-}
-
-.tag-suggestion-item:last-child {
-  border-radius: 0 0 9px 9px;
+  opacity: 0.8;
 }
 
 /* macOS 风格标签 */
