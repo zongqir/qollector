@@ -204,7 +204,7 @@ function PreviewPanel() {
     return (
       <div
         className="preview-text-content"
-        onDoubleClick={handleStartEditContent}
+        onDoubleClick={item.has_raw_formats ? undefined : handleStartEditContent}
       >
         {getContentPreview(item.content)}
       </div>
@@ -366,7 +366,7 @@ function PreviewPanel() {
                 <span>{t('item.saveAs')}</span>
               </button>
             )}
-            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
+            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
                 <span>{t('panel.editContent')}</span>
               </button>
