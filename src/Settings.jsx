@@ -52,6 +52,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     double_copy_emphasis_enabled: true,
     double_copy_window_ms: 900,
     ctrl_shift_c_shortcut_enabled: false,
+    copy_pin_shortcut: 'ctrl+shift+c',
+    toggle_window_shortcut_enabled: true,
+    toggle_window_shortcut: 'alt+x',
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -91,6 +94,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [importPassword, setImportPassword] = useState('');
   const [importFilePath, setImportFilePath] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [shortcutError, setShortcutError] = useState('');
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -101,6 +105,27 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       await invoke('update_general_config', { config: updated });
     } catch (error) {
       console.error('保存语言配置失败:', error);
+    }
+  };
+
+  const normalizeShortcutText = (value) => (value || '').trim().toLowerCase();
+
+  const saveShortcutConfig = async (updated) => {
+    setGeneralConfig(updated);
+    setShortcutError('');
+    try {
+      await invoke('update_general_config', { config: updated });
+      return true;
+    } catch (error) {
+      const message = typeof error === 'string' ? error : String(error);
+      setShortcutError(message);
+      console.error('Failed to save shortcut config:', error);
+      try {
+        await loadConfigs();
+      } catch (reloadError) {
+        console.error('Failed to reload configs after shortcut save failure:', reloadError);
+      }
+      return false;
     }
   };
 
@@ -689,29 +714,98 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="setting-group-title">{t('settings.shortcuts.globalHotkeys')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
+                <span>{t('settings.shortcuts.toggleWindow')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(generalConfig.toggle_window_shortcut_enabled)}
+                    onChange={async (e) => {
+                      await saveShortcutConfig({
+                        ...generalConfig,
+                        toggle_window_shortcut_enabled: e.target.checked,
+                      });
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <div className="sg-row">
+                <span>{t('settings.shortcuts.toggleWindowKey')}</span>
+                <input
+                  type="text"
+                  value={generalConfig.toggle_window_shortcut ?? 'alt+x'}
+                  onChange={(e) => {
+                    setGeneralConfig({
+                      ...generalConfig,
+                      toggle_window_shortcut: e.target.value,
+                    });
+                  }}
+                  onBlur={async () => {
+                    const normalized = normalizeShortcutText(generalConfig.toggle_window_shortcut);
+                    await saveShortcutConfig({
+                      ...generalConfig,
+                      toggle_window_shortcut: normalized || 'alt+x',
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="shortcut-input"
+                  disabled={!generalConfig.toggle_window_shortcut_enabled}
+                />
+              </div>
+              <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.ctrlShiftC')}</span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={Boolean(generalConfig.ctrl_shift_c_shortcut_enabled)}
                     onChange={async (e) => {
-                      const updated = {
+                      await saveShortcutConfig({
                         ...generalConfig,
                         ctrl_shift_c_shortcut_enabled: e.target.checked,
-                      };
-                      setGeneralConfig(updated);
-                      try {
-                        await invoke('update_general_config', { config: updated });
-                      } catch (error) {
-                        console.error('Failed to save Ctrl+Shift+C shortcut setting:', error);
-                      }
+                      });
                     }}
                   />
                   <span className="toggle-slider" />
                 </span>
               </label>
+              <div className="sg-row">
+                <span>{t('settings.shortcuts.ctrlShiftCKey')}</span>
+                <input
+                  type="text"
+                  value={generalConfig.copy_pin_shortcut ?? 'ctrl+shift+c'}
+                  onChange={(e) => {
+                    setGeneralConfig({
+                      ...generalConfig,
+                      copy_pin_shortcut: e.target.value,
+                    });
+                  }}
+                  onBlur={async () => {
+                    const normalized = normalizeShortcutText(generalConfig.copy_pin_shortcut);
+                    await saveShortcutConfig({
+                      ...generalConfig,
+                      copy_pin_shortcut: normalized || 'ctrl+shift+c',
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="shortcut-input"
+                  disabled={!generalConfig.ctrl_shift_c_shortcut_enabled}
+                />
+              </div>
             </div>
             <small className="setting-hint">{t('settings.shortcuts.ctrlShiftCHint')}</small>
+            {shortcutError && (
+              <small className="setting-hint">
+                <span className="setting-warning">{shortcutError}</span>
+              </small>
+            )}
 
             <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">
@@ -726,12 +820,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         ...generalConfig,
                         double_copy_emphasis_enabled: e.target.checked,
                       };
-                      setGeneralConfig(updated);
-                      try {
-                        await invoke('update_general_config', { config: updated });
-                      } catch (error) {
-                        console.error('Failed to save double copy emphasis config:', error);
-                      }
+                      await saveShortcutConfig(updated);
                     }}
                   />
                   <span className="toggle-slider" />
@@ -750,12 +839,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       ...generalConfig,
                       double_copy_window_ms: value,
                     };
-                    setGeneralConfig(updated);
-                    try {
-                      await invoke('update_general_config', { config: updated });
-                    } catch (error) {
-                      console.error('Failed to save double copy window config:', error);
-                    }
+                    await saveShortcutConfig(updated);
                   }}
                   min="300"
                   max="2500"

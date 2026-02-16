@@ -295,6 +295,29 @@
   box-shadow: 0 0 0 3px var(--accent-medium);
 }
 
+.shortcut-input {
+  width: 168px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  text-align: right;
+  transition: all 0.15s ease;
+  background: var(--bg-input);
+  color: var(--accent-color);
+  box-shadow: inset 0 0.5px 2px rgba(0, 0, 0, 0.06);
+}
+
+.shortcut-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-medium);
+}
+
+.shortcut-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---- Toggle 开关 ---- */
 .toggle-switch {
   position: relative;

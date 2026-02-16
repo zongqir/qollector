@@ -207,10 +207,13 @@
     },
     "shortcuts": {
       "globalHotkeys": "全局快捷键",
-      "ctrlShiftC": "Ctrl+Shift+C：复制并置顶",
-      "ctrlShiftCHint": "默认关闭，避免与其他应用快捷键冲突。",
+      "ctrlShiftC": "复制并置顶快捷键",
+      "ctrlShiftCHint": "修改会立即生效。如遇冲突导致注册失败，会自动回滚到之前可用的快捷键。",
       "emphasisCopy": "强调复制",
-      "emphasisCopyHint": "按住 Ctrl 连续按两次 C，可将同应用重复复制内容自动置顶。"
+      "emphasisCopyHint": "按住 Ctrl 连续按两次 C，可将同应用重复复制内容自动置顶。",
+      "toggleWindow": "显示/隐藏主面板",
+      "toggleWindowKey": "显示/隐藏按键",
+      "ctrlShiftCKey": "复制并置顶按键"
     }
   },
   "dragDrop": {

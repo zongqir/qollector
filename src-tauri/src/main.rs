@@ -8,6 +8,7 @@ mod mcp;
 mod ocr;
 mod platform;
 mod repository;
+mod shortcuts;
 mod startup_metrics;
 
 use commands::ai_commands::*;
@@ -22,6 +23,7 @@ use commands::ocr_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
+use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -134,8 +136,10 @@ fn main() {
             setup_meter.mark("db_deobfuscate");
 
             let app_handle_for_shortcuts = app.app_handle().clone();
+            let shortcut_binding_state = Arc::new(ShortcutBindingState::default());
+            let shortcut_binding_state_for_setup = shortcut_binding_state.clone();
             let startup_metrics_for_core_init = startup_metrics_for_setup.clone();
-            let ctrl_shift_c_shortcut_enabled = tauri::async_runtime::block_on(async move {
+            let startup_general_config = tauri::async_runtime::block_on(async move {
                 let mut init_meter = StartupMeter::new("core_init");
                 let repository = ClipboardRepository::new(db_path)
                     .await
@@ -272,6 +276,7 @@ fn main() {
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
+                app.manage(shortcut_binding_state_for_setup);
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
 
@@ -284,7 +289,7 @@ fn main() {
                 });
                 init_meter.mark("spawn_clipboard_monitor");
                 startup_metrics_for_core_init.mark_monitor_spawn_complete();
-                general_config.ctrl_shift_c_shortcut_enabled
+                general_config
             });
 
             setup_meter.mark("setup_complete");
@@ -294,65 +299,62 @@ fn main() {
             #[cfg(desktop)]
             {
                 use tauri::Emitter;
-                use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
+                use tauri_plugin_global_shortcut::ShortcutState;
 
                 let app_handle = app_handle_for_shortcuts.clone();
-                let mut shortcuts = vec!["alt+x"];
-                if ctrl_shift_c_shortcut_enabled {
-                    shortcuts.push("ctrl+shift+c");
-                }
+                let shortcut_binding_state_for_handler = shortcut_binding_state.clone();
                 app_handle.plugin(
                     tauri_plugin_global_shortcut::Builder::new()
-                        .with_shortcuts(shortcuts)?
                         .with_handler(move |app, shortcut, event| {
                             if event.state != ShortcutState::Pressed {
                                 return;
                             }
 
-                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyC) {
-                                // Ctrl+Shift+C: one-shot copy from foreground app and pin it
-                                let app_handle = app.clone();
-                                tauri::async_runtime::spawn(async move {
-                                    if let Some(manager) =
-                                        app_handle.try_state::<Arc<ClipboardManager>>()
-                                    {
-                                        match manager.copy_and_pin_foreground_selection().await {
-                                            Ok(id) => {
-                                                println!(
-                                                    "[Shortcut] Pinned clipboard item: {}",
-                                                    id
-                                                );
-                                                let _ = app_handle.emit("clipboard-changed", ());
-                                            }
-                                            Err(e) => {
-                                                eprintln!(
-                                                    "[Shortcut] Failed to pin clipboard: {}",
-                                                    e
-                                                );
+                            match shortcut_binding_state_for_handler
+                                .action_for_shortcut_id(shortcut.id())
+                            {
+                                ShortcutAction::CopyPin => {
+                                    let app_handle = app.clone();
+                                    tauri::async_runtime::spawn(async move {
+                                        if let Some(manager) =
+                                            app_handle.try_state::<Arc<ClipboardManager>>()
+                                        {
+                                            match manager.copy_and_pin_foreground_selection().await {
+                                                Ok(id) => {
+                                                    println!("[Shortcut] Pinned clipboard item: {}", id);
+                                                    let _ = app_handle.emit("clipboard-changed", ());
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[Shortcut] Failed to pin clipboard: {}", e);
+                                                }
                                             }
                                         }
-                                    }
-                                });
-                            }
+                                    });
+                                }
+                                ShortcutAction::ToggleWindow => {
+                                    if let Some(window) = app.get_webview_window("main") {
+                                        let is_visible = window.is_visible().unwrap_or(false);
+                                        let is_minimized = window.is_minimized().unwrap_or(false);
 
-                            if shortcut.matches(Modifiers::ALT, Code::KeyX) {
-                                // Alt+X: toggle main window visibility
-                                if let Some(window) = app.get_webview_window("main") {
-                                    let is_visible = window.is_visible().unwrap_or(false);
-                                    let is_minimized = window.is_minimized().unwrap_or(false);
-
-                                    if is_visible && !is_minimized {
-                                        let _ = window.hide();
-                                    } else {
-                                        let _ = window.show();
-                                        let _ = window.unminimize();
-                                        let _ = window.set_focus();
+                                        if is_visible && !is_minimized {
+                                            let _ = window.hide();
+                                        } else {
+                                            let _ = window.show();
+                                            let _ = window.unminimize();
+                                            let _ = window.set_focus();
+                                        }
                                     }
                                 }
+                                ShortcutAction::None => {}
                             }
                         })
                         .build(),
                 )?;
+                if let Err(error) =
+                    apply_shortcut_config(&app_handle, &shortcut_binding_state, &startup_general_config)
+                {
+                    eprintln!("[Shortcut] Failed to apply startup shortcut config: {}", error);
+                }
                 setup_meter.mark("register_global_shortcuts");
             }
 

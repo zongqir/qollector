@@ -207,10 +207,13 @@
     },
     "shortcuts": {
       "globalHotkeys": "Global Hotkeys",
-      "ctrlShiftC": "Ctrl+Shift+C: Copy and Pin",
-      "ctrlShiftCHint": "Disabled by default to avoid conflicts with other apps.",
+      "ctrlShiftC": "Copy + Pin Shortcut",
+      "ctrlShiftCHint": "Changes apply immediately. If registration fails due to conflicts, previous shortcuts are restored.",
       "emphasisCopy": "Emphasis Copy",
-      "emphasisCopyHint": "Use Ctrl, C, C to emphasize and auto-pin repeated copies from the same app."
+      "emphasisCopyHint": "Use Ctrl, C, C to emphasize and auto-pin repeated copies from the same app.",
+      "toggleWindow": "Toggle Window Shortcut",
+      "toggleWindowKey": "Toggle Window Key",
+      "ctrlShiftCKey": "Copy + Pin Key"
     }
   },
   "dragDrop": {
