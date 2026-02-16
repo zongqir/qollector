@@ -1,47 +1,56 @@
 use crate::share::ShareError;
 use reqwest::multipart;
 
-/// Upload content to file.io and return the download URL.
-pub async fn upload_to_file_io(content: &[u8], filename: &str) -> Result<String, ShareError> {
+/// Upload content to 0x0.st and return the download URL.
+/// 0x0.st is a free, no-registration file hosting service.
+/// Files under 256MB, retained for 30 days minimum.
+pub async fn upload_to_file_hosting(content: &[u8], filename: &str) -> Result<String, ShareError> {
     let part = multipart::Part::bytes(content.to_vec())
         .file_name(filename.to_string())
         .mime_str("application/octet-stream")
         .map_err(|e| ShareError::Upload(e.to_string()))?;
 
-    let form = multipart::Form::new()
-        .part("file", part)
-        .text("expires", "1d");
+    let form = multipart::Form::new().part("file", part);
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent("ClipBox/1.0")
+        .build()
+        .map_err(|e| ShareError::Upload(e.to_string()))?;
     let resp = client
-        .post("https://file.io")
+        .post("https://0x0.st")
         .multipart(form)
         .send()
         .await
         .map_err(|e| ShareError::Upload(e.to_string()))?;
 
     let status = resp.status();
-    if status.as_u16() == 429 {
-        return Err(ShareError::RateLimited(
-            "File.io rate limit exceeded. Try again later or configure S3.".into(),
-        ));
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| ShareError::Upload(format!("Failed to read response: {}", e)))?;
+
+    let text = text.trim().to_string();
+
+    if !status.is_success() {
+        if status.as_u16() == 429 {
+            return Err(ShareError::RateLimited(
+                "Upload rate limited. Try again later or configure S3.".into(),
+            ));
+        }
+        return Err(ShareError::Upload(format!(
+            "Upload failed (status {}): {}",
+            status,
+            &text[..text.len().min(200)]
+        )));
     }
 
-    let body: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| ShareError::Upload(format!("Failed to parse response: {}", e)))?;
-
-    if let Some(link) = body.get("link").and_then(|v| v.as_str()) {
-        Ok(link.to_string())
+    // 0x0.st returns the URL directly as plain text
+    if text.starts_with("http") {
+        Ok(text)
     } else {
-        let msg = body
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Unknown error");
         Err(ShareError::Upload(format!(
-            "file.io returned status {}: {}",
-            status, msg
+            "Unexpected response: {}",
+            &text[..text.len().min(200)]
         )))
     }
 }

@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::share::config::{ShareConfig, ShareProvider};
-use crate::share::file_io::upload_to_file_io;
+use crate::share::file_io::upload_to_file_hosting;
 use crate::share::qr_generator::generate_qr_base64;
 use crate::share::s3_uploader::upload_to_s3;
 use crate::share::ShareError;
 
-const LOCAL_QR_TEXT_LIMIT: usize = 1500;
+const LOCAL_QR_TEXT_LIMIT: usize = 400;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShareMethod {
@@ -113,7 +113,7 @@ impl ShareService {
 
     async fn upload_bytes(&self, bytes: &[u8], filename: &str) -> Result<String, ShareError> {
         match &self.config.provider {
-            ShareProvider::FileIo => upload_to_file_io(bytes, filename).await,
+            ShareProvider::FileIo => upload_to_file_hosting(bytes, filename).await,
             ShareProvider::S3 => {
                 let s3_config = self
                     .config
