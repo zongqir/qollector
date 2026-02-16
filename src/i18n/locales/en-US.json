@@ -43,7 +43,18 @@
     "favorites": "Favorites",
     "showFavorites": "Show Favorites",
     "showPinned": "Show Pinned",
-    "showAll": "Show All"
+    "showAll": "Show All",
+    "dateFilter": "Date Filter",
+    "dateFilterActive": "Date filtering",
+    "clearDateFilter": "Clear Date",
+    "dateToday": "Today",
+    "dateYesterday": "Yesterday",
+    "dateLast7Days": "Last 7 Days",
+    "dateLast30Days": "Last 30 Days",
+    "dateCustomRange": "Custom Range",
+    "dateStart": "Start Date",
+    "dateEnd": "End Date",
+    "dateApply": "Apply"
   },
   "item": {
     "pinned": "Collected",

@@ -94,6 +94,10 @@ const useAppStore = create((set, get) => ({
   showPinnedOnly: false,
   showTagFilter: false,
   tagSearchQuery: '',
+  selectedDateRange: null,
+  showDateFilter: false,
+  customDateStart: '',
+  customDateEnd: '',
 
   // ========== 多选状态 ==========
   selectedItemIds: [],
@@ -457,6 +461,11 @@ const useAppStore = create((set, get) => ({
   setShowPinnedOnly: (v) => set({ showPinnedOnly: v }),
   setShowTagFilter: (v) => set({ showTagFilter: v }),
   setTagSearchQuery: (q) => set({ tagSearchQuery: q }),
+  setSelectedDateRange: (range) => set({ selectedDateRange: range }),
+  setShowDateFilter: (v) => set({ showDateFilter: v }),
+  setCustomDateStart: (v) => set({ customDateStart: v }),
+  setCustomDateEnd: (v) => set({ customDateEnd: v }),
+  clearDateFilter: () => set({ selectedDateRange: null, customDateStart: '', customDateEnd: '', showDateFilter: false }),
 
   toggleTagFilter: (tag) => {
     const { selectedTags } = get();

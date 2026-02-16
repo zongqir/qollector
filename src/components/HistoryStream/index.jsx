@@ -7,6 +7,7 @@ import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -72,8 +73,17 @@ function HistoryStream({ style }) {
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
   const tagSearchQuery = useAppStore(s => s.tagSearchQuery);
+  const selectedDateRange = useAppStore(s => s.selectedDateRange);
+  const showDateFilter = useAppStore(s => s.showDateFilter);
+  const customDateStart = useAppStore(s => s.customDateStart);
+  const customDateEnd = useAppStore(s => s.customDateEnd);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const toggleTagFilter = useAppStore(s => s.toggleTagFilter);
+  const setSelectedDateRange = useAppStore(s => s.setSelectedDateRange);
+  const setShowDateFilter = useAppStore(s => s.setShowDateFilter);
+  const setCustomDateStart = useAppStore(s => s.setCustomDateStart);
+  const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
+  const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -130,6 +140,23 @@ function HistoryStream({ style }) {
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
 
+  const handleSelectDatePreset = useCallback((preset) => {
+    if (preset === 'custom') {
+      setSelectedDateRange({ preset: 'custom', start: null, end: null });
+    } else {
+      const range = getDateRangeForPreset(preset);
+      if (range) setSelectedDateRange(range);
+    }
+  }, [setSelectedDateRange]);
+
+  const handleApplyCustomDateRange = useCallback(() => {
+    const start = dateStringToTimestamp(customDateStart);
+    const end = dateStringToEndTimestamp(customDateEnd);
+    if (start != null && end != null) {
+      setSelectedDateRange({ preset: 'custom', start, end });
+    }
+  }, [customDateStart, customDateEnd, setSelectedDateRange]);
+
   const filteredItems = useMemo(() => {
     const startedAt = performance.now();
     let scannedItems = 0;
@@ -157,6 +184,10 @@ function HistoryStream({ style }) {
         const typeTag = typeMap[item.type_];
         const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
+      }
+
+      if (selectedDateRange && selectedDateRange.start != null && selectedDateRange.end != null) {
+        if (item.created_at < selectedDateRange.start || item.created_at > selectedDateRange.end) return false;
       }
 
       if (!hasSearch) return true;
@@ -189,7 +220,7 @@ function HistoryStream({ style }) {
     };
 
     return result;
-  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly]);
+  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
   useEffect(() => {
     const probe = filterProbeRef.current;
@@ -211,7 +242,7 @@ function HistoryStream({ style }) {
 
     lastFilterProbeLogAtRef.current = now;
     console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
-  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, items.length]);
+  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, selectedDateRange, items.length]);
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -378,6 +409,16 @@ function HistoryStream({ style }) {
         onTagSearchChange={setTagSearchQuery}
         onToggleTag={toggleTagFilter}
         onOpenSettings={() => setShowSettings(true)}
+        selectedDateRange={selectedDateRange}
+        showDateFilter={showDateFilter}
+        onToggleDateFilter={() => setShowDateFilter(!showDateFilter)}
+        onClearDateFilter={clearDateFilter}
+        onSelectDatePreset={handleSelectDatePreset}
+        customDateStart={customDateStart}
+        customDateEnd={customDateEnd}
+        onCustomDateStartChange={setCustomDateStart}
+        onCustomDateEndChange={setCustomDateEnd}
+        onApplyCustomDateRange={handleApplyCustomDateRange}
       />
 
       <div className="history-stream-content">

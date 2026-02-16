@@ -43,7 +43,18 @@
     "favorites": "收藏",
     "showFavorites": "显示收藏",
     "showPinned": "显示置顶",
-    "showAll": "显示全部"
+    "showAll": "显示全部",
+    "dateFilter": "日期筛选",
+    "dateFilterActive": "日期筛选中",
+    "clearDateFilter": "清除日期",
+    "dateToday": "今天",
+    "dateYesterday": "昨天",
+    "dateLast7Days": "最近 7 天",
+    "dateLast30Days": "最近 30 天",
+    "dateCustomRange": "自定义范围",
+    "dateStart": "开始日期",
+    "dateEnd": "结束日期",
+    "dateApply": "应用"
   },
   "item": {
     "pinned": "已收集",

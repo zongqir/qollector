@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Code, Check, Layers } from 'lucide-react';
+import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -14,9 +14,15 @@ function SearchBar({
   tagSearchQuery, onTagSearchChange,
   onToggleTag,
   onOpenSettings,
+  selectedDateRange, showDateFilter, onToggleDateFilter,
+  onClearDateFilter, onSelectDatePreset,
+  customDateStart, customDateEnd,
+  onCustomDateStartChange, onCustomDateEndChange,
+  onApplyCustomDateRange,
 }) {
   const { t } = useTranslation();
   const tagWrapperRef = useRef(null);
+  const dateWrapperRef = useRef(null);
 
   useEffect(() => {
     if (!showTagFilter) return;
@@ -29,13 +35,36 @@ function SearchBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showTagFilter, onToggleTagFilter]);
 
+  useEffect(() => {
+    if (!showDateFilter) return;
+    const handleClickOutside = (e) => {
+      if (dateWrapperRef.current && !dateWrapperRef.current.contains(e.target)) {
+        onToggleDateFilter();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDateFilter, onToggleDateFilter]);
+
+  const datePresets = [
+    { key: 'today', label: t('toolbar.dateToday'), badge: '1d' },
+    { key: 'yesterday', label: t('toolbar.dateYesterday'), badge: '1d' },
+    { key: '7d', label: t('toolbar.dateLast7Days'), badge: '7d' },
+    { key: '30d', label: t('toolbar.dateLast30Days'), badge: '30d' },
+    { key: 'custom', label: t('toolbar.dateCustomRange'), badge: '...' },
+  ];
+
+  const dateBadgeText = selectedDateRange
+    ? (selectedDateRange.preset === 'custom' ? '...' : datePresets.find(p => p.key === selectedDateRange.preset)?.badge || '')
+    : '';
+
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
-    { key: 'text', icon: <FileText size={14} /> },
+    { key: 'text', icon: <Type size={14} /> },
     { key: 'image', icon: <Image size={14} /> },
     { key: 'file', icon: <File size={14} /> },
     { key: 'link', icon: <Link size={14} /> },
-    { key: 'code', icon: <Code size={14} /> },
+    { key: 'code', icon: <Braces size={14} /> },
   ];
 
   return (
@@ -150,6 +179,69 @@ function SearchBar({
           </div>
         )}
 
+        <div className="date-select-wrapper" ref={dateWrapperRef}>
+          <button
+            onClick={onToggleDateFilter}
+            className={`header-icon-btn ${selectedDateRange ? 'active' : ''}`}
+            title={t('toolbar.dateFilter')}
+          >
+            <Calendar size={15} />
+            {selectedDateRange && (
+              <span className="icon-btn-badge">{dateBadgeText}</span>
+            )}
+          </button>
+          {showDateFilter && (
+            <div className="date-dropdown">
+              <div className="date-dropdown-presets">
+                {datePresets.map(({ key, label }) => (
+                  <div
+                    key={key}
+                    onClick={() => onSelectDatePreset(key)}
+                    className={`date-dropdown-item ${selectedDateRange?.preset === key ? 'selected' : ''}`}
+                  >
+                    <span className="date-check">
+                      {selectedDateRange?.preset === key ? <Check size={14} /> : ''}
+                    </span>
+                    <span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              {selectedDateRange?.preset === 'custom' && (
+                <div className="date-dropdown-custom">
+                  <label>{t('toolbar.dateStart')}</label>
+                  <input
+                    type="date"
+                    value={customDateStart}
+                    onChange={(e) => onCustomDateStartChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <label>{t('toolbar.dateEnd')}</label>
+                  <input
+                    type="date"
+                    value={customDateEnd}
+                    onChange={(e) => onCustomDateEndChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    className="date-apply-btn"
+                    disabled={!customDateStart || !customDateEnd}
+                    onClick={onApplyCustomDateRange}
+                  >
+                    {t('toolbar.dateApply')}
+                  </button>
+                </div>
+              )}
+              {selectedDateRange && (
+                <div className="date-dropdown-footer">
+                  <button onClick={onClearDateFilter} className="clear-selection-btn">
+                    {t('toolbar.clearDateFilter')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="type-filter-group">
           {typeOptions.map(({ key, icon }) => (
             <button
@@ -176,6 +268,17 @@ function SearchBar({
           </span>
           <button onClick={onClearTags} className="clear-filter-btn" title={t('toolbar.clearAll')}>
             <X size={12} /> {t('toolbar.clearFilter')}
+          </button>
+        </div>
+      )}
+
+      {selectedDateRange && (
+        <div className="filter-status">
+          <span className="filter-status-text">
+            {t('toolbar.dateFilterActive')}
+          </span>
+          <button onClick={onClearDateFilter} className="clear-filter-btn" title={t('toolbar.clearDateFilter')}>
+            <X size={12} /> {t('toolbar.clearDateFilter')}
           </button>
         </div>
       )}
