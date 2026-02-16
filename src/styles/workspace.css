@@ -354,6 +354,21 @@
   border-color: transparent;
 }
 
+.compact-tag.clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.compact-tag.clickable:hover {
+  background: rgba(0, 122, 255, 0.18);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.dark-mode .compact-tag.clickable:hover {
+  background: rgba(10, 132, 255, 0.25);
+  border-color: rgba(10, 132, 255, 0.35);
+}
+
 .dark-mode .compact-tag {
   background: rgba(10, 132, 255, 0.12);
   border-color: rgba(10, 132, 255, 0.18);

@@ -1,13 +1,13 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
-  maxPinnedItems, onOpenItem,
+  maxPinnedItems, onOpenItem, onRevealInFolder,
 }) {
   const { t } = useTranslation();
 
@@ -110,6 +110,19 @@ function ItemToolbar({
           >
             <ExternalLink size={14} className="toolbar-btn-icon" />
             <span>{t('item.open')}</span>
+          </button>
+        </>
+      )}
+      {item.type_ === 'file' && (
+        <>
+          <div className="toolbar-divider"></div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRevealInFolder(item); }}
+            className="toolbar-btn open-btn"
+            title={t('item.revealInFolder')}
+          >
+            <FolderOpen size={14} className="toolbar-btn-icon" />
+            <span>{t('item.revealInFolder')}</span>
           </button>
         </>
       )}

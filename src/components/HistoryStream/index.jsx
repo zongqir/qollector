@@ -92,6 +92,7 @@ function HistoryStream({ style }) {
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const clearSelection = useAppStore(s => s.clearSelection);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
@@ -101,6 +102,7 @@ function HistoryStream({ style }) {
   const setHoverPreview = useAppStore(s => s.setHoverPreview);
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
+  const handleTagClick = useAppStore(s => s.handleTagClick);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -420,6 +422,8 @@ function HistoryStream({ style }) {
           onTogglePin={togglePin}
           onToggleFavorite={toggleFavorite}
           onOpenItem={handleOpenItem}
+          onRevealInFolder={handleRevealInFolder}
+          onTagClick={handleTagClick}
         />
       </div>
     );
@@ -437,6 +441,8 @@ function HistoryStream({ style }) {
     togglePin,
     toggleFavorite,
     handleOpenItem,
+    handleRevealInFolder,
+    handleTagClick,
   ]);
 
   return (

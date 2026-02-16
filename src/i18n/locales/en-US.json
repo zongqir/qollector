@@ -105,6 +105,8 @@
     "saveImageAs": "Save Image As",
     "openLink": "Open Link",
     "openFile": "Open File",
+    "revealInFolder": "Reveal in Folder",
+    "formatJsonCopy": "Format & Copy",
     "delete": "Delete"
   },
   "edit": {

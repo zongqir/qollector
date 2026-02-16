@@ -250,6 +250,70 @@ fn image_source_path(item: &ClipboardItem) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
+#[tauri::command]
+pub async fn reveal_in_folder(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<(), String> {
+    let item = manager
+        .get_item_by_id(&id)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Item not found".to_string())?;
+
+    if item.type_ != "file" {
+        return Err("Only file types can be revealed".to_string());
+    }
+
+    let file_path = first_file_target(
+        item.content
+            .as_deref()
+            .ok_or_else(|| "File path is empty".to_string())?,
+    )?;
+
+    let path = Path::new(&file_path);
+    if !path.exists() {
+        return Err("File does not exist".to_string());
+    }
+
+    reveal_path_in_explorer(path)?;
+    Ok(())
+}
+
+fn reveal_path_in_explorer(path: &Path) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg("/select,")
+            .arg(path)
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(path)
+            .spawn()
+            .map_err(|e| format!("Failed to reveal in folder: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        if let Some(parent) = path.parent() {
+            std::process::Command::new("xdg-open")
+                .arg(parent)
+                .spawn()
+                .map_err(|e| format!("Failed to reveal in folder: {}", e))?;
+        } else {
+            return Err("Cannot determine parent folder".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn open_with_system(target: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {

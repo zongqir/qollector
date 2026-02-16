@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
@@ -25,6 +25,7 @@ function PreviewPanel() {
   const handleOCR = useAppStore(s => s.handleOCR);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleOpenUrl = useAppStore(s => s.handleOpenUrl);
+  const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const handleSaveImageAs = useAppStore(s => s.handleSaveImageAs);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
@@ -74,6 +75,7 @@ function PreviewPanel() {
   }, [item.type_, item.content]);
   const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenableUrls.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
+  const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
   // 收集并切回搜集箱
@@ -139,6 +141,15 @@ function PreviewPanel() {
       handleOpenUrl(textOpenableUrls[0]);
     }
   }, [handleOpenItem, handleOpenUrl, item, textOpenableUrls]);
+
+  const handleFormatJsonCopy = useCallback(() => {
+    try {
+      const formatted = JSON.stringify(JSON.parse(item.content), null, 2);
+      handleCopyPlainText(formatted);
+    } catch {
+      handleCopyPlainText(item.content);
+    }
+  }, [item.content, handleCopyPlainText]);
 
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
@@ -300,6 +311,12 @@ function PreviewPanel() {
                 <span>{t('item.copyPlainText')}</span>
               </button>
             )}
+            {isJson && (
+              <button className="preview-tool-btn" onClick={handleFormatJsonCopy}>
+                <Braces size={14} />
+                <span>{t('item.formatJsonCopy')}</span>
+              </button>
+            )}
             <button
               className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
               onClick={() => toggleFavorite(item)}
@@ -331,6 +348,12 @@ function PreviewPanel() {
               <button className="preview-tool-btn" onClick={handleOpen} title={openButtonTitle}>
                 <ExternalLink size={14} />
                 <span>{t('item.open')}</span>
+              </button>
+            )}
+            {item.type_ === 'file' && (
+              <button className="preview-tool-btn" onClick={() => handleRevealInFolder(item)} title={t('item.revealInFolder')}>
+                <FolderOpen size={14} />
+                <span>{t('item.revealInFolder')}</span>
               </button>
             )}
             {shouldShowSaveImageButton && (

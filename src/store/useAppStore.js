@@ -367,6 +367,14 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  handleRevealInFolder: async (item) => {
+    try {
+      await invoke('reveal_in_folder', { id: item.id });
+    } catch (error) {
+      console.error('reveal in folder failed:', error);
+    }
+  },
+
   handleOpenUrl: async (url) => {
     if (!url) return;
     try {

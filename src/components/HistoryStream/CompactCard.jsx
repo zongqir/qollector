@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
 import {
   formatDate,
   getTimelineColor,
@@ -35,6 +35,8 @@ function CompactCard({
   onTogglePin,
   onToggleFavorite,
   onOpenItem,
+  onRevealInFolder,
+  onTagClick,
 }) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
@@ -150,6 +152,15 @@ function CompactCard({
               <ExternalLink size={10} />
             </button>
           )}
+          {item.type_ === 'file' && (
+            <button
+              className="badge-btn badge-open"
+              onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
+              title={t('item.revealInFolder')}
+            >
+              <FolderOpen size={10} />
+            </button>
+          )}
           <button
             className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
             onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
@@ -177,7 +188,13 @@ function CompactCard({
       {userTags.length > 0 && (
         <div className="compact-card-tags">
           {userTags.slice(0, 3).map(tag => (
-            <span key={tag} className="compact-tag">{tag}</span>
+            <span
+              key={tag}
+              className="compact-tag clickable"
+              onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
+            >
+              {tag}
+            </span>
           ))}
           {userTags.length > 3 && (
             <span className="compact-tag more">+{userTags.length - 3}</span>
