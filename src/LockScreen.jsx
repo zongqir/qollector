@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import useAppStore from './store/useAppStore';
 import './LockScreen.css';
 
 function LockScreen({ onUnlock }) {
@@ -9,6 +10,8 @@ function LockScreen({ onUnlock }) {
   const [error, setError] = useState('');
   const [showReset, setShowReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const loadItems = useAppStore(s => s.loadItems);
+  const resetRuntimeStateAfterDataReset = useAppStore(s => s.resetRuntimeStateAfterDataReset);
 
   const handleUnlock = async (e) => {
     e.preventDefault();
@@ -30,6 +33,8 @@ function LockScreen({ onUnlock }) {
     setResetting(true);
     try {
       await invoke('reset_all_data');
+      resetRuntimeStateAfterDataReset();
+      await loadItems();
       onUnlock();
     } catch (err) {
       setError(String(err));
