@@ -357,6 +357,15 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  handleOpenUrl: async (url) => {
+    if (!url) return;
+    try {
+      await invoke('open_url', { url });
+    } catch (error) {
+      console.error('open url failed:', error);
+    }
+  },
+
   deleteItem: async (item) => {
     try {
       await deleteItemSvc(item.id);

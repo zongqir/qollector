@@ -138,6 +138,13 @@ pub async fn open_item(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn open_url(url: String) -> Result<(), String> {
+    let target = parse_openable_link(&url)?;
+    open_with_system(&target)?;
+    Ok(())
+}
+
 fn first_file_target(content: &str) -> Result<String, String> {
     content
         .lines()

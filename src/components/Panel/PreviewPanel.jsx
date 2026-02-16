@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
   ExternalLink, Check, FileText, Copy, Trash2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
-import { getContentPreview, getFileList, getFileName, formatDate } from '../../utils/formatters';
+import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
@@ -24,6 +24,7 @@ function PreviewPanel() {
   const generateAITags = useAppStore(s => s.generateAITags);
   const handleOCR = useAppStore(s => s.handleOCR);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const handleOpenUrl = useAppStore(s => s.handleOpenUrl);
   const handleCopy = useAppStore(s => s.handleCopy);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
@@ -65,7 +66,12 @@ function PreviewPanel() {
   const hasAITags = tags.some(tag => tag.startsWith('AI:'));
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags;
   const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
-  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file';
+  const textOpenableUrls = useMemo(() => {
+    if (item.type_ !== 'text') return [];
+    return extractOpenableUrls(item.content);
+  }, [item.type_, item.content]);
+  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenableUrls.length > 0;
+  const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
@@ -120,6 +126,16 @@ function PreviewPanel() {
       cancelAddTag();
     }
   };
+
+  const handleOpen = useCallback(() => {
+    if (item.type_ === 'link' || item.type_ === 'file') {
+      handleOpenItem(item);
+      return;
+    }
+    if (textOpenableUrls.length > 0) {
+      handleOpenUrl(textOpenableUrls[0]);
+    }
+  }, [handleOpenItem, handleOpenUrl, item, textOpenableUrls]);
 
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
@@ -303,7 +319,7 @@ function PreviewPanel() {
               </button>
             )}
             {shouldShowOpenButton && (
-              <button className="preview-tool-btn" onClick={() => handleOpenItem(item)}>
+              <button className="preview-tool-btn" onClick={handleOpen} title={openButtonTitle}>
                 <ExternalLink size={14} />
                 <span>{t('item.open')}</span>
               </button>

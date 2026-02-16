@@ -70,6 +70,55 @@ export const parseUrl = (url) => {
   }
 };
 
+const OPENABLE_SCHEMES = new Set(['http:', 'https:', 'ftp:', 'ftps:', 'ws:', 'wss:']);
+const URL_CANDIDATE_REGEX = /(?:https?|ftps?|wss?):\/\/[^\s<>"'`]+/gi;
+
+const trimTrailingPunctuation = (value) => {
+  let url = value.trim();
+  while (/[.,!?;:'"]$/.test(url)) {
+    url = url.slice(0, -1);
+  }
+
+  while (url.endsWith(')')) {
+    const leftCount = (url.match(/\(/g) || []).length;
+    const rightCount = (url.match(/\)/g) || []).length;
+    if (rightCount > leftCount) {
+      url = url.slice(0, -1);
+      continue;
+    }
+    break;
+  }
+
+  return url;
+};
+
+export const extractOpenableUrls = (content, maxUrls = 5) => {
+  if (!content || typeof content !== 'string') return [];
+
+  const matches = content.match(URL_CANDIDATE_REGEX) || [];
+  const urls = [];
+  const seen = new Set();
+
+  for (const match of matches) {
+    if (urls.length >= maxUrls) break;
+    const cleaned = trimTrailingPunctuation(match);
+    if (!cleaned) continue;
+
+    try {
+      const parsed = new URL(cleaned);
+      if (!OPENABLE_SCHEMES.has(parsed.protocol)) continue;
+      const normalized = parsed.toString();
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      urls.push(normalized);
+    } catch {
+      // Ignore malformed candidates.
+    }
+  }
+
+  return urls;
+};
+
 export const getLinkPreviewTitle = (item) => {
   if (!item?.metadata) return null;
   try {
