@@ -24,68 +24,33 @@
 
 /* ========== 分割线 ========== */
 .resize-handle {
-  width: 8px;
+  width: 1px;
   cursor: col-resize;
   background: transparent;
-  transition: all 0.2s ease;
   flex-shrink: 0;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* 默认状态：几乎不可见的细线 */
-.resize-handle::before {
+/* 扩展点击区域 */
+.resize-handle::after {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1px;
-  background: var(--border-light);
-  opacity: 0.15;
-  transition: opacity 0.2s ease;
+  left: -4px;
+  right: -4px;
 }
 
-/* hover 状态：显示拖动指示器（三条短横线） */
-.resize-handle::after {
-  content: '';
-  width: 3px;
-  height: 32px;
-  background-image:
-    linear-gradient(to bottom,
-      transparent 0%,
-      transparent 40%,
-      var(--text-tertiary) 40%,
-      var(--text-tertiary) 42%,
-      transparent 42%,
-      transparent 48%,
-      var(--text-tertiary) 48%,
-      var(--text-tertiary) 50%,
-      transparent 50%,
-      transparent 56%,
-      var(--text-tertiary) 56%,
-      var(--text-tertiary) 58%,
-      transparent 58%,
-      transparent 100%
-    );
-  border-radius: 2px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+/* hover 状态：显示细线 */
+.resize-handle:hover {
+  background: var(--text-tertiary);
+  opacity: 0.2;
 }
 
-.resize-handle:hover::before {
-  opacity: 0;
-}
-
-.resize-handle:hover::after {
-  opacity: 0.4;
-}
-
-.resize-handle:active::after {
-  opacity: 0.6;
+/* active 状态：稍微明显 */
+.resize-handle:active {
+  background: var(--accent-color);
+  opacity: 0.35;
 }
 
 .history-stream-content {

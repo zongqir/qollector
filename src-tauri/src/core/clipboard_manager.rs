@@ -166,12 +166,6 @@ impl ClipboardManager {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
-        // Filter out clipboard changes from this app itself
-        if metadata.is_self {
-            println!("Skipping clipboard change from {} itself", APP_NAME);
-            return Ok(());
-        }
-
         let item = match &content {
             ClipboardContent::Text { plain: text, .. } => {
                 // 妫€鏌ユ槸鍚︿负绌虹櫧鍐呭
