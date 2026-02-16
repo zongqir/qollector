@@ -303,6 +303,27 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  handleCopyAndAutoPaste: async (item) => {
+    try {
+      await copyItemToClipboard(item);
+      set({ copiedItemId: item.id });
+      setTimeout(() => set({ copiedItemId: null }), 1000);
+
+      try {
+        const pasted = await invoke('try_paste_foreground');
+        if (!pasted) {
+          // Non-Windows platforms currently fall back to copy-only.
+          console.info('[AutoPaste] Platform not implemented, copied only');
+        }
+      } catch (error) {
+        // Keep copy success even if paste simulation fails.
+        console.warn('[AutoPaste] Paste simulation failed, copied only:', error);
+      }
+    } catch (error) {
+      console.error('copy/auto-paste failed:', error);
+    }
+  },
+
   handleCopyPlainText: async (text) => {
     try {
       await invoke('copy_plain_text', { text });

@@ -86,7 +86,7 @@ function HistoryStream({ style }) {
   const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
-  const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
   const togglePin = useAppStore(s => s.togglePin);
@@ -318,8 +318,8 @@ function HistoryStream({ style }) {
       clickTimerRef.current = null;
     }
     clearHoverPreview();
-    handleCopy(item);
-  }, [handleCopy, clearHoverPreview]);
+    handleCopyAndAutoPaste(item);
+  }, [handleCopyAndAutoPaste, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);

@@ -2,7 +2,7 @@
 use crate::core::models::ClipboardItem;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::State;
+use tauri::{Manager, State};
 
 #[tauri::command]
 pub async fn get_recent_items(
@@ -158,6 +158,26 @@ pub async fn open_url(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.hide();
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+        send_ctrl_v_input().map_err(|e| format!("Failed to simulate paste: {}", e))?;
+        return Ok(true);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // Keep behavior extensible: other platforms currently fallback to copy-only.
+        Ok(false)
+    }
+}
+
+#[tauri::command]
 pub async fn save_image_as(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
@@ -248,6 +268,51 @@ fn image_source_path(item: &ClipboardItem) -> Result<String, String> {
     }
 
     Ok(trimmed.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
+        VK_CONTROL,
+    };
+
+    const VK_V_KEY: u16 = 0x56;
+
+    fn key_input(vk: u16, key_up: bool) -> INPUT {
+        let flags = if key_up {
+            KEYEVENTF_KEYUP
+        } else {
+            Default::default()
+        };
+
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(vk),
+                    wScan: 0,
+                    dwFlags: flags,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        }
+    }
+
+    let inputs = [
+        key_input(VK_CONTROL.0, false),
+        key_input(VK_V_KEY, false),
+        key_input(VK_V_KEY, true),
+        key_input(VK_CONTROL.0, true),
+    ];
+
+    let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+    if sent != inputs.len() as u32 {
+        return Err(format!("SendInput sent {} events, expected {}", sent, inputs.len()).into());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

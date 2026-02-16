@@ -340,6 +340,36 @@ fn main() {
                                         if is_visible && !is_minimized {
                                             let _ = window.hide();
                                         } else {
+                                            // Move window near the cursor before showing
+                                            if let Ok(size) = window.outer_size() {
+                                                let cursor = platform::cursor::get_cursor_position();
+                                                let mon = window.current_monitor()
+                                                    .ok()
+                                                    .flatten()
+                                                    .or_else(|| window.primary_monitor().ok().flatten());
+
+                                                let (scr_x, scr_y, scr_w, scr_h) = if let Some(m) = mon {
+                                                    let pos = m.position();
+                                                    let sz = m.size();
+                                                    (pos.x, pos.y, sz.width as i32, sz.height as i32)
+                                                } else {
+                                                    (0, 0, 3840, 2160)
+                                                };
+
+                                                let win_w = size.width as i32;
+                                                let win_h = size.height as i32;
+
+                                                // Center the window on the cursor
+                                                let mut x = cursor.x - win_w / 2;
+                                                let mut y = cursor.y - win_h / 2;
+
+                                                // Clamp to monitor bounds
+                                                x = x.max(scr_x).min(scr_x + scr_w - win_w);
+                                                y = y.max(scr_y).min(scr_y + scr_h - win_h);
+
+                                                let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+                                            }
+
                                             let _ = window.show();
                                             let _ = window.unminimize();
                                             let _ = window.set_focus();
@@ -409,6 +439,7 @@ fn main() {
             toggle_favorite_item,
             open_item,
             open_url,
+            try_paste_foreground,
             reveal_in_folder,
             save_image_as,
             search_items,
