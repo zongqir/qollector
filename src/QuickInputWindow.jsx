@@ -32,7 +32,8 @@ function QuickInputWindow() {
   const { t } = useTranslation();
   const textareaRef = useRef(null);
   const toastTimerRef = useRef(null);
-  const appWindow = getCurrentWindow();
+  const appWindowRef = useRef(getCurrentWindow());
+  const appWindow = appWindowRef.current;
 
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(true);

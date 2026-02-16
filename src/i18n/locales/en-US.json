@@ -63,6 +63,7 @@
     "unpin": "Remove",
     "copy": "Copy",
     "copied": "Copied",
+    "copyPlainText": "Copy Plain Text",
     "aiTag": "AI Tag",
     "generating": "Generating",
     "ocr": "OCR",
@@ -363,7 +364,14 @@
     "importFailed": "Import failed: {{error}}",
     "exportFailed": "Export failed: {{error}}",
     "passwordMismatch": "Passwords do not match",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "clearData": "Clear All Data",
+    "clearDataWarning": "Warning: This will permanently delete all clipboard history and image files. This action cannot be undone!",
+    "clearAllData": "Clear All Data",
+    "confirmClear": "Confirm Clear?",
+    "clearing": "Clearing...",
+    "clearSuccess": "All data has been cleared",
+    "clearFailed": "Clear failed: {{error}}"
   },
   "multiSelect": {
     "selected": "{{count}} selected",

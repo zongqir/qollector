@@ -385,6 +385,7 @@ fn main() {
             get_recent_items_light,
             get_more_items,
             copy_item,
+            copy_plain_text,
             update_item,
             delete_item,
             toggle_pin_item,
@@ -424,6 +425,7 @@ fn main() {
             reset_all_data,
             export_data,
             import_data,
+            clear_all_data,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

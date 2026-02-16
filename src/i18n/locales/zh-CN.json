@@ -63,6 +63,7 @@
     "unpin": "移除收集",
     "copy": "复制",
     "copied": "已复制",
+    "copyPlainText": "复制纯文本",
     "aiTag": "AI标签",
     "generating": "生成中",
     "ocr": "OCR识别",
@@ -363,7 +364,14 @@
     "importFailed": "导入失败：{{error}}",
     "exportFailed": "导出失败：{{error}}",
     "passwordMismatch": "两次密码不一致",
-    "cancelled": "已取消"
+    "cancelled": "已取消",
+    "clearData": "清除所有数据",
+    "clearDataWarning": "警告：此操作将永久删除所有剪贴板历史记录和图片文件，且无法恢复！",
+    "clearAllData": "清除所有数据",
+    "confirmClear": "确认清除？",
+    "clearing": "清除中...",
+    "clearSuccess": "所有数据已清除",
+    "clearFailed": "清除失败：{{error}}"
   },
   "multiSelect": {
     "selected": "已选 {{count}} 项",

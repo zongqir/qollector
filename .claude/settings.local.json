@@ -14,7 +14,8 @@
       "Bash(npm install zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities)",
       "mcp__ide__getDiagnostics",
       "Bash(wc -l \"D:\\\\code\\\\pith\\\\src\"/*.jsx \"D:\\\\code\\\\pith\\\\src\"/*.css)",
-      "Bash(find \"D:\\\\code\\\\pith\\\\src\" -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)"
+      "Bash(find \"D:\\\\code\\\\pith\\\\src\" -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.css\" -o -name \"*.json\" \\\\\\) -exec wc -l {} +)",
+      "Bash(git add -A)"
     ]
   }
 }

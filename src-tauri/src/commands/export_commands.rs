@@ -414,3 +414,13 @@ pub async fn import_data(
         skipped,
     })
 }
+
+#[tauri::command]
+pub async fn clear_all_data(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<(), String> {
+    manager
+        .clear_all_data()
+        .await
+        .map_err(|e| format!("clear all data failed: {}", e))
+}

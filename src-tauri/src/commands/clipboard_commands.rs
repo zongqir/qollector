@@ -46,6 +46,17 @@ pub async fn copy_item(
 }
 
 #[tauri::command]
+pub async fn copy_plain_text(
+    manager: State<'_, Arc<ClipboardManager>>,
+    text: String,
+) -> Result<(), String> {
+    manager
+        .copy_plain_text(&text)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn update_item(
     manager: State<'_, Arc<ClipboardManager>>,
     item: ClipboardItem,

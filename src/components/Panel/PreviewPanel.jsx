@@ -26,6 +26,7 @@ function PreviewPanel() {
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleOpenUrl = useAppStore(s => s.handleOpenUrl);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const generatingAI = useAppStore(s => s.generatingAI);
@@ -291,6 +292,12 @@ function PreviewPanel() {
               <Copy size={14} />
               <span>{t('item.copy')}</span>
             </button>
+            {(item.type_ === 'text' || item.type_ === 'link') && item.content && (
+              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
+                <FileText size={14} />
+                <span>{t('item.copyPlainText')}</span>
+              </button>
+            )}
             <button
               className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
               onClick={() => toggleFavorite(item)}

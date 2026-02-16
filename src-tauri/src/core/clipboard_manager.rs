@@ -955,6 +955,14 @@ impl ClipboardManager {
         self.platform.set_content(content).await
     }
 
+    pub async fn copy_plain_text(&self, text: &str) -> Result<(), ClipboardError> {
+        let content = ClipboardContent::Text {
+            plain: text.to_string(),
+            raw_formats: None,
+        };
+        self.platform.set_content(content).await
+    }
+
     pub async fn update_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.update(item).await
@@ -1300,6 +1308,33 @@ impl ClipboardManager {
     pub async fn insert_raw_formats(&self, item_id: &str, formats: &[(String, Vec<u8>)]) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.insert_raw_formats(item_id, formats).await
+    }
+
+    /// Clear all clipboard data (items and images).
+    pub async fn clear_all_data(&self) -> Result<(), String> {
+        let repo = self.repository.lock().await;
+
+        // Delete all items from database
+        sqlx::query("DELETE FROM clipboard_items")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete items: {}", e))?;
+
+        // Delete all raw formats
+        sqlx::query("DELETE FROM clipboard_raw_formats")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete raw formats: {}", e))?;
+
+        // Delete all image files
+        if self.image_dir.exists() {
+            std::fs::remove_dir_all(&self.image_dir)
+                .map_err(|e| format!("Failed to delete images: {}", e))?;
+            std::fs::create_dir_all(&self.image_dir)
+                .map_err(|e| format!("Failed to recreate image directory: {}", e))?;
+        }
+
+        Ok(())
     }
 
     fn compute_content_hash(content: &ClipboardContent) -> String {

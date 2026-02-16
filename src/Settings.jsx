@@ -99,6 +99,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [shortcutError, setShortcutError] = useState('');
   const [recordingTarget, setRecordingTarget] = useState(null);
+  const [clearDataConfirm, setClearDataConfirm] = useState(false);
+  const [clearDataResult, setClearDataResult] = useState(null);
+  const [clearing, setClearing] = useState(false);
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -790,6 +793,27 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       }
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleClearAllData = async () => {
+    if (!clearDataConfirm) {
+      setClearDataConfirm(true);
+      return;
+    }
+
+    setClearing(true);
+    setClearDataResult(null);
+    try {
+      await invoke('clear_all_data');
+      setClearDataResult({ success: true, message: t('export.clearSuccess') });
+      setClearDataConfirm(false);
+      // Notify parent to refresh
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      setClearDataResult({ success: false, message: t('export.clearFailed', { error }) });
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -1659,6 +1683,36 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 {(exportResult || importResult)?.message}
               </small>
             )}
+
+            <div className="setting-group" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <label className="setting-label">{t('export.clearData')}</label>
+              <small className="setting-hint-block" style={{ color: '#ff6b6b' }}>
+                {t('export.clearDataWarning')}
+              </small>
+              <div className="setting-btn-row">
+                <button
+                  className={`test-btn ${clearDataConfirm ? 'danger' : 'secondary'}`}
+                  onClick={handleClearAllData}
+                  disabled={clearing || exporting || importing}
+                >
+                  {clearing ? t('export.clearing') : clearDataConfirm ? t('export.confirmClear') : t('export.clearAllData')}
+                </button>
+                {clearDataConfirm && (
+                  <button
+                    className="test-btn"
+                    onClick={() => { setClearDataConfirm(false); setClearDataResult(null); }}
+                    disabled={clearing}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                )}
+              </div>
+              {clearDataResult && (
+                <small className={`setting-status ${clearDataResult.success ? 'success' : 'error'}`}>
+                  {clearDataResult.message}
+                </small>
+              )}
+            </div>
           </div>
         )}
 

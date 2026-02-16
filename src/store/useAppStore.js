@@ -303,6 +303,16 @@ const useAppStore = create((set, get) => ({
     }
   },
 
+  handleCopyPlainText: async (text) => {
+    try {
+      await invoke('copy_plain_text', { text });
+      set({ copiedItemId: 'plain-text' });
+      setTimeout(() => set({ copiedItemId: null }), 1000);
+    } catch (error) {
+      console.error('复制纯文本失败:', error);
+    }
+  },
+
   togglePin: async (item) => {
     try {
       const { maxPinnedItems, loadItems } = get();
