@@ -95,14 +95,14 @@ function ItemTags({
             title={t('item.confirmTag')}
             disabled={!newTagInput.trim()}
           >
-            <Check size={13} />
+            <Check size={11} />
           </button>
           <button
             onClick={onCancelAddTag}
             className="tag-btn-cancel"
             title={t('item.cancelTag')}
           >
-            <X size={13} />
+            <X size={11} />
           </button>
           {filteredUserTags.length > 0 && (
             <div className="tag-suggestions">

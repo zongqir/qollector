@@ -178,7 +178,9 @@
       "featureModules": "Feature Modules",
       "enableAI": "AI Tags",
       "enableOCR": "OCR Recognition",
-      "enableMCP": "MCP Service"
+      "enableMCP": "MCP Service",
+      "doubleCopyEmphasis": "Double Copy Emphasis Pin",
+      "doubleCopyWindowMs": "Double Copy Window (ms)"
     },
     "mcp": {
       "enabled": "Enable MCP Service",

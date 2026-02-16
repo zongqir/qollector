@@ -49,6 +49,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     max_pinned_items: 3,
     language: 'zh-CN',
     theme_mode: themeMode || 'system',
+    double_copy_emphasis_enabled: true,
+    double_copy_window_ms: 900,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -596,6 +598,54 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   }}
                   min="1"
                   max="10"
+                  className="setting-input-small"
+                />
+              </div>
+              <label className="sg-row setting-toggle-row">
+                <span>{t('settings.general.doubleCopyEmphasis')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(generalConfig.double_copy_emphasis_enabled)}
+                    onChange={async (e) => {
+                      const updated = {
+                        ...generalConfig,
+                        double_copy_emphasis_enabled: e.target.checked,
+                      };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('Failed to save double copy emphasis config:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <div className="sg-row">
+                <span>{t('settings.general.doubleCopyWindowMs')}</span>
+                <input
+                  type="number"
+                  value={generalConfig.double_copy_window_ms ?? 900}
+                  onChange={async (e) => {
+                    let value = parseInt(e.target.value) || 900;
+                    if (value < 300) value = 300;
+                    if (value > 2500) value = 2500;
+                    const updated = {
+                      ...generalConfig,
+                      double_copy_window_ms: value,
+                    };
+                    setGeneralConfig(updated);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('Failed to save double copy window config:', error);
+                    }
+                  }}
+                  min="300"
+                  max="2500"
+                  step="50"
                   className="setting-input-small"
                 />
               </div>

@@ -40,24 +40,35 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  background: var(--bg-input);
+  border-radius: 12px;
+  padding: 2px 4px 2px 10px;
+  gap: 2px;
   z-index: 10;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.add-tag-input-wrapper:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--textarea-focus-bg);
 }
 
 .add-tag-input {
-  width: 120px;
-  padding: 4px 8px;
+  width: 100px;
+  padding: 4px 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 12px;
   outline: none;
-  background: var(--bg-input);
+  background: transparent;
   color: var(--text-primary);
   transition: all 0.15s;
 }
 
 .add-tag-input:focus {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  box-shadow: none;
 }
 
 .add-tag-input::placeholder {
@@ -66,14 +77,13 @@
 
 .tag-btn-confirm,
 .tag-btn-cancel {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border: none;
-  border-radius: 6px;
+  border-radius: 11px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: bold;
-  transition: all 0.15s;
+  font-size: 12px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,26 +91,31 @@
 }
 
 .tag-btn-confirm {
-  background: #34c759;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.25);
 }
 
 .tag-btn-confirm:hover:not(:disabled) {
-  background: #2db84e;
+  background: var(--accent-hover);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+  transform: translateY(-0.5px);
 }
 
 .tag-btn-confirm:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .tag-btn-cancel {
-  background: var(--cancel-btn-bg);
-  color: var(--text-secondary);
+  background: transparent;
+  color: var(--text-tertiary);
 }
 
 .tag-btn-cancel:hover {
   background: var(--cancel-btn-hover-bg);
+  color: var(--text-secondary);
 }
 
 .tag-suggestions {
