@@ -8,11 +8,39 @@ use tauri::{
 
 use crate::core::clipboard_manager::ClipboardManager;
 
+// Get system language or default to English
+fn get_system_language() -> String {
+    std::env::var("LANG")
+        .or_else(|_| std::env::var("LANGUAGE"))
+        .unwrap_or_else(|_| "en".to_string())
+        .split('.')
+        .next()
+        .unwrap_or("en")
+        .to_lowercase()
+}
+
+// Localized strings
+fn t(key: &str, lang: &str) -> &'static str {
+    let is_zh = lang.starts_with("zh");
+    match key {
+        "toggle" => if is_zh { "显示 / 隐藏" } else { "Show / Hide" },
+        "settings" => if is_zh { "设置" } else { "Settings" },
+        "pause" => if is_zh { "暂停监听" } else { "Pause Monitoring" },
+        "resume" => if is_zh { "恢复监听" } else { "Resume Monitoring" },
+        "quit" => if is_zh { "退出" } else { "Quit" },
+        "tooltip" => if is_zh { "ClipBox" } else { "ClipBox" },
+        "tooltip_paused" => if is_zh { "ClipBox (已暂停)" } else { "ClipBox (Paused)" },
+        _ => key,
+    }
+}
+
 pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let show_hide = MenuItemBuilder::with_id("toggle", "Show / Hide").build(app)?;
-    let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
-    let pause = MenuItemBuilder::with_id("pause", "Pause Monitoring").build(app)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
+    let lang = get_system_language();
+
+    let show_hide = MenuItemBuilder::with_id("toggle", t("toggle", &lang)).build(app)?;
+    let settings = MenuItemBuilder::with_id("settings", t("settings", &lang)).build(app)?;
+    let pause = MenuItemBuilder::with_id("pause", t("pause", &lang)).build(app)?;
+    let quit = MenuItemBuilder::with_id("quit", t("quit", &lang)).build(app)?;
 
     let menu = MenuBuilder::new(app)
         .item(&show_hide)
@@ -31,10 +59,11 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap());
 
     let pause_item = pause.clone();
+    let lang_clone = lang.clone();
 
     TrayIconBuilder::with_id("main")
         .icon(icon)
-        .tooltip("ClipBox")
+        .tooltip(t("tooltip", &lang))
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id().as_ref() {
@@ -58,10 +87,10 @@ pub fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                         manager.pause();
                     }
                     let new_paused = !is_paused;
-                    let text = if new_paused { "Resume Monitoring" } else { "Pause Monitoring" };
+                    let text = if new_paused { t("resume", &lang_clone) } else { t("pause", &lang_clone) };
                     let _ = pause_item.set_text(text);
                     if let Some(tray) = app.tray_by_id("main") {
-                        let tooltip = if new_paused { "ClipBox (Paused)" } else { "ClipBox" };
+                        let tooltip = if new_paused { t("tooltip_paused", &lang_clone) } else { t("tooltip", &lang_clone) };
                         let _ = tray.set_tooltip(Some(tooltip));
 
                         // Update tray icon based on pause state
