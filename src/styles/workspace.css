@@ -314,17 +314,26 @@
 
 .compact-tag {
   font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--accent-light);
-  color: var(--accent-color);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 122, 255, 0.12);
   white-space: nowrap;
   font-weight: 500;
+  letter-spacing: 0.2px;
+  -webkit-font-smoothing: antialiased;
 }
 
 .compact-tag.more {
   background: var(--btn-hover-bg);
   color: var(--text-tertiary);
+  border-color: transparent;
+}
+
+.dark-mode .compact-tag {
+  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.18);
 }
 
 /* ========== 右栏：多态面板 ========== */

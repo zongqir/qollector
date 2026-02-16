@@ -213,7 +213,20 @@
       "emphasisCopyHint": "Use Ctrl, C, C to emphasize and auto-pin repeated copies from the same app.",
       "toggleWindow": "Toggle Window Shortcut",
       "toggleWindowKey": "Toggle Window Key",
-      "ctrlShiftCKey": "Copy + Pin Key"
+      "ctrlShiftCKey": "Copy + Pin Key",
+      "startRecording": "Record",
+      "stopRecording": "Stop",
+      "recordingHint": "Recording... press a shortcut now. Press Esc to cancel.",
+      "restoreDefaults": "Restore Shortcut Defaults",
+      "recordNeedPrimary": "Press a non-modifier key to complete the shortcut.",
+      "recordNeedModifier": "Shortcut must include at least one modifier key.",
+      "recordUnsupported": "This key is not supported for global shortcuts.",
+      "platformNotice": "Cross-platform notes: macOS Command is mapped to Super; some OS-reserved shortcuts cannot be registered.",
+      "recordReserved": "This shortcut is reserved by the OS: {{shortcut}}",
+      "conflictError": "Copy + Pin and Toggle Window cannot use the same shortcut.",
+      "occupiedHint": "Previous shortcuts are kept active. Try another combination such as Ctrl+Alt+X or Ctrl+Shift+V.",
+      "defaultCandidate": "Default fallback for {{platform}}: {{shortcut}}",
+      "occupiedHintOne": "Previous shortcuts are kept active. Suggested fallback on {{platform}}: {{shortcut}}."
     }
   },
   "dragDrop": {

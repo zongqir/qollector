@@ -318,6 +318,59 @@
   cursor: not-allowed;
 }
 
+.shortcut-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-record-btn {
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: var(--accent-color);
+  background: var(--accent-light);
+  transition: all 0.15s ease;
+}
+
+.shortcut-record-btn:hover:not(:disabled) {
+  background: var(--accent-medium);
+}
+
+.shortcut-record-btn.recording {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+.shortcut-record-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.shortcut-actions {
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.shortcut-reset-btn {
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  transition: all 0.15s ease;
+}
+
+.shortcut-reset-btn:hover {
+  background: var(--btn-hover-bg);
+}
+
 /* ---- Toggle 开关 ---- */
 .toggle-switch {
   position: relative;

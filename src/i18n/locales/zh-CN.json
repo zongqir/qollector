@@ -213,7 +213,20 @@
       "emphasisCopyHint": "按住 Ctrl 连续按两次 C，可将同应用重复复制内容自动置顶。",
       "toggleWindow": "显示/隐藏主面板",
       "toggleWindowKey": "显示/隐藏按键",
-      "ctrlShiftCKey": "复制并置顶按键"
+      "ctrlShiftCKey": "复制并置顶按键",
+      "startRecording": "录制",
+      "stopRecording": "停止",
+      "recordingHint": "录制中，请按下快捷键。按 Esc 可取消。",
+      "restoreDefaults": "恢复快捷键默认值",
+      "recordNeedPrimary": "请按下一个非修饰键来完成快捷键。",
+      "recordNeedModifier": "快捷键必须包含至少一个修饰键。",
+      "recordUnsupported": "该按键不支持作为全局快捷键。",
+      "platformNotice": "跨平台注意：macOS 的 Command 会映射为 Super；部分系统保留快捷键无法注册。",
+      "recordReserved": "该快捷键被系统保留：{{shortcut}}",
+      "conflictError": "复制并置顶与显示/隐藏主面板不能使用相同快捷键。",
+      "occupiedHint": "已自动保留之前可用的快捷键。请改用其他组合，例如 Ctrl+Alt+X 或 Ctrl+Shift+V。",
+      "defaultCandidate": "{{platform}} ?????{{shortcut}}",
+      "occupiedHintOne": "??????????????{{platform}} ?????{{shortcut}}?"
     }
   },
   "dragDrop": {

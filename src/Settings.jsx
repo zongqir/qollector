@@ -95,6 +95,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [importFilePath, setImportFilePath] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [shortcutError, setShortcutError] = useState('');
+  const [recordingTarget, setRecordingTarget] = useState(null);
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -110,15 +111,120 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
   const normalizeShortcutText = (value) => (value || '').trim().toLowerCase();
 
-  const saveShortcutConfig = async (updated) => {
+  const normalizeShortcutToken = (token) => {
+    const value = (token || '').trim().toLowerCase();
+    if (!value) return '';
+    if (value === 'control') return 'ctrl';
+    if (value === 'cmd' || value === 'command' || value === 'meta') return 'super';
+    if (value === 'option') return 'alt';
+    if (value === 'return') return 'enter';
+    if (value === 'escape') return 'esc';
+    return value;
+  };
+
+  const shortcutKey = (shortcut) => {
+    const normalized = normalizeShortcutText(shortcut);
+    if (!normalized) return '';
+    const tokens = normalized
+      .split('+')
+      .map(normalizeShortcutToken)
+      .filter(Boolean);
+    if (tokens.length === 0) return '';
+    return Array.from(new Set(tokens)).sort().join('+');
+  };
+
+  const getShortcutPlatform = () => {
+    const rawPlatform = (
+      navigator.userAgentData?.platform
+      || navigator.platform
+      || navigator.userAgent
+      || ''
+    ).toLowerCase();
+    if (rawPlatform.includes('mac')) return 'macos';
+    if (rawPlatform.includes('win')) return 'windows';
+    if (rawPlatform.includes('linux')) return 'linux';
+    return 'other';
+  };
+
+  const getPlatformLabel = (platform) => {
+    if (platform === 'macos') return 'macOS';
+    if (platform === 'windows') return 'Windows';
+    if (platform === 'linux') return 'Linux';
+    return 'Current OS';
+  };
+
+  const getDefaultSuggestedShortcut = (target) => {
+    const platform = getShortcutPlatform();
+    if (target === 'copy_pin_shortcut') {
+      if (platform === 'macos') return 'super+alt+c';
+      return 'ctrl+alt+c';
+    }
+    if (target === 'toggle_window_shortcut') {
+      if (platform === 'macos') return 'super+alt+x';
+      return 'ctrl+alt+x';
+    }
+    if (platform === 'macos') return 'super+alt+x';
+    return 'ctrl+alt+x';
+  };
+
+  const getReservedShortcutKeys = () => {
+    const byPlatform = {
+      windows: ['alt+tab', 'alt+f4', 'super+l', 'super+d', 'super+tab', 'ctrl+alt+delete'],
+      macos: ['super+q', 'super+tab', 'super+space', 'ctrl+space', 'super+h'],
+      linux: ['alt+tab', 'alt+f4', 'super+l'],
+      other: ['alt+tab'],
+    };
+    const platform = getShortcutPlatform();
+    const source = byPlatform[platform] || byPlatform.other;
+    return new Set(source.map(shortcutKey).filter(Boolean));
+  };
+
+  const isReservedShortcut = (shortcut) => {
+    const key = shortcutKey(shortcut);
+    if (!key) return false;
+    return getReservedShortcutKeys().has(key);
+  };
+
+  const validateShortcutConfigDraft = (draft) => {
+    const toggleShortcut = normalizeShortcutText(draft.toggle_window_shortcut || '');
+    const copyShortcut = normalizeShortcutText(draft.copy_pin_shortcut || '');
+
+    if (draft.toggle_window_shortcut_enabled && isReservedShortcut(toggleShortcut)) {
+      return t('settings.shortcuts.recordReserved', { shortcut: toggleShortcut });
+    }
+    if (draft.ctrl_shift_c_shortcut_enabled && isReservedShortcut(copyShortcut)) {
+      return t('settings.shortcuts.recordReserved', { shortcut: copyShortcut });
+    }
+
+    if (draft.toggle_window_shortcut_enabled && draft.ctrl_shift_c_shortcut_enabled) {
+      if (shortcutKey(toggleShortcut) === shortcutKey(copyShortcut)) {
+        return t('settings.shortcuts.conflictError');
+      }
+    }
+
+    return '';
+  };
+
+  const saveShortcutConfig = async (updated, target = null) => {
     setGeneralConfig(updated);
     setShortcutError('');
+    const shortcutValidationError = validateShortcutConfigDraft(updated);
+    if (shortcutValidationError) {
+      setShortcutError(shortcutValidationError);
+      return false;
+    }
     try {
       await invoke('update_general_config', { config: updated });
       return true;
     } catch (error) {
       const message = typeof error === 'string' ? error : String(error);
-      setShortcutError(message);
+      const enrichedMessage = message.includes('Failed to register shortcut')
+        ? `${message} ${t('settings.shortcuts.occupiedHintOne', {
+          platform: getPlatformLabel(getShortcutPlatform()),
+          shortcut: getDefaultSuggestedShortcut(target),
+        })}`
+        : message;
+      setShortcutError(enrichedMessage);
       console.error('Failed to save shortcut config:', error);
       try {
         await loadConfigs();
@@ -129,9 +235,175 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     }
   };
 
+  const getShortcutPrimaryKey = (event) => {
+    const { code, key } = event;
+
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3).toLowerCase();
+    if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+    if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code.toLowerCase();
+
+    const specialKeyMap = {
+      Space: 'space',
+      Enter: 'enter',
+      Escape: 'esc',
+      Tab: 'tab',
+      Backspace: 'backspace',
+      Delete: 'delete',
+      Insert: 'insert',
+      Home: 'home',
+      End: 'end',
+      PageUp: 'pageup',
+      PageDown: 'pagedown',
+      ArrowUp: 'up',
+      ArrowDown: 'down',
+      ArrowLeft: 'left',
+      ArrowRight: 'right',
+      Minus: '-',
+      Equal: '=',
+      BracketLeft: '[',
+      BracketRight: ']',
+      Backslash: '\\',
+      Semicolon: ';',
+      Quote: "'",
+      Comma: ',',
+      Period: '.',
+      Slash: '/',
+      Backquote: '`',
+    };
+    if (specialKeyMap[code]) return specialKeyMap[code];
+
+    const normalizedKey = (key || '').toLowerCase();
+    if (/^[a-z0-9]$/.test(normalizedKey)) return normalizedKey;
+    return null;
+  };
+
+  const toRecordedShortcut = (event) => {
+    const modifierCodes = new Set([
+      'ControlLeft',
+      'ControlRight',
+      'ShiftLeft',
+      'ShiftRight',
+      'AltLeft',
+      'AltRight',
+      'MetaLeft',
+      'MetaRight',
+    ]);
+
+    if (modifierCodes.has(event.code)) {
+      return { shortcut: null, error: t('settings.shortcuts.recordNeedPrimary') };
+    }
+
+    const primary = getShortcutPrimaryKey(event);
+    if (!primary) {
+      return { shortcut: null, error: t('settings.shortcuts.recordUnsupported') };
+    }
+
+    const modifiers = [];
+    if (event.ctrlKey) modifiers.push('ctrl');
+    if (event.altKey) modifiers.push('alt');
+    if (event.shiftKey) modifiers.push('shift');
+    if (event.metaKey) modifiers.push('super');
+
+    if (modifiers.length === 0) {
+      return { shortcut: null, error: t('settings.shortcuts.recordNeedModifier') };
+    }
+
+    const recorded = `${modifiers.join('+')}+${primary}`;
+    if (isReservedShortcut(recorded)) {
+      return {
+        shortcut: null,
+        error: t('settings.shortcuts.recordReserved', { shortcut: recorded }),
+      };
+    }
+
+    return { shortcut: recorded, error: null };
+  };
+
+  const startShortcutRecording = (target) => {
+    setShortcutError('');
+    setRecordingTarget(target);
+  };
+
+  const stopShortcutRecording = () => {
+    setRecordingTarget(null);
+  };
+
+  const restoreShortcutDefaults = async () => {
+    setRecordingTarget(null);
+    await saveShortcutConfig({
+      ...generalConfig,
+      ctrl_shift_c_shortcut_enabled: false,
+      copy_pin_shortcut: 'ctrl+shift+c',
+      toggle_window_shortcut_enabled: true,
+      toggle_window_shortcut: 'alt+x',
+    });
+  };
+
   useEffect(() => {
     loadConfigs();
   }, []);
+
+  useEffect(() => {
+    if (!recordingTarget) return undefined;
+
+    const onRecordKeyDown = async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.repeat) return;
+      if (event.key === 'Escape') {
+        stopShortcutRecording();
+        return;
+      }
+
+      const { shortcut, error } = toRecordedShortcut(event);
+      if (!shortcut) {
+        setShortcutError(error);
+        return;
+      }
+
+      stopShortcutRecording();
+
+      if (recordingTarget === 'toggle_window_shortcut') {
+        await saveShortcutConfig({
+          ...generalConfig,
+          toggle_window_shortcut: shortcut,
+        }, 'toggle_window_shortcut');
+        return;
+      }
+
+      if (recordingTarget === 'copy_pin_shortcut') {
+        await saveShortcutConfig({
+          ...generalConfig,
+          copy_pin_shortcut: shortcut,
+        }, 'copy_pin_shortcut');
+      }
+    };
+
+    window.addEventListener('keydown', onRecordKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', onRecordKeyDown, true);
+    };
+  }, [generalConfig, recordingTarget, t]);
+
+  useEffect(() => {
+    if (activeTab !== 'shortcuts' && recordingTarget) {
+      setRecordingTarget(null);
+      return;
+    }
+    if (recordingTarget === 'toggle_window_shortcut' && !generalConfig.toggle_window_shortcut_enabled) {
+      setRecordingTarget(null);
+      return;
+    }
+    if (recordingTarget === 'copy_pin_shortcut' && !generalConfig.ctrl_shift_c_shortcut_enabled) {
+      setRecordingTarget(null);
+    }
+  }, [
+    activeTab,
+    recordingTarget,
+    generalConfig.toggle_window_shortcut_enabled,
+    generalConfig.ctrl_shift_c_shortcut_enabled,
+  ]);
 
   // 辅助函数：获取供应商的键名
   const getProviderKey = (provider) => {
@@ -723,7 +995,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       await saveShortcutConfig({
                         ...generalConfig,
                         toggle_window_shortcut_enabled: e.target.checked,
-                      });
+                      }, 'toggle_window_shortcut');
                     }}
                   />
                   <span className="toggle-slider" />
@@ -731,31 +1003,55 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </label>
               <div className="sg-row">
                 <span>{t('settings.shortcuts.toggleWindowKey')}</span>
-                <input
-                  type="text"
-                  value={generalConfig.toggle_window_shortcut ?? 'alt+x'}
-                  onChange={(e) => {
-                    setGeneralConfig({
-                      ...generalConfig,
-                      toggle_window_shortcut: e.target.value,
-                    });
-                  }}
-                  onBlur={async () => {
-                    const normalized = normalizeShortcutText(generalConfig.toggle_window_shortcut);
-                    await saveShortcutConfig({
-                      ...generalConfig,
-                      toggle_window_shortcut: normalized || 'alt+x',
-                    });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="shortcut-input"
-                  disabled={!generalConfig.toggle_window_shortcut_enabled}
-                />
+                <div className="shortcut-editor">
+                  <input
+                    type="text"
+                    value={generalConfig.toggle_window_shortcut ?? 'alt+x'}
+                    onChange={(e) => {
+                      setGeneralConfig({
+                        ...generalConfig,
+                        toggle_window_shortcut: e.target.value,
+                      });
+                    }}
+                    onBlur={async () => {
+                      const normalized = normalizeShortcutText(generalConfig.toggle_window_shortcut);
+                      await saveShortcutConfig({
+                        ...generalConfig,
+                        toggle_window_shortcut: normalized || 'alt+x',
+                      }, 'toggle_window_shortcut');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="shortcut-input"
+                    disabled={!generalConfig.toggle_window_shortcut_enabled || recordingTarget === 'toggle_window_shortcut'}
+                  />
+                  <button
+                    type="button"
+                    className={`shortcut-record-btn ${recordingTarget === 'toggle_window_shortcut' ? 'recording' : ''}`}
+                    onClick={() => {
+                      if (recordingTarget === 'toggle_window_shortcut') {
+                        stopShortcutRecording();
+                      } else {
+                        startShortcutRecording('toggle_window_shortcut');
+                      }
+                    }}
+                    disabled={!generalConfig.toggle_window_shortcut_enabled}
+                  >
+                    {recordingTarget === 'toggle_window_shortcut'
+                      ? t('settings.shortcuts.stopRecording')
+                      : t('settings.shortcuts.startRecording')}
+                  </button>
+                </div>
               </div>
+              <small className="setting-hint setting-hint-inline">
+                {t('settings.shortcuts.defaultCandidate', {
+                  platform: getPlatformLabel(getShortcutPlatform()),
+                  shortcut: getDefaultSuggestedShortcut('toggle_window_shortcut'),
+                })}
+              </small>
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.ctrlShiftC')}</span>
                 <span className="toggle-switch">
@@ -766,7 +1062,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       await saveShortcutConfig({
                         ...generalConfig,
                         ctrl_shift_c_shortcut_enabled: e.target.checked,
-                      });
+                      }, 'copy_pin_shortcut');
                     }}
                   />
                   <span className="toggle-slider" />
@@ -774,38 +1070,75 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </label>
               <div className="sg-row">
                 <span>{t('settings.shortcuts.ctrlShiftCKey')}</span>
-                <input
-                  type="text"
-                  value={generalConfig.copy_pin_shortcut ?? 'ctrl+shift+c'}
-                  onChange={(e) => {
-                    setGeneralConfig({
-                      ...generalConfig,
-                      copy_pin_shortcut: e.target.value,
-                    });
-                  }}
-                  onBlur={async () => {
-                    const normalized = normalizeShortcutText(generalConfig.copy_pin_shortcut);
-                    await saveShortcutConfig({
-                      ...generalConfig,
-                      copy_pin_shortcut: normalized || 'ctrl+shift+c',
-                    });
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="shortcut-input"
-                  disabled={!generalConfig.ctrl_shift_c_shortcut_enabled}
-                />
+                <div className="shortcut-editor">
+                  <input
+                    type="text"
+                    value={generalConfig.copy_pin_shortcut ?? 'ctrl+shift+c'}
+                    onChange={(e) => {
+                      setGeneralConfig({
+                        ...generalConfig,
+                        copy_pin_shortcut: e.target.value,
+                      });
+                    }}
+                    onBlur={async () => {
+                      const normalized = normalizeShortcutText(generalConfig.copy_pin_shortcut);
+                      await saveShortcutConfig({
+                        ...generalConfig,
+                        copy_pin_shortcut: normalized || 'ctrl+shift+c',
+                      }, 'copy_pin_shortcut');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="shortcut-input"
+                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled || recordingTarget === 'copy_pin_shortcut'}
+                  />
+                  <button
+                    type="button"
+                    className={`shortcut-record-btn ${recordingTarget === 'copy_pin_shortcut' ? 'recording' : ''}`}
+                    onClick={() => {
+                      if (recordingTarget === 'copy_pin_shortcut') {
+                        stopShortcutRecording();
+                      } else {
+                        startShortcutRecording('copy_pin_shortcut');
+                      }
+                    }}
+                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled}
+                  >
+                    {recordingTarget === 'copy_pin_shortcut'
+                      ? t('settings.shortcuts.stopRecording')
+                      : t('settings.shortcuts.startRecording')}
+                  </button>
+                </div>
               </div>
+              <small className="setting-hint setting-hint-inline">
+                {t('settings.shortcuts.defaultCandidate', {
+                  platform: getPlatformLabel(getShortcutPlatform()),
+                  shortcut: getDefaultSuggestedShortcut('copy_pin_shortcut'),
+                })}
+              </small>
             </div>
+            {recordingTarget && (
+              <small className="setting-hint">{t('settings.shortcuts.recordingHint')}</small>
+            )}
             <small className="setting-hint">{t('settings.shortcuts.ctrlShiftCHint')}</small>
+            <small className="setting-hint">{t('settings.shortcuts.platformNotice')}</small>
             {shortcutError && (
               <small className="setting-hint">
                 <span className="setting-warning">{shortcutError}</span>
               </small>
             )}
+            <div className="shortcut-actions">
+              <button
+                type="button"
+                className="shortcut-reset-btn"
+                onClick={restoreShortcutDefaults}
+              >
+                {t('settings.shortcuts.restoreDefaults')}
+              </button>
+            </div>
 
             <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">

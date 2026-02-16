@@ -303,7 +303,7 @@ fn main() {
 
                 let app_handle = app_handle_for_shortcuts.clone();
                 let shortcut_binding_state_for_handler = shortcut_binding_state.clone();
-                app_handle.plugin(
+                let plugin_result = app_handle.plugin(
                     tauri_plugin_global_shortcut::Builder::new()
                         .with_handler(move |app, shortcut, event| {
                             if event.state != ShortcutState::Pressed {
@@ -349,8 +349,14 @@ fn main() {
                             }
                         })
                         .build(),
-                )?;
-                if let Err(error) =
+                );
+
+                if let Err(error) = plugin_result {
+                    eprintln!(
+                        "[Shortcut] Global shortcut plugin initialization failed. Continue without global shortcuts: {}",
+                        error
+                    );
+                } else if let Err(error) =
                     apply_shortcut_config(&app_handle, &shortcut_binding_state, &startup_general_config)
                 {
                     eprintln!("[Shortcut] Failed to apply startup shortcut config: {}", error);

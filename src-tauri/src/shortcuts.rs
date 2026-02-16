@@ -1,4 +1,5 @@
 use crate::config::GeneralConfig;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
@@ -51,6 +52,82 @@ fn has_modifier(shortcut: &str) -> bool {
     MODIFIERS.iter().any(|m| shortcut.contains(m))
 }
 
+fn normalize_shortcut_token(token: &str) -> String {
+    match token.trim().to_ascii_lowercase().as_str() {
+        "control" => "ctrl".to_string(),
+        "cmd" | "command" | "meta" => "super".to_string(),
+        "option" => "alt".to_string(),
+        "return" => "enter".to_string(),
+        "escape" => "esc".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn shortcut_token_set(shortcut: &str) -> BTreeSet<String> {
+    shortcut
+        .split('+')
+        .map(normalize_shortcut_token)
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn reserved_shortcuts() -> &'static [&'static str] {
+    &[
+        "alt+tab",
+        "alt+f4",
+        "super+l",
+        "super+d",
+        "super+tab",
+        "ctrl+alt+delete",
+    ]
+}
+
+#[cfg(target_os = "macos")]
+fn reserved_shortcuts() -> &'static [&'static str] {
+    &["super+q", "super+tab", "super+space", "ctrl+space", "super+h"]
+}
+
+#[cfg(target_os = "linux")]
+fn reserved_shortcuts() -> &'static [&'static str] {
+    &["alt+tab", "alt+f4", "super+l"]
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn reserved_shortcuts() -> &'static [&'static str] {
+    &["alt+tab"]
+}
+
+#[cfg(target_os = "windows")]
+fn platform_name() -> &'static str {
+    "Windows"
+}
+
+#[cfg(target_os = "macos")]
+fn platform_name() -> &'static str {
+    "macOS"
+}
+
+#[cfg(target_os = "linux")]
+fn platform_name() -> &'static str {
+    "Linux"
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+fn platform_name() -> &'static str {
+    "current platform"
+}
+
+fn is_reserved_shortcut(shortcut: &str) -> bool {
+    let current = shortcut_token_set(shortcut);
+    if current.is_empty() {
+        return false;
+    }
+    reserved_shortcuts()
+        .iter()
+        .any(|candidate| shortcut_token_set(candidate) == current)
+}
+
 #[cfg(desktop)]
 fn parse_shortcut(raw: &str, field_name: &str) -> Result<(String, tauri_plugin_global_shortcut::Shortcut), String> {
     let normalized = raw.trim().to_ascii_lowercase();
@@ -61,6 +138,14 @@ fn parse_shortcut(raw: &str, field_name: &str) -> Result<(String, tauri_plugin_g
         return Err(format!(
             "{} must include at least one modifier key (Ctrl/Alt/Shift/Super)",
             field_name
+        ));
+    }
+    if is_reserved_shortcut(&normalized) {
+        return Err(format!(
+            "{} uses a reserved system shortcut on {}: {}",
+            field_name,
+            platform_name(),
+            normalized
         ));
     }
     let parsed = normalized
@@ -133,7 +218,10 @@ pub fn apply_shortcut_config(
                 let _ = global_shortcut.register(shortcut);
             }
             state.replace(previous);
-            return Err(format!("Failed to register shortcut '{}': {}", shortcut, error));
+            return Err(format!(
+                "Failed to register shortcut '{}': {}. It may be occupied by another app or blocked by the OS. Try a different combination.",
+                shortcut, error
+            ));
         }
         registered_now.push(shortcut.clone());
     }
