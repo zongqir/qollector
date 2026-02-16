@@ -139,8 +139,8 @@ impl ClipboardManager {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
-        let item = match content {
-            ClipboardContent::Text(text) => {
+        let item = match &content {
+            ClipboardContent::Text { plain: text, .. } => {
                 // 妫€鏌ユ槸鍚︿负绌虹櫧鍐呭
                 if text.trim().is_empty() {
                     // 缁熻鎹㈣绗︽暟閲?
@@ -162,7 +162,7 @@ impl ClipboardManager {
                     );
                 }
                 println!("Creating clipboard item for text: {} chars", text.len());
-                ClipboardItem::new_text(text, metadata)
+                ClipboardItem::new_text(text.clone(), metadata)
             }
             ClipboardContent::Image(data) => {
                 println!("Image clipboard content detected, saving...");
@@ -252,7 +252,7 @@ impl ClipboardManager {
 
                 let mut item = ClipboardItem::new_text(summary, metadata);
                 item.type_ = "file".to_string();
-                item.content = Some(paths_str.clone());
+                item.content = Some(paths_str.to_string());
                 // Use full path payload hash to avoid false collisions on same filename.
                 let mut hasher = sha2::Sha256::new();
                 use sha2::Digest;
@@ -275,6 +275,17 @@ impl ClipboardManager {
             println!("Inserting new clipboard item: {}", item.id);
             repo_lock.insert(&item).await?;
             inserted_new_item = true;
+
+            // Save raw clipboard formats (HTML, RTF) if present
+            if let ClipboardContent::Text { raw_formats: Some(formats), .. } = &content {
+                if !formats.is_empty() {
+                    if let Err(e) = repo_lock.insert_raw_formats(&item.id, formats).await {
+                        eprintln!("Failed to save raw formats: {}", e);
+                    } else {
+                        println!("Saved {} raw format(s) for item {}", formats.len(), item.id);
+                    }
+                }
+            }
         }
 
         let item_type = item.type_.clone();
@@ -557,7 +568,29 @@ impl ClipboardManager {
                 return Err(ClipboardError::UnsupportedType);
             }
         } else if let Some(text) = &item.content {
-            ClipboardContent::Text(text.clone())
+            // Check if user edited the text (stale raw formats should not be restored).
+            // Note: get_recent_light returns original_content as empty string,
+            // so we must treat empty/None original_content as "unknown" (not edited).
+            let edited = match (&item.content, &item.original_content) {
+                (Some(c), Some(o)) if !o.is_empty() => c != o,
+                _ => false,
+            };
+
+            let raw_formats = if edited {
+                None
+            } else {
+                // Try to load raw formats from DB
+                let repo = self.repository.lock().await;
+                match repo.get_raw_formats(&item.id).await {
+                    Ok(formats) if !formats.is_empty() => Some(formats),
+                    _ => None,
+                }
+            };
+
+            ClipboardContent::Text {
+                plain: text.clone(),
+                raw_formats,
+            }
         } else {
             return Err(ClipboardError::UnsupportedType);
         };
@@ -578,7 +611,9 @@ impl ClipboardManager {
 
     pub async fn delete_item(&self, id: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
-        repo.delete(id).await
+        repo.delete(id).await?;
+        let _ = repo.delete_raw_formats(id).await;
+        Ok(())
     }
 
     pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
@@ -811,6 +846,7 @@ impl ClipboardManager {
         sqlx::query("DELETE FROM clipboard_items")
             .execute(repo.pool())
             .await?;
+        let _ = repo.delete_all_raw_formats().await;
         Ok(())
     }
 
@@ -844,9 +880,21 @@ impl ClipboardManager {
         &self.image_dir
     }
 
+    /// Get raw clipboard formats for an item (for export).
+    pub async fn get_raw_formats(&self, item_id: &str) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_raw_formats(item_id).await
+    }
+
+    /// Insert raw clipboard formats for an item (for import).
+    pub async fn insert_raw_formats(&self, item_id: &str, formats: &[(String, Vec<u8>)]) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.insert_raw_formats(item_id, formats).await
+    }
+
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
-            ClipboardContent::Text(text) => {
+            ClipboardContent::Text { plain: ref text, .. } => {
                 use sha2::{Digest, Sha256};
                 let mut hasher = Sha256::new();
                 hasher.update(text.as_bytes());

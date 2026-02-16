@@ -86,6 +86,25 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
 
+        // Raw clipboard formats table (HTML, RTF, etc.)
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS clipboard_raw_formats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                data BLOB NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_raw_formats_item_id ON clipboard_raw_formats(item_id)")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
@@ -345,6 +364,72 @@ impl ClipboardRepository {
             .bind(pinned as i32)
             .bind(pinned_at)
             .bind(id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    // ========== Raw Formats CRUD ==========
+
+    /// Insert raw clipboard format data (zstd-compressed) for an item.
+    pub async fn insert_raw_formats(
+        &self,
+        item_id: &str,
+        formats: &[(String, Vec<u8>)],
+    ) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        for (mime_type, data) in formats {
+            let compressed = zstd::encode_all(data.as_slice(), 3).unwrap_or_else(|_| data.clone());
+            sqlx::query(
+                "INSERT INTO clipboard_raw_formats (item_id, mime_type, data, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(item_id)
+            .bind(mime_type)
+            .bind(&compressed)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
+    }
+
+    /// Get raw clipboard format data for an item (zstd-decompressed).
+    pub async fn get_raw_formats(
+        &self,
+        item_id: &str,
+    ) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+        let rows: Vec<(String, Vec<u8>)> = sqlx::query_as(
+            "SELECT mime_type, data FROM clipboard_raw_formats WHERE item_id = ?",
+        )
+        .bind(item_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut results = Vec::new();
+        for (mime_type, compressed) in rows {
+            match zstd::decode_all(compressed.as_slice()) {
+                Ok(decompressed) => results.push((mime_type, decompressed)),
+                Err(_) => {
+                    // Fallback: treat as uncompressed (migration safety)
+                    results.push((mime_type, compressed));
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    /// Delete all raw format data for an item.
+    pub async fn delete_raw_formats(&self, item_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM clipboard_raw_formats WHERE item_id = ?")
+            .bind(item_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Delete all raw format data (for clear_all_items).
+    pub async fn delete_all_raw_formats(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM clipboard_raw_formats")
             .execute(&self.pool)
             .await?;
         Ok(())

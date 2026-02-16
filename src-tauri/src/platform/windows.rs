@@ -169,12 +169,20 @@ pub mod windows {
             // Use block_in_place to run synchronously, avoid cross-thread clipboard issues
             tokio::task::block_in_place(|| {
                 match content {
-                    ClipboardContent::Text(text) => {
+                    ClipboardContent::Text { plain, raw_formats } => {
+                        if let Some(ref formats) = raw_formats {
+                            if !formats.is_empty() {
+                                println!("[Paste] Restoring {} rich format(s)", formats.len());
+                                return Self::set_multi_format_text(&plain, formats);
+                            }
+                        }
+                        println!("[Paste] Plain text only (no rich formats)");
+                        // Fallback: plain text only via arboard
                         use arboard::Clipboard;
                         let mut clipboard = Clipboard::new()
                             .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                         clipboard
-                            .set_text(text)
+                            .set_text(plain)
                             .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                     }
                     ClipboardContent::Image(data) => {
@@ -243,7 +251,18 @@ pub mod windows {
                 Clipboard::new().map_err(|e| ClipboardError::AccessError(e.to_string()))?;
 
             if let Ok(text) = clipboard.get_text() {
-                return Ok(ClipboardContent::Text(text));
+                // Drop arboard before opening clipboard again for rich formats
+                drop(clipboard);
+                // Try to read rich text formats (HTML, RTF) via Win32 API
+                let raw_formats = Self::read_rich_formats();
+                return Ok(ClipboardContent::Text {
+                    plain: text,
+                    raw_formats: if raw_formats.is_empty() {
+                        None
+                    } else {
+                        Some(raw_formats)
+                    },
+                });
             }
 
             if let Ok(img) = clipboard.get_image() {
@@ -266,6 +285,122 @@ pub mod windows {
             }
 
             Err(ClipboardError::UnsupportedType)
+        }
+
+        /// Read rich text formats (HTML Format, Rich Text Format) from the clipboard.
+        fn read_rich_formats() -> Vec<(String, Vec<u8>)> {
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+            use windows::Win32::System::Memory::*;
+
+            let format_names = ["HTML Format", "Rich Text Format"];
+            let mut results = Vec::new();
+
+            unsafe {
+                if OpenClipboard(None).is_err() {
+                    println!("[RichFormat] Failed to open clipboard");
+                    return results;
+                }
+
+                for name in &format_names {
+                    let wide: Vec<u16> = OsStr::new(name).encode_wide().chain(Some(0)).collect();
+                    let fmt = RegisterClipboardFormatW(
+                        windows::core::PCWSTR(wide.as_ptr()),
+                    );
+                    if fmt == 0 {
+                        continue;
+                    }
+
+                    if let Ok(handle) = GetClipboardData(fmt) {
+                        if !handle.is_invalid() {
+                            let hglobal = HGLOBAL(handle.0);
+                            let ptr = GlobalLock(hglobal);
+                            if !ptr.is_null() {
+                                let size = GlobalSize(hglobal);
+                                if size > 0 {
+                                    let slice = std::slice::from_raw_parts(
+                                        ptr as *const u8,
+                                        size,
+                                    );
+                                    println!("[RichFormat] Read '{}': {} bytes", name, size);
+                                    results.push((name.to_string(), slice.to_vec()));
+                                }
+                                let _ = GlobalUnlock(hglobal);
+                            }
+                        }
+                    }
+                }
+
+                let _ = CloseClipboard();
+            }
+
+            results
+        }
+
+        /// Write plain text + rich formats to the clipboard via Win32 API.
+        fn set_multi_format_text(
+            plain: &str,
+            formats: &[(String, Vec<u8>)],
+        ) -> Result<(), ClipboardError> {
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+            use windows::Win32::System::Memory::*;
+
+            unsafe {
+                OpenClipboard(None).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to open clipboard: {}", e))
+                })?;
+                let _ = EmptyClipboard();
+
+                // 1) Set CF_UNICODETEXT (13)
+                {
+                    let wide: Vec<u16> = plain.encode_utf16().chain(Some(0)).collect();
+                    let byte_len = wide.len() * 2;
+                    if let Ok(hmem) = GlobalAlloc(GMEM_MOVEABLE, byte_len) {
+                        let ptr = GlobalLock(hmem);
+                        if !ptr.is_null() {
+                            std::ptr::copy_nonoverlapping(
+                                wide.as_ptr() as *const u8,
+                                ptr as *mut u8,
+                                byte_len,
+                            );
+                            let _ = GlobalUnlock(hmem);
+                            let handle = HANDLE(hmem.0 as isize as *mut _);
+                            let _ = SetClipboardData(13, handle); // CF_UNICODETEXT = 13
+                        }
+                    }
+                }
+
+                // 2) Set each rich format
+                for (name, data) in formats {
+                    let wide_name: Vec<u16> =
+                        OsStr::new(name).encode_wide().chain(Some(0)).collect();
+                    let fmt = RegisterClipboardFormatW(
+                        windows::core::PCWSTR(wide_name.as_ptr()),
+                    );
+                    if fmt == 0 {
+                        continue;
+                    }
+
+                    if let Ok(hmem) = GlobalAlloc(GMEM_MOVEABLE, data.len()) {
+                        let ptr = GlobalLock(hmem);
+                        if !ptr.is_null() {
+                            std::ptr::copy_nonoverlapping(
+                                data.as_ptr(),
+                                ptr as *mut u8,
+                                data.len(),
+                            );
+                            let _ = GlobalUnlock(hmem);
+                            let handle = HANDLE(hmem.0 as isize as *mut _);
+                            let _ = SetClipboardData(fmt, handle);
+                        }
+                    }
+                }
+
+                let _ = CloseClipboard();
+            }
+
+            Ok(())
         }
 
         fn get_file_paths() -> Result<Vec<String>, ClipboardError> {
