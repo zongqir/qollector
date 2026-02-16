@@ -39,7 +39,7 @@ function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenI
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...attributes} {...listeners}>
       <CollectionCard
         item={item}
         isCopied={isCopied}
@@ -47,7 +47,6 @@ function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenI
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onOpenItem={onOpenItem}
-        dragListeners={listeners}
       />
     </div>
   );

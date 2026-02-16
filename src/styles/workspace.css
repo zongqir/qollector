@@ -574,12 +574,16 @@
   border-radius: 12px;
   padding: 14px;
   position: relative;
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.2s ease;
   border: 0.5px solid var(--border-light);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   break-inside: avoid;
   margin-bottom: 10px;
+}
+
+.collection-card:active {
+  cursor: grabbing;
 }
 
 .collection-card:hover {
@@ -620,34 +624,6 @@
   color: #ff3b30;
 }
 
-.collection-card-drag {
-  position: absolute;
-  top: 8px;
-  left: 6px;
-  width: 20px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  cursor: grab;
-  opacity: 0;
-  transition: opacity 0.15s;
-  touch-action: none;
-}
-
-.collection-card:hover .collection-card-drag {
-  opacity: 0.5;
-}
-
-.collection-card-drag:hover {
-  opacity: 1 !important;
-  color: var(--text-secondary);
-}
-
-.collection-card-drag:active {
-  cursor: grabbing;
-}
 
 .collection-card-content {
   margin-bottom: 8px;
