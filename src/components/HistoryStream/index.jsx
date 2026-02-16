@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useCallback, forwardRef } from 'react';
+import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
@@ -8,6 +8,7 @@ import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
+import { searchItems } from '../../services/clipboardService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -109,6 +110,31 @@ function HistoryStream({ style }) {
     return () => clearTimeout(timer);
   }, [searchQuery, setDebouncedSearchQuery]);
 
+  const [backendSearchResults, setBackendSearchResults] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
+    if (!query) {
+      setBackendSearchResults(null);
+      return;
+    }
+    let cancelled = false;
+    setIsSearching(true);
+    searchItems(query, 500)
+      .then((results) => {
+        if (!cancelled) setBackendSearchResults(results);
+      })
+      .catch((err) => {
+        console.error('[FTS] backend search failed:', err);
+        if (!cancelled) setBackendSearchResults(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSearching(false);
+      });
+    return () => { cancelled = true; };
+  }, [debouncedSearchQuery]);
+
   const allTags = useMemo(() => {
     const userTags = new Set();
     const aiTags = new Set();
@@ -169,7 +195,10 @@ function HistoryStream({ style }) {
     const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
     const hasSearch = normalizedQuery.length > 0;
 
-    let result = items.filter(item => {
+    // When searching, use backend FTS results as base; otherwise use loaded items
+    const baseItems = (hasSearch && backendSearchResults) ? backendSearchResults : items;
+
+    let result = baseItems.filter(item => {
       scannedItems += 1;
       scannedChars += toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note);
 
@@ -196,14 +225,8 @@ function HistoryStream({ style }) {
         if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
       }
 
-      if (!hasSearch) return true;
-      if (item.content && item.content.toLowerCase().includes(normalizedQuery)) return true;
-      if (item.user_note && item.user_note.toLowerCase().includes(normalizedQuery)) return true;
-      const tags = getTags(item.tags);
-      if (tags.some(tag => tag.toLowerCase().includes(normalizedQuery))) return true;
-      if (getSourceApp(item.metadata).toLowerCase().includes(normalizedQuery)) return true;
-      if (item.ocr_text && item.ocr_text.toLowerCase().includes(normalizedQuery)) return true;
-      return false;
+      // Text matching is handled by backend FTS when searching
+      return true;
     });
 
     // Pin 筛选时�?pinned_at 降序排序
@@ -213,7 +236,7 @@ function HistoryStream({ style }) {
 
     filterProbeRef.current = {
       elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
-      totalItems: items.length,
+      totalItems: baseItems.length,
       resultItems: result.length,
       scannedItems,
       scannedChars,
@@ -223,10 +246,11 @@ function HistoryStream({ style }) {
       selectedType,
       showFavoritesOnly,
       showPinnedOnly,
+      backendSearch: hasSearch && backendSearchResults != null,
     };
 
     return result;
-  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
+  }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
   useEffect(() => {
     const probe = filterProbeRef.current;

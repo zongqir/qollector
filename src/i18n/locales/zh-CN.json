@@ -17,6 +17,7 @@
   "search": {
     "placeholder": "搜索内容、标签、备注...",
     "noResults": "没有找到匹配的记录",
+    "searching": "搜索中...",
     "typeFilter": {
       "all": "全部",
       "text": "文本",

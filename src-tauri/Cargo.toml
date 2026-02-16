@@ -39,6 +39,7 @@ zip = "2"
 aes-gcm = "0.10"
 rfd = "0.15"
 zstd = "0.13"
+jieba-rs = { version = "0.8", default-features = false, features = ["default-dict"] }
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-global-shortcut = "2"

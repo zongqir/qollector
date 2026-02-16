@@ -407,6 +407,7 @@ fn main() {
             start_native_file_drag,
             toggle_favorite_item,
             open_item,
+            search_items,
             get_mcp_config,
             get_mcp_port,
             update_mcp_config,

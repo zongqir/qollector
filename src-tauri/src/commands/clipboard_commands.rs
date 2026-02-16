@@ -97,6 +97,18 @@ pub async fn toggle_favorite_item(
 }
 
 #[tauri::command]
+pub async fn search_items(
+    manager: State<'_, Arc<ClipboardManager>>,
+    query: String,
+    limit: Option<i32>,
+) -> Result<Vec<ClipboardItem>, String> {
+    manager
+        .search_items(&query, limit.unwrap_or(200) as usize)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn open_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,

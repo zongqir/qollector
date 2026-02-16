@@ -17,6 +17,7 @@
   "search": {
     "placeholder": "Search content, tags, notes...",
     "noResults": "No matching records found",
+    "searching": "Searching...",
     "typeFilter": {
       "all": "All",
       "text": "Text",

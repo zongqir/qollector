@@ -31,3 +31,7 @@ export const getRecentItemsLight = async (limit = 50) => {
 export const getMoreItems = async (limit = 50, offset = 0) => {
   return invoke('get_more_items', { limit, offset });
 };
+
+export const searchItems = async (query, limit = 200) => {
+  return invoke('search_items', { query, limit });
+};
