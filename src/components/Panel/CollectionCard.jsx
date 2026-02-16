@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, GripVertical, Folder, ExternalLink } from 'lucide-react';
+import { X, Check, Folder, ExternalLink } from 'lucide-react';
 import { FileIcon, defaultStyles } from 'react-file-icon';
 import { getContentPreview, getFileList, getFileName, parseUrl } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
@@ -17,7 +17,7 @@ const isFolder = (path) => {
   return !name.includes('.');
 };
 
-function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem, dragListeners }) {
+function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem }) {
   const { t } = useTranslation();
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
 
@@ -116,11 +116,6 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpe
       >
         <X size={14} />
       </button>
-      {dragListeners && (
-        <div className="collection-card-drag" {...dragListeners}>
-          <GripVertical size={14} />
-        </div>
-      )}
       <div className="collection-card-content">
         {renderContent()}
       </div>

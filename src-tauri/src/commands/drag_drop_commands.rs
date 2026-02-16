@@ -149,7 +149,8 @@ pub async fn add_clipboard_item_manual(
             item.content_hash = calculate_sha256(&content_paths);
 
             if !shortcut_targets.is_empty() {
-                let mut metadata_value = serde_json::to_value(&metadata).unwrap_or_else(|_| json!({}));
+                let mut metadata_value =
+                    serde_json::to_value(&metadata).unwrap_or_else(|_| json!({}));
                 metadata_value["shortcut_targets"] = Value::Array(shortcut_targets);
                 item.metadata = Some(metadata_value.to_string());
                 item.original_content = Some(resolved_targets.join("\n"));
@@ -163,8 +164,7 @@ pub async fn add_clipboard_item_manual(
                 .map_err(|e| format!("Base64 解码失败: {}", e))?;
 
             let image_dir = app_dir.join("images");
-            std::fs::create_dir_all(&image_dir)
-                .map_err(|e| format!("创建图片目录失败: {}", e))?;
+            std::fs::create_dir_all(&image_dir).map_err(|e| format!("创建图片目录失败: {}", e))?;
 
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -176,8 +176,7 @@ pub async fn add_clipboard_item_manual(
             let image_path = image_dir.join(&filename);
             let thumb_path = image_dir.join(&thumb_filename);
 
-            std::fs::write(&image_path, &image_data)
-                .map_err(|e| format!("保存图片失败: {}", e))?;
+            std::fs::write(&image_path, &image_data).map_err(|e| format!("保存图片失败: {}", e))?;
 
             if let Ok(img) = image::load_from_memory(&image_data) {
                 let thumbnail = img.thumbnail(300, 300);
@@ -194,7 +193,8 @@ pub async fn add_clipboard_item_manual(
             })
             .to_string();
 
-            let mut item = ClipboardItem::new_text(format!("[Image: {}]", filename), metadata.clone());
+            let mut item =
+                ClipboardItem::new_text(format!("[Image: {}]", filename), metadata.clone());
             item.type_ = "image".to_string();
             item.image_paths = Some(image_paths_json);
 

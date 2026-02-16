@@ -1,15 +1,15 @@
-use std::sync::Arc;
-use tokio::sync::{Mutex, oneshot};
 use serde_json::{json, Value};
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::{oneshot, Mutex};
 use warp::Filter;
 
-use crate::core::clipboard_manager::ClipboardManager;
 use super::config::{McpConfig, McpMode};
+use super::lock_file::LockFile;
+use super::port_manager::PortManager;
 use super::protocol::{McpRequest, McpResponse};
 use super::tools::ClipboardTools;
-use super::port_manager::PortManager;
-use super::lock_file::LockFile;
+use crate::core::clipboard_manager::ClipboardManager;
 use std::path::PathBuf;
 
 /// MCP 服务器
@@ -102,9 +102,7 @@ impl McpServer {
                     }
                 }
             }
-            McpMode::Stdio => {
-                Err("GUI 应用不支持 stdio 模式，请使用 HTTP 模式".to_string())
-            }
+            McpMode::Stdio => Err("GUI 应用不支持 stdio 模式，请使用 HTTP 模式".to_string()),
         }
     }
 
@@ -156,11 +154,10 @@ impl McpServer {
 
         // 启动服务器，支持优雅关闭
         tokio::spawn(async move {
-            let (_, server) = warp::serve(routes)
-                .bind_with_graceful_shutdown(addr, async {
-                    shutdown_rx.await.ok();
-                    println!("[MCP] 收到关闭信号，正在优雅关闭服务器...");
-                });
+            let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(addr, async {
+                shutdown_rx.await.ok();
+                println!("[MCP] 收到关闭信号，正在优雅关闭服务器...");
+            });
 
             server.await;
             println!("[MCP] 服务器已完全关闭");
@@ -253,9 +250,7 @@ impl McpServer {
         tools: ClipboardTools,
     ) -> Result<McpResponse, String> {
         let params = params.ok_or("缺少参数")?;
-        let tool_name = params["name"]
-            .as_str()
-            .ok_or("缺少工具名称")?;
+        let tool_name = params["name"].as_str().ok_or("缺少工具名称")?;
         let arguments = params["arguments"].clone();
 
         match tools.call_tool(tool_name, arguments).await {

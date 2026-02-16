@@ -40,24 +40,35 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  background: var(--bg-input);
+  border-radius: 12px;
+  padding: 2px 4px 2px 10px;
+  gap: 2px;
   z-index: 10;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.add-tag-input-wrapper:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--textarea-focus-bg);
 }
 
 .add-tag-input {
-  width: 120px;
-  padding: 4px 8px;
+  width: 100px;
+  padding: 4px 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   font-size: 12px;
   outline: none;
-  background: var(--bg-input);
+  background: transparent;
   color: var(--text-primary);
   transition: all 0.15s;
 }
 
 .add-tag-input:focus {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  box-shadow: none;
 }
 
 .add-tag-input::placeholder {
@@ -66,14 +77,13 @@
 
 .tag-btn-confirm,
 .tag-btn-cancel {
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border: none;
-  border-radius: 6px;
+  border-radius: 9px;
   cursor: pointer;
-  font-size: 13px;
-  font-weight: bold;
-  transition: all 0.15s;
+  font-size: 11px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,42 +91,48 @@
 }
 
 .tag-btn-confirm {
-  background: #34c759;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.25);
 }
 
 .tag-btn-confirm:hover:not(:disabled) {
-  background: #2db84e;
+  background: var(--accent-hover);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+  transform: translateY(-0.5px);
 }
 
 .tag-btn-confirm:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .tag-btn-cancel {
-  background: var(--cancel-btn-bg);
-  color: var(--text-secondary);
+  background: transparent;
+  color: var(--text-tertiary);
 }
 
 .tag-btn-cancel:hover {
   background: var(--cancel-btn-hover-bg);
+  color: var(--text-secondary);
 }
 
 .tag-suggestions {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   background: var(--tag-suggestion-bg);
   backdrop-filter: saturate(180%) blur(20px);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px var(--shadow-lg);
-  max-height: 240px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--shadow-md), 0 1px 3px var(--shadow-sm);
+  max-height: 200px;
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1000;
-  min-width: 180px;
+  min-width: 140px;
+  padding: 4px;
   animation: suggestionsSlideIn 0.15s ease;
 }
 
@@ -126,43 +142,34 @@
 }
 
 .tag-suggestion-item {
-  padding: 8px 14px;
+  padding: 5px 10px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: 12px;
+  color: var(--text-secondary);
   transition: all 0.1s ease;
-  border-left: 2px solid transparent;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  border-radius: 6px;
 }
 
 .tag-suggestion-icon {
-  opacity: 0.5;
+  opacity: 0.4;
   transition: opacity 0.1s;
   flex-shrink: 0;
 }
 
 .tag-suggestion-item:hover {
   background: var(--tag-suggestion-hover);
-  border-left-color: var(--accent-color);
   color: var(--accent-color);
 }
 
 .tag-suggestion-item:hover .tag-suggestion-icon {
-  opacity: 1;
+  opacity: 0.8;
 }
 
-.tag-suggestion-item:first-child {
-  border-radius: 9px 9px 0 0;
-}
-
-.tag-suggestion-item:last-child {
-  border-radius: 0 0 9px 9px;
-}
-
-/* macOS 风格标签 */
+/* ---- tags ---- */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -171,90 +178,167 @@
   padding: 3px 10px;
   border-radius: 10px;
   font-size: 11px;
-  font-weight: 600;
-  transition: all 0.15s;
-  border: none;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
   cursor: pointer;
   user-select: none;
-  color: white;
 }
 
-.tag.selected {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* AI标签 - 紫色 */
-.tag.ai-tag {
-  background: #af52de;
-}
-
-.tag.ai-tag:hover {
-  background: #c77deb;
-}
-
-.tag.ai-tag.selected {
-  background: #9a3dca;
-}
-
-/* 用户标签 - 蓝色 */
+/* user-tag (blue) */
 .tag.user-tag {
-  background: var(--accent-color);
+  background: rgba(0, 122, 255, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(0, 122, 255, 0.15);
 }
-
 .tag.user-tag:hover {
-  background: var(--accent-hover);
+  background: rgba(0, 122, 255, 0.16);
+  border-color: rgba(0, 122, 255, 0.25);
 }
-
 .tag.user-tag.selected {
-  background: #0055b3;
-}
-
-/* 来源标签 - 橙色 */
-.tag.source-tag {
-  background: #ff9500;
-}
-
-.tag.source-tag:hover {
-  background: #e68600;
-}
-
-.tag.source-tag.selected {
-  background: #cc7700;
-}
-
-/* 类型标签 - 青色 */
-.tag.type-tag {
-  background: #5ac8fa;
-}
-
-.tag.type-tag:hover {
-  background: #4ab8e8;
-}
-
-.tag.type-tag.selected {
-  background: #3aa8d8;
-}
-
-.tag.editable {
   background: var(--accent-color);
   color: white;
+  border-color: var(--accent-color);
+  box-shadow: 0 1px 4px rgba(0, 122, 255, 0.25);
+}
+
+/* ai-tag (purple) */
+.tag.ai-tag {
+  background: rgba(175, 82, 222, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(175, 82, 222, 0.15);
+}
+.tag.ai-tag:hover {
+  background: rgba(175, 82, 222, 0.16);
+  border-color: rgba(175, 82, 222, 0.25);
+}
+.tag.ai-tag.selected {
+  background: #af52de;
+  color: white;
+  border-color: #af52de;
+  box-shadow: 0 1px 4px rgba(175, 82, 222, 0.25);
+}
+
+/* source-tag (orange) */
+.tag.source-tag {
+  background: rgba(255, 149, 0, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(255, 149, 0, 0.15);
+}
+.tag.source-tag:hover {
+  background: rgba(255, 149, 0, 0.16);
+  border-color: rgba(255, 149, 0, 0.25);
+}
+.tag.source-tag.selected {
+  background: #ff9500;
+  color: white;
+  border-color: #ff9500;
+  box-shadow: 0 1px 4px rgba(255, 149, 0, 0.25);
+}
+
+/* type-tag (cyan) */
+.tag.type-tag {
+  background: rgba(90, 200, 250, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(90, 200, 250, 0.15);
+}
+.tag.type-tag:hover {
+  background: rgba(90, 200, 250, 0.16);
+  border-color: rgba(90, 200, 250, 0.25);
+}
+.tag.type-tag.selected {
+  background: #5ac8fa;
+  color: white;
+  border-color: #5ac8fa;
+  box-shadow: 0 1px 4px rgba(90, 200, 250, 0.25);
+}
+
+/* ---- dark mode ---- */
+.dark-mode .tag.user-tag {
+  background: rgba(10, 132, 255, 0.14);
+  border-color: rgba(10, 132, 255, 0.20);
+}
+.dark-mode .tag.user-tag:hover {
+  background: rgba(10, 132, 255, 0.22);
+  border-color: rgba(10, 132, 255, 0.32);
+}
+.dark-mode .tag.user-tag.selected {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  box-shadow: 0 1px 6px rgba(10, 132, 255, 0.35);
+}
+
+.dark-mode .tag.ai-tag {
+  background: rgba(191, 90, 242, 0.14);
+  border-color: rgba(191, 90, 242, 0.20);
+}
+.dark-mode .tag.ai-tag:hover {
+  background: rgba(191, 90, 242, 0.22);
+  border-color: rgba(191, 90, 242, 0.32);
+}
+.dark-mode .tag.ai-tag.selected {
+  background: #bf5af2;
+  border-color: #bf5af2;
+  box-shadow: 0 1px 6px rgba(191, 90, 242, 0.35);
+}
+
+.dark-mode .tag.source-tag {
+  background: rgba(255, 159, 10, 0.14);
+  border-color: rgba(255, 159, 10, 0.20);
+}
+.dark-mode .tag.source-tag:hover {
+  background: rgba(255, 159, 10, 0.22);
+  border-color: rgba(255, 159, 10, 0.32);
+}
+.dark-mode .tag.source-tag.selected {
+  background: #ff9f0a;
+  border-color: #ff9f0a;
+  box-shadow: 0 1px 6px rgba(255, 159, 10, 0.35);
+}
+
+.dark-mode .tag.type-tag {
+  background: rgba(100, 210, 255, 0.14);
+  border-color: rgba(100, 210, 255, 0.20);
+}
+.dark-mode .tag.type-tag:hover {
+  background: rgba(100, 210, 255, 0.22);
+  border-color: rgba(100, 210, 255, 0.32);
+}
+.dark-mode .tag.type-tag.selected {
+  background: #64d2ff;
+  color: #1c1c1e;
+  border-color: #64d2ff;
+  box-shadow: 0 1px 6px rgba(100, 210, 255, 0.35);
+}
+
+/* editable */
+.tag.editable {
+  background: rgba(0, 122, 255, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(0, 122, 255, 0.15);
   padding-right: 10px;
 }
+.dark-mode .tag.editable {
+  background: rgba(10, 132, 255, 0.14);
+  border-color: rgba(10, 132, 255, 0.20);
+}
 
+/* remove button */
 .tag-remove {
   background: none;
   border: none;
-  color: white;
+  color: currentColor;
   cursor: pointer;
   font-size: 16px;
   padding: 0;
   margin-left: 2px;
   line-height: 1;
-  opacity: 0.7;
+  opacity: 0.5;
   transition: opacity 0.15s;
 }
-
 .tag-remove:hover {
-  opacity: 1;
+  opacity: 0.8;
 }

@@ -36,61 +36,73 @@
 
 .note-edit-bar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--note-edit-bg);
-  border-radius: 10px;
-  margin-top: 0;
-  border: 1px solid var(--note-edit-border);
+  flex-direction: column;
+  padding: 0;
+  background: transparent;
+  border-top: 1px solid var(--border-light);
+  margin: 0 -16px -16px;
   position: relative;
-  overflow: hidden;
-}
-
-.note-edit-bar::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--timeline-color, var(--text-tertiary));
 }
 
 .note-edit-input {
-  flex: 1;
-  padding: 6px 10px;
+  width: 100%;
+  padding: 12px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  background: var(--bg-input);
-  min-height: 28px;
-  transition: all 0.15s;
-  color: var(--text-secondary);
-  font-weight: 500;
+  background: transparent;
+  min-height: 60px;
+  transition: background 0.2s ease;
+  color: var(--text-primary);
+  font-weight: 400;
   outline: none;
+  line-height: 1.6;
+  box-sizing: border-box;
 }
 
 .note-edit-input:focus {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  background: var(--textarea-focus-bg);
 }
 
 .note-edit-input::placeholder {
   color: var(--text-tertiary);
 }
 
+.note-edit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.note-edit-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  background: transparent;
+  border-radius: 4px;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
+}
+
+.note-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
 .note-btn-save,
 .note-btn-cancel {
-  width: 28px;
-  height: 28px;
+  height: 24px;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
-  transition: all 0.15s;
+  font-size: 12px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,21 +110,29 @@
 }
 
 .note-btn-save {
-  background: #34c759;
-  color: white;
+  padding: 0 10px;
+  gap: 4px;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.25);
 }
 
 .note-btn-save:hover {
-  background: #2db84e;
+  background: var(--accent-hover);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+  transform: translateY(-0.5px);
 }
 
 .note-btn-cancel {
-  background: var(--cancel-btn-bg);
-  color: var(--text-secondary);
+  width: 24px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-tertiary);
 }
 
 .note-btn-cancel:hover {
   background: var(--cancel-btn-hover-bg);
+  color: var(--text-secondary);
 }
 
 .add-note-btn {

@@ -1,33 +1,35 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ai;
+mod commands;
+mod config;
 mod core;
+mod mcp;
+mod ocr;
 mod platform;
 mod repository;
-mod commands;
-mod ai;
-mod ocr;
-mod mcp;
-mod config;
+mod shortcuts;
 mod startup_metrics;
 
-use std::sync::Arc;
+use commands::ai_commands::*;
+use commands::clipboard_commands::*;
+use commands::drag_drop_commands::*;
+use commands::export_commands::*;
+use commands::general_commands::*;
+use commands::lock_commands::*;
+use commands::mcp_commands::*;
+use commands::native_drag_commands::*;
+use commands::ocr_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
-use commands::clipboard_commands::*;
-use commands::ai_commands::*;
-use commands::ocr_commands::*;
-use commands::drag_drop_commands::*;
-use commands::native_drag_commands::*;
-use commands::mcp_commands::*;
-use commands::general_commands::*;
-use commands::lock_commands::*;
-use commands::export_commands::*;
-use tauri::Manager;
-use std::sync::Mutex;
-use tokio::sync::Mutex as TokioMutex;
-use std::time::Instant;
+use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Instant;
+use tauri::Manager;
+use tokio::sync::Mutex as TokioMutex;
 
 struct StartupMeter {
     scope: &'static str,
@@ -105,14 +107,15 @@ fn main() {
         }))
         .setup(move |app| {
             let mut setup_meter = StartupMeter::new("setup");
-            let app_dir = app.path().app_data_dir()
+            let app_dir = app
+                .path()
+                .app_data_dir()
                 .expect("Failed to get app data directory");
             setup_meter.mark("resolve_app_dir");
 
             println!("App data directory: {:?}", app_dir);
 
-            std::fs::create_dir_all(&app_dir)
-                .expect("Failed to create app directory");
+            std::fs::create_dir_all(&app_dir).expect("Failed to create app directory");
             setup_meter.mark("ensure_app_dir");
 
             let db_path = app_dir.join("clipbox.db");
@@ -133,8 +136,10 @@ fn main() {
             setup_meter.mark("db_deobfuscate");
 
             let app_handle_for_shortcuts = app.app_handle().clone();
+            let shortcut_binding_state = Arc::new(ShortcutBindingState::default());
+            let shortcut_binding_state_for_setup = shortcut_binding_state.clone();
             let startup_metrics_for_core_init = startup_metrics_for_setup.clone();
-            tauri::async_runtime::block_on(async move {
+            let startup_general_config = tauri::async_runtime::block_on(async move {
                 let mut init_meter = StartupMeter::new("core_init");
                 let repository = ClipboardRepository::new(db_path)
                     .await
@@ -145,22 +150,27 @@ fn main() {
 
                 // 初始化配置仓库
                 let config_repo = Arc::new(ConfigRepository::new(repository.pool().clone()));
-                config_repo.init_table().await
+                config_repo
+                    .init_table()
+                    .await
                     .expect("Failed to initialize config table");
                 println!("Config repository initialized");
                 init_meter.mark("init_config_repo");
 
-                let platform = platform::create_platform()
-                    .expect("Failed to initialize clipboard");
+                let platform = platform::create_platform().expect("Failed to initialize clipboard");
                 init_meter.mark("create_platform");
 
                 // 加载或初始化 AI 配置
-                let (ai_config_opt, ocr_config_opt, mcp_config_opt) = tokio::try_join!(
-                    config_repo.load_ai_config(),
-                    config_repo.load_ocr_config(),
-                    config_repo.load_mcp_config()
-                ).expect("Failed to load startup configs");
+                let (ai_config_opt, ocr_config_opt, mcp_config_opt, general_config_opt) =
+                    tokio::try_join!(
+                        config_repo.load_ai_config(),
+                        config_repo.load_ocr_config(),
+                        config_repo.load_mcp_config(),
+                        config_repo.load_general_config()
+                    )
+                    .expect("Failed to load startup configs");
                 init_meter.mark("load_startup_configs");
+                let general_config = general_config_opt.unwrap_or_default();
 
                 let ai_config = ai_config_opt.unwrap_or_default();
                 println!("AI config loaded: enabled={}", ai_config.enabled);
@@ -173,7 +183,10 @@ fn main() {
 
                 // 加载或初始化 OCR 配置
                 let ocr_config = ocr_config_opt.unwrap_or_default();
-                println!("OCR config loaded: enabled={}, provider={:?}", ocr_config.enabled, ocr_config.current_provider);
+                println!(
+                    "OCR config loaded: enabled={}, provider={:?}",
+                    ocr_config.enabled, ocr_config.current_provider
+                );
 
                 // 初始化 OCR 服务
                 let ocr_service_arc = Arc::new(Mutex::new(None));
@@ -263,6 +276,7 @@ fn main() {
                 app.manage(ai_state);
                 app.manage(ocr_state);
                 app.manage(mcp_state);
+                app.manage(shortcut_binding_state_for_setup);
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
 
@@ -275,6 +289,7 @@ fn main() {
                 });
                 init_meter.mark("spawn_clipboard_monitor");
                 startup_metrics_for_core_init.mark_monitor_spawn_complete();
+                general_config
             });
 
             setup_meter.mark("setup_complete");
@@ -284,53 +299,68 @@ fn main() {
             #[cfg(desktop)]
             {
                 use tauri::Emitter;
-                use tauri_plugin_global_shortcut::{Code, Modifiers, ShortcutState};
+                use tauri_plugin_global_shortcut::ShortcutState;
 
                 let app_handle = app_handle_for_shortcuts.clone();
-                app_handle.plugin(
+                let shortcut_binding_state_for_handler = shortcut_binding_state.clone();
+                let plugin_result = app_handle.plugin(
                     tauri_plugin_global_shortcut::Builder::new()
-                        .with_shortcuts(["ctrl+shift+c", "alt+x"])?
                         .with_handler(move |app, shortcut, event| {
                             if event.state != ShortcutState::Pressed {
                                 return;
                             }
 
-                            if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyC) {
-                                // Ctrl+Shift+C: pin current clipboard content
-                                let app_handle = app.clone();
-                                tauri::async_runtime::spawn(async move {
-                                    if let Some(manager) = app_handle.try_state::<Arc<ClipboardManager>>() {
-                                        match manager.pin_current_clipboard().await {
-                                            Ok(id) => {
-                                                println!("[Shortcut] Pinned clipboard item: {}", id);
-                                                let _ = app_handle.emit("clipboard-changed", ());
-                                            }
-                                            Err(e) => {
-                                                eprintln!("[Shortcut] Failed to pin clipboard: {}", e);
+                            match shortcut_binding_state_for_handler
+                                .action_for_shortcut_id(shortcut.id())
+                            {
+                                ShortcutAction::CopyPin => {
+                                    let app_handle = app.clone();
+                                    tauri::async_runtime::spawn(async move {
+                                        if let Some(manager) =
+                                            app_handle.try_state::<Arc<ClipboardManager>>()
+                                        {
+                                            match manager.copy_and_pin_foreground_selection().await {
+                                                Ok(id) => {
+                                                    println!("[Shortcut] Pinned clipboard item: {}", id);
+                                                    let _ = app_handle.emit("clipboard-changed", ());
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[Shortcut] Failed to pin clipboard: {}", e);
+                                                }
                                             }
                                         }
-                                    }
-                                });
-                            }
+                                    });
+                                }
+                                ShortcutAction::ToggleWindow => {
+                                    if let Some(window) = app.get_webview_window("main") {
+                                        let is_visible = window.is_visible().unwrap_or(false);
+                                        let is_minimized = window.is_minimized().unwrap_or(false);
 
-                            if shortcut.matches(Modifiers::ALT, Code::KeyX) {
-                                // Alt+X: toggle main window visibility
-                                if let Some(window) = app.get_webview_window("main") {
-                                    let is_visible = window.is_visible().unwrap_or(false);
-                                    let is_minimized = window.is_minimized().unwrap_or(false);
-
-                                    if is_visible && !is_minimized {
-                                        let _ = window.hide();
-                                    } else {
-                                        let _ = window.show();
-                                        let _ = window.unminimize();
-                                        let _ = window.set_focus();
+                                        if is_visible && !is_minimized {
+                                            let _ = window.hide();
+                                        } else {
+                                            let _ = window.show();
+                                            let _ = window.unminimize();
+                                            let _ = window.set_focus();
+                                        }
                                     }
                                 }
+                                ShortcutAction::None => {}
                             }
                         })
                         .build(),
-                )?;
+                );
+
+                if let Err(error) = plugin_result {
+                    eprintln!(
+                        "[Shortcut] Global shortcut plugin initialization failed. Continue without global shortcuts: {}",
+                        error
+                    );
+                } else if let Err(error) =
+                    apply_shortcut_config(&app_handle, &shortcut_binding_state, &startup_general_config)
+                {
+                    eprintln!("[Shortcut] Failed to apply startup shortcut config: {}", error);
+                }
                 setup_meter.mark("register_global_shortcuts");
             }
 
@@ -353,7 +383,10 @@ fn main() {
                 }
 
                 // 退出时混淆数据库文件头
-                let app_dir = app_handle.path().app_data_dir().expect("Failed to get app data dir");
+                let app_dir = app_handle
+                    .path()
+                    .app_data_dir()
+                    .expect("Failed to get app data dir");
                 let db_path = app_dir.join("clipbox.db");
                 core::db_obfuscate::obfuscate_db(&db_path);
             }

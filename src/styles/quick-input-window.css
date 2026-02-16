@@ -20,6 +20,8 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--quick-add-bg, var(--quick-input-bg));
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border: none;
   border-radius: 12px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
@@ -203,4 +205,42 @@ body {
 .quick-window-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ========== Glass opacity indicator ========== */
+.glass-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  animation: glassIndicatorIn 0.15s ease;
+}
+
+.glass-indicator-track {
+  width: 40px;
+  height: 3px;
+  border-radius: 1.5px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.glass-indicator-fill {
+  height: 100%;
+  border-radius: 1.5px;
+  background: var(--accent-color);
+  transition: width 0.08s ease-out;
+}
+
+.glass-indicator-value {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: right;
+}
+
+@keyframes glassIndicatorIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
 }

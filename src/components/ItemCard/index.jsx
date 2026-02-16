@@ -68,7 +68,7 @@ function ItemCard({
         isExpanded={isExpanded}
         isCopied={isCopied}
       />
-      <div className="item-footer">
+      {editingNoteId === item.id && (
         <NoteDisplay
           item={item}
           editingNoteId={editingNoteId}
@@ -78,6 +78,19 @@ function ItemCard({
           onSaveNote={onSaveNote}
           onCancelNoteEdit={onCancelNoteEdit}
         />
+      )}
+      <div className="item-footer">
+        {editingNoteId !== item.id && (
+          <NoteDisplay
+            item={item}
+            editingNoteId={editingNoteId}
+            editNote={editNote}
+            onEditNoteChange={onEditNoteChange}
+            onStartEditNote={onStartEditNote}
+            onSaveNote={onSaveNote}
+            onCancelNoteEdit={onCancelNoteEdit}
+          />
+        )}
         <ItemTags
           item={item}
           selectedTags={selectedTags}

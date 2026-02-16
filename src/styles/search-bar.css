@@ -2,8 +2,8 @@
 .header {
   padding: 10px 12px;
   background: var(--bg-secondary);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   display: flex;
   flex-direction: column;
   gap: 6px;

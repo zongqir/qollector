@@ -26,8 +26,8 @@
 /* 编辑弹窗主体 */
 .edit-modal {
   background: var(--edit-modal-bg);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border-radius: 14px;
   box-shadow: 0 12px 40px var(--shadow-xl), 0 0 0 1px var(--border-light);
   width: 90%;

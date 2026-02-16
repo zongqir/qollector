@@ -10,12 +10,12 @@ function NoteDisplay({
 
   if (editingNoteId === item.id) {
     return (
-      <div className="note-edit-bar">
+      <div className="note-edit-bar" onClick={(e) => e.stopPropagation()}>
         <textarea
           value={editNote}
           onChange={(e) => onEditNoteChange(e.target.value)}
           className="note-edit-input"
-          rows={1}
+          rows={2}
           placeholder={t('edit.notePlaceholder')}
           autoFocus
           onKeyDown={(e) => {
@@ -26,12 +26,17 @@ function NoteDisplay({
             }
           }}
         />
-        <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>
-          <Check size={13} />
-        </button>
-        <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>
-          <X size={13} />
-        </button>
+        <div className="note-edit-footer">
+          <span className="note-edit-hint">Ctrl+Enter</span>
+          <div className="note-edit-actions">
+            <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>
+              <X size={12} />
+            </button>
+            <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>
+              <Check size={12} />
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

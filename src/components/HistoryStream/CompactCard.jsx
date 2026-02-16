@@ -1,12 +1,14 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, GripVertical, ExternalLink, Check } from 'lucide-react';
+import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check } from 'lucide-react';
 import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList, parseUrl } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
+import CodeBlock from '../CodeBlock/CodeBlock';
 
-const TypeIcon = ({ type }) => {
+const TypeIcon = ({ type, hasCodeLanguage }) => {
   const size = 11;
+  if (hasCodeLanguage) return <Code size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
     case 'file': return <FileText size={size} />;
@@ -80,6 +82,9 @@ function CompactCard({
         </div>
       );
     }
+    if (item.code_language && item.content) {
+      return <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />;
+    }
     return (
       <div className="compact-card-text">
         {getContentPreview(item.content)}
@@ -96,7 +101,7 @@ function CompactCard({
       onDragStart={(e) => onDragStart && onDragStart(item, e)}
     >
       <div className="compact-card-header">
-        <TypeIcon type={item.type_} />
+        <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
         <span className="compact-card-time">
           {formatDate(item.created_at, i18n.language)}
         </span>

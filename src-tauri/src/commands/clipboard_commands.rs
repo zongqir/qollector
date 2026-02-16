@@ -1,16 +1,14 @@
-use crate::core::models::ClipboardItem;
 use crate::core::clipboard_manager::ClipboardManager;
-use tauri::State;
+use crate::core::models::ClipboardItem;
 use std::sync::Arc;
+use tauri::State;
 
 #[tauri::command]
 pub async fn get_recent_items(
     manager: State<'_, Arc<ClipboardManager>>,
     limit: i32,
 ) -> Result<Vec<ClipboardItem>, String> {
-    manager.get_recent(limit)
-        .await
-        .map_err(|e| e.to_string())
+    manager.get_recent(limit).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -18,7 +16,8 @@ pub async fn get_recent_items_light(
     manager: State<'_, Arc<ClipboardManager>>,
     limit: i32,
 ) -> Result<Vec<ClipboardItem>, String> {
-    manager.get_recent_light(limit)
+    manager
+        .get_recent_light(limit)
         .await
         .map_err(|e| e.to_string())
 }
@@ -29,7 +28,8 @@ pub async fn get_more_items(
     limit: i32,
     offset: i32,
 ) -> Result<Vec<ClipboardItem>, String> {
-    manager.get_recent_paged(limit, offset)
+    manager
+        .get_recent_paged(limit, offset)
         .await
         .map_err(|e| e.to_string())
 }
@@ -39,7 +39,8 @@ pub async fn copy_item(
     manager: State<'_, Arc<ClipboardManager>>,
     item: ClipboardItem,
 ) -> Result<(), String> {
-    manager.copy_to_clipboard(&item)
+    manager
+        .copy_to_clipboard(&item)
         .await
         .map_err(|e| e.to_string())
 }
@@ -49,9 +50,7 @@ pub async fn update_item(
     manager: State<'_, Arc<ClipboardManager>>,
     item: ClipboardItem,
 ) -> Result<(), String> {
-    manager.update_item(&item)
-        .await
-        .map_err(|e| e.to_string())
+    manager.update_item(&item).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -59,9 +58,7 @@ pub async fn delete_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
 ) -> Result<(), String> {
-    manager.delete_item(&id)
-        .await
-        .map_err(|e| e.to_string())
+    manager.delete_item(&id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -70,7 +67,8 @@ pub async fn toggle_pin_item(
     id: String,
     max_pinned: Option<usize>,
 ) -> Result<bool, String> {
-    manager.toggle_pin(&id, max_pinned.unwrap_or(5))
+    manager
+        .toggle_pin(&id, max_pinned.unwrap_or(5))
         .await
         .map_err(|e| e.to_string())
 }
@@ -81,7 +79,8 @@ pub async fn pin_item(
     id: String,
     max_pinned: Option<usize>,
 ) -> Result<bool, String> {
-    manager.pin_item(&id, max_pinned.unwrap_or(5))
+    manager
+        .pin_item(&id, max_pinned.unwrap_or(5))
         .await
         .map_err(|e| e.to_string())
 }
@@ -91,7 +90,8 @@ pub async fn toggle_favorite_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
 ) -> Result<bool, String> {
-    manager.toggle_favorite(&id)
+    manager
+        .toggle_favorite(&id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -103,23 +103,27 @@ pub async fn open_item(
 ) -> Result<(), String> {
     // 获取条目
     let items = manager.get_recent(1000).await.map_err(|e| e.to_string())?;
-    let item = items.iter().find(|i| i.id == id)
+    let item = items
+        .iter()
+        .find(|i| i.id == id)
         .ok_or_else(|| "Item not found".to_string())?;
 
     // 根据类型决定打开什么
     let target = match item.type_.as_str() {
         "link" => {
             // 链接类型,直接打开 content
-            item.content.as_ref()
+            item.content
+                .as_ref()
                 .ok_or_else(|| "Link content is empty".to_string())?
                 .clone()
-        },
+        }
         "file" => {
             // 文件类型,打开 content 中的文件路径
-            item.content.as_ref()
+            item.content
+                .as_ref()
                 .ok_or_else(|| "File path is empty".to_string())?
                 .clone()
-        },
+        }
         _ => {
             return Err("Only link and file types can be opened".to_string());
         }

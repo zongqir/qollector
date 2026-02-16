@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use std::collections::HashMap;
+use thiserror::Error;
 
-pub mod provider;
-pub mod local;
 pub mod deepseek;
-pub mod siliconflow;
+pub mod local;
+pub mod provider;
 pub mod service;
+pub mod siliconflow;
 
 pub use service::OcrService;
 
@@ -72,7 +72,10 @@ pub struct OcrCredentials {
 
 impl OcrCredentials {
     pub fn new(api_key: Option<String>, api_secret: Option<String>) -> Self {
-        Self { api_key, api_secret }
+        Self {
+            api_key,
+            api_secret,
+        }
     }
 }
 
@@ -80,7 +83,7 @@ impl OcrCredentials {
 pub struct OcrConfig {
     pub enabled: bool,
     pub current_provider: OcrProviderType,
-    pub credentials: HashMap<String, OcrCredentials>,  // key 是 provider 的字符串表示
+    pub credentials: HashMap<String, OcrCredentials>, // key 是 provider 的字符串表示
     pub language: String,
     pub auto_ocr: bool,
 }
@@ -88,7 +91,8 @@ pub struct OcrConfig {
 impl OcrConfig {
     /// 获取当前供应商的凭证
     pub fn get_current_credentials(&self) -> Option<&OcrCredentials> {
-        self.credentials.get(&self.provider_key(&self.current_provider))
+        self.credentials
+            .get(&self.provider_key(&self.current_provider))
     }
 
     /// 获取当前供应商的 API Key
@@ -106,7 +110,8 @@ impl OcrConfig {
     /// 设置当前供应商的凭证
     pub fn set_current_credentials(&mut self, api_key: Option<String>, api_secret: Option<String>) {
         let key = self.provider_key(&self.current_provider);
-        self.credentials.insert(key, OcrCredentials::new(api_key, api_secret));
+        self.credentials
+            .insert(key, OcrCredentials::new(api_key, api_secret));
     }
 
     /// 生成供应商的唯一键

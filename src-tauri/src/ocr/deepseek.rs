@@ -1,7 +1,7 @@
+use super::{provider::OcrProvider, OcrError, OcrResult};
 use async_trait::async_trait;
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
-use base64::{Engine as _, engine::general_purpose};
-use super::{OcrError, OcrResult, provider::OcrProvider};
 
 /// DeepSeek OCR 实现
 ///
@@ -108,7 +108,8 @@ impl DeepSeekOcr {
                 content: vec![
                     MessageContent::Text(TextContent {
                         content_type: "text".to_string(),
-                        text: "请识别图片中的所有文字，直接返回文字内容，不要添加任何解释或格式。".to_string(),
+                        text: "请识别图片中的所有文字，直接返回文字内容，不要添加任何解释或格式。"
+                            .to_string(),
                     }),
                     MessageContent::Image(ImageContent {
                         content_type: "image_url".to_string(),

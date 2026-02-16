@@ -1,6 +1,6 @@
-use async_trait::async_trait;
+use super::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::core::models::{ClipboardContent, WindowMetadata};
-use super::clipboard_trait::{PlatformClipboard, ClipboardCallback, ClipboardError};
+use async_trait::async_trait;
 
 pub struct MacosClipboard;
 

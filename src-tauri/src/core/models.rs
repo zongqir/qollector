@@ -11,6 +11,7 @@ pub struct ClipboardItem {
     pub content_hash: String,
     pub image_paths: Option<String>,
     pub ocr_text: Option<String>,
+    pub code_language: Option<String>,
     pub embedding: Option<Vec<u8>>,
     pub tags: Option<String>,
     pub user_note: Option<String>,
@@ -43,6 +44,7 @@ impl ClipboardItem {
             content_hash: hash,
             image_paths: None,
             ocr_text: None,
+            code_language: None,
             embedding: None,
             tags: None,
             user_note: None,
@@ -109,6 +111,7 @@ impl ClipboardItem {
             content_hash: hash,
             image_paths: Some(image_paths.to_string()),
             ocr_text: None,
+            code_language: None,
             embedding: None,
             tags: None,
             user_note: None,
@@ -123,26 +126,27 @@ impl ClipboardItem {
     }
 
     fn calculate_hash(content: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(content.as_bytes());
         format!("{:x}", hasher.finalize())
     }
 
     pub fn get_image_paths(&self) -> Option<ImagePaths> {
-        self.image_paths.as_ref().and_then(|json| {
-            serde_json::from_str(json).ok()
-        })
+        self.image_paths
+            .as_ref()
+            .and_then(|json| serde_json::from_str(json).ok())
     }
 
     pub fn get_metadata(&self) -> Option<WindowMetadata> {
-        self.metadata.as_ref().and_then(|json| {
-            serde_json::from_str(json).ok()
-        })
+        self.metadata
+            .as_ref()
+            .and_then(|json| serde_json::from_str(json).ok())
     }
 
     pub fn get_tags(&self) -> Vec<String> {
-        self.tags.as_ref()
+        self.tags
+            .as_ref()
             .and_then(|json| serde_json::from_str(json).ok())
             .unwrap_or_default()
     }

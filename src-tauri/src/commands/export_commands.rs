@@ -1,9 +1,9 @@
-use std::io::{Read, Write, Cursor};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use tauri::State;
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
+use serde::{Deserialize, Serialize};
+use std::io::{Cursor, Read, Write};
+use std::sync::Arc;
+use tauri::State;
 
 const MAGIC: &[u8; 8] = b"CLIPBOX\0";
 
@@ -61,25 +61,26 @@ impl From<&ClipboardItem> for ExportItem {
 }
 
 fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
-    use aes_gcm::aead::OsRng;
     use aes_gcm::aead::rand_core::RngCore;
-    use sha2::{Sha256, Digest};
+    use aes_gcm::aead::OsRng;
+    use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
+    use sha2::{Digest, Sha256};
 
     // 从密码派生 256-bit 密钥
     let mut hasher = Sha256::new();
     hasher.update(password.as_bytes());
     let key_bytes = hasher.finalize();
 
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .map_err(|e| format!("加密初始化失败: {}", e))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("加密初始化失败: {}", e))?;
 
     // 生成随机 96-bit nonce
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = aes_gcm::Nonce::from_slice(&nonce_bytes);
 
-    let ciphertext = cipher.encrypt(nonce, data)
+    let ciphertext = cipher
+        .encrypt(nonce, data)
         .map_err(|e| format!("加密失败: {}", e))?;
 
     // 输出: MAGIC(8) + nonce(12) + ciphertext
@@ -91,8 +92,8 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
 }
 
 fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
-    use aes_gcm::{Aes256Gcm, KeyInit, aead::Aead};
-    use sha2::{Sha256, Digest};
+    use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
+    use sha2::{Digest, Sha256};
 
     if data.len() < 20 || &data[..8] != MAGIC {
         return Err("不是有效的 ClipBox 加密文件".to_string());
@@ -102,20 +103,20 @@ fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     hasher.update(password.as_bytes());
     let key_bytes = hasher.finalize();
 
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .map_err(|e| format!("解密初始化失败: {}", e))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("解密初始化失败: {}", e))?;
 
     let nonce = aes_gcm::Nonce::from_slice(&data[8..20]);
     let ciphertext = &data[20..];
 
-    cipher.decrypt(nonce, ciphertext)
+    cipher
+        .decrypt(nonce, ciphertext)
         .map_err(|_| "解密失败，密码可能不正确".to_string())
 }
 
 fn is_encrypted(data: &[u8]) -> bool {
     data.len() >= 8 && &data[..8] == MAGIC
 }
-
 
 #[tauri::command]
 pub async fn export_data(
@@ -125,7 +126,11 @@ pub async fn export_data(
 ) -> Result<String, String> {
     // 弹出保存对话框
     let default_ext = if password.is_some() { "clipbox" } else { "zip" };
-    let filter_name = if password.is_some() { "ClipBox Encrypted" } else { "ZIP Archive" };
+    let filter_name = if password.is_some() {
+        "ClipBox Encrypted"
+    } else {
+        "ZIP Archive"
+    };
 
     let save_path = rfd::FileDialog::new()
         .set_file_name(&format!("clipbox_export.{}", default_ext))
@@ -134,7 +139,9 @@ pub async fn export_data(
         .ok_or_else(|| "CANCELLED".to_string())?;
 
     // 查询所有未删除条目
-    let items = manager.get_all_items().await
+    let items = manager
+        .get_all_items()
+        .await
         .map_err(|e| format!("查询数据失败: {}", e))?;
 
     let mut zip_buf = Vec::new();
@@ -178,7 +185,8 @@ pub async fn export_data(
                                             let thumb_zip = format!("images/{}", thumb_name);
                                             let _ = zip.start_file(&thumb_zip, options);
                                             let _ = zip.write_all(&thumb_data);
-                                            new_paths["thumbnail"] = serde_json::Value::String(thumb_zip);
+                                            new_paths["thumbnail"] =
+                                                serde_json::Value::String(thumb_zip);
                                         }
                                     }
                                 }
@@ -202,8 +210,8 @@ pub async fn export_data(
             items: export_items,
         };
 
-        let json = serde_json::to_string_pretty(&export_data)
-            .map_err(|e| format!("序列化失败: {}", e))?;
+        let json =
+            serde_json::to_string_pretty(&export_data).map_err(|e| format!("序列化失败: {}", e))?;
 
         zip.start_file("data.json", options)
             .map_err(|e| format!("创建 zip 条目失败: {}", e))?;
@@ -220,12 +228,10 @@ pub async fn export_data(
         zip_buf
     };
 
-    std::fs::write(&save_path, &final_data)
-        .map_err(|e| format!("写入文件失败: {}", e))?;
+    std::fs::write(&save_path, &final_data).map_err(|e| format!("写入文件失败: {}", e))?;
 
     Ok(save_path.to_string_lossy().to_string())
 }
-
 
 #[tauri::command]
 pub async fn import_data(
@@ -243,12 +249,12 @@ pub async fn import_data(
             .ok_or_else(|| "CANCELLED".to_string())?
     };
 
-    let raw_data = std::fs::read(&file_path)
-        .map_err(|e| format!("读取文件失败: {}", e))?;
+    let raw_data = std::fs::read(&file_path).map_err(|e| format!("读取文件失败: {}", e))?;
 
     // 检测是否加密
     let zip_data = if is_encrypted(&raw_data) {
-        let pwd = password.as_deref()
+        let pwd = password
+            .as_deref()
             .ok_or_else(|| format!("ENCRYPTED:{}", file_path.to_string_lossy()))?;
         decrypt_data(&raw_data, pwd)?
     } else {
@@ -257,37 +263,39 @@ pub async fn import_data(
 
     // 解压 zip
     let cursor = Cursor::new(&zip_data);
-    let mut archive = zip::ZipArchive::new(cursor)
-        .map_err(|e| format!("解压失败: {}", e))?;
+    let mut archive = zip::ZipArchive::new(cursor).map_err(|e| format!("解压失败: {}", e))?;
 
     // 读取 data.json
     let export_data: ExportData = {
-        let mut json_file = archive.by_name("data.json")
+        let mut json_file = archive
+            .by_name("data.json")
             .map_err(|_| "zip 中未找到 data.json".to_string())?;
         let mut json_str = String::new();
-        json_file.read_to_string(&mut json_str)
+        json_file
+            .read_to_string(&mut json_str)
             .map_err(|e| format!("读取 data.json 失败: {}", e))?;
-        serde_json::from_str(&json_str)
-            .map_err(|e| format!("解析 data.json 失败: {}", e))?
+        serde_json::from_str(&json_str).map_err(|e| format!("解析 data.json 失败: {}", e))?
     };
 
     let image_dir = manager.image_dir().to_path_buf();
     std::fs::create_dir_all(&image_dir).ok();
 
     // 先提取所有图片文件到 image_dir
-    let mut extracted_images: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut extracted_images: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
     for i in 0..archive.len() {
-        let mut entry = archive.by_index(i)
+        let mut entry = archive
+            .by_index(i)
             .map_err(|e| format!("读取 zip 条目失败: {}", e))?;
         let name = entry.name().to_string();
         if name.starts_with("images/") && name.len() > 7 {
             let filename = &name[7..]; // 去掉 "images/" 前缀
             let dest = image_dir.join(filename);
             let mut buf = Vec::new();
-            entry.read_to_end(&mut buf)
+            entry
+                .read_to_end(&mut buf)
                 .map_err(|e| format!("读取图片失败: {}", e))?;
-            std::fs::write(&dest, &buf)
-                .map_err(|e| format!("写入图片失败: {}", e))?;
+            std::fs::write(&dest, &buf).map_err(|e| format!("写入图片失败: {}", e))?;
             extracted_images.insert(name, dest.to_string_lossy().to_string());
         }
     }
@@ -330,6 +338,7 @@ pub async fn import_data(
             content_hash: ei.content_hash.clone(),
             image_paths,
             ocr_text: ei.ocr_text.clone(),
+            code_language: None,
             embedding: None,
             tags: ei.tags.clone(),
             user_note: ei.user_note.clone(),
@@ -352,5 +361,9 @@ pub async fn import_data(
         }
     }
 
-    Ok(ImportResult { total, imported, skipped })
+    Ok(ImportResult {
+        total,
+        imported,
+        skipped,
+    })
 }

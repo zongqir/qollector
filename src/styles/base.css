@@ -17,7 +17,7 @@ input:not([type]) {
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Microsoft YaHei', sans-serif;
-  background: var(--bg-primary);
+  background: transparent;
   color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -30,6 +30,7 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: transparent;
 }
 
 .app {

@@ -1,5 +1,5 @@
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use crate::core::models::{ClipboardItem, SearchFilters};
+use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::PathBuf;
 
 pub struct ClipboardRepository {
@@ -48,13 +48,18 @@ impl ClipboardRepository {
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
-            "#
+            "#,
         )
         .execute(&self.pool)
         .await?;
 
-        // 迁移：为已有表添加 pinned_at 列
+        // migration: add pinned_at column
         let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pinned_at INTEGER")
+            .execute(&self.pool)
+            .await;
+
+        // migration: add code_language column
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN code_language TEXT")
             .execute(&self.pool)
             .await;
 
@@ -77,6 +82,10 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
 
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
@@ -85,11 +94,11 @@ impl ClipboardRepository {
             r#"
             INSERT INTO clipboard_items (
                 id, type, content, original_content, content_hash,
-                image_paths, ocr_text, embedding, tags, user_note,
+                image_paths, ocr_text, code_language, embedding, tags, user_note,
                 metadata, is_pinned, is_favorite, is_deleted,
                 pinned_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
         )
         .bind(&item.id)
         .bind(&item.type_)
@@ -98,6 +107,7 @@ impl ClipboardRepository {
         .bind(&item.content_hash)
         .bind(&item.image_paths)
         .bind(&item.ocr_text)
+        .bind(&item.code_language)
         .bind(&item.embedding)
         .bind(&item.tags)
         .bind(&item.user_note)
@@ -116,7 +126,7 @@ impl ClipboardRepository {
 
     pub async fn find_by_hash(&self, hash: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let item = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE content_hash = ? AND is_deleted = 0 LIMIT 1"
+            "SELECT * FROM clipboard_items WHERE content_hash = ? AND is_deleted = 0 LIMIT 1",
         )
         .bind(hash)
         .fetch_optional(&self.pool)
@@ -127,7 +137,7 @@ impl ClipboardRepository {
 
     pub async fn get_recent(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY updated_at DESC LIMIT ?"
+            "SELECT * FROM clipboard_items WHERE is_deleted = 0 ORDER BY updated_at DESC LIMIT ?",
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -140,11 +150,11 @@ impl ClipboardRepository {
     pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
-             ORDER BY updated_at DESC LIMIT ?"
+             ORDER BY updated_at DESC LIMIT ?",
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -153,15 +163,19 @@ impl ClipboardRepository {
         Ok(items)
     }
 
-    /// 分页查询（用于 loadMore）
-    pub async fn get_recent_paged(&self, limit: i32, offset: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    /// paged query (for loadMore)
+    pub async fn get_recent_paged(
+        &self,
+        limit: i32,
+        offset: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
-             ORDER BY updated_at DESC LIMIT ? OFFSET ?"
+             ORDER BY updated_at DESC LIMIT ? OFFSET ?",
         )
         .bind(limit)
         .bind(offset)
@@ -171,7 +185,12 @@ impl ClipboardRepository {
         Ok(items)
     }
 
-    pub async fn search(&self, query: &str, filters: &SearchFilters, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    pub async fn search(
+        &self,
+        query: &str,
+        filters: &SearchFilters,
+        limit: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let mut sql = String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0");
 
         if let Some(type_filter) = &filters.type_filter {
@@ -179,15 +198,24 @@ impl ClipboardRepository {
         }
 
         if let Some(is_pinned) = filters.is_pinned {
-            sql.push_str(&format!(" AND is_pinned = {}", if is_pinned { 1 } else { 0 }));
+            sql.push_str(&format!(
+                " AND is_pinned = {}",
+                if is_pinned { 1 } else { 0 }
+            ));
         }
 
         if let Some(is_favorite) = filters.is_favorite {
-            sql.push_str(&format!(" AND is_favorite = {}", if is_favorite { 1 } else { 0 }));
+            sql.push_str(&format!(
+                " AND is_favorite = {}",
+                if is_favorite { 1 } else { 0 }
+            ));
         }
 
         if !query.is_empty() {
-            sql.push_str(&format!(" AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')", query, query));
+            sql.push_str(&format!(
+                " AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')",
+                query, query
+            ));
         }
 
         sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
@@ -203,14 +231,15 @@ impl ClipboardRepository {
         sqlx::query(
             r#"
             UPDATE clipboard_items SET
-                content = ?, tags = ?, user_note = ?,
+                content = ?, tags = ?, user_note = ?, code_language = ?,
                 is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(&item.content)
         .bind(&item.tags)
         .bind(&item.user_note)
+        .bind(&item.code_language)
         .bind(item.is_pinned)
         .bind(item.is_favorite)
         .bind(item.pinned_at)
@@ -237,9 +266,26 @@ impl ClipboardRepository {
             UPDATE clipboard_items SET
                 ocr_text = ?, updated_at = ?
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(ocr_text)
+        .bind(chrono::Utc::now().timestamp())
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_code_language(&self, id: &str, code_language: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                code_language = ?, updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(code_language)
         .bind(chrono::Utc::now().timestamp())
         .bind(id)
         .execute(&self.pool)
@@ -260,7 +306,7 @@ impl ClipboardRepository {
 
     pub async fn find_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let item = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT * FROM clipboard_items WHERE id = ? AND is_deleted = 0 LIMIT 1"
+            "SELECT * FROM clipboard_items WHERE id = ? AND is_deleted = 0 LIMIT 1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -290,7 +336,11 @@ impl ClipboardRepository {
     }
 
     pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
-        let pinned_at = if pinned { Some(chrono::Utc::now().timestamp()) } else { None };
+        let pinned_at = if pinned {
+            Some(chrono::Utc::now().timestamp())
+        } else {
+            None
+        };
         sqlx::query("UPDATE clipboard_items SET is_pinned = ?, pinned_at = ? WHERE id = ?")
             .bind(pinned as i32)
             .bind(pinned_at)

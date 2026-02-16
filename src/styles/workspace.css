@@ -13,6 +13,8 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
   flex-shrink: 0;
 }
 
@@ -70,6 +72,8 @@
 /* ========== macOS 风格紧凑卡片 ========== */
 .compact-card {
   background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 10px;
   padding: 10px 12px;
   cursor: pointer;
@@ -99,7 +103,9 @@
   justify-content: space-between;
   padding: 8px 12px;
   border-top: 1px solid var(--border-light);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   flex-shrink: 0;
 }
 
@@ -308,17 +314,26 @@
 
 .compact-tag {
   font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--accent-light);
-  color: var(--accent-color);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--text-secondary);
+  border: 1px solid rgba(0, 122, 255, 0.12);
   white-space: nowrap;
   font-weight: 500;
+  letter-spacing: 0.2px;
+  -webkit-font-smoothing: antialiased;
 }
 
 .compact-tag.more {
   background: var(--btn-hover-bg);
   color: var(--text-tertiary);
+  border-color: transparent;
+}
+
+.dark-mode .compact-tag {
+  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.18);
 }
 
 /* ========== 右栏：多态面板 ========== */
@@ -328,8 +343,8 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-secondary);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(200%) blur(40px);
+  -webkit-backdrop-filter: saturate(200%) blur(40px);
   position: relative;
 }
 
@@ -554,16 +569,21 @@
 
 .collection-card {
   background: var(--bg-card);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 12px;
   padding: 14px;
   position: relative;
-  cursor: pointer;
+  cursor: grab;
   transition: all 0.2s ease;
   border: 0.5px solid var(--border-light);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   break-inside: avoid;
   margin-bottom: 10px;
+}
+
+.collection-card:active {
+  cursor: grabbing;
 }
 
 .collection-card:hover {
@@ -604,34 +624,6 @@
   color: #ff3b30;
 }
 
-.collection-card-drag {
-  position: absolute;
-  top: 8px;
-  left: 6px;
-  width: 20px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  cursor: grab;
-  opacity: 0;
-  transition: opacity 0.15s;
-  touch-action: none;
-}
-
-.collection-card:hover .collection-card-drag {
-  opacity: 0.5;
-}
-
-.collection-card-drag:hover {
-  opacity: 1 !important;
-  color: var(--text-secondary);
-}
-
-.collection-card-drag:active {
-  cursor: grabbing;
-}
 
 .collection-card-content {
   margin-bottom: 8px;
@@ -793,7 +785,9 @@
   gap: 8px;
   padding: 10px 16px;
   border-top: 1px solid var(--border-light);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .collection-btn {
@@ -970,7 +964,9 @@
   gap: 4px;
   padding: 10px 16px;
   border-top: 1px solid var(--border-light);
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .preview-tool-btn {
@@ -1045,6 +1041,12 @@
 
 .preview-note-section .note-display-bar {
   margin: 0;
+}
+
+.preview-note-section .note-edit-bar {
+  margin: -6px -16px -6px;
+  width: calc(100% + 32px);
+  border-top: none;
 }
 
 .preview-add-note-btn {

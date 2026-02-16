@@ -1,5 +1,5 @@
-use tauri::State;
 use std::sync::Arc;
+use tauri::State;
 use tokio::sync::Mutex;
 
 use crate::mcp::{McpConfig, McpServer};
@@ -37,7 +37,10 @@ pub async fn update_mcp_config(
     drop(current_config);
 
     // 持久化到数据库
-    state.config_repo.save_mcp_config(&config).await
+    state
+        .config_repo
+        .save_mcp_config(&config)
+        .await
         .map_err(|e| format!("保存配置失败: {}", e))?;
 
     Ok(())
@@ -45,9 +48,7 @@ pub async fn update_mcp_config(
 
 /// 测试 MCP 连接
 #[tauri::command]
-pub async fn test_mcp_connection(
-    state: State<'_, McpState>,
-) -> Result<String, String> {
+pub async fn test_mcp_connection(state: State<'_, McpState>) -> Result<String, String> {
     let config = state.config.lock().await;
     if config.enabled {
         Ok("MCP 服务已启用".to_string())
@@ -58,9 +59,7 @@ pub async fn test_mcp_connection(
 
 /// 关闭 MCP 服务器
 #[tauri::command]
-pub async fn shutdown_mcp_server(
-    state: State<'_, McpState>,
-) -> Result<(), String> {
+pub async fn shutdown_mcp_server(state: State<'_, McpState>) -> Result<(), String> {
     if let Some(server) = &state.server {
         server.shutdown().await;
         Ok(())
@@ -71,9 +70,7 @@ pub async fn shutdown_mcp_server(
 
 /// 获取 MCP 服务器当前端口
 #[tauri::command]
-pub async fn get_mcp_current_port(
-    state: State<'_, McpState>,
-) -> Result<Option<u16>, String> {
+pub async fn get_mcp_current_port(state: State<'_, McpState>) -> Result<Option<u16>, String> {
     if let Some(server) = &state.server {
         Ok(server.get_current_port().await)
     } else {

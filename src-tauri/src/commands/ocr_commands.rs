@@ -1,8 +1,8 @@
-use tauri::State;
-use std::sync::{Mutex, Arc};
-use crate::ocr::{OcrService, OcrConfig};
 use crate::core::clipboard_manager::ClipboardManager;
+use crate::ocr::{OcrConfig, OcrService};
 use crate::repository::config_repo::ConfigRepository;
+use std::sync::{Arc, Mutex};
+use tauri::State;
 
 pub struct OcrState {
     pub service: Arc<Mutex<Option<OcrService>>>,
@@ -34,25 +34,34 @@ pub async fn init_ocr_service(
     manager.update_ocr_service(Some(service));
 
     // 持久化到数据库
-    state.config_repo.save_ocr_config(&config).await
+    state
+        .config_repo
+        .save_ocr_config(&config)
+        .await
         .map_err(|e| format!("保存配置失败: {}", e))?;
 
-    Ok(format!("OCR service initialized with provider: {}", provider_name))
+    Ok(format!(
+        "OCR service initialized with provider: {}",
+        provider_name
+    ))
 }
 
 #[tauri::command]
-pub async fn get_ocr_config(
-    state: State<'_, OcrState>,
-) -> Result<OcrConfig, String> {
+pub async fn get_ocr_config(state: State<'_, OcrState>) -> Result<OcrConfig, String> {
     println!("获取 OCR 配置");
     let in_memory_config = {
         let service_guard = state.service.lock().unwrap();
-        service_guard.as_ref().map(|service| service.get_config().clone())
+        service_guard
+            .as_ref()
+            .map(|service| service.get_config().clone())
     };
 
     if let Some(config) = in_memory_config {
         println!("返回已保存的配置: {:?}", config.current_provider);
-        println!("  API Key 长度: {}", config.get_current_api_key().map(|k| k.len()).unwrap_or(0));
+        println!(
+            "  API Key 长度: {}",
+            config.get_current_api_key().map(|k| k.len()).unwrap_or(0)
+        );
         return Ok(config);
     }
 
@@ -79,7 +88,12 @@ pub async fn update_ocr_config(
     println!("收到 OCR 配置更新请求:");
     println!("  enabled: {}", config.enabled);
     println!("  provider: {:?}", config.current_provider);
-    println!("  api_key: {:?}", config.get_current_api_key().map(|k| format!("{}...", &k[..10.min(k.len())])));
+    println!(
+        "  api_key: {:?}",
+        config
+            .get_current_api_key()
+            .map(|k| format!("{}...", &k[..10.min(k.len())]))
+    );
     println!("  language: {}", config.language);
     println!("  auto_ocr: {}", config.auto_ocr);
 
@@ -89,7 +103,8 @@ pub async fn update_ocr_config(
     };
 
     if let Some(mut service) = service_opt {
-        service.update_config(config.clone())
+        service
+            .update_config(config.clone())
             .map_err(|e| format!("Failed to update OCR config: {}", e))?;
         *state.service.lock().unwrap() = Some(service.clone());
 
@@ -97,7 +112,10 @@ pub async fn update_ocr_config(
         manager.update_ocr_service(Some(service));
 
         // 持久化到数据库
-        state.config_repo.save_ocr_config(&config).await
+        state
+            .config_repo
+            .save_ocr_config(&config)
+            .await
             .map_err(|e| format!("保存配置失败: {}", e))?;
 
         println!("OCR 配置更新成功");
@@ -120,7 +138,9 @@ pub async fn recognize_image(
     };
 
     if let Some(service) = service_opt {
-        let result = service.recognize(&image_path).await
+        let result = service
+            .recognize(&image_path)
+            .await
             .map_err(|e| format!("OCR recognition failed: {}", e))?;
         Ok(result.text)
     } else {
@@ -142,7 +162,9 @@ pub async fn recognize_and_update(
     };
 
     let ocr_text = if let Some(service) = service_opt {
-        let result = service.recognize(&image_path).await
+        let result = service
+            .recognize(&image_path)
+            .await
             .map_err(|e| format!("OCR recognition failed: {}", e))?;
         result.text
     } else {
@@ -150,16 +172,16 @@ pub async fn recognize_and_update(
     };
 
     // 更新数据库
-    manager.update_ocr_text(&item_id, &ocr_text).await
+    manager
+        .update_ocr_text(&item_id, &ocr_text)
+        .await
         .map_err(|e| format!("Failed to update OCR text: {}", e))?;
 
     Ok(ocr_text)
 }
 
 #[tauri::command]
-pub async fn check_ocr_available(
-    state: State<'_, OcrState>,
-) -> Result<bool, String> {
+pub async fn check_ocr_available(state: State<'_, OcrState>) -> Result<bool, String> {
     println!("检查 OCR 服务可用性");
 
     let service_opt = {

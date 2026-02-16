@@ -1,20 +1,21 @@
 #[cfg(target_os = "windows")]
 pub mod windows {
-    use crate::platform::clipboard_trait::*;
     use crate::core::models::{ClipboardContent, WindowMetadata};
+    use crate::platform::clipboard_trait::*;
     use async_trait::async_trait;
-    use std::sync::{Arc, Mutex};
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use once_cell::sync::Lazy;
     use std::collections::HashMap;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::mpsc;
+    use std::sync::{Arc, Mutex};
+    use windows::core::w;
     use windows::Win32::Foundation::*;
     use windows::Win32::System::DataExchange::*;
     use windows::Win32::UI::WindowsAndMessaging::*;
-    use windows::core::w;
-    use std::sync::mpsc;
-    use once_cell::sync::Lazy;
 
     /// 友好应用名缓存：key = exe 路径, value = 友好名称
-    static APP_NAME_CACHE: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+    static APP_NAME_CACHE: Lazy<Mutex<HashMap<String, String>>> =
+        Lazy::new(|| Mutex::new(HashMap::new()));
 
     // Wrapper to make HWND Send
     #[derive(Clone, Copy)]
@@ -43,7 +44,10 @@ pub mod windows {
                         w!("STATIC"),
                         w!("ClipBox Clipboard Listener"),
                         WS_OVERLAPPEDWINDOW,
-                        0, 0, 0, 0,
+                        0,
+                        0,
+                        0,
+                        0,
                         None,
                         None,
                         None,
@@ -70,8 +74,11 @@ pub mod windows {
                 }
             });
 
-            let hwnd_ptr = rx.recv()
-                .map_err(|e| ClipboardError::PlatformError(format!("Failed to receive window handle: {}", e)))?
+            let hwnd_ptr = rx
+                .recv()
+                .map_err(|e| {
+                    ClipboardError::PlatformError(format!("Failed to receive window handle: {}", e))
+                })?
                 .map_err(|e| ClipboardError::PlatformError(e))?;
 
             let hwnd = HWND(hwnd_ptr as *mut _);
@@ -88,8 +95,12 @@ pub mod windows {
     impl PlatformClipboard for WindowsClipboard {
         fn register_listener(&self, callback: ClipboardCallback) -> Result<(), ClipboardError> {
             unsafe {
-                AddClipboardFormatListener(self.hwnd.0)
-                    .map_err(|e| ClipboardError::PlatformError(format!("Failed to register clipboard listener: {}", e)))?;
+                AddClipboardFormatListener(self.hwnd.0).map_err(|e| {
+                    ClipboardError::PlatformError(format!(
+                        "Failed to register clipboard listener: {}",
+                        e
+                    ))
+                })?;
             }
 
             println!("Clipboard listener registered successfully");
@@ -116,7 +127,10 @@ pub mod windows {
 
                             // Skip if this change was triggered by our own set_content
                             if skip_next.swap(false, Ordering::SeqCst) {
-                                println!("Skipping self-triggered clipboard change (sequence: {})", sequence);
+                                println!(
+                                    "Skipping self-triggered clipboard change (sequence: {})",
+                                    sequence
+                                );
                                 continue;
                             }
 
@@ -159,7 +173,8 @@ pub mod windows {
                         use arboard::Clipboard;
                         let mut clipboard = Clipboard::new()
                             .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-                        clipboard.set_text(text)
+                        clipboard
+                            .set_text(text)
                             .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                     }
                     ClipboardContent::Image(data) => {
@@ -168,12 +183,13 @@ pub mod windows {
                             .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                         let img = image::load_from_memory(&data)
                             .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
-                        clipboard.set_image(arboard::ImageData {
-                            width: img.width() as usize,
-                            height: img.height() as usize,
-                            bytes: img.to_rgba8().into_raw().into(),
-                        })
-                        .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+                        clipboard
+                            .set_image(arboard::ImageData {
+                                width: img.width() as usize,
+                                height: img.height() as usize,
+                                bytes: img.to_rgba8().into_raw().into(),
+                            })
+                            .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
                     }
                     ClipboardContent::File(paths_str) => {
                         let paths: Vec<String> = paths_str.lines().map(|s| s.to_string()).collect();
@@ -190,12 +206,15 @@ pub mod windows {
 
         async fn clear(&self) -> Result<(), ClipboardError> {
             unsafe {
-                OpenClipboard(self.hwnd.0)
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
-                EmptyClipboard()
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to empty clipboard: {}", e)))?;
-                CloseClipboard()
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to close clipboard: {}", e)))?;
+                OpenClipboard(self.hwnd.0).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to open clipboard: {}", e))
+                })?;
+                EmptyClipboard().map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to empty clipboard: {}", e))
+                })?;
+                CloseClipboard().map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to close clipboard: {}", e))
+                })?;
             }
             Ok(())
         }
@@ -220,8 +239,8 @@ pub mod windows {
                 }
             }
 
-            let mut clipboard = Clipboard::new()
-                .map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+            let mut clipboard =
+                Clipboard::new().map_err(|e| ClipboardError::AccessError(e.to_string()))?;
 
             if let Ok(text) = clipboard.get_text() {
                 return Ok(ClipboardContent::Text(text));
@@ -232,7 +251,10 @@ pub mod windows {
                     img.width as u32,
                     img.height as u32,
                     img.bytes.to_vec(),
-                ).ok_or(ClipboardError::PlatformError("Invalid image data".to_string()))?;
+                )
+                .ok_or(ClipboardError::PlatformError(
+                    "Invalid image data".to_string(),
+                ))?;
 
                 let mut buffer = Vec::new();
                 use image::codecs::png::PngEncoder;
@@ -247,13 +269,14 @@ pub mod windows {
         }
 
         fn get_file_paths() -> Result<Vec<String>, ClipboardError> {
-            use windows::Win32::System::Memory::*;
             use std::ffi::OsString;
             use std::os::windows::ffi::OsStringExt;
+            use windows::Win32::System::Memory::*;
 
             unsafe {
-                OpenClipboard(None)
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
+                OpenClipboard(None).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to open clipboard: {}", e))
+                })?;
 
                 // CF_HDROP format (15)
                 let hdrop_result = GetClipboardData(15);
@@ -274,14 +297,16 @@ pub mod windows {
                 let hdrop_ptr = GlobalLock(hglobal);
                 if hdrop_ptr.is_null() {
                     let _ = CloseClipboard();
-                    return Err(ClipboardError::AccessError("Failed to lock memory".to_string()));
+                    return Err(ClipboardError::AccessError(
+                        "Failed to lock memory".to_string(),
+                    ));
                 }
 
                 // Get file count
                 let file_count = windows::Win32::UI::Shell::DragQueryFileW(
                     windows::Win32::UI::Shell::HDROP(hdrop_ptr),
                     0xFFFFFFFF,
-                    None
+                    None,
                 );
 
                 let mut files = Vec::new();
@@ -290,7 +315,7 @@ pub mod windows {
                     let len = windows::Win32::UI::Shell::DragQueryFileW(
                         windows::Win32::UI::Shell::HDROP(hdrop_ptr),
                         i,
-                        Some(&mut buffer)
+                        Some(&mut buffer),
                     );
 
                     if len > 0 {
@@ -309,13 +334,14 @@ pub mod windows {
         }
 
         fn set_file_paths(paths: &[String]) -> Result<(), ClipboardError> {
-            use windows::Win32::System::Memory::*;
             use std::ffi::OsStr;
             use std::os::windows::ffi::OsStrExt;
+            use windows::Win32::System::Memory::*;
 
             unsafe {
-                OpenClipboard(None)
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
+                OpenClipboard(None).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to open clipboard: {}", e))
+                })?;
 
                 let _ = EmptyClipboard();
 
@@ -327,19 +353,23 @@ pub mod windows {
                 }
                 total_size += 2; // Final null terminator
 
-                let hmem = GlobalAlloc(GMEM_MOVEABLE, total_size)
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to allocate memory: {}", e)))?;
+                let hmem = GlobalAlloc(GMEM_MOVEABLE, total_size).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to allocate memory: {}", e))
+                })?;
 
                 let ptr = GlobalLock(hmem);
                 if ptr.is_null() {
                     let _ = GlobalFree(hmem);
                     let _ = CloseClipboard();
-                    return Err(ClipboardError::AccessError("Failed to lock memory".to_string()));
+                    return Err(ClipboardError::AccessError(
+                        "Failed to lock memory".to_string(),
+                    ));
                 }
 
                 // Write DROPFILES structure
                 let dropfiles = ptr as *mut windows::Win32::UI::Shell::DROPFILES;
-                (*dropfiles).pFiles = std::mem::size_of::<windows::Win32::UI::Shell::DROPFILES>() as u32;
+                (*dropfiles).pFiles =
+                    std::mem::size_of::<windows::Win32::UI::Shell::DROPFILES>() as u32;
                 (*dropfiles).pt.x = 0;
                 (*dropfiles).pt.y = 0;
                 (*dropfiles).fNC = false.into();
@@ -363,8 +393,9 @@ pub mod windows {
                 // Set clipboard data (CF_HDROP = 15)
                 // HGLOBAL can be used directly as HANDLE
                 let handle = HANDLE(hmem.0 as isize as *mut _);
-                SetClipboardData(15, handle)
-                    .map_err(|e| ClipboardError::AccessError(format!("Failed to set clipboard data: {}", e)))?;
+                SetClipboardData(15, handle).map_err(|e| {
+                    ClipboardError::AccessError(format!("Failed to set clipboard data: {}", e))
+                })?;
 
                 let _ = CloseClipboard();
 
@@ -373,12 +404,16 @@ pub mod windows {
         }
 
         fn get_process_name(process_id: u32) -> Result<String, ClipboardError> {
-            use windows::Win32::System::Threading::*;
             use windows::core::PWSTR;
+            use windows::Win32::System::Threading::*;
 
             unsafe {
-                let handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, process_id)
-                    .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
+                let handle = OpenProcess(
+                    PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                    false,
+                    process_id,
+                )
+                .map_err(|e| ClipboardError::PlatformError(e.to_string()))?;
 
                 let mut name = vec![0u16; 260];
                 let mut size = name.len() as u32;
@@ -417,8 +452,8 @@ pub mod windows {
                 let mut process_id = 0;
                 GetWindowThreadProcessId(hwnd, Some(&mut process_id));
 
-                let exe_path = Self::get_process_name(process_id)
-                    .unwrap_or_else(|_| "Unknown".to_string());
+                let exe_path =
+                    Self::get_process_name(process_id).unwrap_or_else(|_| "Unknown".to_string());
 
                 let source_app = Self::get_friendly_app_name(&exe_path, &window_title);
 
@@ -481,11 +516,12 @@ pub mod windows {
 
         /// 从 exe 文件的版本信息中读取 ProductName
         fn get_product_name_from_exe(exe_path: &str) -> Option<String> {
-            use windows::Win32::Storage::FileSystem::*;
             use windows::core::PCWSTR;
+            use windows::Win32::Storage::FileSystem::*;
 
             unsafe {
-                let wide_path: Vec<u16> = exe_path.encode_utf16().chain(std::iter::once(0)).collect();
+                let wide_path: Vec<u16> =
+                    exe_path.encode_utf16().chain(std::iter::once(0)).collect();
                 let path_pcwstr = PCWSTR(wide_path.as_ptr());
 
                 // 获取版本信息大小
@@ -496,7 +532,8 @@ pub mod windows {
 
                 // 分配缓冲区并获取版本信息
                 let mut buffer = vec![0u8; size as usize];
-                if GetFileVersionInfoW(path_pcwstr, 0, size, buffer.as_mut_ptr() as *mut _).is_err() {
+                if GetFileVersionInfoW(path_pcwstr, 0, size, buffer.as_mut_ptr() as *mut _).is_err()
+                {
                     return None;
                 }
 
@@ -520,8 +557,13 @@ pub mod windows {
                         query_pcwstr,
                         &mut value_ptr,
                         &mut value_len,
-                    ).as_bool() && value_len > 0 && !value_ptr.is_null() {
-                        let slice = std::slice::from_raw_parts(value_ptr as *const u16, value_len as usize);
+                    )
+                    .as_bool()
+                        && value_len > 0
+                        && !value_ptr.is_null()
+                    {
+                        let slice =
+                            std::slice::from_raw_parts(value_ptr as *const u16, value_len as usize);
                         // 去掉末尾的 null
                         let end = slice.iter().position(|&c| c == 0).unwrap_or(slice.len());
                         let name = String::from_utf16_lossy(&slice[..end]).trim().to_string();
