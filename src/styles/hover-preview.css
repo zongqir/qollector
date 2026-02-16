@@ -1,0 +1,103 @@
+/* ========== Hover Preview ========== */
+.hover-preview {
+  position: fixed;
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 520px;
+  max-height: 420px;
+  background: var(--bg-card);
+  backdrop-filter: saturate(180%) blur(40px);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: hoverPreviewFadeIn 0.12s ease;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@keyframes hoverPreviewFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hover-preview-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 12px 14px;
+  position: relative;
+  max-height: 350px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 85%, transparent 100%);
+}
+
+.hover-preview-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hover-preview-text.truncated {
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+
+.hover-preview-image img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+  display: block;
+  object-fit: contain;
+}
+
+.hover-preview-ocr {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-light);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hover-preview-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hover-preview-file-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hover-preview-more {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.hover-preview-meta {
+  display: flex;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-light);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.dark-mode .hover-preview {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+}

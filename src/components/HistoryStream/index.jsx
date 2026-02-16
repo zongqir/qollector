@@ -95,6 +95,11 @@ function HistoryStream({ style }) {
   const clearSelection = useAppStore(s => s.clearSelection);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
+  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
+  const setHoverPreview = useAppStore(s => s.setHoverPreview);
+  const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
+  const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -258,20 +263,37 @@ function HistoryStream({ style }) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
+    if (!collectionPanelEnabled && !isMiniMode) {
+      if (hoverPreviewItem?.id === item.id) {
+        clearHoverPreview();
+        return;
+      }
+      clickTimerRef.current = setTimeout(() => {
+        const el = document.querySelector(`[data-item-id="${item.id}"]`);
+        const rect = el ? el.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+        setHoverPreview(item, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+        clickTimerRef.current = null;
+      }, 250);
+      return;
+    }
+    if (isMiniMode) return;
     clickTimerRef.current = setTimeout(() => {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
+    clearHoverPreview();
     handleCopy(item);
-  }, [handleCopy]);
+  }, [handleCopy, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);
@@ -316,10 +338,14 @@ function HistoryStream({ style }) {
       clearSelection();
       return;
     }
+    if (!collectionPanelEnabled) {
+      clearHoverPreview();
+      return;
+    }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, collectionPanelEnabled, clearHoverPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -355,6 +381,7 @@ function HistoryStream({ style }) {
     return (
       <div
         className="history-stream-row"
+        data-item-id={item.id}
         style={{ paddingBottom: `${rowGap}px` }}
         onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
         onDoubleClick={(e) => handleCardDoubleClick(item, e)}
@@ -420,6 +447,8 @@ function HistoryStream({ style }) {
         onCustomDateStartChange={setCustomDateStart}
         onCustomDateEndChange={setCustomDateEnd}
         onApplyCustomDateRange={handleApplyCustomDateRange}
+        collectionPanelEnabled={collectionPanelEnabled}
+        onToggleCollectionPanel={toggleCollectionPanel}
       />
 
       <div className="history-stream-content">

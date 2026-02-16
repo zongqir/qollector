@@ -371,6 +371,8 @@
     "expandedNoteSubmit": "添加到搜集箱",
     "mergeCopy": "合并复制",
     "clearAll": "清空搜集箱",
+    "hidePanel": "隐藏搜集箱",
+    "showPanel": "显示搜集箱",
     "archivedToHistory": "已归档至历史流",
     "backToCollection": "返回搜集箱",
     "addToCollection": "加入搜集",

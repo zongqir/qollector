@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar } from 'lucide-react';
+import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -19,6 +19,7 @@ function SearchBar({
   customDateStart, customDateEnd,
   onCustomDateStartChange, onCustomDateEndChange,
   onApplyCustomDateRange,
+  collectionPanelEnabled, onToggleCollectionPanel,
 }) {
   const { t } = useTranslation();
   const tagWrapperRef = useRef(null);
@@ -264,6 +265,16 @@ function SearchBar({
         <button onClick={onOpenSettings} className="header-icon-btn settings-btn" title={t('settings.title')}>
           <Settings size={15} />
         </button>
+
+        {!collectionPanelEnabled && !isMiniMode && (
+          <button
+            onClick={onToggleCollectionPanel}
+            className="header-icon-btn"
+            title={t('collection.showPanel')}
+          >
+            <PanelRightOpen size={15} />
+          </button>
+        )}
       </div>
 
       {/* 筛选状态提示（仅在有标签筛选时显示） */}

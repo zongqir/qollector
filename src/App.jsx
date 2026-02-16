@@ -11,6 +11,7 @@ import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
+import HoverPreview from './components/HoverPreview';
 
 const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
@@ -29,6 +30,7 @@ function App() {
   const isAlwaysOnTop = useAppStore(s => s.isAlwaysOnTop);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
+  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -261,14 +263,15 @@ function App() {
       />
 
       <div className="workspace">
-        <HistoryStream style={{ width: isMiniMode ? '100%' : `${leftWidth}px` }} />
-        {!isMiniMode && (
+        <HistoryStream style={{ width: isMiniMode || !collectionPanelEnabled ? '100%' : `${leftWidth}px` }} />
+        {!isMiniMode && collectionPanelEnabled && (
           <>
             <div className="resize-handle" onMouseDown={handleResizeStart} />
             <PolymorphicPanel />
           </>
         )}
       </div>
+      {!isMiniMode && !collectionPanelEnabled && <HoverPreview />}
     </div>
   );
 }

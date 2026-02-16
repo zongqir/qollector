@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Copy, Trash2, Plus, X, Send } from 'lucide-react';
+import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -67,6 +67,7 @@ function CollectionPanel() {
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
 
   const pinnedItems = useMemo(() => {
     const pinned = items.filter(i => i.is_pinned);
@@ -196,6 +197,13 @@ function CollectionPanel() {
             onChange={(e) => setQuickNote(e.target.value)}
             onKeyDown={handleQuickNoteSubmit}
           />
+          <button
+            className="collection-close-inline-btn"
+            onClick={toggleCollectionPanel}
+            title={t('collection.hidePanel')}
+          >
+            <PanelRightClose size={14} />
+          </button>
         </div>
       )}
     </div>

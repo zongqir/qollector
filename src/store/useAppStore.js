@@ -118,6 +118,11 @@ const useAppStore = create((set, get) => ({
   themeMode: 'system',
   isLocked: true,
   hasPassword: false,
+  collectionPanelEnabled: true,
+
+  // ========== 悬浮预览 ==========
+  hoverPreviewItem: null,
+  hoverPreviewPosition: null,
 
   // ========== 备注编辑 ==========
   editingNoteId: null,
@@ -142,6 +147,36 @@ const useAppStore = create((set, get) => ({
 
   switchToCollection: () => {
     set({ panelMode: 'collection', previewItem: null });
+  },
+
+  // ========== 收集箱面板开关 ==========
+  setCollectionPanelEnabled: (v) => {
+    const updates = { collectionPanelEnabled: v };
+    if (!v) {
+      Object.assign(updates, { hoverPreviewItem: null, hoverPreviewPosition: null });
+    }
+    set(updates);
+  },
+
+  toggleCollectionPanel: async () => {
+    const next = !get().collectionPanelEnabled;
+    get().setCollectionPanelEnabled(next);
+    try {
+      const generalConfig = await invoke('get_general_config');
+      await invoke('update_general_config', {
+        config: { ...generalConfig, collection_panel_enabled: next },
+      });
+    } catch (error) {
+      console.error('persist collection_panel_enabled failed:', error);
+    }
+  },
+
+  setHoverPreview: (item, position) => {
+    set({ hoverPreviewItem: item, hoverPreviewPosition: position });
+  },
+
+  clearHoverPreview: () => {
+    set({ hoverPreviewItem: null, hoverPreviewPosition: null });
   },
 
   // ========== 数据加载 Actions ==========
@@ -247,6 +282,7 @@ const useAppStore = create((set, get) => ({
         maxPinnedItems: generalConfig.max_pinned_items || 3,
         hasPassword: hasLock,
         isLocked: hasLock,
+        collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });

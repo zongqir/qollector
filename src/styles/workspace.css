@@ -18,6 +18,10 @@
   flex-shrink: 0;
 }
 
+.history-stream[style*="width: 100%"] {
+  max-width: none;
+}
+
 /* ========== 分割线 ========== */
 .resize-handle {
   width: 1px;
@@ -364,6 +368,26 @@
 }
 
 /* ========== 搜集箱 ========== */
+.collection-close-inline-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.collection-close-inline-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
 .collection-panel {
   flex: 1;
   display: flex;

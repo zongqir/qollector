@@ -31,6 +31,9 @@ pub struct GeneralConfig {
     /// Global shortcut for show/hide main window.
     #[serde(default = "default_toggle_window_shortcut")]
     pub toggle_window_shortcut: String,
+    /// Whether the collection panel is visible.
+    #[serde(default = "default_collection_panel_enabled")]
+    pub collection_panel_enabled: bool,
 }
 
 fn default_language() -> String {
@@ -65,6 +68,10 @@ fn default_toggle_window_shortcut() -> String {
     "alt+x".to_string()
 }
 
+fn default_collection_panel_enabled() -> bool {
+    true
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -78,6 +85,7 @@ impl Default for GeneralConfig {
             copy_pin_shortcut: default_copy_pin_shortcut(),
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
+            collection_panel_enabled: true,
         }
     }
 }
