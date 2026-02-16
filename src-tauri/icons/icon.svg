@@ -2,12 +2,12 @@
   <!-- Background gradient -->
   <defs>
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="clipGradient" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
-      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#dbeafe;stop-opacity:0.9" />
     </linearGradient>
     <filter id="shadow">
       <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
@@ -23,22 +23,22 @@
     <rect x="140" y="120" width="232" height="300" rx="20" fill="url(#clipGradient)"/>
 
     <!-- Clipboard clip at top -->
-    <rect x="210" y="100" width="92" height="40" rx="8" fill="#5a67d8"/>
-    <rect x="220" y="105" width="72" height="30" rx="6" fill="#4c51bf"/>
+    <rect x="210" y="100" width="92" height="40" rx="8" fill="#2563eb"/>
+    <rect x="220" y="105" width="72" height="30" rx="6" fill="#1d4ed8"/>
 
     <!-- Document lines inside clipboard -->
-    <rect x="180" y="180" width="152" height="12" rx="6" fill="#667eea" opacity="0.3"/>
-    <rect x="180" y="210" width="120" height="12" rx="6" fill="#667eea" opacity="0.3"/>
-    <rect x="180" y="240" width="140" height="12" rx="6" fill="#667eea" opacity="0.3"/>
+    <rect x="180" y="180" width="152" height="12" rx="6" fill="#3b82f6" opacity="0.3"/>
+    <rect x="180" y="210" width="120" height="12" rx="6" fill="#3b82f6" opacity="0.3"/>
+    <rect x="180" y="240" width="140" height="12" rx="6" fill="#3b82f6" opacity="0.3"/>
 
     <!-- Box/Collection indicator - small squares at bottom -->
     <g opacity="0.4">
-      <rect x="180" y="300" width="40" height="40" rx="8" fill="#5a67d8"/>
-      <rect x="236" y="300" width="40" height="40" rx="8" fill="#5a67d8"/>
-      <rect x="292" y="300" width="40" height="40" rx="8" fill="#5a67d8"/>
+      <rect x="180" y="300" width="40" height="40" rx="8" fill="#2563eb"/>
+      <rect x="236" y="300" width="40" height="40" rx="8" fill="#2563eb"/>
+      <rect x="292" y="300" width="40" height="40" rx="8" fill="#2563eb"/>
     </g>
 
     <!-- Accent dot - represents "active" state -->
-    <circle cx="340" cy="160" r="16" fill="#f56565"/>
+    <circle cx="340" cy="160" r="16" fill="#10b981"/>
   </g>
 </svg>
