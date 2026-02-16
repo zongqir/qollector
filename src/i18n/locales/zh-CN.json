@@ -225,8 +225,8 @@
       "recordReserved": "该快捷键被系统保留：{{shortcut}}",
       "conflictError": "复制并置顶与显示/隐藏主面板不能使用相同快捷键。",
       "occupiedHint": "已自动保留之前可用的快捷键。请改用其他组合，例如 Ctrl+Alt+X 或 Ctrl+Shift+V。",
-      "defaultCandidate": "{{platform}} ?????{{shortcut}}",
-      "occupiedHintOne": "??????????????{{platform}} ?????{{shortcut}}?"
+      "defaultCandidate": "{{platform}} \u9ed8\u8ba4\u5019\u9009\uff1a{{shortcut}}",
+      "occupiedHintOne": "\u5df2\u81ea\u52a8\u4fdd\u7559\u4e4b\u524d\u53ef\u7528\u7684\u5feb\u6377\u952e\u3002{{platform}} \u5efa\u8bae\u4f7f\u7528\uff1a{{shortcut}}\u3002"
     }
   },
   "dragDrop": {
