@@ -672,72 +672,247 @@ impl ClipboardManager {
         &self.image_dir
     }
 
-    /// Pin the current clipboard content.
-    /// Reads the clipboard, computes the hash, looks up the item in DB
-    /// (with retry to wait for the monitoring thread to finish inserting),
-    /// then pins it.
-    pub async fn pin_current_clipboard(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        use crate::core::models::ClipboardContent;
-
-        // 1. Read current clipboard content
-        let content = self.platform.get_content().await
-            .map_err(|e| format!("Failed to read clipboard: {}", e))?;
-
-        // 2. Compute hash (must match monitoring thread logic exactly)
-        let content_hash = match &content {
+    fn compute_content_hash(content: &ClipboardContent) -> String {
+        match content {
             ClipboardContent::Text(text) => {
-                // Text/link: SHA256 (same as ClipboardItem::calculate_hash)
-                use sha2::{Sha256, Digest};
+                use sha2::{Digest, Sha256};
                 let mut hasher = Sha256::new();
                 hasher.update(text.as_bytes());
                 format!("{:x}", hasher.finalize())
             }
-            ClipboardContent::Image(data) => {
-                // Image: MD5 (same as handle_clipboard_change)
-                format!("{:x}", md5::compute(data))
-            }
+            ClipboardContent::Image(data) => format!("{:x}", md5::compute(data)),
             ClipboardContent::File(paths_str) => {
-                // File: SHA256 on path string (same as handle_clipboard_change)
-                use sha2::{Sha256, Digest};
+                use sha2::{Digest, Sha256};
                 let mut hasher = Sha256::new();
                 hasher.update(paths_str.as_bytes());
                 format!("{:x}", hasher.finalize())
             }
-        };
+        }
+    }
 
-        // 3. Load max_pinned from config
-        let max_pinned = self.config_repo.load_general_config().await
+    async fn load_max_pinned(&self) -> usize {
+        self.config_repo
+            .load_general_config()
+            .await
             .ok()
             .flatten()
             .map(|c| c.max_pinned_items)
-            .unwrap_or(3);
+            .unwrap_or(3)
+    }
 
-        // 4. Retry loop: wait for monitoring thread to insert the item
-        let max_retries = 5;
+    async fn pin_by_hash_with_retry(
+        &self,
+        content_hash: &str,
+        max_pinned: usize,
+        max_retries: usize,
+        retry_delay_ms: u64,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         for attempt in 0..max_retries {
             let repo = self.repository.lock().await;
-            if let Some(item) = repo.find_by_hash(&content_hash).await? {
-                // Already pinned? nothing to do
+            if let Some(item) = repo.find_by_hash(content_hash).await? {
                 if item.is_pinned {
                     return Ok(item.id);
                 }
-                // Pin it (inline to stay within the same lock)
+
                 let pinned_items = repo.get_pinned_items().await?;
                 if pinned_items.len() >= max_pinned {
                     if let Some(oldest) = pinned_items.first() {
                         repo.unpin(&oldest.id).await?;
                     }
                 }
+
                 repo.set_pinned(&item.id, true).await?;
                 return Ok(item.id);
             }
             drop(repo);
 
-            if attempt < max_retries - 1 {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            if attempt + 1 < max_retries {
+                tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
             }
         }
 
-        Err(format!("Clipboard item not found in DB after {} retries", max_retries).into())
+        Err(format!(
+            "Clipboard item not found in DB after {} retries (hash={})",
+            max_retries, content_hash
+        )
+        .into())
+    }
+
+    async fn read_clipboard_with_retry(
+        &self,
+        max_retries: usize,
+        retry_delay_ms: u64,
+    ) -> Result<ClipboardContent, Box<dyn std::error::Error + Send + Sync>> {
+        for attempt in 0..max_retries {
+            match self.platform.get_content().await {
+                Ok(content) => return Ok(content),
+                Err(err) => {
+                    if attempt + 1 >= max_retries {
+                        return Err(format!("Failed to read clipboard: {}", err).into());
+                    }
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
+        }
+
+        Err("Failed to read clipboard".into())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn wait_shortcut_modifiers_released(timeout_ms: u64) {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT};
+
+        fn is_pressed(vk: i32) -> bool {
+            unsafe { (GetAsyncKeyState(vk) as u16 & 0x8000) != 0 }
+        }
+
+        let started = std::time::Instant::now();
+        let timeout = std::time::Duration::from_millis(timeout_ms);
+        while started.elapsed() < timeout {
+            if !is_pressed(VK_CONTROL.0 as i32)
+                && !is_pressed(VK_SHIFT.0 as i32)
+                && !is_pressed(VK_MENU.0 as i32)
+            {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn send_ctrl_c_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{
+            SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_CONTROL,
+        };
+
+        const VK_C_KEY: u16 = 0x43;
+
+        fn key_input(vk: u16, key_up: bool) -> INPUT {
+            let flags = if key_up {
+                KEYEVENTF_KEYUP
+            } else {
+                Default::default()
+            };
+
+            INPUT {
+                r#type: INPUT_KEYBOARD,
+                Anonymous: INPUT_0 {
+                    ki: KEYBDINPUT {
+                        wVk: VIRTUAL_KEY(vk),
+                        wScan: 0,
+                        dwFlags: flags,
+                        time: 0,
+                        dwExtraInfo: 0,
+                    },
+                },
+            }
+        }
+
+        let inputs = [
+            key_input(VK_CONTROL.0, false),
+            key_input(VK_C_KEY, false),
+            key_input(VK_C_KEY, true),
+            key_input(VK_CONTROL.0, true),
+        ];
+
+        let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+        if sent != inputs.len() as u32 {
+            return Err(format!("SendInput sent {} events, expected {}", sent, inputs.len()).into());
+        }
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn wait_clipboard_sequence_change(previous_seq: u32, timeout_ms: u64) -> bool {
+        use windows::Win32::System::DataExchange::GetClipboardSequenceNumber;
+
+        let started = std::time::Instant::now();
+        let timeout = std::time::Duration::from_millis(timeout_ms);
+        while started.elapsed() < timeout {
+            let current = unsafe { GetClipboardSequenceNumber() };
+            if current != 0 && current != previous_seq {
+                return true;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+
+        false
+    }
+
+    /// One-shot pipeline:
+    /// 1) trigger a copy in the foreground app,
+    /// 2) wait for clipboard change,
+    /// 3) persist and dedupe clipboard content,
+    /// 4) pin the resulting item.
+    ///
+    /// Falls back to pinning current clipboard when the synthetic copy path cannot complete.
+    pub async fn copy_and_pin_foreground_selection(
+        &self,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        #[cfg(target_os = "windows")]
+        {
+            use windows::Win32::System::DataExchange::GetClipboardSequenceNumber;
+
+            Self::wait_shortcut_modifiers_released(350).await;
+            let seq_before = unsafe { GetClipboardSequenceNumber() };
+
+            if let Err(err) = Self::send_ctrl_c_input() {
+                eprintln!("[Shortcut] copy simulation failed: {}", err);
+                return self.pin_current_clipboard().await;
+            }
+
+            let changed = Self::wait_clipboard_sequence_change(seq_before, 1500).await;
+            if !changed {
+                eprintln!("[Shortcut] clipboard sequence did not change after synthetic copy");
+                return self.pin_current_clipboard().await;
+            }
+
+            let content = self.read_clipboard_with_retry(20, 30).await?;
+            let content_hash = Self::compute_content_hash(&content);
+            let metadata = self.platform.get_active_window_info().unwrap_or(WindowMetadata {
+                source_app: "Unknown".to_string(),
+                window_title: "".to_string(),
+                source_url: None,
+            });
+
+            if let Err(err) = Self::handle_clipboard_change(
+                content,
+                self.repository.clone(),
+                self.config_repo.clone(),
+                metadata,
+                self.image_dir.clone(),
+                self.ai_config.clone(),
+                self.ocr_config.clone(),
+                self.ai_semaphore.clone(),
+                self.app_handle.clone(),
+            )
+            .await
+            {
+                eprintln!("[Shortcut] failed to persist copied content: {}", err);
+            }
+
+            let max_pinned = self.load_max_pinned().await;
+            return self
+                .pin_by_hash_with_retry(&content_hash, max_pinned, 20, 75)
+                .await;
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            self.pin_current_clipboard().await
+        }
+    }
+
+    /// Pin current clipboard content without triggering an extra copy action.
+    pub async fn pin_current_clipboard(
+        &self,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let content = self.read_clipboard_with_retry(10, 40).await?;
+        let content_hash = Self::compute_content_hash(&content);
+        let max_pinned = self.load_max_pinned().await;
+
+        self.pin_by_hash_with_retry(&content_hash, max_pinned, 20, 75)
+            .await
     }
 }

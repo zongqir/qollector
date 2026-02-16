@@ -296,11 +296,11 @@ fn main() {
                             }
 
                             if shortcut.matches(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyC) {
-                                // Ctrl+Shift+C: pin current clipboard content
+                                // Ctrl+Shift+C: one-shot copy from foreground app and pin it
                                 let app_handle = app.clone();
                                 tauri::async_runtime::spawn(async move {
                                     if let Some(manager) = app_handle.try_state::<Arc<ClipboardManager>>() {
-                                        match manager.pin_current_clipboard().await {
+                                        match manager.copy_and_pin_foreground_selection().await {
                                             Ok(id) => {
                                                 println!("[Shortcut] Pinned clipboard item: {}", id);
                                                 let _ = app_handle.emit("clipboard-changed", ());
