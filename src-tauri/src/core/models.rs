@@ -126,10 +126,7 @@ impl ClipboardItem {
     }
 
     fn calculate_hash(content: &str) -> String {
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(content.as_bytes());
-        format!("{:x}", hasher.finalize())
+        blake3::hash(content.as_bytes()).to_hex().to_string()
     }
 
     pub fn get_image_paths(&self) -> Option<ImagePaths> {

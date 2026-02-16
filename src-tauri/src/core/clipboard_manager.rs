@@ -168,7 +168,7 @@ impl ClipboardManager {
                 println!("Image clipboard content detected, saving...");
 
                 // 璁＄畻鍥剧墖鍐呭鐨凪D5鍝堝笇
-                let image_hash = format!("{:x}", md5::compute(&data));
+                let image_hash = blake3::hash(&data).to_hex().to_string();
 
                 // Generate unique filename
                 let timestamp = std::time::SystemTime::now()
@@ -254,10 +254,7 @@ impl ClipboardManager {
                 item.type_ = "file".to_string();
                 item.content = Some(paths_str.to_string());
                 // Use full path payload hash to avoid false collisions on same filename.
-                let mut hasher = sha2::Sha256::new();
-                use sha2::Digest;
-                hasher.update(paths_str.as_bytes());
-                item.content_hash = format!("{:x}", hasher.finalize());
+                item.content_hash = blake3::hash(paths_str.as_bytes()).to_hex().to_string();
                 item
             }
         };
@@ -760,11 +757,7 @@ impl ClipboardManager {
         content: &str,
         notes: Option<&str>,
     ) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::new();
-        hasher.update(content.as_bytes());
-        let hash = format!("{:x}", hasher.finalize());
+        let hash = blake3::hash(content.as_bytes()).to_hex().to_string();
 
         let metadata = self.platform.get_active_window_info().unwrap_or_else(|_| {
             crate::core::models::WindowMetadata {
@@ -895,17 +888,11 @@ impl ClipboardManager {
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
             ClipboardContent::Text { plain: ref text, .. } => {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(text.as_bytes());
-                format!("{:x}", hasher.finalize())
+                blake3::hash(text.as_bytes()).to_hex().to_string()
             }
-            ClipboardContent::Image(data) => format!("{:x}", md5::compute(data)),
+            ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
             ClipboardContent::File(paths_str) => {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(paths_str.as_bytes());
-                format!("{:x}", hasher.finalize())
+                blake3::hash(paths_str.as_bytes()).to_hex().to_string()
             }
         }
     }

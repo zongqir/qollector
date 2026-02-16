@@ -69,10 +69,7 @@ fn resolve_shortcut_target(_path: &str) -> Option<String> {
 }
 
 fn calculate_sha256(input: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(input.as_bytes());
-    format!("{:x}", hasher.finalize())
+    blake3::hash(input.as_bytes()).to_hex().to_string()
 }
 
 #[tauri::command]
@@ -199,7 +196,7 @@ pub async fn add_clipboard_item_manual(
             item.image_paths = Some(image_paths_json);
 
             if dedupe_by_hash.unwrap_or(false) {
-                item.content_hash = format!("{:x}", md5::compute(&image_data));
+                item.content_hash = blake3::hash(&image_data).to_hex().to_string();
             }
 
             item
@@ -283,7 +280,7 @@ pub async fn add_image_file(
     item.image_paths = Some(image_paths_json);
 
     if dedupe_by_hash.unwrap_or(false) {
-        item.content_hash = format!("{:x}", md5::compute(&image_data));
+        item.content_hash = blake3::hash(&image_data).to_hex().to_string();
         let effective_id = manager
             .insert_item_dedup_touch(&item)
             .await
