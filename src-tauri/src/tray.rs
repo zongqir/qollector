@@ -20,7 +20,7 @@ fn get_system_language() -> String {
 }
 
 // Localized strings
-fn t(key: &str, lang: &str) -> &'static str {
+fn t<'a>(key: &'a str, lang: &str) -> &'a str {
     let is_zh = lang.starts_with("zh");
     match key {
         "toggle" => if is_zh { "显示 / 隐藏" } else { "Show / Hide" },

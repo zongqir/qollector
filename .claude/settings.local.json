@@ -25,7 +25,10 @@
       "Bash(git add src-tauri/icons/)",
       "Bash(git add package.json package-lock.json)",
       "Bash(git commit -m \"feat: redesign app icon with modern clipboard design\n\n- Replace simple blue square with professional gradient icon\n- Design features: clipboard with document lines, collection boxes, and accent dot\n- Color scheme: purple-blue gradient \\(#667eea to #764ba2\\)\n- Generate all required formats: PNG \\(multiple sizes\\), ICO, ICNS\n- Add Node.js script for automated icon generation from SVG\n- Update all Windows Store icons and macOS iconset\")",
-      "Bash(git commit -m \"refactor: change icon color scheme from purple to blue\n\n- Update gradient: purple-blue \\(#667eea → #764ba2\\) to blue \\(#3b82f6 → #1e40af\\)\n- Change accent dot from red to green for better contrast\n- Regenerate all icon formats with new color scheme\n- More professional and recognizable blue theme\")"
+      "Bash(git commit -m \"refactor: change icon color scheme from purple to blue\n\n- Update gradient: purple-blue \\(#667eea → #764ba2\\) to blue \\(#3b82f6 → #1e40af\\)\n- Change accent dot from red to green for better contrast\n- Regenerate all icon formats with new color scheme\n- More professional and recognizable blue theme\")",
+      "Bash(git commit -m \"feat: add disconnected state tray icon with dynamic switching\n\n- Create red-themed disconnected icon \\(pause state indicator\\)\n- Generate disconnected icons in multiple sizes \\(16-256px\\)\n- Update tray icon dynamically when pausing/resuming monitoring\n- Red gradient background with pause symbol overlay\n- Improve visual feedback for monitoring status\n- Update icon generation script to include disconnected state\")",
+      "Bash(git add src-tauri/src/tray.rs)",
+      "Bash(git commit -m \"feat: add i18n support for tray menu\n\n- Detect system language \\(zh/en\\) automatically\n- Localize all tray menu items \\(Show/Hide, Settings, Pause, Quit\\)\n- Update tooltip text based on language\n- Support Chinese and English for tray menu\")"
     ]
   }
 }
