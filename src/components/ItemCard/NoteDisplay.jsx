@@ -30,10 +30,10 @@ function NoteDisplay({
           <span className="note-edit-hint">Ctrl+Enter</span>
           <div className="note-edit-actions">
             <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>
-              <X size={13} />
+              <X size={12} />
             </button>
             <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>
-              <Check size={13} />
+              <Check size={12} />
             </button>
           </div>
         </div>

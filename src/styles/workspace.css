@@ -1058,6 +1058,12 @@
   margin: 0;
 }
 
+.preview-note-section .note-edit-bar {
+  margin: -6px -16px -6px;
+  width: calc(100% + 32px);
+  border-top: none;
+}
+
 .preview-add-note-btn {
   display: flex;
   align-items: center;

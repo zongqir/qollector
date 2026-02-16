@@ -73,20 +73,21 @@
 .note-edit-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 12px;
-  border-top: 1px solid var(--border-light);
-  background: var(--quick-input-footer-bg, transparent);
+  justify-content: flex-end;
+  padding: 8px 12px;
+  gap: 8px;
 }
 
 .note-edit-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
-  padding: 2px 6px;
-  background: var(--hint-item-bg, rgba(0,0,0,0.03));
+  padding: 2px 8px;
+  background: transparent;
   border-radius: 4px;
-  border: 1px solid var(--border-light);
-  font-family: monospace;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.02em;
+  opacity: 0.7;
 }
 
 .note-edit-actions {
@@ -96,13 +97,12 @@
 
 .note-btn-save,
 .note-btn-cancel {
-  width: 26px;
-  height: 26px;
+  height: 24px;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.15s ease;
+  font-size: 12px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -110,21 +110,29 @@
 }
 
 .note-btn-save {
+  padding: 0 10px;
+  gap: 4px;
   background: var(--accent-color);
   color: var(--text-on-accent);
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.25);
 }
 
 .note-btn-save:hover {
   background: var(--accent-hover);
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+  transform: translateY(-0.5px);
 }
 
 .note-btn-cancel {
-  background: var(--cancel-btn-bg);
-  color: var(--text-secondary);
+  width: 24px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-tertiary);
 }
 
 .note-btn-cancel:hover {
   background: var(--cancel-btn-hover-bg);
+  color: var(--text-secondary);
 }
 
 .add-note-btn {
