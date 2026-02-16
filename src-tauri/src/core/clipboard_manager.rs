@@ -7,12 +7,16 @@ use crate::repository::config_repo::ConfigRepository;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
+use url::Host;
 
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 180;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
+const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
+const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -309,6 +313,7 @@ impl ClipboardManager {
         let item_type = item.type_.clone();
         let item_content = item.content.clone();
         let item_image_paths = item.image_paths.clone();
+        let item_metadata = item.metadata.clone();
         drop(repo_lock);
         let _ = app_handle.emit("clipboard-changed", ());
         println!("Clipboard item saved successfully!");
@@ -355,9 +360,23 @@ impl ClipboardManager {
         let ai_config_clone = ai_config.clone();
         let ocr_config_clone = ocr_config.clone();
         let ai_semaphore_clone = ai_semaphore.clone();
+        let app_handle_clone = app_handle.clone();
 
         if inserted_new_item {
             tokio::spawn(async move {
+                if item_type == "link" {
+                    if let Some(url) = item_content.as_deref() {
+                        Self::try_enrich_link_preview(
+                            repo_clone.clone(),
+                            app_handle_clone.clone(),
+                            item_id.clone(),
+                            item_metadata.as_deref(),
+                            url,
+                        )
+                        .await;
+                    }
+                }
+
                 if item_type == "image" {
                     if let Some(image_paths_str) = item_image_paths {
                         let ocr_service_opt = ocr_config_clone.lock().unwrap().clone();
@@ -501,6 +520,267 @@ impl ClipboardManager {
         Ok(())
     }
 
+    async fn try_enrich_link_preview(
+        repo: Arc<TokioMutex<ClipboardRepository>>,
+        app_handle: AppHandle,
+        item_id: String,
+        metadata_json: Option<&str>,
+        url: &str,
+    ) {
+        if let Some(existing_title) = metadata_json
+            .and_then(Self::extract_link_preview_title_from_metadata)
+        {
+            if !existing_title.is_empty() {
+                return;
+            }
+        }
+
+        let title = match Self::fetch_link_title(url).await {
+            Some(value) => value,
+            None => return,
+        };
+
+        let new_metadata = match Self::merge_link_preview_metadata(metadata_json, &title, url) {
+            Some(value) => value,
+            None => return,
+        };
+
+        let repo_lock = repo.lock().await;
+        if let Err(error) = repo_lock.update_metadata_only(&item_id, &new_metadata).await {
+            eprintln!("[LinkPreview] failed to persist title for {}: {}", item_id, error);
+            return;
+        }
+        drop(repo_lock);
+
+        let _ = app_handle.emit("clipboard-changed", ());
+    }
+
+    fn extract_link_preview_title_from_metadata(metadata_json: &str) -> Option<String> {
+        let value = serde_json::from_str::<serde_json::Value>(metadata_json).ok()?;
+        let title = value
+            .get("link_preview")
+            .and_then(|v| v.get("title"))
+            .and_then(|v| v.as_str())?
+            .trim();
+        if title.is_empty() {
+            None
+        } else {
+            Some(title.to_string())
+        }
+    }
+
+    fn merge_link_preview_metadata(
+        metadata_json: Option<&str>,
+        title: &str,
+        url: &str,
+    ) -> Option<String> {
+        let mut value = if let Some(raw) = metadata_json {
+            serde_json::from_str::<serde_json::Value>(raw).ok()?
+        } else {
+            serde_json::json!({})
+        };
+
+        let object = value.as_object_mut()?;
+        object.insert(
+            "link_preview".to_string(),
+            serde_json::json!({
+                "title": title,
+                "url": url,
+                "fetched_at": chrono::Utc::now().timestamp(),
+            }),
+        );
+        Some(value.to_string())
+    }
+
+    async fn fetch_link_title(url: &str) -> Option<String> {
+        let parsed = url::Url::parse(url).ok()?;
+        let scheme = parsed.scheme();
+        if scheme != "http" && scheme != "https" {
+            return None;
+        }
+        if Self::is_local_or_private_host(&parsed) {
+            return None;
+        }
+
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(LINK_PREVIEW_TIMEOUT_SECS))
+            .redirect(reqwest::redirect::Policy::limited(5))
+            .user_agent("ClipBox/1.0")
+            .build()
+            .ok()?;
+
+        let mut response = client
+            .get(parsed)
+            .header(
+                reqwest::header::ACCEPT,
+                "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+            )
+            .send()
+            .await
+            .ok()?;
+
+        if !response.status().is_success() {
+            return None;
+        }
+
+        if let Some(content_type) = response.headers().get(reqwest::header::CONTENT_TYPE) {
+            if let Ok(value) = content_type.to_str() {
+                let normalized = value.to_ascii_lowercase();
+                if !normalized.contains("text/html")
+                    && !normalized.contains("application/xhtml+xml")
+                {
+                    return None;
+                }
+            }
+        }
+
+        let mut bytes = Vec::with_capacity(8192);
+        loop {
+            match response.chunk().await {
+                Ok(Some(chunk)) => {
+                    let remaining = LINK_PREVIEW_MAX_BYTES.saturating_sub(bytes.len());
+                    if remaining == 0 {
+                        break;
+                    }
+                    if chunk.len() > remaining {
+                        bytes.extend_from_slice(&chunk[..remaining]);
+                        break;
+                    }
+                    bytes.extend_from_slice(&chunk);
+                }
+                Ok(None) => break,
+                Err(_) => return None,
+            }
+        }
+
+        if bytes.is_empty() {
+            return None;
+        }
+
+        let html = String::from_utf8_lossy(&bytes);
+        Self::extract_title_from_html(&html)
+    }
+
+    fn is_local_or_private_host(parsed: &url::Url) -> bool {
+        match parsed.host() {
+            Some(Host::Ipv4(ip)) => {
+                ip.is_private()
+                    || ip.is_loopback()
+                    || ip.is_link_local()
+                    || ip.is_broadcast()
+                    || ip.is_documentation()
+                    || ip.is_unspecified()
+            }
+            Some(Host::Ipv6(ip)) => ip.is_loopback() || ip.is_unique_local() || ip.is_unspecified(),
+            Some(Host::Domain(domain)) => {
+                let host = domain.to_ascii_lowercase();
+                host == "localhost" || host.ends_with(".localhost") || host.ends_with(".local")
+            }
+            None => true,
+        }
+    }
+
+    fn extract_title_from_html(html: &str) -> Option<String> {
+        Self::extract_meta_title(html, "property", "og:title")
+            .or_else(|| Self::extract_meta_title(html, "name", "twitter:title"))
+            .or_else(|| Self::extract_title_tag(html))
+            .and_then(|title| Self::normalize_link_title(&title))
+    }
+
+    fn extract_meta_title(html: &str, attr_name: &str, attr_value: &str) -> Option<String> {
+        let lower = html.to_ascii_lowercase();
+        let mut offset = 0usize;
+
+        while let Some(meta_rel) = lower[offset..].find("<meta") {
+            let start = offset + meta_rel;
+            let Some(end_rel) = lower[start..].find('>') else {
+                break;
+            };
+            let end = start + end_rel + 1;
+
+            let tag = &html[start..end];
+            let attr = Self::extract_attribute(tag, attr_name);
+            if attr
+                .as_deref()
+                .map(|value| value.eq_ignore_ascii_case(attr_value))
+                .unwrap_or(false)
+            {
+                if let Some(content) = Self::extract_attribute(tag, "content") {
+                    return Some(content);
+                }
+            }
+            offset = end;
+        }
+
+        None
+    }
+
+    fn extract_title_tag(html: &str) -> Option<String> {
+        let lower = html.to_ascii_lowercase();
+        let title_start = lower.find("<title")?;
+        let title_open_end_rel = lower[title_start..].find('>')?;
+        let content_start = title_start + title_open_end_rel + 1;
+        let title_end_rel = lower[content_start..].find("</title>")?;
+        let content_end = content_start + title_end_rel;
+        Some(html[content_start..content_end].to_string())
+    }
+
+    fn extract_attribute(tag: &str, attr_name: &str) -> Option<String> {
+        let lower = tag.to_ascii_lowercase();
+        let pattern = format!("{}=", attr_name.to_ascii_lowercase());
+        let start = lower.find(&pattern)? + pattern.len();
+        let bytes = tag.as_bytes();
+
+        let mut i = start;
+        while i < bytes.len() && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if i >= bytes.len() {
+            return None;
+        }
+
+        let quote = bytes[i];
+        if quote == b'"' || quote == b'\'' {
+            let value_start = i + 1;
+            let mut value_end = value_start;
+            while value_end < bytes.len() && bytes[value_end] != quote {
+                value_end += 1;
+            }
+            return Some(tag[value_start..value_end].to_string());
+        }
+
+        let value_start = i;
+        let mut value_end = value_start;
+        while value_end < bytes.len()
+            && !bytes[value_end].is_ascii_whitespace()
+            && bytes[value_end] != b'>'
+        {
+            value_end += 1;
+        }
+        Some(tag[value_start..value_end].to_string())
+    }
+
+    fn normalize_link_title(raw: &str) -> Option<String> {
+        let decoded = raw
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&nbsp;", " ");
+        let collapsed = decoded.split_whitespace().collect::<Vec<_>>().join(" ");
+        let trimmed = collapsed.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+        let max_len = 180usize;
+        if trimmed.chars().count() > max_len {
+            let clipped = trimmed.chars().take(max_len).collect::<String>();
+            return Some(clipped);
+        }
+        Some(trimmed.to_string())
+    }
+
     fn should_pin_on_double_copy(
         state: &Arc<Mutex<DoubleCopyEmphasisState>>,
         content_hash: &str,
@@ -581,26 +861,7 @@ impl ClipboardManager {
 
         // Delete image files for image-type items
         for target in &targets {
-            if target.type_ == "image" {
-                if let Some(paths_str) = &target.image_paths {
-                    if let Ok(paths) = serde_json::from_str::<serde_json::Value>(paths_str) {
-                        for key in &["original", "thumbnail"] {
-                            if let Some(p) = paths[key].as_str() {
-                                if let Err(e) = std::fs::remove_file(p) {
-                                    if e.kind() != std::io::ErrorKind::NotFound {
-                                        eprintln!("[Cleanup] failed to delete {}: {}", p, e);
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Legacy single-path format
-                        let _ = std::fs::remove_file(paths_str);
-                        let thumb = paths_str.replace(".png", "_thumb.png");
-                        let _ = std::fs::remove_file(&thumb);
-                    }
-                }
-            }
+            Self::cleanup_image_files(target);
             // file type: never touch disk files
         }
 
@@ -701,6 +962,10 @@ impl ClipboardManager {
 
     pub async fn delete_item(&self, id: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
+        // Fetch item before deletion to get image paths
+        if let Ok(Some(item)) = repo.find_by_id(id).await {
+            Self::cleanup_image_files(&item);
+        }
         repo.delete(id).await?;
         let _ = repo.delete_raw_formats(id).await;
         Ok(())
@@ -929,6 +1194,16 @@ impl ClipboardManager {
     /// 娓呯┖鎵€鏈夊壀璐存澘鏁版嵁
     pub async fn clear_all_items(&self) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
+        // Fetch all image items and delete their files before clearing DB
+        let image_items: Vec<ClipboardItem> = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items WHERE type = 'image'",
+        )
+        .fetch_all(repo.pool())
+        .await
+        .unwrap_or_default();
+        for item in &image_items {
+            Self::cleanup_image_files(item);
+        }
         sqlx::query("DELETE FROM clipboard_items")
             .execute(repo.pool())
             .await?;
@@ -962,6 +1237,31 @@ impl ClipboardManager {
     }
 
     /// 鑾峰彇鍥剧墖瀛樺偍鐩綍
+    /// Delete image files (original + thumbnail) associated with a clipboard item.
+    fn cleanup_image_files(item: &ClipboardItem) {
+        if item.type_ != "image" {
+            return;
+        }
+        if let Some(paths_str) = &item.image_paths {
+            if let Ok(paths) = serde_json::from_str::<serde_json::Value>(paths_str) {
+                for key in &["original", "thumbnail"] {
+                    if let Some(p) = paths[key].as_str() {
+                        if let Err(e) = std::fs::remove_file(p) {
+                            if e.kind() != std::io::ErrorKind::NotFound {
+                                eprintln!("[Delete] failed to delete {}: {}", p, e);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Legacy single-path format
+                let _ = std::fs::remove_file(paths_str);
+                let thumb = paths_str.replace(".png", "_thumb.png");
+                let _ = std::fs::remove_file(&thumb);
+            }
+        }
+    }
+
     pub fn image_dir(&self) -> &std::path::Path {
         &self.image_dir
     }
