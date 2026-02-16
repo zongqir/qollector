@@ -7,10 +7,7 @@ export const generateAITagsForItem = async (item) => {
   const [aiTags, codeLanguage] = await invoke('generate_ai_tags', { content: item.content });
 
   if (aiTags && aiTags.length > 0) {
-    // Code tags are factual (no "AI:" prefix); non-code tags get "AI:" prefix
-    const taggedAI = codeLanguage
-      ? aiTags
-      : aiTags.map(tag => `AI:${tag}`);
+    const taggedAI = aiTags.map(tag => `AI:${tag}`);
     const existingTags = getTags(item.tags);
     const newTags = [...existingTags, ...taggedAI.filter(t => !existingTags.includes(t))];
 
@@ -64,9 +61,7 @@ export const autoGenerateAITags = async (items, processedItemIds, setProcessedIt
         invoke('generate_ai_tags', { content: item.content })
           .then(([aiTags, codeLanguage]) => {
             if ((aiTags && aiTags.length > 0) || codeLanguage) {
-              const taggedAI = codeLanguage
-                ? (aiTags || [])
-                : (aiTags || []).map(tag => `AI:${tag}`);
+              const taggedAI = (aiTags || []).map(tag => `AI:${tag}`);
               const newTags = [...tags, ...taggedAI];
 
               const updatedItem = {

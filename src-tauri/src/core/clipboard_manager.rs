@@ -420,11 +420,8 @@ impl ClipboardManager {
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
                             Ok((tags, code_language)) if !tags.is_empty() || code_language.is_some() => {
-                                let ai_tags: Vec<String> = if code_language.is_some() {
-                                    tags.clone()
-                                } else {
-                                    tags.iter().map(|t| format!("AI:{}", t)).collect()
-                                };
+                                let ai_tags: Vec<String> =
+                                    tags.iter().map(|t| format!("AI:{}", t)).collect();
 
                                 let repo_lock = repo_clone.lock().await;
                                 if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
