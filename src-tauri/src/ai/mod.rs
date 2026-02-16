@@ -275,12 +275,12 @@ impl AIService {
         &self,
         content: &str,
         language: &str,
-    ) -> Result<Vec<String>, AIError> {
+    ) -> Result<(Vec<String>, Option<String>), AIError> {
         let api_key = self.config.get_current_api_key();
 
-        // 只要有API key就尝试生成,不检查enabled标志
+        // Only try if API key exists, don't check enabled flag
         if api_key.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), None));
         }
 
         // Sanitize and truncate content (考虑 UTF-8 字符边界)
@@ -298,7 +298,7 @@ impl AIService {
         let sanitized = truncated.replace('\0', "").trim().to_string();
 
         if sanitized.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), None));
         }
 
         // 获取提示词：优先使用用户自定义，否则使用系统提示词
@@ -382,20 +382,37 @@ impl AIService {
             .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;
 
         if let Some(choice) = chat_response.choices.first() {
-            let tags_text = choice.message.content.trim();
-            println!("AI generated text: {}", tags_text);
+            let raw_text = choice.message.content.trim();
+            println!("AI generated text: {}", raw_text);
 
+            let mut lines = raw_text.lines();
+            let first_line = lines.next().unwrap_or("").trim();
+
+            // Parse LANG:xxx from first line
+            let code_language = if let Some(lang) = first_line.strip_prefix("LANG:") {
+                let lang = lang.trim().to_lowercase();
+                if lang == "none" || lang.is_empty() {
+                    None
+                } else {
+                    Some(lang)
+                }
+            } else {
+                None
+            };
+
+            // Remaining lines are tags (second line onward)
+            let tags_text: String = lines.collect::<Vec<&str>>().join("\n");
             let tags: Vec<String> = tags_text
-                .split(&[',', '，', '\n'][..])
+                .split(&[',', '\u{ff0c}', '\n'][..])
                 .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
+                .filter(|s| !s.is_empty() && !s.starts_with("LANG:"))
                 .take(5)
                 .collect();
 
-            println!("Parsed tags: {:?}", tags);
-            Ok(tags)
+            println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);
+            Ok((tags, code_language))
         } else {
-            Ok(Vec::new())
+            Ok((Vec::new(), None))
         }
     }
 }

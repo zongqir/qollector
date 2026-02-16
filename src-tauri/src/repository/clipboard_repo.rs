@@ -53,8 +53,13 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
-        // 迁移：为已有表添加 pinned_at 列
+        // migration: add pinned_at column
         let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pinned_at INTEGER")
+            .execute(&self.pool)
+            .await;
+
+        // migration: add code_language column
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN code_language TEXT")
             .execute(&self.pool)
             .await;
 
@@ -77,6 +82,10 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
 
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
@@ -85,10 +94,10 @@ impl ClipboardRepository {
             r#"
             INSERT INTO clipboard_items (
                 id, type, content, original_content, content_hash,
-                image_paths, ocr_text, embedding, tags, user_note,
+                image_paths, ocr_text, code_language, embedding, tags, user_note,
                 metadata, is_pinned, is_favorite, is_deleted,
                 pinned_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(&item.id)
@@ -98,6 +107,7 @@ impl ClipboardRepository {
         .bind(&item.content_hash)
         .bind(&item.image_paths)
         .bind(&item.ocr_text)
+        .bind(&item.code_language)
         .bind(&item.embedding)
         .bind(&item.tags)
         .bind(&item.user_note)
@@ -140,7 +150,7 @@ impl ClipboardRepository {
     pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
@@ -153,7 +163,7 @@ impl ClipboardRepository {
         Ok(items)
     }
 
-    /// 分页查询（用于 loadMore）
+    /// paged query (for loadMore)
     pub async fn get_recent_paged(
         &self,
         limit: i32,
@@ -161,7 +171,7 @@ impl ClipboardRepository {
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, NULL as embedding, tags, user_note,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at
              FROM clipboard_items WHERE is_deleted = 0
@@ -221,7 +231,7 @@ impl ClipboardRepository {
         sqlx::query(
             r#"
             UPDATE clipboard_items SET
-                content = ?, tags = ?, user_note = ?,
+                content = ?, tags = ?, user_note = ?, code_language = ?,
                 is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
             WHERE id = ?
             "#,
@@ -229,6 +239,7 @@ impl ClipboardRepository {
         .bind(&item.content)
         .bind(&item.tags)
         .bind(&item.user_note)
+        .bind(&item.code_language)
         .bind(item.is_pinned)
         .bind(item.is_favorite)
         .bind(item.pinned_at)
@@ -258,6 +269,23 @@ impl ClipboardRepository {
             "#,
         )
         .bind(ocr_text)
+        .bind(chrono::Utc::now().timestamp())
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_code_language(&self, id: &str, code_language: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                code_language = ?, updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(code_language)
         .bind(chrono::Utc::now().timestamp())
         .bind(id)
         .execute(&self.pool)

@@ -143,7 +143,11 @@ function HistoryStream({ style }) {
 
       if (showFavoritesOnly && !item.is_favorite) return false;
       if (showPinnedOnly && !item.is_pinned) return false;
-      if (selectedType !== 'all' && item.type_ !== selectedType) return false;
+      if (selectedType === 'code') {
+        if (!item.code_language) return false;
+      } else if (selectedType !== 'all' && item.type_ !== selectedType) {
+        return false;
+      }
 
       if (selectedTags.length > 0) {
         const itemTags = getTags(item.tags);

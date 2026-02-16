@@ -9,8 +9,8 @@ const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 's
 const INTERNAL_DRAG_MIME = 'application/x-clipbox-item';
 const EDITABLE_SELECTOR = 'input, textarea, [contenteditable="true"]';
 
-function normalizeUniquePaths(paths) {
-  return Array.from(new Set((paths || []).map(path => path.trim()).filter(Boolean)));
+function normalizeUniqueStrings(values) {
+  return Array.from(new Set((values || []).map(value => String(value || '').trim()).filter(Boolean)));
 }
 
 function isImagePath(filePath) {
@@ -27,7 +27,7 @@ function getTransferTypes(dataTransfer) {
   return new Set(Array.from(dataTransfer.types).map(type => type.toLowerCase()));
 }
 
-function canHandleExternalNonFileDrop(event, internalDragActive) {
+function canHandleExternalDrop(event, internalDragActive) {
   const dataTransfer = event.dataTransfer;
   if (!dataTransfer) return false;
   if (internalDragActive) return false;
@@ -75,19 +75,32 @@ function getTransferItemString(item) {
 async function extractDroppedText(dataTransfer) {
   if (!dataTransfer) return '';
 
-  const plainText = dataTransfer.getData('text/plain') || dataTransfer.getData('text');
-  if (plainText && plainText.trim()) {
-    return plainText;
+  const directTypes = [
+    'text/plain',
+    'text',
+    'Text',
+    'text/uri-list',
+    'URL',
+    'text/html',
+  ];
+
+  for (const type of directTypes) {
+    const raw = dataTransfer.getData(type);
+    if (!raw || !raw.trim()) continue;
+    const normalized = normalizeTextByMime(raw, type);
+    if (normalized && normalized.trim()) {
+      return normalized;
+    }
   }
 
-  const uriList = dataTransfer.getData('text/uri-list');
-  if (uriList && uriList.trim()) {
-    return normalizeTextByMime(uriList, 'text/uri-list');
-  }
-
-  const html = dataTransfer.getData('text/html');
-  if (html && html.trim()) {
-    return normalizeTextByMime(html, 'text/html');
+  const dynamicTypes = Array.from(dataTransfer.types || []);
+  for (const type of dynamicTypes) {
+    const raw = dataTransfer.getData(type);
+    if (!raw || !raw.trim()) continue;
+    const normalized = normalizeTextByMime(raw, type);
+    if (normalized && normalized.trim()) {
+      return normalized;
+    }
   }
 
   const items = Array.from(dataTransfer.items || []);
@@ -119,36 +132,36 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
   const switchToCollectionRef = useRef(switchToCollection);
   switchToCollectionRef.current = switchToCollection;
   const cleanupRef = useRef(null);
-  const fileDragActiveRef = useRef(false);
-  const textDragActiveRef = useRef(false);
-  const textDragIdleTimerRef = useRef(null);
+  const nativeDropDragActiveRef = useRef(false);
+  const domDragActiveRef = useRef(false);
+  const domDragIdleTimerRef = useRef(null);
   const internalDragActiveRef = useRef(false);
 
   useEffect(() => {
     let disposed = false;
 
     const updateDraggingState = () => {
-      setIsDragging(fileDragActiveRef.current || textDragActiveRef.current);
+      setIsDragging(nativeDropDragActiveRef.current || domDragActiveRef.current);
     };
 
-    const setTextDragActive = (active) => {
-      if (textDragActiveRef.current === active) return;
-      textDragActiveRef.current = active;
+    const setDomDragActive = (active) => {
+      if (domDragActiveRef.current === active) return;
+      domDragActiveRef.current = active;
       updateDraggingState();
     };
 
-    const clearTextDragTimer = () => {
-      if (textDragIdleTimerRef.current) {
-        clearTimeout(textDragIdleTimerRef.current);
-        textDragIdleTimerRef.current = null;
+    const clearDomDragTimer = () => {
+      if (domDragIdleTimerRef.current) {
+        clearTimeout(domDragIdleTimerRef.current);
+        domDragIdleTimerRef.current = null;
       }
     };
 
-    const touchTextDrag = () => {
-      setTextDragActive(true);
-      clearTextDragTimer();
-      textDragIdleTimerRef.current = setTimeout(() => {
-        setTextDragActive(false);
+    const touchDomDrag = () => {
+      setDomDragActive(true);
+      clearDomDragTimer();
+      domDragIdleTimerRef.current = setTimeout(() => {
+        setDomDragActive(false);
       }, 120);
     };
 
@@ -159,9 +172,53 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
       });
     };
 
+    const addDroppedPathItems = async (paths) => {
+      const uniquePaths = normalizeUniqueStrings(paths);
+      if (uniquePaths.length === 0) {
+        return 0;
+      }
+
+      switchToCollectionRef.current?.();
+      let insertedCount = 0;
+
+      for (const filePath of uniquePaths) {
+        if (isImagePath(filePath)) {
+          try {
+            const itemId = await invoke('add_image_file', {
+              filePath,
+              dedupeByHash: true,
+            });
+            await pinDroppedItem(itemId);
+            onItemAddedRef.current?.();
+            onTypeAddedRef.current?.('image');
+            insertedCount += 1;
+          } catch (error) {
+            console.error('failed to add dropped image file:', error);
+          }
+          continue;
+        }
+
+        try {
+          const itemId = await invoke('add_clipboard_item_manual', {
+            contentType: 'file',
+            content: filePath,
+            dedupeByHash: true,
+          });
+          await pinDroppedItem(itemId);
+          onItemAddedRef.current?.();
+          onTypeAddedRef.current?.('file');
+          insertedCount += 1;
+        } catch (error) {
+          console.error('failed to add dropped file path:', error);
+        }
+      }
+
+      return insertedCount;
+    };
+
     const handleDroppedText = async (content) => {
       const normalized = content.trim();
-      if (!normalized) return;
+      if (!normalized) return false;
 
       switchToCollectionRef.current?.();
 
@@ -174,6 +231,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
       await pinDroppedItem(itemId);
       onItemAddedRef.current?.();
       onTypeAddedRef.current?.('text');
+      return true;
     };
 
     const setupDropListeners = async () => {
@@ -181,56 +239,27 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
 
       const unlistenTauriDrop = await appWindow.onDragDropEvent(async (event) => {
         if (event.payload.type === 'over') {
-          fileDragActiveRef.current = true;
+          nativeDropDragActiveRef.current = true;
           updateDraggingState();
           return;
         }
 
         if (event.payload.type === 'leave') {
-          fileDragActiveRef.current = false;
+          nativeDropDragActiveRef.current = false;
           updateDraggingState();
           return;
         }
 
         if (event.payload.type === 'drop') {
-          fileDragActiveRef.current = false;
+          nativeDropDragActiveRef.current = false;
           updateDraggingState();
 
-          const uniquePaths = normalizeUniquePaths(event.payload.paths);
-          if (uniquePaths.length === 0) {
-            return;
+          const handled = await addDroppedPathItems(event.payload.paths);
+          if (handled === 0) {
+            console.warn('native file drop did not provide usable absolute paths');
           }
-
-          switchToCollectionRef.current?.();
-
-          for (const filePath of uniquePaths) {
-            if (isImagePath(filePath)) {
-              try {
-                const itemId = await invoke('add_image_file', {
-                  filePath,
-                  dedupeByHash: true,
-                });
-                await pinDroppedItem(itemId);
-                onItemAddedRef.current?.();
-                onTypeAddedRef.current?.('image');
-              } catch (error) {
-                console.error('failed to add dropped image file:', error);
-              }
-              continue;
-            }
-
-            try {
-              const itemId = await invoke('add_clipboard_item_manual', {
-                contentType: 'file',
-                content: filePath,
-                dedupeByHash: true,
-              });
-              await pinDroppedItem(itemId);
-              onItemAddedRef.current?.();
-              onTypeAddedRef.current?.('file');
-            } catch (error) {
-              console.error('failed to add dropped file path:', error);
-            }
+          if (handled > 0) {
+            return;
           }
         }
       });
@@ -245,7 +274,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
       };
 
       const handleNativeDragOver = (event) => {
-        if (!canHandleExternalNonFileDrop(event, internalDragActiveRef.current)) {
+        if (!canHandleExternalDrop(event, internalDragActiveRef.current)) {
           return;
         }
 
@@ -253,42 +282,38 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
         if (event.dataTransfer) {
           event.dataTransfer.dropEffect = 'copy';
         }
-        touchTextDrag();
+        touchDomDrag();
       };
 
       const handleNativeDrop = async (event) => {
-        clearTextDragTimer();
-        setTextDragActive(false);
+        clearDomDragTimer();
+        setDomDragActive(false);
         internalDragActiveRef.current = false;
 
-        if (!canHandleExternalNonFileDrop(event, false)) {
+        if (!canHandleExternalDrop(event, false)) {
           return;
         }
 
         event.preventDefault();
 
-        const content = await extractDroppedText(event.dataTransfer);
-        if (!content.trim()) {
-          return;
-        }
-
         try {
+          const content = await extractDroppedText(event.dataTransfer);
           await handleDroppedText(content);
         } catch (error) {
-          console.error('failed to add dropped text:', error);
+          console.error('failed to process dropped content:', error);
         }
       };
 
       const handleNativeDragEnd = () => {
         internalDragActiveRef.current = false;
-        clearTextDragTimer();
-        setTextDragActive(false);
+        clearDomDragTimer();
+        setDomDragActive(false);
       };
 
       const handleWindowBlur = () => {
         internalDragActiveRef.current = false;
-        clearTextDragTimer();
-        setTextDragActive(false);
+        clearDomDragTimer();
+        setDomDragActive(false);
       };
 
       document.addEventListener('dragstart', handleNativeDragStart, true);
@@ -304,7 +329,7 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
         window.removeEventListener('drop', handleNativeDrop, true);
         window.removeEventListener('dragend', handleNativeDragEnd, true);
         window.removeEventListener('blur', handleWindowBlur);
-        clearTextDragTimer();
+        clearDomDragTimer();
       };
 
       if (cleanupRef.current) {
@@ -319,10 +344,10 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
 
     return () => {
       disposed = true;
-      fileDragActiveRef.current = false;
+      nativeDropDragActiveRef.current = false;
       internalDragActiveRef.current = false;
-      clearTextDragTimer();
-      textDragActiveRef.current = false;
+      clearDomDragTimer();
+      domDragActiveRef.current = false;
       setIsDragging(false);
       if (cleanupRef.current) {
         cleanupRef.current();

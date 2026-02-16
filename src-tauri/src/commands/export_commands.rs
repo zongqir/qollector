@@ -338,6 +338,7 @@ pub async fn import_data(
             content_hash: ei.content_hash.clone(),
             image_paths,
             ocr_text: ei.ocr_text.clone(),
+            code_language: None,
             embedding: None,
             tags: ei.tags.clone(),
             user_note: ei.user_note.clone(),

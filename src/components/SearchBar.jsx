@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Check, Layers } from 'lucide-react';
+import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, FileText, Image, File, Link, Code, Check, Layers } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -35,6 +35,7 @@ function SearchBar({
     { key: 'image', icon: <Image size={14} /> },
     { key: 'file', icon: <File size={14} /> },
     { key: 'link', icon: <Link size={14} /> },
+    { key: 'code', icon: <Code size={14} /> },
   ];
 
   return (

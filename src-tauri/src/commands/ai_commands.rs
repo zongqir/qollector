@@ -44,15 +44,13 @@ pub async fn update_ai_config(
 pub async fn generate_ai_tags(
     state: State<'_, AIState>,
     content: String,
-) -> Result<Vec<String>, String> {
+) -> Result<(Vec<String>, Option<String>), String> {
     let config = state.config.lock().unwrap().clone();
 
-    // 只要有API key就尝试生成,失败静默返回空数组
     if config.get_current_api_key().is_empty() {
-        return Ok(Vec::new());
+        return Ok((Vec::new(), None));
     }
 
-    // 获取当前语言配置
     let language = state
         .config_repo
         .load_general_config()
@@ -64,10 +62,10 @@ pub async fn generate_ai_tags(
 
     let service = AIService::new(config);
     match service.generate_tags(&content, &language).await {
-        Ok(tags) => Ok(tags),
+        Ok(result) => Ok(result),
         Err(e) => {
-            eprintln!("AI标签生成失败(静默): {}", e);
-            Ok(Vec::new()) // 失败时返回空数组而不是错误
+            eprintln!("AI tag generation failed (silent): {}", e);
+            Ok((Vec::new(), None))
         }
     }
 }
@@ -88,7 +86,7 @@ pub async fn test_ai_connection(
         .unwrap_or_else(|| "zh-CN".to_string());
 
     let service = AIService::new(config);
-    match service.generate_tags("测试", &language).await {
+    match service.generate_tags("test", &language).await {
         Ok(_) => Ok(true),
         Err(e) => Err(e.to_string()),
     }

@@ -1,0 +1,57 @@
+@import 'highlight.js/styles/vs2015.css';
+
+.code-block {
+  position: relative;
+  border-radius: 6px;
+  background: #1e1e1e;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+}
+
+.code-block code {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.code-block.compact {
+  max-height: 4.5em; /* ~3 lines */
+  overflow: hidden;
+}
+
+.code-block.compact pre {
+  padding: 4px 8px;
+}
+
+.code-language-badge {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+  font-family: system-ui, sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.code-truncate-notice {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+  font-family: system-ui, sans-serif;
+}

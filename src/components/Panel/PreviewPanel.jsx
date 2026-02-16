@@ -10,6 +10,7 @@ import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
+import CodeBlock from '../CodeBlock/CodeBlock';
 
 function PreviewPanel() {
   const { t, i18n } = useTranslation();
@@ -134,6 +135,14 @@ function PreviewPanel() {
           }}
           autoFocus
         />
+      );
+    }
+
+    if (item.code_language && item.content) {
+      return (
+        <div onDoubleClick={handleStartEditContent}>
+          <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
+        </div>
       );
     }
 
