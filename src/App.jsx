@@ -5,12 +5,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
-import { openQuickInputWindow } from './services/windowService';
+import { openQuickInputWindow, openWidgetWindow } from './services/windowService';
 import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
 import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
+import HoverPreview from './components/HoverPreview';
 
 const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
@@ -29,6 +30,7 @@ function App() {
   const isAlwaysOnTop = useAppStore(s => s.isAlwaysOnTop);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
+  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -57,16 +59,23 @@ function App() {
     loadItems();
     loadConfigs();
 
+    // Auto-launch widget
+    openWidgetWindow().catch(err => console.warn('widget auto-launch failed:', err));
+
     const unlistenClipboardPromise = listen('clipboard-changed', () => {
       loadItems();
     });
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
     });
+    const unlistenOpenSettingsPromise = listen('open-settings', () => {
+      setShowSettings(true);
+    });
 
     return () => {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
+      unlistenOpenSettingsPromise.then(unlisten => unlisten());
     };
   }, []);
 
@@ -254,14 +263,15 @@ function App() {
       />
 
       <div className="workspace">
-        <HistoryStream style={{ width: isMiniMode ? '100%' : `${leftWidth}px` }} />
-        {!isMiniMode && (
+        <HistoryStream style={{ width: isMiniMode || !collectionPanelEnabled ? '100%' : `${leftWidth}px` }} />
+        {!isMiniMode && collectionPanelEnabled && (
           <>
             <div className="resize-handle" onMouseDown={handleResizeStart} />
             <PolymorphicPanel />
           </>
         )}
       </div>
+      {!isMiniMode && !collectionPanelEnabled && <HoverPreview />}
     </div>
   );
 }

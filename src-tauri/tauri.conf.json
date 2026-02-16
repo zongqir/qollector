@@ -60,7 +60,9 @@
             "core:webview:allow-create-webview-window",
             "core:event:default",
             "core:path:default",
-            "core:app:default"
+            "core:app:default",
+            "core:tray:default",
+            "core:menu:default"
           ]
         },
         {
@@ -75,6 +77,16 @@
         {
           "identifier": "quick-input-capability",
           "windows": ["quick-input"],
+          "permissions": [
+            "core:window:allow-close",
+            "core:window:allow-set-always-on-top",
+            "core:window:allow-start-dragging",
+            "core:event:default"
+          ]
+        },
+        {
+          "identifier": "widget-capability",
+          "windows": ["widget"],
           "permissions": [
             "core:window:allow-close",
             "core:window:allow-set-always-on-top",

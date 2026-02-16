@@ -1,5 +1,6 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
@@ -31,6 +32,14 @@ struct ExportItem {
     is_favorite: bool,
     created_at: i64,
     updated_at: i64,
+    #[serde(default)]
+    raw_formats: Option<Vec<ExportRawFormat>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ExportRawFormat {
+    mime_type: String,
+    data: String, // base64-encoded (already zstd-compressed in DB, but decompressed here)
 }
 
 #[derive(Serialize)]
@@ -56,6 +65,7 @@ impl From<&ClipboardItem> for ExportItem {
             is_favorite: item.is_favorite,
             created_at: item.created_at,
             updated_at: item.updated_at,
+            raw_formats: None,
         }
     }
 }
@@ -203,8 +213,28 @@ pub async fn export_data(
             export_items.push(ei);
         }
 
+        // Query raw formats for text/link items
+        for (idx, item) in items.iter().enumerate() {
+            if item.type_ == "text" || item.type_ == "link" {
+                if let Ok(formats) = manager.get_raw_formats(&item.id).await {
+                    if !formats.is_empty() {
+                        let b64 = base64::engine::general_purpose::STANDARD;
+                        export_items[idx].raw_formats = Some(
+                            formats
+                                .into_iter()
+                                .map(|(mime_type, data)| ExportRawFormat {
+                                    mime_type,
+                                    data: b64.encode(&data),
+                                })
+                                .collect(),
+                        );
+                    }
+                }
+            }
+        }
+
         let export_data = ExportData {
-            version: 1,
+            version: 2,
             exported_at: chrono::Utc::now().to_rfc3339(),
             app_version: "0.1.0".to_string(),
             items: export_items,
@@ -352,7 +382,24 @@ pub async fn import_data(
         };
 
         match manager.insert_item_if_not_exists(&item).await {
-            Ok(true) => imported += 1,
+            Ok(true) => {
+                imported += 1;
+                // Import raw formats if present
+                if let Some(ref raw_fmts) = ei.raw_formats {
+                    let b64 = base64::engine::general_purpose::STANDARD;
+                    let formats: Vec<(String, Vec<u8>)> = raw_fmts
+                        .iter()
+                        .filter_map(|rf| {
+                            b64.decode(&rf.data)
+                                .ok()
+                                .map(|data| (rf.mime_type.clone(), data))
+                        })
+                        .collect();
+                    if !formats.is_empty() {
+                        let _ = manager.insert_raw_formats(&item.id, &formats).await;
+                    }
+                }
+            }
             Ok(false) => skipped += 1,
             Err(e) => {
                 eprintln!("导入条目失败: {}", e);

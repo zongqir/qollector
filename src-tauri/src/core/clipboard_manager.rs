@@ -5,6 +5,7 @@ use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, Platfo
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -31,6 +32,7 @@ pub struct ClipboardManager {
     ai_semaphore: Arc<Semaphore>, // AI request serialization control
     double_copy_state: Arc<Mutex<DoubleCopyEmphasisState>>,
     app_handle: AppHandle,
+    pub paused: Arc<AtomicBool>,
 }
 
 impl ClipboardManager {
@@ -56,7 +58,20 @@ impl ClipboardManager {
             ai_semaphore: Arc::new(Semaphore::new(1)), // 鍙厑璁?涓狝I璇锋眰鍚屾椂鎵ц
             double_copy_state: Arc::new(Mutex::new(DoubleCopyEmphasisState::default())),
             app_handle,
+            paused: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn pause(&self) {
+        self.paused.store(true, Ordering::Relaxed);
+    }
+
+    pub fn resume(&self) {
+        self.paused.store(false, Ordering::Relaxed);
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.paused.load(Ordering::Relaxed)
     }
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
@@ -68,6 +83,7 @@ impl ClipboardManager {
         let ai_semaphore = self.ai_semaphore.clone();
         let double_copy_state = self.double_copy_state.clone();
         let app_handle = self.app_handle.clone();
+        let paused = self.paused.clone();
 
         let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
@@ -78,8 +94,12 @@ impl ClipboardManager {
             let ai_semaphore = ai_semaphore.clone();
             let double_copy_state = double_copy_state.clone();
             let app_handle = app_handle.clone();
+            let paused = paused.clone();
 
             Box::pin(async move {
+                if paused.load(Ordering::Relaxed) {
+                    return Ok(());
+                }
                 if let Err(e) = Self::handle_clipboard_change(
                     content,
                     repo,
@@ -119,8 +139,8 @@ impl ClipboardManager {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
-        let item = match content {
-            ClipboardContent::Text(text) => {
+        let item = match &content {
+            ClipboardContent::Text { plain: text, .. } => {
                 // 妫€鏌ユ槸鍚︿负绌虹櫧鍐呭
                 if text.trim().is_empty() {
                     // 缁熻鎹㈣绗︽暟閲?
@@ -142,13 +162,13 @@ impl ClipboardManager {
                     );
                 }
                 println!("Creating clipboard item for text: {} chars", text.len());
-                ClipboardItem::new_text(text, metadata)
+                ClipboardItem::new_text(text.clone(), metadata)
             }
             ClipboardContent::Image(data) => {
                 println!("Image clipboard content detected, saving...");
 
                 // 璁＄畻鍥剧墖鍐呭鐨凪D5鍝堝笇
-                let image_hash = format!("{:x}", md5::compute(&data));
+                let image_hash = blake3::hash(&data).to_hex().to_string();
 
                 // Generate unique filename
                 let timestamp = std::time::SystemTime::now()
@@ -232,12 +252,9 @@ impl ClipboardManager {
 
                 let mut item = ClipboardItem::new_text(summary, metadata);
                 item.type_ = "file".to_string();
-                item.content = Some(paths_str.clone());
+                item.content = Some(paths_str.to_string());
                 // Use full path payload hash to avoid false collisions on same filename.
-                let mut hasher = sha2::Sha256::new();
-                use sha2::Digest;
-                hasher.update(paths_str.as_bytes());
-                item.content_hash = format!("{:x}", hasher.finalize());
+                item.content_hash = blake3::hash(paths_str.as_bytes()).to_hex().to_string();
                 item
             }
         };
@@ -255,6 +272,17 @@ impl ClipboardManager {
             println!("Inserting new clipboard item: {}", item.id);
             repo_lock.insert(&item).await?;
             inserted_new_item = true;
+
+            // Save raw clipboard formats (HTML, RTF) if present
+            if let ClipboardContent::Text { raw_formats: Some(formats), .. } = &content {
+                if !formats.is_empty() {
+                    if let Err(e) = repo_lock.insert_raw_formats(&item.id, formats).await {
+                        eprintln!("Failed to save raw formats: {}", e);
+                    } else {
+                        println!("Saved {} raw format(s) for item {}", formats.len(), item.id);
+                    }
+                }
+            }
         }
 
         let item_type = item.type_.clone();
@@ -420,11 +448,8 @@ impl ClipboardManager {
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
                             Ok((tags, code_language)) if !tags.is_empty() || code_language.is_some() => {
-                                let ai_tags: Vec<String> = if code_language.is_some() {
-                                    tags.clone()
-                                } else {
-                                    tags.iter().map(|t| format!("AI:{}", t)).collect()
-                                };
+                                let ai_tags: Vec<String> =
+                                    tags.iter().map(|t| format!("AI:{}", t)).collect();
 
                                 let repo_lock = repo_clone.lock().await;
                                 if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
@@ -540,7 +565,29 @@ impl ClipboardManager {
                 return Err(ClipboardError::UnsupportedType);
             }
         } else if let Some(text) = &item.content {
-            ClipboardContent::Text(text.clone())
+            // Check if user edited the text (stale raw formats should not be restored).
+            // Note: get_recent_light returns original_content as empty string,
+            // so we must treat empty/None original_content as "unknown" (not edited).
+            let edited = match (&item.content, &item.original_content) {
+                (Some(c), Some(o)) if !o.is_empty() => c != o,
+                _ => false,
+            };
+
+            let raw_formats = if edited {
+                None
+            } else {
+                // Try to load raw formats from DB
+                let repo = self.repository.lock().await;
+                match repo.get_raw_formats(&item.id).await {
+                    Ok(formats) if !formats.is_empty() => Some(formats),
+                    _ => None,
+                }
+            };
+
+            ClipboardContent::Text {
+                plain: text.clone(),
+                raw_formats,
+            }
         } else {
             return Err(ClipboardError::UnsupportedType);
         };
@@ -561,7 +608,9 @@ impl ClipboardManager {
 
     pub async fn delete_item(&self, id: &str) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
-        repo.delete(id).await
+        repo.delete(id).await?;
+        let _ = repo.delete_raw_formats(id).await;
+        Ok(())
     }
 
     pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
@@ -708,11 +757,7 @@ impl ClipboardManager {
         content: &str,
         notes: Option<&str>,
     ) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
-        use sha2::{Digest, Sha256};
-
-        let mut hasher = Sha256::new();
-        hasher.update(content.as_bytes());
-        let hash = format!("{:x}", hasher.finalize());
+        let hash = blake3::hash(content.as_bytes()).to_hex().to_string();
 
         let metadata = self.platform.get_active_window_info().unwrap_or_else(|_| {
             crate::core::models::WindowMetadata {
@@ -794,6 +839,7 @@ impl ClipboardManager {
         sqlx::query("DELETE FROM clipboard_items")
             .execute(repo.pool())
             .await?;
+        let _ = repo.delete_all_raw_formats().await;
         Ok(())
     }
 
@@ -827,20 +873,26 @@ impl ClipboardManager {
         &self.image_dir
     }
 
+    /// Get raw clipboard formats for an item (for export).
+    pub async fn get_raw_formats(&self, item_id: &str) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_raw_formats(item_id).await
+    }
+
+    /// Insert raw clipboard formats for an item (for import).
+    pub async fn insert_raw_formats(&self, item_id: &str, formats: &[(String, Vec<u8>)]) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.insert_raw_formats(item_id, formats).await
+    }
+
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
-            ClipboardContent::Text(text) => {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(text.as_bytes());
-                format!("{:x}", hasher.finalize())
+            ClipboardContent::Text { plain: ref text, .. } => {
+                blake3::hash(text.as_bytes()).to_hex().to_string()
             }
-            ClipboardContent::Image(data) => format!("{:x}", md5::compute(data)),
+            ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
             ClipboardContent::File(paths_str) => {
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(paths_str.as_bytes());
-                format!("{:x}", hasher.finalize())
+                blake3::hash(paths_str.as_bytes()).to_hex().to_string()
             }
         }
     }

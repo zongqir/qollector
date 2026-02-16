@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useCallback, forwardRef } from 'react';
+import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
@@ -7,6 +7,8 @@ import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
+import { searchItems } from '../../services/clipboardService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -72,8 +74,17 @@ function HistoryStream({ style }) {
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
   const tagSearchQuery = useAppStore(s => s.tagSearchQuery);
+  const selectedDateRange = useAppStore(s => s.selectedDateRange);
+  const showDateFilter = useAppStore(s => s.showDateFilter);
+  const customDateStart = useAppStore(s => s.customDateStart);
+  const customDateEnd = useAppStore(s => s.customDateEnd);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const toggleTagFilter = useAppStore(s => s.toggleTagFilter);
+  const setSelectedDateRange = useAppStore(s => s.setSelectedDateRange);
+  const setShowDateFilter = useAppStore(s => s.setShowDateFilter);
+  const setCustomDateStart = useAppStore(s => s.setCustomDateStart);
+  const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
+  const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -85,6 +96,11 @@ function HistoryStream({ style }) {
   const clearSelection = useAppStore(s => s.clearSelection);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
+  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
+  const setHoverPreview = useAppStore(s => s.setHoverPreview);
+  const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
+  const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -93,6 +109,31 @@ function HistoryStream({ style }) {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, setDebouncedSearchQuery]);
+
+  const [backendSearchResults, setBackendSearchResults] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    const query = debouncedSearchQuery.trim();
+    if (!query) {
+      setBackendSearchResults(null);
+      return;
+    }
+    let cancelled = false;
+    setIsSearching(true);
+    searchItems(query, 500)
+      .then((results) => {
+        if (!cancelled) setBackendSearchResults(results);
+      })
+      .catch((err) => {
+        console.error('[FTS] backend search failed:', err);
+        if (!cancelled) setBackendSearchResults(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSearching(false);
+      });
+    return () => { cancelled = true; };
+  }, [debouncedSearchQuery]);
 
   const allTags = useMemo(() => {
     const userTags = new Set();
@@ -130,6 +171,23 @@ function HistoryStream({ style }) {
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
 
+  const handleSelectDatePreset = useCallback((preset) => {
+    if (preset === 'custom') {
+      setSelectedDateRange({ preset: 'custom', start: null, end: null });
+    } else {
+      const range = getDateRangeForPreset(preset);
+      if (range) setSelectedDateRange(range);
+    }
+  }, [setSelectedDateRange]);
+
+  const handleApplyCustomDateRange = useCallback(() => {
+    const start = dateStringToTimestamp(customDateStart);
+    const end = dateStringToEndTimestamp(customDateEnd);
+    if (start != null || end != null) {
+      setSelectedDateRange({ preset: 'custom', start, end });
+    }
+  }, [customDateStart, customDateEnd, setSelectedDateRange]);
+
   const filteredItems = useMemo(() => {
     const startedAt = performance.now();
     let scannedItems = 0;
@@ -137,7 +195,10 @@ function HistoryStream({ style }) {
     const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
     const hasSearch = normalizedQuery.length > 0;
 
-    let result = items.filter(item => {
+    // When searching, use backend FTS results as base; otherwise use loaded items
+    const baseItems = (hasSearch && backendSearchResults) ? backendSearchResults : items;
+
+    let result = baseItems.filter(item => {
       scannedItems += 1;
       scannedChars += toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note);
 
@@ -159,14 +220,13 @@ function HistoryStream({ style }) {
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
 
-      if (!hasSearch) return true;
-      if (item.content && item.content.toLowerCase().includes(normalizedQuery)) return true;
-      if (item.user_note && item.user_note.toLowerCase().includes(normalizedQuery)) return true;
-      const tags = getTags(item.tags);
-      if (tags.some(tag => tag.toLowerCase().includes(normalizedQuery))) return true;
-      if (getSourceApp(item.metadata).toLowerCase().includes(normalizedQuery)) return true;
-      if (item.ocr_text && item.ocr_text.toLowerCase().includes(normalizedQuery)) return true;
-      return false;
+      if (selectedDateRange) {
+        if (selectedDateRange.start != null && item.created_at < selectedDateRange.start) return false;
+        if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
+      }
+
+      // Text matching is handled by backend FTS when searching
+      return true;
     });
 
     // Pin 筛选时�?pinned_at 降序排序
@@ -176,7 +236,7 @@ function HistoryStream({ style }) {
 
     filterProbeRef.current = {
       elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
-      totalItems: items.length,
+      totalItems: baseItems.length,
       resultItems: result.length,
       scannedItems,
       scannedChars,
@@ -186,10 +246,11 @@ function HistoryStream({ style }) {
       selectedType,
       showFavoritesOnly,
       showPinnedOnly,
+      backendSearch: hasSearch && backendSearchResults != null,
     };
 
     return result;
-  }, [items, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly]);
+  }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
   useEffect(() => {
     const probe = filterProbeRef.current;
@@ -211,7 +272,7 @@ function HistoryStream({ style }) {
 
     lastFilterProbeLogAtRef.current = now;
     console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
-  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, items.length]);
+  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, selectedDateRange, items.length]);
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -226,20 +287,37 @@ function HistoryStream({ style }) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
+    if (!collectionPanelEnabled && !isMiniMode) {
+      if (hoverPreviewItem?.id === item.id) {
+        clearHoverPreview();
+        return;
+      }
+      clickTimerRef.current = setTimeout(() => {
+        const el = document.querySelector(`[data-item-id="${item.id}"]`);
+        const rect = el ? el.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+        setHoverPreview(item, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+        clickTimerRef.current = null;
+      }, 250);
+      return;
+    }
+    if (isMiniMode) return;
     clickTimerRef.current = setTimeout(() => {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
+    clearHoverPreview();
     handleCopy(item);
-  }, [handleCopy]);
+  }, [handleCopy, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);
@@ -284,10 +362,14 @@ function HistoryStream({ style }) {
       clearSelection();
       return;
     }
+    if (!collectionPanelEnabled) {
+      clearHoverPreview();
+      return;
+    }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, collectionPanelEnabled, clearHoverPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -323,6 +405,7 @@ function HistoryStream({ style }) {
     return (
       <div
         className="history-stream-row"
+        data-item-id={item.id}
         style={{ paddingBottom: `${rowGap}px` }}
         onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
         onDoubleClick={(e) => handleCardDoubleClick(item, e)}
@@ -378,6 +461,18 @@ function HistoryStream({ style }) {
         onTagSearchChange={setTagSearchQuery}
         onToggleTag={toggleTagFilter}
         onOpenSettings={() => setShowSettings(true)}
+        selectedDateRange={selectedDateRange}
+        showDateFilter={showDateFilter}
+        onToggleDateFilter={() => setShowDateFilter(!showDateFilter)}
+        onClearDateFilter={clearDateFilter}
+        onSelectDatePreset={handleSelectDatePreset}
+        customDateStart={customDateStart}
+        customDateEnd={customDateEnd}
+        onCustomDateStartChange={setCustomDateStart}
+        onCustomDateEndChange={setCustomDateEnd}
+        onApplyCustomDateRange={handleApplyCustomDateRange}
+        collectionPanelEnabled={collectionPanelEnabled}
+        onToggleCollectionPanel={toggleCollectionPanel}
       />
 
       <div className="history-stream-content">

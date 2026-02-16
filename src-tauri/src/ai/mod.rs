@@ -406,7 +406,7 @@ impl AIService {
                 .split(&[',', '\u{ff0c}', '\n'][..])
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty() && !s.starts_with("LANG:"))
-                .take(5)
+                .take(3)
                 .collect();
 
             println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);

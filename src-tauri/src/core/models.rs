@@ -126,10 +126,7 @@ impl ClipboardItem {
     }
 
     fn calculate_hash(content: &str) -> String {
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(content.as_bytes());
-        format!("{:x}", hasher.finalize())
+        blake3::hash(content.as_bytes()).to_hex().to_string()
     }
 
     pub fn get_image_paths(&self) -> Option<ImagePaths> {
@@ -167,7 +164,10 @@ pub struct WindowMetadata {
 
 #[derive(Debug, Clone)]
 pub enum ClipboardContent {
-    Text(String),
+    Text {
+        plain: String,
+        raw_formats: Option<Vec<(String, Vec<u8>)>>,
+    },
     Image(Vec<u8>),
     File(String),
 }
@@ -175,7 +175,7 @@ pub enum ClipboardContent {
 impl ClipboardContent {
     pub fn get_type(&self) -> &str {
         match self {
-            Self::Text(_) => "text",
+            Self::Text { .. } => "text",
             Self::Image(_) => "image",
             Self::File(_) => "file",
         }
@@ -183,7 +183,7 @@ impl ClipboardContent {
 
     pub fn to_string(&self) -> String {
         match self {
-            Self::Text(s) => s.clone(),
+            Self::Text { plain, .. } => plain.clone(),
             Self::Image(_) => "[Image]".to_string(),
             Self::File(path) => path.clone(),
         }

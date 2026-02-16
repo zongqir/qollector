@@ -17,6 +17,7 @@
   "search": {
     "placeholder": "搜索内容、标签、备注...",
     "noResults": "没有找到匹配的记录",
+    "searching": "搜索中...",
     "typeFilter": {
       "all": "全部",
       "text": "文本",
@@ -43,7 +44,18 @@
     "favorites": "收藏",
     "showFavorites": "显示收藏",
     "showPinned": "显示置顶",
-    "showAll": "显示全部"
+    "showAll": "显示全部",
+    "dateFilter": "日期筛选",
+    "dateFilterActive": "日期筛选中",
+    "clearDateFilter": "清除日期",
+    "dateToday": "今天",
+    "dateYesterday": "昨天",
+    "dateLast7Days": "最近 7 天",
+    "dateLast30Days": "最近 30 天",
+    "dateCustomRange": "自定义范围",
+    "dateStart": "开始日期",
+    "dateEnd": "结束日期",
+    "dateApply": "应用"
   },
   "item": {
     "pinned": "已收集",
@@ -178,11 +190,16 @@
       "themeDark": "深色",
       "themeHint": "选择「跟随系统」会自动匹配你的系统深浅色设置",
       "featureModules": "可选功能",
-      "enableAI": "AI 自动标签 — 让 AI 为复制内容生成分类标签",
-      "enableOCR": "图片文字识别 — 自动提取图片中的文字",
-      "enableMCP": "MCP 服务 — 让 Claude 等 AI 助手读取你的剪贴板",
-      "doubleCopyEmphasis": "快速连按两次复制，自动置顶该内容",
-      "doubleCopyWindowMs": "连按间隔（毫秒）— 两次复制间隔多久算「连按」"
+      "enableAI": "AI 自动标签",
+      "enableAIHint": "让 AI 为复制内容生成分类标签",
+      "enableOCR": "图片文字识别",
+      "enableOCRHint": "自动提取图片中的文字",
+      "enableMCP": "MCP 服务",
+      "enableMCPHint": "让 Claude 等 AI 助手读取你的剪贴板",
+      "doubleCopyEmphasis": "连按复制自动置顶",
+      "doubleCopyEmphasisHint": "快速连按两次复制，该内容自动置顶",
+      "doubleCopyWindowMs": "连按间隔",
+      "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",
@@ -355,6 +372,8 @@
     "expandedNoteSubmit": "添加到搜集箱",
     "mergeCopy": "合并复制",
     "clearAll": "清空搜集箱",
+    "hidePanel": "隐藏搜集箱",
+    "showPanel": "显示搜集箱",
     "archivedToHistory": "已归档至历史流",
     "backToCollection": "返回搜集箱",
     "addToCollection": "加入搜集",
@@ -365,5 +384,17 @@
     "editContent": "编辑内容",
     "saveContent": "保存",
     "cancelEdit": "取消"
+  },
+  "widget": {
+    "title": "快捷投放",
+    "dropHint": "拖放到这里"
+  },
+  "tray": {
+    "show": "显示主窗口",
+    "hide": "隐藏主窗口",
+    "settings": "设置",
+    "pause": "暂停监听",
+    "resume": "恢复监听",
+    "quit": "退出"
   }
 }

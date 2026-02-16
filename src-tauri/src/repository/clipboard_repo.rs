@@ -1,4 +1,5 @@
 use crate::core::models::{ClipboardItem, SearchFilters};
+use crate::core::tokenizer;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::PathBuf;
 
@@ -86,6 +87,42 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
 
+        // Raw clipboard formats table (HTML, RTF, etc.)
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS clipboard_raw_formats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id TEXT NOT NULL,
+                mime_type TEXT NOT NULL,
+                data BLOB NOT NULL,
+                created_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_raw_formats_item_id ON clipboard_raw_formats(item_id)")
+            .execute(&self.pool)
+            .await?;
+
+        // FTS5 virtual table for full-text search
+        sqlx::query(
+            r#"
+            CREATE VIRTUAL TABLE IF NOT EXISTS clipboard_fts USING fts5(
+                item_id UNINDEXED,
+                content_tokens,
+                ocr_tokens,
+                note_tokens
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Migrate existing data into FTS table if empty
+        self.migrate_fts_data().await?;
+
         Ok(())
     }
 
@@ -120,6 +157,8 @@ impl ClipboardRepository {
         .bind(item.updated_at)
         .execute(&self.pool)
         .await?;
+
+        self.insert_fts(item).await;
 
         Ok(())
     }
@@ -191,6 +230,20 @@ impl ClipboardRepository {
         filters: &SearchFilters,
         limit: i32,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        // When there's a query, try FTS5 first
+        if !query.is_empty() {
+            match self.search_fts(query, filters, limit).await {
+                Ok(results) if !results.is_empty() => return Ok(results),
+                Ok(_) => {
+                    // FTS returned empty — fall through to LIKE
+                }
+                Err(e) => {
+                    eprintln!("[FTS] search failed, falling back to LIKE: {}", e);
+                }
+            }
+        }
+
+        // Fallback: original LIKE-based search
         let mut sql = String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0");
 
         if let Some(type_filter) = &filters.type_filter {
@@ -248,6 +301,8 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
+        self.update_fts(item).await;
+
         Ok(())
     }
 
@@ -256,6 +311,8 @@ impl ClipboardRepository {
             .bind(id)
             .execute(&self.pool)
             .await?;
+
+        self.delete_fts(id).await;
 
         Ok(())
     }
@@ -273,6 +330,11 @@ impl ClipboardRepository {
         .bind(id)
         .execute(&self.pool)
         .await?;
+
+        // Re-index FTS for this item
+        if let Ok(Some(item)) = self.find_by_id(id).await {
+            self.update_fts(&item).await;
+        }
 
         Ok(())
     }
@@ -348,5 +410,223 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
         Ok(())
+    }
+
+    // ========== Raw Formats CRUD ==========
+
+    /// Insert raw clipboard format data (zstd-compressed) for an item.
+    pub async fn insert_raw_formats(
+        &self,
+        item_id: &str,
+        formats: &[(String, Vec<u8>)],
+    ) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        for (mime_type, data) in formats {
+            let compressed = zstd::encode_all(data.as_slice(), 3).unwrap_or_else(|_| data.clone());
+            sqlx::query(
+                "INSERT INTO clipboard_raw_formats (item_id, mime_type, data, created_at) VALUES (?, ?, ?, ?)",
+            )
+            .bind(item_id)
+            .bind(mime_type)
+            .bind(&compressed)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        }
+        Ok(())
+    }
+
+    /// Get raw clipboard format data for an item (zstd-decompressed).
+    pub async fn get_raw_formats(
+        &self,
+        item_id: &str,
+    ) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+        let rows: Vec<(String, Vec<u8>)> = sqlx::query_as(
+            "SELECT mime_type, data FROM clipboard_raw_formats WHERE item_id = ?",
+        )
+        .bind(item_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut results = Vec::new();
+        for (mime_type, compressed) in rows {
+            match zstd::decode_all(compressed.as_slice()) {
+                Ok(decompressed) => results.push((mime_type, decompressed)),
+                Err(_) => {
+                    // Fallback: treat as uncompressed (migration safety)
+                    results.push((mime_type, compressed));
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    /// Delete all raw format data for an item.
+    pub async fn delete_raw_formats(&self, item_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM clipboard_raw_formats WHERE item_id = ?")
+            .bind(item_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Delete all raw format data (for clear_all_items).
+    pub async fn delete_all_raw_formats(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM clipboard_raw_formats")
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    // ========== FTS5 Full-Text Search ==========
+
+    /// FTS index version — bump this when tokenizer logic changes to trigger rebuild.
+    const FTS_VERSION: i64 = 2;
+
+    async fn migrate_fts_data(&self) -> Result<(), sqlx::Error> {
+        // Track FTS index version in app_config-style pragma
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS _fts_meta (key TEXT PRIMARY KEY, value INTEGER)",
+        )
+        .execute(&self.pool)
+        .await;
+
+        let stored_version: Option<(i64,)> =
+            sqlx::query_as("SELECT value FROM _fts_meta WHERE key = 'fts_version'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        let need_rebuild = match stored_version {
+            Some((v,)) if v >= Self::FTS_VERSION => false,
+            _ => true,
+        };
+
+        if !need_rebuild {
+            return Ok(());
+        }
+
+        // Clear stale index
+        sqlx::query("DELETE FROM clipboard_fts")
+            .execute(&self.pool)
+            .await?;
+
+        let item_count: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
+                .fetch_one(&self.pool)
+                .await?;
+
+        if item_count.0 > 0 {
+            println!(
+                "[FTS] Building index v{} for {} items...",
+                Self::FTS_VERSION,
+                item_count.0
+            );
+
+            let items = sqlx::query_as::<_, ClipboardItem>(
+                "SELECT * FROM clipboard_items WHERE is_deleted = 0",
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            for item in &items {
+                self.insert_fts(item).await;
+            }
+
+            println!("[FTS] Index build complete: {} items", items.len());
+        }
+
+        // Store version
+        sqlx::query(
+            "INSERT OR REPLACE INTO _fts_meta (key, value) VALUES ('fts_version', ?)",
+        )
+        .bind(Self::FTS_VERSION)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn insert_fts(&self, item: &ClipboardItem) {
+        let content_tokens = tokenizer::tokenize(item.content.as_deref().unwrap_or(""));
+        let ocr_tokens = tokenizer::tokenize(item.ocr_text.as_deref().unwrap_or(""));
+        let note_tokens = tokenizer::tokenize(item.user_note.as_deref().unwrap_or(""));
+
+        if let Err(e) = sqlx::query(
+            "INSERT INTO clipboard_fts (item_id, content_tokens, ocr_tokens, note_tokens) VALUES (?, ?, ?, ?)",
+        )
+        .bind(&item.id)
+        .bind(&content_tokens)
+        .bind(&ocr_tokens)
+        .bind(&note_tokens)
+        .execute(&self.pool)
+        .await
+        {
+            eprintln!("[FTS] insert failed for {}: {}", item.id, e);
+        }
+    }
+
+    async fn delete_fts(&self, id: &str) {
+        if let Err(e) =
+            sqlx::query("DELETE FROM clipboard_fts WHERE item_id = ?")
+                .bind(id)
+                .execute(&self.pool)
+                .await
+        {
+            eprintln!("[FTS] delete failed for {}: {}", id, e);
+        }
+    }
+
+    async fn update_fts(&self, item: &ClipboardItem) {
+        self.delete_fts(&item.id).await;
+        self.insert_fts(item).await;
+    }
+
+    async fn search_fts(
+        &self,
+        query: &str,
+        filters: &SearchFilters,
+        limit: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let match_expr = tokenizer::tokenize_for_query(query);
+        if match_expr.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Build filter conditions for the main table
+        let mut filter_sql = String::new();
+        if let Some(type_filter) = &filters.type_filter {
+            filter_sql.push_str(&format!(" AND ci.type = '{}'", type_filter));
+        }
+        if let Some(is_pinned) = filters.is_pinned {
+            filter_sql.push_str(&format!(
+                " AND ci.is_pinned = {}",
+                if is_pinned { 1 } else { 0 }
+            ));
+        }
+        if let Some(is_favorite) = filters.is_favorite {
+            filter_sql.push_str(&format!(
+                " AND ci.is_favorite = {}",
+                if is_favorite { 1 } else { 0 }
+            ));
+        }
+
+        let sql = format!(
+            r#"SELECT ci.* FROM clipboard_items ci
+               INNER JOIN clipboard_fts fts ON ci.id = fts.item_id
+               WHERE ci.is_deleted = 0
+               AND clipboard_fts MATCH ?
+               {}
+               ORDER BY ci.updated_at DESC
+               LIMIT ?"#,
+            filter_sql
+        );
+
+        let items = sqlx::query_as::<_, ClipboardItem>(&sql)
+            .bind(&match_expr)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(items)
     }
 }
