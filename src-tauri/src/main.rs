@@ -396,7 +396,7 @@ fn main() {
             }
 
             // Setup system tray
-            tray::setup_tray(&app_handle_for_shortcuts)?;
+            tray::setup_tray(&app_handle_for_shortcuts, Some(&startup_general_config.language))?;
             setup_meter.mark("setup_tray");
 
             Ok(())

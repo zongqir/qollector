@@ -37,6 +37,12 @@ pub async fn update_general_config(
         let _ = apply_shortcut_config(&app, shortcut_state.inner(), &previous_config);
         return Err(error.to_string());
     }
+
+    // Update tray menu language if it changed
+    if config.language != previous_config.language {
+        crate::tray::update_tray_language(&app, &config.language);
+    }
+
     Ok(())
 }
 
