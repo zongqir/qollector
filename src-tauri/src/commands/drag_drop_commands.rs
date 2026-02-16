@@ -91,6 +91,7 @@ pub async fn add_clipboard_item_manual(
         source_app: source.unwrap_or_else(|| "拖拽".to_string()),
         window_title: "".to_string(),
         source_url: None,
+        is_self: false,
     };
 
     let mut item = match content_type.as_str() {
@@ -241,6 +242,7 @@ pub async fn add_image_file(
         source_app: "拖拽".to_string(),
         window_title: "".to_string(),
         source_url: None,
+        is_self: false,
     };
 
     let image_data = std::fs::read(&file_path).map_err(|e| format!("读取图片文件失败: {}", e))?;

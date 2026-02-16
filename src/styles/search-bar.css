@@ -135,9 +135,9 @@
 /* 类型筛选组 - macOS 分段控件风格 */
 .type-filter-group {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   background: var(--filter-group-bg);
-  padding: 2px;
+  padding: 3px;
   border-radius: 8px;
   flex-shrink: 0;
   min-width: max-content;
@@ -148,7 +148,7 @@
   height: 26px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 7px;
   cursor: pointer;
   color: var(--text-tertiary);
   transition: all 0.15s ease;

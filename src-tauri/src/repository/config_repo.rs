@@ -2,6 +2,7 @@ use crate::ai::AIConfig;
 use crate::config::GeneralConfig;
 use crate::mcp::McpConfig;
 use crate::ocr::OcrConfig;
+use crate::share::ShareConfig;
 use sqlx::SqlitePool;
 
 /// 配置仓库，负责持久化应用配置
@@ -195,7 +196,7 @@ impl ConfigRepository {
         Ok(())
     }
 
-    /// 加载通用配置
+    /// Load general config
     pub async fn load_general_config(&self) -> Result<Option<GeneralConfig>, sqlx::Error> {
         let row: Option<(String,)> =
             sqlx::query_as("SELECT value FROM app_config WHERE key = 'general_config'")
@@ -206,6 +207,44 @@ impl ConfigRepository {
             let mut config: GeneralConfig =
                 serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             config.validate();
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Save share config
+    pub async fn save_share_config(&self, config: &ShareConfig) -> Result<(), sqlx::Error> {
+        let value = serde_json::to_string(config).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('share_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#,
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Load share config
+    pub async fn load_share_config(&self) -> Result<Option<ShareConfig>, sqlx::Error> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM app_config WHERE key = 'share_config'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some((value,)) = row {
+            let config: ShareConfig =
+                serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {
             Ok(None)

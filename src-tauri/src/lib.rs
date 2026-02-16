@@ -9,6 +9,7 @@ pub mod config;
 pub mod shortcuts;
 pub mod startup_metrics;
 pub mod tray;
+pub mod share;
 
 #[cfg(test)]
 mod tests;

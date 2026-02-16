@@ -30,7 +30,7 @@ thiserror = "1"
 async-trait = "0.1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 arboard = "3"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart"] }
 base64 = "0.22"
 warp = "0.3"
 sysinfo = "0.32"
@@ -40,6 +40,8 @@ aes-gcm = "0.10"
 rfd = "0.15"
 zstd = "0.13"
 jieba-rs = { version = "0.8", default-features = false, features = ["default-dict"] }
+qrcode = { version = "0.14", default-features = false }
+rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-global-shortcut = "2"

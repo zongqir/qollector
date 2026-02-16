@@ -8,6 +8,7 @@ mod mcp;
 mod ocr;
 mod platform;
 mod repository;
+mod share;
 mod shortcuts;
 mod startup_metrics;
 mod tray;
@@ -21,6 +22,7 @@ use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
 use commands::ocr_commands::*;
+use commands::share_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
@@ -278,6 +280,9 @@ fn main() {
                 app.manage(ocr_state);
                 app.manage(mcp_state);
                 app.manage(shortcut_binding_state_for_setup);
+
+                let share_state = ShareState::new(config_repo.clone());
+                app.manage(share_state);
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
 
@@ -459,6 +464,10 @@ fn main() {
             export_data,
             import_data,
             clear_all_data,
+            get_share_config,
+            update_share_config,
+            share_clipboard_item,
+            test_share_s3_connection,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

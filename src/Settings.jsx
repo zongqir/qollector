@@ -104,6 +104,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [clearDataResult, setClearDataResult] = useState(null);
   const [clearing, setClearing] = useState(false);
 
+  // Share config
+  const [shareConfig, setShareConfig] = useState({ provider: 'FileIo', s3_config: null });
+  const [shareTestResult, setShareTestResult] = useState(null);
+  const [shareTesting, setShareTesting] = useState(false);
+
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
     localStorage.setItem('language', lng);
@@ -478,12 +483,13 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const loadConfigs = async () => {
     try {
       console.log('📥 加载配置...');
-      const [ai, ocr, mcp, mcpPort, general] = await Promise.all([
+      const [ai, ocr, mcp, mcpPort, general, share] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
         invoke('get_mcp_config'),
         invoke('get_mcp_port').catch(() => 38470),
-        invoke('get_general_config')
+        invoke('get_general_config'),
+        invoke('get_share_config').catch(() => ({ provider: 'FileIo', s3_config: null }))
       ]);
       console.log('后端返回的 AI 配置:', ai);
       console.log('后端返回的 OCR 配置:', ocr);
@@ -512,6 +518,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
+      setShareConfig(share);
       console.log('✅ 配置加载完成');
     } catch (error) {
       console.error('❌ 加载配置失败:', error);
@@ -871,6 +878,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             onClick={() => setActiveTab('security')}
           >
             {t('settings.tabs.security')}
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'share' ? 'active' : ''}`}
+            onClick={() => setActiveTab('share')}
+          >
+            {t('settings.tabs.share')}
           </button>
         </div>
 
@@ -1837,14 +1850,166 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           </div>
         )}
 
+        {activeTab === 'share' && (
+          <div className="settings-content">
+            <label className="setting-label">{t('settings.share.provider')}</label>
+            <div className="feature-toggles">
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.share.fileio')}</span>
+                  <span className="toggle-desc">{t('settings.share.fileioDesc')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="radio"
+                    name="share-provider"
+                    checked={shareConfig.provider === 'FileIo'}
+                    onChange={() => {
+                      const updated = { ...shareConfig, provider: 'FileIo' };
+                      setShareConfig(updated);
+                      invoke('update_share_config', { config: updated }).catch(console.error);
+                    }}
+                  />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.share.s3')}</span>
+                  <span className="toggle-desc">{t('settings.share.s3Desc')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="radio"
+                    name="share-provider"
+                    checked={shareConfig.provider === 'S3'}
+                    onChange={() => {
+                      const updated = {
+                        ...shareConfig,
+                        provider: 'S3',
+                        s3_config: shareConfig.s3_config || {
+                          endpoint: '', region: '', bucket: '',
+                          access_key: '', secret_key: '', custom_domain: null,
+                        },
+                      };
+                      setShareConfig(updated);
+                      invoke('update_share_config', { config: updated }).catch(console.error);
+                    }}
+                  />
+                </span>
+              </label>
+            </div>
+
+            {shareConfig.provider === 'S3' && (
+              <div className="setting-group" style={{ marginTop: '1rem' }}>
+                <div className="setting-password-group">
+                  <input
+                    type="text"
+                    value={shareConfig.s3_config?.endpoint || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, endpoint: e.target.value },
+                    })}
+                    placeholder={t('settings.share.endpoint')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="text"
+                    value={shareConfig.s3_config?.region || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, region: e.target.value },
+                    })}
+                    placeholder={t('settings.share.region')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="text"
+                    value={shareConfig.s3_config?.bucket || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, bucket: e.target.value },
+                    })}
+                    placeholder={t('settings.share.bucket')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="text"
+                    value={shareConfig.s3_config?.access_key || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, access_key: e.target.value },
+                    })}
+                    placeholder={t('settings.share.accessKey')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="password"
+                    value={shareConfig.s3_config?.secret_key || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, secret_key: e.target.value },
+                    })}
+                    placeholder={t('settings.share.secretKey')}
+                    className="setting-input"
+                  />
+                  <input
+                    type="text"
+                    value={shareConfig.s3_config?.custom_domain || ''}
+                    onChange={(e) => setShareConfig({
+                      ...shareConfig,
+                      s3_config: { ...shareConfig.s3_config, custom_domain: e.target.value || null },
+                    })}
+                    placeholder={t('settings.share.customDomain')}
+                    className="setting-input"
+                  />
+                </div>
+                <div className="setting-btn-row">
+                  <button
+                    className="test-btn"
+                    onClick={async () => {
+                      setShareTesting(true);
+                      setShareTestResult(null);
+                      try {
+                        await invoke('test_share_s3_connection', { config: shareConfig.s3_config });
+                        setShareTestResult({ success: true, message: t('settings.share.testSuccess') });
+                      } catch (err) {
+                        setShareTestResult({ success: false, message: `${t('settings.share.testFailed')}: ${err}` });
+                      } finally {
+                        setShareTesting(false);
+                      }
+                    }}
+                    disabled={shareTesting}
+                  >
+                    {shareTesting ? t('settings.testing') : t('settings.share.testConnection')}
+                  </button>
+                </div>
+                {shareTestResult && (
+                  <small className={`setting-status ${shareTestResult.success ? 'success' : 'error'}`}>
+                    {shareTestResult.message}
+                  </small>
+                )}
+                <small className="setting-hint-block">{t('settings.share.networkHint')}</small>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="settings-footer">
           <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
-          {(activeTab === 'ai' || activeTab === 'ocr' || activeTab === 'mcp') && (
+          {(activeTab === 'ai' || activeTab === 'ocr' || activeTab === 'mcp' || activeTab === 'share') && (
             <button
               onClick={
                 activeTab === 'ai' ? handleAiSave :
                 activeTab === 'ocr' ? handleOcrSave :
                 activeTab === 'mcp' ? handleMcpSave :
+                activeTab === 'share' ? async () => {
+                  try {
+                    await invoke('update_share_config', { config: shareConfig });
+                    handleClose();
+                  } catch (err) {
+                    console.error('save share config failed:', err);
+                  }
+                } :
                 handleClose
               }
               className="save-btn"

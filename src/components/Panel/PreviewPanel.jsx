@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
@@ -37,6 +37,7 @@ function PreviewPanel() {
   const ocrEnabled = useAppStore(s => s.ocrEnabled);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const items = useAppStore(s => s.items);
+  const openShareModal = useAppStore(s => s.openShareModal);
 
   // 备注相关
   const editingNoteId = useAppStore(s => s.editingNoteId);
@@ -371,6 +372,10 @@ function PreviewPanel() {
                 <span>{t('panel.editContent')}</span>
               </button>
             )}
+            <button className="preview-tool-btn" onClick={() => openShareModal(item)}>
+              <Share2 size={14} />
+              <span>{t('share.button')}</span>
+            </button>
             <button className="preview-tool-btn danger" onClick={() => deleteItem(item)}>
               <Trash2 size={14} />
               <span>{t('item.delete')}</span>
