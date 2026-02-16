@@ -34,6 +34,18 @@ pub struct GeneralConfig {
     /// Whether the collection panel is visible.
     #[serde(default = "default_collection_panel_enabled")]
     pub collection_panel_enabled: bool,
+    /// Double-click auto-paste: copy and paste to foreground app.
+    #[serde(default)]
+    pub auto_paste_on_double_click: bool,
+    /// Enable automatic cleanup of old data.
+    #[serde(default = "default_auto_cleanup_enabled")]
+    pub auto_cleanup_enabled: bool,
+    /// Max number of items to keep (100–999999).
+    #[serde(default = "default_cleanup_max_items")]
+    pub cleanup_max_items: u32,
+    /// Max age in days for items (1–3650).
+    #[serde(default = "default_cleanup_max_age_days")]
+    pub cleanup_max_age_days: u32,
 }
 
 fn default_language() -> String {
@@ -72,6 +84,18 @@ fn default_collection_panel_enabled() -> bool {
     true
 }
 
+fn default_auto_cleanup_enabled() -> bool {
+    true
+}
+
+fn default_cleanup_max_items() -> u32 {
+    50000
+}
+
+fn default_cleanup_max_age_days() -> u32 {
+    90
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -86,6 +110,10 @@ impl Default for GeneralConfig {
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
             collection_panel_enabled: true,
+            auto_paste_on_double_click: false,
+            auto_cleanup_enabled: true,
+            cleanup_max_items: 50000,
+            cleanup_max_age_days: 90,
         }
     }
 }
@@ -117,5 +145,7 @@ impl GeneralConfig {
         if self.toggle_window_shortcut.is_empty() {
             self.toggle_window_shortcut = default_toggle_window_shortcut();
         }
+        self.cleanup_max_items = self.cleanup_max_items.clamp(100, 999999);
+        self.cleanup_max_age_days = self.cleanup_max_age_days.clamp(1, 3650);
     }
 }

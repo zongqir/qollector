@@ -255,6 +255,8 @@ pub mod windows {
                 drop(clipboard);
                 // Try to read rich text formats (HTML, RTF) via Win32 API
                 let raw_formats = Self::read_rich_formats();
+                // Filter out trivial HTML that is just code-editor syntax highlighting
+                let raw_formats = Self::filter_trivial_rich_formats(raw_formats, &text);
                 return Ok(ClipboardContent::Text {
                     plain: text,
                     raw_formats: if raw_formats.is_empty() {
@@ -335,6 +337,76 @@ pub mod windows {
             }
 
             results
+        }
+
+        /// Filter out trivial rich formats that are just code-editor syntax highlighting.
+        /// Editors like VS Code, IntelliJ, Sublime Text attach HTML Format and RTF
+        /// for syntax coloring, but this is not meaningful rich text.
+        fn filter_trivial_rich_formats(
+            formats: Vec<(String, Vec<u8>)>,
+            _plain_text: &str,
+        ) -> Vec<(String, Vec<u8>)> {
+            // Check if HTML Format is trivial editor output
+            let html_is_trivial = formats
+                .iter()
+                .any(|(name, data)| name == "HTML Format" && Self::is_editor_html(data));
+
+            if !html_is_trivial {
+                return formats;
+            }
+
+            // If HTML is trivial editor output, filter out both HTML and RTF
+            // (they come from the same copy source)
+            println!("[RichFormat] Detected editor syntax highlighting, removing rich formats");
+            formats
+                .into_iter()
+                .filter(|(name, _)| name != "HTML Format" && name != "Rich Text Format")
+                .collect()
+        }
+
+        /// Check if HTML Format clipboard data is just code-editor syntax highlighting.
+        fn is_editor_html(data: &[u8]) -> bool {
+            let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
+            let html = match std::str::from_utf8(&data[..end]) {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
+
+            let lower = html.to_lowercase();
+
+            // Structural elements that indicate real rich text
+            let rich_tags = [
+                "<table",
+                "<img",
+                "<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
+                "<ul>", "<ol>", "<li>",
+                "<blockquote",
+                "<hr",
+                "<iframe",
+                "<video", "<audio",
+                "<figure", "<picture", "<svg",
+            ];
+
+            for tag in &rich_tags {
+                if lower.contains(tag) {
+                    return false;
+                }
+            }
+
+            // Links with href indicate real rich content
+            if lower.contains("<a ") && lower.contains("href") {
+                return false;
+            }
+
+            // Monospace font is a strong signal of code editor output
+            let monospace_indicators = [
+                "consolas", "courier", "monospace", "menlo", "monaco",
+                "source code pro", "fira code", "jetbrains mono", "cascadia",
+                "sf mono", "ubuntu mono", "droid sans mono", "liberation mono",
+                "roboto mono", "iosevka",
+            ];
+
+            monospace_indicators.iter().any(|f| lower.contains(f))
         }
 
         /// Write plain text + rich formats to the clipboard via Win32 API.

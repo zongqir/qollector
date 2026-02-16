@@ -16,8 +16,6 @@
   flex-direction: column;
   animation: hoverPreviewFadeIn 0.12s ease;
   pointer-events: auto;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 @keyframes hoverPreviewFadeIn {
@@ -27,12 +25,11 @@
 
 .hover-preview-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   padding: 12px 14px;
   position: relative;
   max-height: 350px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 85%, transparent 100%);
+  overscroll-behavior: contain;
 }
 
 .hover-preview-text {
@@ -40,12 +37,9 @@
   line-height: 1.5;
   color: var(--text-primary);
   white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.hover-preview-text.truncated {
-  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .hover-preview-image img {
@@ -63,10 +57,9 @@
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .hover-preview-files {
@@ -78,9 +71,10 @@
 .hover-preview-file-item {
   font-size: 13px;
   color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .hover-preview-more {

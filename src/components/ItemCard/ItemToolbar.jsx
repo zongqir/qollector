@@ -1,13 +1,13 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
-  maxPinnedItems, onOpenItem,
+  maxPinnedItems, onOpenItem, onRevealInFolder,
 }) {
   const { t } = useTranslation();
 
@@ -113,6 +113,19 @@ function ItemToolbar({
           </button>
         </>
       )}
+      {item.type_ === 'file' && (
+        <>
+          <div className="toolbar-divider"></div>
+          <button
+            onClick={(e) => { e.stopPropagation(); onRevealInFolder(item); }}
+            className="toolbar-btn open-btn"
+            title={t('item.revealInFolder')}
+          >
+            <FolderOpen size={14} className="toolbar-btn-icon" />
+            <span>{t('item.revealInFolder')}</span>
+          </button>
+        </>
+      )}
       <div className="toolbar-divider"></div>
       <button
         onClick={(e) => onToggleExpand(item.id, e)}
@@ -123,7 +136,7 @@ function ItemToolbar({
         <span>{isExpanded ? t('item.collapse') : t('item.expand')}</span>
       </button>
       <div className="toolbar-hint">
-        {t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : t('item.doubleClickToEdit')}
+        {t('item.clickToCopy')} | {item.type_ === 'image' ? t('item.doubleClickToPreview') : item.has_raw_formats ? t('item.doubleClickToCopy') : t('item.doubleClickToEdit')}
       </div>
     </div>
   );

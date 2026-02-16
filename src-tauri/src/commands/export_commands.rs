@@ -379,6 +379,7 @@ pub async fn import_data(
             pinned_at: None,
             created_at: ei.created_at,
             updated_at: ei.updated_at,
+            has_raw_formats: false,
         };
 
         match manager.insert_item_if_not_exists(&item).await {
@@ -413,4 +414,14 @@ pub async fn import_data(
         imported,
         skipped,
     })
+}
+
+#[tauri::command]
+pub async fn clear_all_data(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<(), String> {
+    manager
+        .clear_all_data()
+        .await
+        .map_err(|e| format!("clear all data failed: {}", e))
 }

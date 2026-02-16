@@ -1,4 +1,5 @@
 pub mod clipboard_trait;
+pub mod cursor;
 pub mod drag_out;
 
 #[cfg(target_os = "windows")]

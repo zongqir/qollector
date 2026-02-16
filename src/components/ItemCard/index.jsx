@@ -20,7 +20,7 @@ function ItemCard({
   onDragStart, onTogglePin, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
-  onToggleExpand, onOpenItem,
+  onToggleExpand, onOpenItem, onRevealInFolder,
   // content actions
   onContentClick, onContentDoubleClick,
   language,
@@ -62,6 +62,7 @@ function ItemCard({
         isExpanded={isExpanded}
         maxPinnedItems={maxPinnedItems}
         onOpenItem={onOpenItem}
+        onRevealInFolder={onRevealInFolder}
       />
       <ItemContent
         item={item}

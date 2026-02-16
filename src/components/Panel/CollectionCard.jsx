@@ -2,7 +2,13 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Check, Folder, ExternalLink } from 'lucide-react';
 import { FileIcon, defaultStyles } from 'react-file-icon';
-import { getContentPreview, getFileList, getFileName, parseUrl } from '../../utils/formatters';
+import {
+  getContentPreview,
+  getFileList,
+  getFileName,
+  parseUrl,
+  getLinkPreviewTitle,
+} from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
 
@@ -42,6 +48,13 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpe
     if (item.type_ === 'link') {
       const parsed = parseUrl(item.content);
       if (parsed) {
+        const title = getLinkPreviewTitle(item);
+        let decodedPath = parsed.path;
+        try {
+          decodedPath = parsed.path ? decodeURIComponent(parsed.path) : '';
+        } catch {
+          decodedPath = parsed.path;
+        }
         return (
           <div className="collection-card-link">
             <div className="link-header">
@@ -58,9 +71,8 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpe
                 onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
               />
             </div>
-            {parsed.path && (
-              <div className="link-path">{decodeURIComponent(parsed.path)}</div>
-            )}
+            {title && <div className="link-title">{title}</div>}
+            {decodedPath && <div className="link-path">{decodedPath}</div>}
           </div>
         );
       }

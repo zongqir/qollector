@@ -340,6 +340,36 @@ fn main() {
                                         if is_visible && !is_minimized {
                                             let _ = window.hide();
                                         } else {
+                                            // Move window near the cursor before showing
+                                            if let Ok(size) = window.outer_size() {
+                                                let cursor = platform::cursor::get_cursor_position();
+                                                let mon = window.current_monitor()
+                                                    .ok()
+                                                    .flatten()
+                                                    .or_else(|| window.primary_monitor().ok().flatten());
+
+                                                let (scr_x, scr_y, scr_w, scr_h) = if let Some(m) = mon {
+                                                    let pos = m.position();
+                                                    let sz = m.size();
+                                                    (pos.x, pos.y, sz.width as i32, sz.height as i32)
+                                                } else {
+                                                    (0, 0, 3840, 2160)
+                                                };
+
+                                                let win_w = size.width as i32;
+                                                let win_h = size.height as i32;
+
+                                                // Center the window on the cursor
+                                                let mut x = cursor.x - win_w / 2;
+                                                let mut y = cursor.y - win_h / 2;
+
+                                                // Clamp to monitor bounds
+                                                x = x.max(scr_x).min(scr_x + scr_w - win_w);
+                                                y = y.max(scr_y).min(scr_y + scr_h - win_h);
+
+                                                let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+                                            }
+
                                             let _ = window.show();
                                             let _ = window.unminimize();
                                             let _ = window.set_focus();
@@ -366,7 +396,7 @@ fn main() {
             }
 
             // Setup system tray
-            tray::setup_tray(&app_handle_for_shortcuts)?;
+            tray::setup_tray(&app_handle_for_shortcuts, Some(&startup_general_config.language))?;
             setup_meter.mark("setup_tray");
 
             Ok(())
@@ -385,6 +415,7 @@ fn main() {
             get_recent_items_light,
             get_more_items,
             copy_item,
+            copy_plain_text,
             update_item,
             delete_item,
             toggle_pin_item,
@@ -407,6 +438,10 @@ fn main() {
             start_native_file_drag,
             toggle_favorite_item,
             open_item,
+            open_url,
+            try_paste_foreground,
+            reveal_in_folder,
+            save_image_as,
             search_items,
             get_mcp_config,
             get_mcp_port,
@@ -423,6 +458,7 @@ fn main() {
             reset_all_data,
             export_data,
             import_data,
+            clear_all_data,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

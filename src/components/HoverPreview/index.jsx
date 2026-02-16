@@ -8,8 +8,8 @@ import { getImageThumbnail } from '../../utils/imageHelpers';
 import { getFileName } from '../../utils/formatters';
 import '../../styles/hover-preview.css';
 
-const MAX_TEXT_LINES = 15;
 const MAX_WIDTH = 520;
+const CLICK_DRAG_THRESHOLD = 4;
 
 function HoverPreviewInner() {
   const { i18n } = useTranslation();
@@ -17,6 +17,8 @@ function HoverPreviewInner() {
   const position = useAppStore(s => s.hoverPreviewPosition);
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const panelRef = useRef(null);
+  const pointerStartRef = useRef(null);
+  const pointerMovedRef = useRef(false);
   const [pos, setPos] = useState(null);
 
   useEffect(() => {
@@ -51,6 +53,40 @@ function HoverPreviewInner() {
 
   const sourceApp = getSourceApp(item.metadata);
 
+  const handlePanelMouseDown = (event) => {
+    pointerStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+    pointerMovedRef.current = false;
+  };
+
+  const handlePanelMouseMove = (event) => {
+    if (!pointerStartRef.current) return;
+    const dx = Math.abs(event.clientX - pointerStartRef.current.x);
+    const dy = Math.abs(event.clientY - pointerStartRef.current.y);
+    if (dx > CLICK_DRAG_THRESHOLD || dy > CLICK_DRAG_THRESHOLD) {
+      pointerMovedRef.current = true;
+    }
+  };
+
+  const handlePanelMouseUp = () => {
+    pointerStartRef.current = null;
+  };
+
+  const handlePanelClick = (event) => {
+    event.stopPropagation();
+
+    const selection = window.getSelection?.();
+    const hasSelection = Boolean(selection && !selection.isCollapsed);
+    if (pointerMovedRef.current || hasSelection) {
+      pointerMovedRef.current = false;
+      return;
+    }
+
+    clearHoverPreview();
+  };
+
   const renderContent = () => {
     switch (item.type_) {
       case 'image': {
@@ -78,15 +114,7 @@ function HoverPreviewInner() {
       case 'link':
         return <div className="hover-preview-text">{item.content || ''}</div>;
       default: {
-        const text = item.content || '';
-        const lines = text.split('\n');
-        const truncated = lines.length > MAX_TEXT_LINES;
-        const display = truncated ? lines.slice(0, MAX_TEXT_LINES).join('\n') : text;
-        return (
-          <div className={`hover-preview-text ${truncated ? 'truncated' : ''}`}>
-            {display}
-          </div>
-        );
+        return <div className="hover-preview-text">{item.content || ''}</div>;
       }
     }
   };
@@ -96,6 +124,10 @@ function HoverPreviewInner() {
       ref={panelRef}
       className="hover-preview"
       style={{ top: pos.top, left: pos.left }}
+      onMouseDown={handlePanelMouseDown}
+      onMouseMove={handlePanelMouseMove}
+      onMouseUp={handlePanelMouseUp}
+      onClick={handlePanelClick}
     >
       <div className="hover-preview-content">{renderContent()}</div>
       <div className="hover-preview-meta">

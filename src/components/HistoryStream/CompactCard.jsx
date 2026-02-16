@@ -1,10 +1,19 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check } from 'lucide-react';
-import { formatDate, getTimelineColor, getContentPreview, getFileName, getFileList, parseUrl } from '../../utils/formatters';
+import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
+import {
+  formatDate,
+  getTimelineColor,
+  getContentPreview,
+  getFileName,
+  getFileList,
+  parseUrl,
+  getLinkPreviewTitle,
+} from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import CodeBlock from '../CodeBlock/CodeBlock';
+import useAppStore from '../../store/useAppStore';
 
 const TypeIcon = ({ type, hasCodeLanguage }) => {
   const size = 11;
@@ -27,6 +36,8 @@ function CompactCard({
   onTogglePin,
   onToggleFavorite,
   onOpenItem,
+  onRevealInFolder,
+  onTagClick,
 }) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
@@ -59,6 +70,13 @@ function CompactCard({
     if (item.type_ === 'link') {
       const parsed = parseUrl(item.content);
       if (parsed) {
+        const title = getLinkPreviewTitle(item);
+        let decodedPath = parsed.path;
+        try {
+          decodedPath = parsed.path ? decodeURIComponent(parsed.path) : '';
+        } catch {
+          decodedPath = parsed.path;
+        }
         return (
           <div className="compact-card-link">
             <img
@@ -68,8 +86,11 @@ function CompactCard({
               onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }}
             />
             <Link size={14} className="compact-link-fallback" style={{ display: 'none' }} />
-            <span className="compact-link-domain">{parsed.domain}</span>
-            {parsed.path && <span className="compact-link-path">{decodeURIComponent(parsed.path)}</span>}
+            <div className="compact-link-info">
+              <span className="compact-link-title">{title || parsed.domain}</span>
+              <span className="compact-link-domain">{parsed.domain}</span>
+              {decodedPath && <span className="compact-link-path">{decodedPath}</span>}
+            </div>
           </div>
         );
       }
@@ -132,6 +153,15 @@ function CompactCard({
               <ExternalLink size={10} />
             </button>
           )}
+          {item.type_ === 'file' && (
+            <button
+              className="badge-btn badge-open"
+              onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
+              title={t('item.revealInFolder')}
+            >
+              <FolderOpen size={10} />
+            </button>
+          )}
           <button
             className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
             onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
@@ -151,7 +181,7 @@ function CompactCard({
       <div className="compact-card-body">
         {isCopied && (
           <div className="copy-success-toast">
-            <Check size={16} /> {t('item.copied')}
+            <Check size={16} /> {useAppStore.getState().lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied')}
           </div>
         )}
         {renderContent()}
@@ -159,7 +189,13 @@ function CompactCard({
       {userTags.length > 0 && (
         <div className="compact-card-tags">
           {userTags.slice(0, 3).map(tag => (
-            <span key={tag} className="compact-tag">{tag}</span>
+            <span
+              key={tag}
+              className="compact-tag clickable"
+              onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
+            >
+              {tag}
+            </span>
           ))}
           {userTags.length > 3 && (
             <span className="compact-tag more">+{userTags.length - 3}</span>

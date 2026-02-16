@@ -2,6 +2,11 @@
  * 格式化和内容处理工具函数
  */
 
+import { find as findLinks, registerCustomProtocol } from 'linkifyjs';
+
+registerCustomProtocol('ws');
+registerCustomProtocol('wss');
+
 export const formatDate = (timestamp, language) => {
   const date = new Date(timestamp * 1000);
   const now = new Date();
@@ -65,6 +70,47 @@ export const parseUrl = (url) => {
     const path = u.pathname === '/' ? '' : u.pathname;
     const favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
     return { domain, path, favicon };
+  } catch {
+    return null;
+  }
+};
+
+const OPENABLE_SCHEMES = new Set(['http:', 'https:', 'ftp:', 'ftps:', 'ws:', 'wss:']);
+
+export const extractOpenableUrls = (content, maxUrls = 5) => {
+  if (!content || typeof content !== 'string') return [];
+
+  const urls = [];
+  const seen = new Set();
+  const links = findLinks(content);
+
+  for (const link of links) {
+    if (urls.length >= maxUrls) break;
+    if (link.type !== 'url') continue;
+
+    try {
+      const parsed = new URL(link.href || link.value || '');
+      if (!OPENABLE_SCHEMES.has(parsed.protocol)) continue;
+      const normalized = parsed.toString();
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      urls.push(normalized);
+    } catch {
+      // Ignore malformed candidates.
+    }
+  }
+
+  return urls;
+};
+
+export const getLinkPreviewTitle = (item) => {
+  if (!item?.metadata) return null;
+  try {
+    const metadata = JSON.parse(item.metadata);
+    const title = metadata?.link_preview?.title;
+    if (typeof title !== 'string') return null;
+    const trimmed = title.trim();
+    return trimmed || null;
   } catch {
     return null;
   }

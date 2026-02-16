@@ -22,7 +22,7 @@
 .search-box {
   flex: 1;
   position: relative;
-  min-width: 80px;
+  min-width: 64px;
 }
 
 .search-input {
@@ -140,6 +140,7 @@
   padding: 2px;
   border-radius: 8px;
   flex-shrink: 0;
+  min-width: max-content;
 }
 
 .type-filter-btn {
@@ -172,7 +173,7 @@
   border-color: transparent;
 }
 
-@container (max-width: 380px) {
+@container (max-width: 460px) {
   .settings-btn {
     display: none;
   }

@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Trash2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
-import { getContentPreview, getFileList, getFileName, formatDate } from '../../utils/formatters';
+import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
@@ -24,7 +24,11 @@ function PreviewPanel() {
   const generateAITags = useAppStore(s => s.generateAITags);
   const handleOCR = useAppStore(s => s.handleOCR);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const handleOpenUrl = useAppStore(s => s.handleOpenUrl);
+  const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
+  const handleSaveImageAs = useAppStore(s => s.handleSaveImageAs);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const generatingAI = useAppStore(s => s.generatingAI);
@@ -65,7 +69,14 @@ function PreviewPanel() {
   const hasAITags = tags.some(tag => tag.startsWith('AI:'));
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags;
   const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
-  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file';
+  const textOpenableUrls = useMemo(() => {
+    if (item.type_ !== 'text') return [];
+    return extractOpenableUrls(item.content);
+  }, [item.type_, item.content]);
+  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenableUrls.length > 0;
+  const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
+  const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
+  const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
@@ -121,6 +132,25 @@ function PreviewPanel() {
     }
   };
 
+  const handleOpen = useCallback(() => {
+    if (item.type_ === 'link' || item.type_ === 'file') {
+      handleOpenItem(item);
+      return;
+    }
+    if (textOpenableUrls.length > 0) {
+      handleOpenUrl(textOpenableUrls[0]);
+    }
+  }, [handleOpenItem, handleOpenUrl, item, textOpenableUrls]);
+
+  const handleFormatJsonCopy = useCallback(() => {
+    try {
+      const formatted = JSON.stringify(JSON.parse(item.content), null, 2);
+      handleCopyPlainText(formatted);
+    } catch {
+      handleCopyPlainText(item.content);
+    }
+  }, [item.content, handleCopyPlainText]);
+
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
       return (
@@ -140,7 +170,7 @@ function PreviewPanel() {
 
     if (item.code_language && item.content) {
       return (
-        <div onDoubleClick={handleStartEditContent}>
+        <div>
           <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
         </div>
       );
@@ -174,7 +204,7 @@ function PreviewPanel() {
     return (
       <div
         className="preview-text-content"
-        onDoubleClick={handleStartEditContent}
+        onDoubleClick={item.has_raw_formats ? undefined : handleStartEditContent}
       >
         {getContentPreview(item.content)}
       </div>
@@ -275,6 +305,18 @@ function PreviewPanel() {
               <Copy size={14} />
               <span>{t('item.copy')}</span>
             </button>
+            {item.has_raw_formats && item.content && (
+              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
+                <FileText size={14} />
+                <span>{t('item.copyPlainText')}</span>
+              </button>
+            )}
+            {isJson && (
+              <button className="preview-tool-btn" onClick={handleFormatJsonCopy}>
+                <Braces size={14} />
+                <span>{t('item.formatJsonCopy')}</span>
+              </button>
+            )}
             <button
               className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
               onClick={() => toggleFavorite(item)}
@@ -303,12 +345,28 @@ function PreviewPanel() {
               </button>
             )}
             {shouldShowOpenButton && (
-              <button className="preview-tool-btn" onClick={() => handleOpenItem(item)}>
+              <button className="preview-tool-btn" onClick={handleOpen} title={openButtonTitle}>
                 <ExternalLink size={14} />
                 <span>{t('item.open')}</span>
               </button>
             )}
-            {item.type_ !== 'image' && item.type_ !== 'file' && (
+            {item.type_ === 'file' && (
+              <button className="preview-tool-btn" onClick={() => handleRevealInFolder(item)} title={t('item.revealInFolder')}>
+                <FolderOpen size={14} />
+                <span>{t('item.revealInFolder')}</span>
+              </button>
+            )}
+            {shouldShowSaveImageButton && (
+              <button
+                className="preview-tool-btn"
+                onClick={() => handleSaveImageAs(item)}
+                title={t('item.saveImageAs')}
+              >
+                <Download size={14} />
+                <span>{t('item.saveAs')}</span>
+              </button>
+            )}
+            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
                 <span>{t('panel.editContent')}</span>
               </button>

@@ -4,6 +4,7 @@ import { getTags } from '../utils/tagHelpers';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
+import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
 
 const PAGE_SIZE = 50;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -119,6 +120,8 @@ const useAppStore = create((set, get) => ({
   isLocked: true,
   hasPassword: false,
   collectionPanelEnabled: true,
+  autoPasteOnDoubleClick: false,
+  lastCopyWasAutoPaste: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -194,6 +197,13 @@ const useAppStore = create((set, get) => ({
         fetched: result.length,
         pageSize: PAGE_SIZE,
       });
+      detectAndUpdateCodeLanguage(mergedItems, (id, lang) => {
+        set((state) => ({
+          items: state.items.map((it) =>
+            it.id === id ? { ...it, code_language: lang } : it
+          ),
+        }));
+      });
       if (!loading) {
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
@@ -235,6 +245,13 @@ const useAppStore = create((set, get) => ({
           hasMoreAfter: more.length >= PAGE_SIZE,
         });
       }
+      detectAndUpdateCodeLanguage(more, (id, lang) => {
+        set((state) => ({
+          items: state.items.map((it) =>
+            it.id === id ? { ...it, code_language: lang } : it
+          ),
+        }));
+      });
     } catch (error) {
       console.error('加载更多失败:', error);
     } finally {
@@ -283,6 +300,7 @@ const useAppStore = create((set, get) => ({
         hasPassword: hasLock,
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
+        autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
@@ -300,6 +318,42 @@ const useAppStore = create((set, get) => ({
       setTimeout(() => set({ copiedItemId: null }), 1000);
     } catch (error) {
       console.error('复制失败:', error);
+    }
+  },
+
+  handleCopyAndAutoPaste: async (item) => {
+    try {
+      await copyItemToClipboard(item);
+      set({ copiedItemId: item.id, lastCopyWasAutoPaste: false });
+      setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1000);
+
+      if (!get().autoPasteOnDoubleClick) {
+        return;
+      }
+
+      try {
+        const pasted = await invoke('try_paste_foreground');
+        if (pasted) {
+          set({ copiedItemId: item.id, lastCopyWasAutoPaste: true });
+          setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1500);
+        } else {
+          console.info('[AutoPaste] Platform not implemented, copied only');
+        }
+      } catch (error) {
+        console.warn('[AutoPaste] Paste simulation failed, copied only:', error);
+      }
+    } catch (error) {
+      console.error('copy/auto-paste failed:', error);
+    }
+  },
+
+  handleCopyPlainText: async (text) => {
+    try {
+      await invoke('copy_plain_text', { text });
+      set({ copiedItemId: 'plain-text' });
+      setTimeout(() => set({ copiedItemId: null }), 1000);
+    } catch (error) {
+      console.error('复制纯文本失败:', error);
     }
   },
 
@@ -354,6 +408,35 @@ const useAppStore = create((set, get) => ({
       await invoke('open_item', { id: item.id });
     } catch (error) {
       console.error('打开失败:', error);
+    }
+  },
+
+  handleRevealInFolder: async (item) => {
+    try {
+      await invoke('reveal_in_folder', { id: item.id });
+    } catch (error) {
+      console.error('reveal in folder failed:', error);
+    }
+  },
+
+  handleOpenUrl: async (url) => {
+    if (!url) return;
+    try {
+      await invoke('open_url', { url });
+    } catch (error) {
+      console.error('open url failed:', error);
+    }
+  },
+
+  handleSaveImageAs: async (item) => {
+    if (!item || item.type_ !== 'image') return;
+    try {
+      await invoke('save_image_as', { id: item.id });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || '');
+      if (message !== 'CANCELLED') {
+        console.error('save image as failed:', error);
+      }
     }
   },
 
@@ -586,6 +669,30 @@ const useAppStore = create((set, get) => ({
   setNewTagInput: (v) => set({ newTagInput: v }),
   setCopiedItemId: (v) => set({ copiedItemId: v }),
   setDebouncedSearchQuery: (v) => set({ debouncedSearchQuery: v }),
+  resetRuntimeStateAfterDataReset: () => set((state) => ({
+    items: [],
+    loading: false,
+    hasMore: true,
+    loadingMore: false,
+    itemsRevision: state.itemsRevision + 1,
+    processedItemIds: new Set(),
+    panelMode: 'collection',
+    previewItem: null,
+    hoverPreviewItem: null,
+    hoverPreviewPosition: null,
+    selectedItemIds: [],
+    copiedItemId: null,
+    generatingAI: null,
+    ocrProcessing: null,
+    editingNoteId: null,
+    editNote: '',
+    addingTagItemId: null,
+    newTagInput: '',
+    showEditModal: false,
+    editingItem: null,
+    isMemorySuspended: false,
+    hasPassword: false,
+  })),
 
   // ========== 快速笔记 (搜集箱) ==========
   addQuickNote: async (content) => {

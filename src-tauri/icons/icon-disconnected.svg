@@ -1,0 +1,47 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient - Disconnected (Red/Gray) -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#991b1b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clipGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.95" />
+      <stop offset="100%" style="stop-color:#fee2e2;stop-opacity:0.9" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGradient)"/>
+
+  <!-- Clipboard body -->
+  <g filter="url(#shadow)">
+    <!-- Main clipboard rectangle -->
+    <rect x="140" y="120" width="232" height="300" rx="20" fill="url(#clipGradient)"/>
+
+    <!-- Clipboard clip at top -->
+    <rect x="210" y="100" width="92" height="40" rx="8" fill="#dc2626"/>
+    <rect x="220" y="105" width="72" height="30" rx="6" fill="#b91c1c"/>
+
+    <!-- Document lines inside clipboard (grayed out) -->
+    <rect x="180" y="180" width="152" height="12" rx="6" fill="#ef4444" opacity="0.2"/>
+    <rect x="180" y="210" width="120" height="12" rx="6" fill="#ef4444" opacity="0.2"/>
+    <rect x="180" y="240" width="140" height="12" rx="6" fill="#ef4444" opacity="0.2"/>
+
+    <!-- Box/Collection indicator - small squares at bottom (grayed) -->
+    <g opacity="0.3">
+      <rect x="180" y="300" width="40" height="40" rx="8" fill="#dc2626"/>
+      <rect x="236" y="300" width="40" height="40" rx="8" fill="#dc2626"/>
+      <rect x="292" y="300" width="40" height="40" rx="8" fill="#dc2626"/>
+    </g>
+
+    <!-- Pause/Disconnect icon overlay -->
+    <g opacity="0.9">
+      <rect x="310" y="140" width="20" height="60" rx="4" fill="#ffffff"/>
+      <rect x="345" y="140" width="20" height="60" rx="4" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>

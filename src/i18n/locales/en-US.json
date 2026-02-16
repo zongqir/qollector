@@ -63,6 +63,7 @@
     "unpin": "Remove",
     "copy": "Copy",
     "copied": "Copied",
+    "copyPlainText": "Copy Plain Text",
     "aiTag": "AI Tag",
     "generating": "Generating",
     "ocr": "OCR",
@@ -100,9 +101,14 @@
     "unfavorite": "Unfavorite",
     "favorited": "Favorited",
     "open": "Open",
+    "saveAs": "Save As",
+    "saveImageAs": "Save Image As",
     "openLink": "Open Link",
     "openFile": "Open File",
-    "delete": "Delete"
+    "revealInFolder": "Reveal in Folder",
+    "formatJsonCopy": "Format & Copy",
+    "delete": "Delete",
+    "autoPasted": "Pasted to foreground app"
   },
   "edit": {
     "content": "Content:",
@@ -199,7 +205,15 @@
       "doubleCopyEmphasis": "Double-tap Copy to Pin",
       "doubleCopyEmphasisHint": "Tap copy twice quickly to auto-pin that content",
       "doubleCopyWindowMs": "Double-tap Interval",
-      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)"
+      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)",
+      "autoPaste": "Auto-paste on double-click",
+      "autoPasteHint": "When enabled, double-clicking copies and pastes to the previous app, hiding the window",
+      "autoCleanup": "Auto-clean old data",
+      "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and pinned items are never removed.",
+      "cleanupMaxItems": "Max items to keep",
+      "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
+      "cleanupMaxAgeDays": "Max days to keep",
+      "cleanupMaxAgeDaysHint": "Records older than this are cleaned up automatically"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
@@ -357,7 +371,14 @@
     "importFailed": "Import failed: {{error}}",
     "exportFailed": "Export failed: {{error}}",
     "passwordMismatch": "Passwords do not match",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "clearData": "Clear All Data",
+    "clearDataWarning": "Warning: This will permanently delete all clipboard history and image files. This action cannot be undone!",
+    "clearAllData": "Clear All Data",
+    "confirmClear": "Confirm Clear?",
+    "clearing": "Clearing...",
+    "clearSuccess": "All data has been cleared",
+    "clearFailed": "Clear failed: {{error}}"
   },
   "multiSelect": {
     "selected": "{{count}} selected",

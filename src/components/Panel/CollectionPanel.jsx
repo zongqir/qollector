@@ -65,7 +65,7 @@ function CollectionPanel() {
   const togglePin = useAppStore(s => s.togglePin);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
-  const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
 
@@ -140,8 +140,8 @@ function CollectionPanel() {
   }, [setPanelMode]);
 
   const handleCardDoubleClick = useCallback((item) => {
-    handleCopy(item);
-  }, [handleCopy]);
+    handleCopyAndAutoPaste(item);
+  }, [handleCopyAndAutoPaste]);
 
   const quickNoteSection = (
     <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>

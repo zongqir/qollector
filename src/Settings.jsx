@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff } from 'lucide-react';
+import useAppStore from './store/useAppStore';
 import './Settings.css';
 
 const AI_PROVIDERS = [
@@ -55,6 +56,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     copy_pin_shortcut: 'ctrl+shift+c',
     toggle_window_shortcut_enabled: true,
     toggle_window_shortcut: 'alt+x',
+    auto_cleanup_enabled: true,
+    cleanup_max_items: 50000,
+    cleanup_max_age_days: 90,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -96,6 +100,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [shortcutError, setShortcutError] = useState('');
   const [recordingTarget, setRecordingTarget] = useState(null);
+  const [clearDataConfirm, setClearDataConfirm] = useState(false);
+  const [clearDataResult, setClearDataResult] = useState(null);
+  const [clearing, setClearing] = useState(false);
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -790,6 +797,27 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     }
   };
 
+  const handleClearAllData = async () => {
+    if (!clearDataConfirm) {
+      setClearDataConfirm(true);
+      return;
+    }
+
+    setClearing(true);
+    setClearDataResult(null);
+    try {
+      await invoke('clear_all_data');
+      setClearDataResult({ success: true, message: t('export.clearSuccess') });
+      setClearDataConfirm(false);
+      // Notify parent to refresh
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      setClearDataResult({ success: false, message: t('export.clearFailed', { error }) });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   return (
     <div className="settings-overlay">
       <div className="settings-modal">
@@ -918,7 +946,34 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="setting-group-title">{t('settings.general.featureModules')}</div>
             <div className="feature-toggles">
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableAI')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.autoPaste')}</span>
+                  <span className="toggle-desc">{t('settings.general.autoPasteHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.auto_paste_on_double_click || false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      const updated = { ...generalConfig, auto_paste_on_double_click: checked };
+                      setGeneralConfig(updated);
+                      useAppStore.setState({ autoPasteOnDoubleClick: checked });
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('save auto_paste config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableAI')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableAIHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -938,7 +993,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableOCR')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableOCR')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableOCRHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -958,7 +1016,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <label className="setting-toggle-row">
-                <span>{t('settings.general.enableMCP')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableMCP')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableMCPHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -1046,12 +1107,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 </div>
               </div>
-              <small className="setting-hint setting-hint-inline">
-                {t('settings.shortcuts.defaultCandidate', {
-                  platform: getPlatformLabel(getShortcutPlatform()),
-                  shortcut: getDefaultSuggestedShortcut('toggle_window_shortcut'),
-                })}
-              </small>
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.ctrlShiftC')}</span>
                 <span className="toggle-switch">
@@ -1113,12 +1168,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 </div>
               </div>
-              <small className="setting-hint setting-hint-inline">
-                {t('settings.shortcuts.defaultCandidate', {
-                  platform: getPlatformLabel(getShortcutPlatform()),
-                  shortcut: getDefaultSuggestedShortcut('copy_pin_shortcut'),
-                })}
-              </small>
             </div>
             {recordingTarget && (
               <small className="setting-hint">{t('settings.shortcuts.recordingHint')}</small>
@@ -1143,7 +1192,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
-                <span>{t('settings.general.doubleCopyEmphasis')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.doubleCopyEmphasis')}</span>
+                  <span className="toggle-desc">{t('settings.general.doubleCopyEmphasisHint')}</span>
+                </span>
                 <span className="toggle-switch">
                   <input
                     type="checkbox"
@@ -1160,7 +1212,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
               <div className="sg-row">
-                <span>{t('settings.general.doubleCopyWindowMs')}</span>
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.doubleCopyWindowMs')}</span>
+                  <span className="toggle-desc">{t('settings.general.doubleCopyWindowMsHint')}</span>
+                </span>
                 <input
                   type="number"
                   value={generalConfig.double_copy_window_ms ?? 900}
@@ -1511,6 +1566,65 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           <div className="settings-content">
             <div className="setting-options-group">
               <label className="setting-toggle-row">
+                <span>{t('settings.general.autoCleanup')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.auto_cleanup_enabled}
+                    onChange={(e) => {
+                      const updated = { ...generalConfig, auto_cleanup_enabled: e.target.checked };
+                      setGeneralConfig(updated);
+                      invoke('update_general_config', { config: updated });
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <small className="setting-hint">{t('settings.general.autoCleanupHint')}</small>
+
+              {generalConfig.auto_cleanup_enabled && (
+                <>
+                  <div className="setting-inline-row">
+                    <span>{t('settings.general.cleanupMaxItems')}</span>
+                    <input
+                      type="number"
+                      min={100}
+                      max={999999}
+                      value={generalConfig.cleanup_max_items}
+                      onChange={(e) => {
+                        const value = Math.max(100, Math.min(999999, parseInt(e.target.value) || 100));
+                        const updated = { ...generalConfig, cleanup_max_items: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      className="setting-input compact"
+                    />
+                  </div>
+                  <small className="setting-hint">{t('settings.general.cleanupMaxItemsHint')}</small>
+
+                  <div className="setting-inline-row">
+                    <span>{t('settings.general.cleanupMaxAgeDays')}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={3650}
+                      value={generalConfig.cleanup_max_age_days}
+                      onChange={(e) => {
+                        const value = Math.max(1, Math.min(3650, parseInt(e.target.value) || 90));
+                        const updated = { ...generalConfig, cleanup_max_age_days: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      className="setting-input compact"
+                    />
+                  </div>
+                  <small className="setting-hint">{t('settings.general.cleanupMaxAgeDaysHint')}</small>
+                </>
+              )}
+            </div>
+
+            <div className="setting-options-group">
+              <label className="setting-toggle-row">
                 <span>{t('export.includeImages')}</span>
                 <span className="toggle-switch">
                   <input
@@ -1594,6 +1708,36 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 {(exportResult || importResult)?.message}
               </small>
             )}
+
+            <div className="setting-group" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <label className="setting-label">{t('export.clearData')}</label>
+              <small className="setting-hint-block" style={{ color: '#ff6b6b' }}>
+                {t('export.clearDataWarning')}
+              </small>
+              <div className="setting-btn-row">
+                <button
+                  className={`test-btn ${clearDataConfirm ? 'danger' : 'secondary'}`}
+                  onClick={handleClearAllData}
+                  disabled={clearing || exporting || importing}
+                >
+                  {clearing ? t('export.clearing') : clearDataConfirm ? t('export.confirmClear') : t('export.clearAllData')}
+                </button>
+                {clearDataConfirm && (
+                  <button
+                    className="test-btn"
+                    onClick={() => { setClearDataConfirm(false); setClearDataResult(null); }}
+                    disabled={clearing}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                )}
+              </div>
+              {clearDataResult && (
+                <small className={`setting-status ${clearDataResult.success ? 'success' : 'error'}`}>
+                  {clearDataResult.message}
+                </small>
+              )}
+            </div>
           </div>
         )}
 

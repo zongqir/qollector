@@ -86,12 +86,13 @@ function HistoryStream({ style }) {
   const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
-  const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const clearSelection = useAppStore(s => s.clearSelection);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
@@ -101,6 +102,7 @@ function HistoryStream({ style }) {
   const setHoverPreview = useAppStore(s => s.setHoverPreview);
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
+  const handleTagClick = useAppStore(s => s.handleTagClick);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -316,8 +318,8 @@ function HistoryStream({ style }) {
       clickTimerRef.current = null;
     }
     clearHoverPreview();
-    handleCopy(item);
-  }, [handleCopy, clearHoverPreview]);
+    handleCopyAndAutoPaste(item);
+  }, [handleCopyAndAutoPaste, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);
@@ -420,6 +422,8 @@ function HistoryStream({ style }) {
           onTogglePin={togglePin}
           onToggleFavorite={toggleFavorite}
           onOpenItem={handleOpenItem}
+          onRevealInFolder={handleRevealInFolder}
+          onTagClick={handleTagClick}
         />
       </div>
     );
@@ -437,6 +441,8 @@ function HistoryStream({ style }) {
     togglePin,
     toggleFavorite,
     handleOpenItem,
+    handleRevealInFolder,
+    handleTagClick,
   ]);
 
   return (
