@@ -36,45 +36,36 @@
 
 .note-edit-bar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px 10px;
   background: var(--note-edit-bg);
-  border-radius: 10px;
+  border-radius: 8px;
   margin-top: 0;
-  border: 1px solid var(--note-edit-border);
+  border: 1px solid var(--border-light);
   position: relative;
-  overflow: hidden;
-}
-
-.note-edit-bar::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--timeline-color, var(--text-tertiary));
 }
 
 .note-edit-input {
   flex: 1;
   padding: 6px 10px;
-  border: none;
-  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  background: var(--bg-input);
-  min-height: 28px;
-  transition: all 0.15s;
-  color: var(--text-secondary);
-  font-weight: 500;
+  background: var(--note-input-bg);
+  min-height: 52px;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  font-weight: 400;
   outline: none;
+  line-height: 1.5;
 }
 
 .note-edit-input:focus {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .note-edit-input::placeholder {
@@ -83,14 +74,13 @@
 
 .note-btn-save,
 .note-btn-cancel {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
-  transition: all 0.15s;
+  font-size: 13px;
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,12 +88,12 @@
 }
 
 .note-btn-save {
-  background: #34c759;
-  color: white;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
 }
 
 .note-btn-save:hover {
-  background: #2db84e;
+  background: var(--accent-hover);
 }
 
 .note-btn-cancel {

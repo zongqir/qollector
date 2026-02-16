@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
@@ -6,8 +7,43 @@ import { SquarePen, Minimize2, Maximize2, X, Pin, Shrink, Expand } from 'lucide-
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
 
+const GLASS_STORAGE_KEY = 'clipbox-glass-opacity';
+const GLASS_DEFAULT = 0.55;
+const GLASS_MIN = 0.10;
+const GLASS_MAX = 1.0;
+const GLASS_STEP = 0.03;
+
+function applyGlassOpacity(value) {
+  document.documentElement.style.setProperty('--glass-opacity', value);
+}
+
 function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMiniMode, onToggleMiniMode }) {
   const { t } = useTranslation();
+
+  const [glassOpacity, setGlassOpacity] = useState(() => {
+    const saved = localStorage.getItem(GLASS_STORAGE_KEY);
+    return saved ? parseFloat(saved) : GLASS_DEFAULT;
+  });
+  const [showIndicator, setShowIndicator] = useState(false);
+  const hideTimerRef = useRef(null);
+
+  useEffect(() => {
+    applyGlassOpacity(glassOpacity);
+  }, []);
+
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    setGlassOpacity(prev => {
+      const delta = e.deltaY > 0 ? -GLASS_STEP : GLASS_STEP;
+      const next = Math.round(Math.min(Math.max(prev + delta, GLASS_MIN), GLASS_MAX) * 100) / 100;
+      applyGlassOpacity(next);
+      localStorage.setItem(GLASS_STORAGE_KEY, next);
+      return next;
+    });
+    setShowIndicator(true);
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setShowIndicator(false), 800);
+  }, []);
 
   const handleToggleMini = async () => {
     const appWindow = getCurrentWindow();
@@ -18,10 +54,21 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
   };
 
   return (
-    <div className="titlebar">
+    <div className="titlebar" onWheel={handleWheel}>
       <div data-tauri-drag-region className="titlebar-drag-area">
         <div className="titlebar-title">{t('app.title')}</div>
       </div>
+      {showIndicator && (
+        <div className="glass-indicator">
+          <div className="glass-indicator-track">
+            <div
+              className="glass-indicator-fill"
+              style={{ width: `${((glassOpacity - GLASS_MIN) / (GLASS_MAX - GLASS_MIN)) * 100}%` }}
+            />
+          </div>
+          <span className="glass-indicator-value">{Math.round(glassOpacity * 100)}%</span>
+        </div>
+      )}
       <div className="titlebar-buttons">
         <button
           onClick={onOpenQuickInput}

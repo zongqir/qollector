@@ -16,6 +16,12 @@ const NOTE_COLORS = [
   { id: 'purple', bg: '#f3eefa', dot: '#c4a8f0' },
 ];
 
+const GLASS_KEY = 'clipbox-quick-glass-opacity';
+const GLASS_DEFAULT = 0.75;
+const GLASS_MIN = 0.15;
+const GLASS_MAX = 1.0;
+const GLASS_STEP = 0.03;
+
 function resolveEffectiveTheme(themeMode) {
   if (themeMode === 'dark') return 'dark';
   if (themeMode === 'light') return 'light';
@@ -33,6 +39,31 @@ function QuickInputWindow() {
   const [noteColor, setNoteColor] = useState('default');
   const [saving, setSaving] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+
+  const [glassOpacity, setGlassOpacity] = useState(() => {
+    const saved = localStorage.getItem(GLASS_KEY);
+    return saved ? parseFloat(saved) : GLASS_DEFAULT;
+  });
+  const [showGlassIndicator, setShowGlassIndicator] = useState(false);
+  const glassTimerRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--glass-opacity', glassOpacity);
+  }, []);
+
+  const handleHeaderWheel = useCallback((e) => {
+    e.preventDefault();
+    setGlassOpacity(prev => {
+      const delta = e.deltaY > 0 ? -GLASS_STEP : GLASS_STEP;
+      const next = Math.round(Math.min(Math.max(prev + delta, GLASS_MIN), GLASS_MAX) * 100) / 100;
+      document.documentElement.style.setProperty('--glass-opacity', next);
+      localStorage.setItem(GLASS_KEY, next);
+      return next;
+    });
+    setShowGlassIndicator(true);
+    clearTimeout(glassTimerRef.current);
+    glassTimerRef.current = setTimeout(() => setShowGlassIndicator(false), 800);
+  }, []);
 
   useEffect(() => {
     let unmounted = false;
@@ -121,10 +152,21 @@ function QuickInputWindow() {
 
   return (
     <div className="quick-window-shell" style={panelStyle}>
-      <header className="quick-window-header" data-tauri-drag-region>
+      <header className="quick-window-header" data-tauri-drag-region onWheel={handleHeaderWheel}>
         <div className="quick-window-header-left">
           <span className="quick-window-tip">{t('editModal.quickAddTip')}</span>
         </div>
+        {showGlassIndicator && (
+          <div className="glass-indicator">
+            <div className="glass-indicator-track">
+              <div
+                className="glass-indicator-fill"
+                style={{ width: `${((glassOpacity - GLASS_MIN) / (GLASS_MAX - GLASS_MIN)) * 100}%` }}
+              />
+            </div>
+            <span className="glass-indicator-value">{Math.round(glassOpacity * 100)}%</span>
+          </div>
+        )}
         <div className="quick-window-actions" data-tauri-drag-region="false">
           <div className="quick-window-colors">
             {NOTE_COLORS.map((color) => (
