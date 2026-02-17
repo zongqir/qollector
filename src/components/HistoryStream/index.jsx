@@ -395,7 +395,19 @@ function HistoryStream({ style }) {
           ? (dir === 1 ? 0 : total - 1)
           : Math.max(0, Math.min(total - 1, focusedIndex + dir));
         setFocusedIndex(next);
-        virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'center' });
+        virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
+        const nextItem = filteredItems[next];
+        if (nextItem) {
+          if (collectionPanelEnabled) {
+            setPanelMode('preview', nextItem);
+          } else {
+            const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+            }
+          }
+        }
         return;
       }
 
@@ -419,7 +431,7 @@ function HistoryStream({ style }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste]);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, collectionPanelEnabled]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
