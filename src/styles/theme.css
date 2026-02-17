@@ -22,9 +22,9 @@
   --accent-medium: rgba(0, 122, 255, 0.15);
 
   /* 文字颜色 - macOS 风格 */
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #aeaeb2;
+  --text-primary: #2a2a2e;
+  --text-secondary: #7a7a80;
+  --text-tertiary: #b8b8bd;
   --text-on-accent: #ffffff;
 
   /* 边框 - 更柔和 */
