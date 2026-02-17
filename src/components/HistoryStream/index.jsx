@@ -51,6 +51,8 @@ function HistoryStream({ style }) {
   const clickTimerRef = useRef(null);
   const filterProbeRef = useRef(null);
   const lastFilterProbeLogAtRef = useRef(0);
+  const hasTopTrackerInitRef = useRef(false);
+  const prevTopItemIdRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -286,6 +288,56 @@ function HistoryStream({ style }) {
     lastFilterProbeLogAtRef.current = now;
     console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
   }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, selectedDateRange, items.length]);
+
+  const topFilteredItem = filteredItems[0] || null;
+  const topFilteredItemSignature = topFilteredItem
+    ? `${topFilteredItem.id}:${topFilteredItem.updated_at ?? ''}`
+    : null;
+
+  useEffect(() => {
+    if (!hasTopTrackerInitRef.current) {
+      hasTopTrackerInitRef.current = true;
+      prevTopItemIdRef.current = topFilteredItemSignature;
+      return;
+    }
+
+    const previousTopItemSignature = prevTopItemIdRef.current;
+    prevTopItemIdRef.current = topFilteredItemSignature;
+
+    if (!topFilteredItemSignature || topFilteredItemSignature === previousTopItemSignature) {
+      return;
+    }
+
+    if (selectedItemIds.length > 0) {
+      return;
+    }
+
+    const hasSearchOrFilters =
+      !!debouncedSearchQuery.trim() ||
+      selectedTags.length > 0 ||
+      selectedType !== 'all' ||
+      showFavoritesOnly ||
+      showPinnedOnly ||
+      !!selectedDateRange;
+    if (hasSearchOrFilters) {
+      return;
+    }
+
+    virtuosoRef.current?.scrollToIndex?.({
+      index: 0,
+      align: 'start',
+      behavior: 'smooth',
+    });
+  }, [
+    topFilteredItemSignature,
+    selectedItemIds.length,
+    debouncedSearchQuery,
+    selectedTags.length,
+    selectedType,
+    showFavoritesOnly,
+    showPinnedOnly,
+    selectedDateRange,
+  ]);
 
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
