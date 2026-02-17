@@ -1123,35 +1123,38 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+  flex-shrink: 0;
 }
 
 .preview-tool-btn span {
   white-space: nowrap;
 }
 
-/* When preview panel is narrow, hide button text */
-@container preview-panel (max-width: 450px) {
+/* When preview panel is very narrow, hide button text to save space */
+@container preview-panel (max-width: 500px) {
   .preview-tool-btn span {
     display: none;
   }
 
   .preview-tool-btn {
-    padding: 5px;
-    min-width: 28px;
+    padding: 6px;
+    min-width: 32px;
     justify-content: center;
   }
 }
 
 /* Fallback for browsers without container query support */
-@media (max-width: 800px) {
-  .preview-panel .preview-tool-btn span {
-    display: none;
-  }
+@supports not (container-type: inline-size) {
+  @media (max-width: 850px) {
+    .preview-panel .preview-tool-btn span {
+      display: none;
+    }
 
-  .preview-panel .preview-tool-btn {
-    padding: 5px;
-    min-width: 28px;
-    justify-content: center;
+    .preview-panel .preview-tool-btn {
+      padding: 6px;
+      min-width: 32px;
+      justify-content: center;
+    }
   }
 }
 
