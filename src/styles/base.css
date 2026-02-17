@@ -4,6 +4,22 @@
   box-sizing: border-box;
 }
 
+@font-face {
+  font-family: 'Alibaba PuHuiTi 3';
+  src: url('/fonts/alibaba-puhuiti-3/AlibabaPuHuiTi-3-55-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba PuHuiTi 3';
+  src: url('/fonts/alibaba-puhuiti-3/AlibabaPuHuiTi-3-65-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 input[type="text"],
 input[type="password"],
 input[type="search"],
@@ -15,15 +31,23 @@ input:not([type]) {
   text-overflow: ellipsis;
 }
 
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: 'Alibaba PuHuiTi 3', 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
   background: transparent;
   color: var(--text-primary);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'kern';
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 #root {
