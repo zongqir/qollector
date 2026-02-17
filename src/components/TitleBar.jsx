@@ -58,7 +58,7 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
       <div data-tauri-drag-region className="titlebar-drag-area">
         <div className="titlebar-title">{t('app.title')}</div>
       </div>
-      {showIndicator && (
+      {showIndicator && !isMiniMode && (
         <div className="glass-indicator">
           <div className="glass-indicator-track">
             <div

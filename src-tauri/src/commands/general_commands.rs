@@ -6,6 +6,13 @@ use std::sync::Arc;
 use tauri::{AppHandle, State};
 use tauri_plugin_autostart::ManagerExt;
 
+fn shortcut_fields_changed(next: &GeneralConfig, previous: &GeneralConfig) -> bool {
+    next.ctrl_shift_c_shortcut_enabled != previous.ctrl_shift_c_shortcut_enabled
+        || next.copy_pin_shortcut != previous.copy_pin_shortcut
+        || next.toggle_window_shortcut_enabled != previous.toggle_window_shortcut_enabled
+        || next.toggle_window_shortcut != previous.toggle_window_shortcut
+}
+
 #[tauri::command]
 pub async fn get_general_config(ai_state: State<'_, AIState>) -> Result<GeneralConfig, String> {
     let config = ai_state
@@ -31,11 +38,16 @@ pub async fn update_general_config(
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
+    let shortcuts_changed = shortcut_fields_changed(&config, &previous_config);
 
-    apply_shortcut_config(&app, shortcut_state.inner(), &config)?;
+    if shortcuts_changed {
+        apply_shortcut_config(&app, shortcut_state.inner(), &config)?;
+    }
 
     if let Err(error) = ai_state.config_repo.save_general_config(&config).await {
-        let _ = apply_shortcut_config(&app, shortcut_state.inner(), &previous_config);
+        if shortcuts_changed {
+            let _ = apply_shortcut_config(&app, shortcut_state.inner(), &previous_config);
+        }
         return Err(error.to_string());
     }
 

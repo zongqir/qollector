@@ -51,6 +51,8 @@ function HistoryStream({ style }) {
   const clickTimerRef = useRef(null);
   const filterProbeRef = useRef(null);
   const lastFilterProbeLogAtRef = useRef(0);
+  const hasTopTrackerInitRef = useRef(false);
+  const prevTopItemIdRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -107,6 +109,8 @@ function HistoryStream({ style }) {
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+  const previewItemId = previewItem?.id;
+  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
   const virtuosoRef = useRef(null);
 
@@ -285,9 +289,69 @@ function HistoryStream({ style }) {
     console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
   }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, selectedDateRange, items.length]);
 
+  const topFilteredItem = filteredItems[0] || null;
+  const topFilteredItemSignature = topFilteredItem
+    ? `${topFilteredItem.id}:${topFilteredItem.updated_at ?? ''}`
+    : null;
+
+  useEffect(() => {
+    if (!hasTopTrackerInitRef.current) {
+      hasTopTrackerInitRef.current = true;
+      prevTopItemIdRef.current = topFilteredItemSignature;
+      return;
+    }
+
+    const previousTopItemSignature = prevTopItemIdRef.current;
+    prevTopItemIdRef.current = topFilteredItemSignature;
+
+    if (!topFilteredItemSignature || topFilteredItemSignature === previousTopItemSignature) {
+      return;
+    }
+
+    if (selectedItemIds.length > 0) {
+      return;
+    }
+
+    const hasSearchOrFilters =
+      !!debouncedSearchQuery.trim() ||
+      selectedTags.length > 0 ||
+      selectedType !== 'all' ||
+      showFavoritesOnly ||
+      showPinnedOnly ||
+      !!selectedDateRange;
+    if (hasSearchOrFilters) {
+      return;
+    }
+
+    virtuosoRef.current?.scrollToIndex?.({
+      index: 0,
+      align: 'start',
+      behavior: 'smooth',
+    });
+  }, [
+    topFilteredItemSignature,
+    selectedItemIds.length,
+    debouncedSearchQuery,
+    selectedTags.length,
+    selectedType,
+    showFavoritesOnly,
+    showPinnedOnly,
+    selectedDateRange,
+  ]);
+
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
     if (e.ctrlKey || e.metaKey) {
+      const shouldIncludePreviewSelection =
+        selectedItemIds.length === 0 &&
+        panelMode === 'preview' &&
+        previewItemId &&
+        previewItemId !== item.id &&
+        filteredItems.some(candidate => candidate.id === previewItemId);
+
+      if (shouldIncludePreviewSelection) {
+        toggleSelectItem(previewItemId);
+      }
       toggleSelectItem(item.id);
       return;
     }
@@ -298,7 +362,7 @@ function HistoryStream({ style }) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    if (!collectionPanelEnabled && !isMiniMode) {
+    if (shouldUseHoverPreview) {
       if (hoverPreviewItem?.id === item.id) {
         clearHoverPreview();
         return;
@@ -311,12 +375,11 @@ function HistoryStream({ style }) {
       }, 250);
       return;
     }
-    if (isMiniMode) return;
     clickTimerRef.current = setTimeout(() => {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, panelMode, previewItemId, filteredItems, shouldUseHoverPreview, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -378,14 +441,20 @@ function HistoryStream({ style }) {
       clearSelection();
       return;
     }
-    if (!collectionPanelEnabled) {
+    if (shouldUseHoverPreview) {
       clearHoverPreview();
       return;
     }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, collectionPanelEnabled, clearHoverPreview]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearHoverPreview]);
+
+  useEffect(() => {
+    if (!shouldUseHoverPreview) {
+      clearHoverPreview();
+    }
+  }, [shouldUseHoverPreview, clearHoverPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -405,14 +474,14 @@ function HistoryStream({ style }) {
         virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
         const nextItem = filteredItems[next];
         if (nextItem) {
-          if (collectionPanelEnabled) {
-            setPanelMode('preview', nextItem);
-          } else {
+          if (shouldUseHoverPreview) {
             const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
             if (el) {
               const rect = el.getBoundingClientRect();
               setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
             }
+          } else {
+            setPanelMode('preview', nextItem);
           }
         }
         return;
@@ -435,7 +504,7 @@ function HistoryStream({ style }) {
         deleteSelectedItems();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         e.preventDefault();
-        copySelectedItemsMerged();
+        copySelectedItemsMerged(filteredItems);
       } else if (e.key === 'Escape') {
         clearSelection();
         setFocusedIndex(-1);
@@ -443,7 +512,7 @@ function HistoryStream({ style }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, collectionPanelEnabled]);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, shouldUseHoverPreview]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -569,7 +638,7 @@ function HistoryStream({ style }) {
             {t('multiSelect.selected', { count: selectedItemIds.length })}
           </span>
           <div className="multi-select-actions">
-            <button className="multi-select-btn copy" onClick={copySelectedItemsMerged}>
+            <button className="multi-select-btn copy" onClick={() => copySelectedItemsMerged(filteredItems)}>
               <Copy size={14} />
               <span>{t('multiSelect.mergeCopy')}</span>
             </button>

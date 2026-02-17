@@ -555,6 +555,21 @@ pub async fn open_file_path(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn reveal_file_path(path: String) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("File path is empty".to_string());
+    }
+
+    let path = Path::new(trimmed);
+    if !path.exists() {
+        return Err("File does not exist".to_string());
+    }
+
+    reveal_path_in_explorer(path)
+}
+
+#[tauri::command]
 pub async fn get_items_by_date_range(
     manager: State<'_, Arc<ClipboardManager>>,
     start_timestamp: i64,

@@ -45,6 +45,7 @@
     "showFavorites": "Show Favorites",
     "showPinned": "Show Collected",
     "showAll": "Show All",
+    "filterType": "Type Filter",
     "dateFilter": "Date Filter",
     "dateFilterActive": "Date filtering",
     "clearDateFilter": "Clear Date",

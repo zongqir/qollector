@@ -9,6 +9,7 @@ import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 30;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
+let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
 
@@ -311,11 +312,16 @@ const useAppStore = create((set, get) => ({
 
   // ========== 数据加载 Actions ==========
   loadItems: async () => {
+    const requestSeq = ++loadItemsRequestSeq;
     console.log('[Perf:Store] loadItems START at', performance.now().toFixed(1), 'ms');
     try {
       console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
       const result = await getRecentItemsLight(PAGE_SIZE);
       console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
+      if (requestSeq !== loadItemsRequestSeq) {
+        console.log('[Perf:Store] drop stale loadItems result before merge', { requestSeq, latest: loadItemsRequestSeq });
+        return;
+      }
 
       const { loading, processedItemIds } = get();
       const mergedItems = mergeUniqueById([], result);
@@ -334,6 +340,7 @@ const useAppStore = create((set, get) => ({
 
       console.log('[Perf:Store] Calling detectAndUpdateCodeLanguage at', performance.now().toFixed(1), 'ms');
       detectAndUpdateCodeLanguage(mergedItems, (id, lang) => {
+        if (requestSeq !== loadItemsRequestSeq) return;
         set((state) => ({
           items: state.items.map((it) =>
             it.id === id ? { ...it, code_language: lang } : it
@@ -342,21 +349,24 @@ const useAppStore = create((set, get) => ({
       });
 
       if (!loading) {
+        if (requestSeq !== loadItemsRequestSeq) return;
         console.log('[Perf:Store] Calling autoGenerateAITagsSvc at', performance.now().toFixed(1), 'ms');
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
+          if (requestSeq !== loadItemsRequestSeq) return;
           const current = get().processedItemIds;
           const next = typeof updater === 'function' ? updater(current) : updater;
           set({ processedItemIds: next });
         });
       }
 
-      if (loading) {
+      if (loading && requestSeq === loadItemsRequestSeq) {
         console.log('[Perf:Store] Setting loading=false at', performance.now().toFixed(1), 'ms');
         set({ loading: false });
       }
 
       console.log('[Perf:Store] loadItems COMPLETE at', performance.now().toFixed(1), 'ms');
     } catch (error) {
+      if (requestSeq !== loadItemsRequestSeq) return;
       console.error('[Perf:Store] loadItems ERROR at', performance.now().toFixed(1), 'ms:', error);
       if (get().loading) set({ loading: false });
     }
@@ -691,30 +701,22 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  copySelectedItemsMerged: async () => {
+  copySelectedItemsMerged: async (sourceItems = null) => {
     const { selectedItemIds, items } = get();
     if (selectedItemIds.length === 0) return;
     try {
-      const idSet = new Set(selectedItemIds);
-      const selectedItems = items.filter(i => idSet.has(i.id));
-      const merged = selectedItems.map(i => i.content || '').filter(Boolean).join('\n');
+      const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
+      const preferredById = new Map(preferredItems.map(item => [item.id, item]));
+      const fallbackById = new Map(items.map(item => [item.id, item]));
+      const selectedItems = selectedItemIds
+        .map(id => preferredById.get(id) || fallbackById.get(id))
+        .filter(Boolean);
+      const merged = selectedItems
+        .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+        .filter(Boolean)
+        .join('\n');
       if (!merged) return;
-      const tempItem = {
-        id: 'temp-merge',
-        type_: 'text',
-        content: merged,
-        is_pinned: false,
-        is_favorite: false,
-        is_deleted: false,
-        tags: '[]',
-        metadata: '{}',
-        image_paths: null,
-        ocr_text: null,
-        user_note: null,
-        created_at: Math.floor(Date.now() / 1000),
-        updated_at: Math.floor(Date.now() / 1000),
-      };
-      await copyItemToClipboard(tempItem);
+      await invoke('copy_plain_text', { text: merged });
       set({ copiedItemId: 'merge-success', selectedItemIds: [] });
       setTimeout(() => set({ copiedItemId: null }), 1000);
     } catch (error) {
@@ -988,25 +990,13 @@ const useAppStore = create((set, get) => ({
     try {
       const { items } = get();
       const pinnedItems = items.filter(i => i.is_pinned);
-      const merged = pinnedItems.map(i => i.content || '').join('\n\n');
+      const merged = pinnedItems
+        .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+        .filter(Boolean)
+        .join('\n\n');
       if (merged) {
         // 构造临时 item 用于复制
-        const tempItem = {
-          id: 'temp-merge',
-          type_: 'text',
-          content: merged,
-          is_pinned: false,
-          is_favorite: false,
-          is_deleted: false,
-          tags: '[]',
-          metadata: '{}',
-          image_paths: null,
-          ocr_text: null,
-          user_note: null,
-          created_at: Math.floor(Date.now() / 1000),
-          updated_at: Math.floor(Date.now() / 1000),
-        };
-        await copyItemToClipboard(tempItem);
+        await invoke('copy_plain_text', { text: merged });
         set({ copiedItemId: 'merge-success' });
         setTimeout(() => set({ copiedItemId: null }), 1000);
       }

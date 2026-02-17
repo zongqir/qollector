@@ -9,7 +9,15 @@ import { getImageThumbnail } from '../../utils/imageHelpers';
 import { getFileName } from '../../utils/formatters';
 import '../../styles/hover-preview.css';
 
-const MAX_WIDTH = 520;
+const DESKTOP_MAX_WIDTH = 540;
+const DESKTOP_MIN_WIDTH = 320;
+const MINI_MAX_WIDTH = 280;
+const MINI_MIN_WIDTH = 240;
+const EDGE_PADDING = 12;
+const RIGHT_ANCHORED_EDGE_PADDING = 6;
+const DEFAULT_PREVIEW_GAP = 10;
+const MINI_PREVIEW_GAP = 12;
+const COLLAPSED_PREVIEW_GAP = 20;
 const CLICK_DRAG_THRESHOLD = 4;
 
 function HoverPreviewInner() {
@@ -21,29 +29,43 @@ function HoverPreviewInner() {
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const isMiniMode = useAppStore(s => s.isMiniMode);
+  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
   const panelRef = useRef(null);
   const pointerStartRef = useRef(null);
   const pointerMovedRef = useRef(false);
   const [pos, setPos] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isCollapsedWorkspace = !isMiniMode && !collectionPanelEnabled;
+  const isRightAnchored = isMiniMode || isCollapsedWorkspace;
+  const previewGap = isCollapsedWorkspace
+    ? COLLAPSED_PREVIEW_GAP
+    : (isMiniMode ? MINI_PREVIEW_GAP : DEFAULT_PREVIEW_GAP);
 
   useEffect(() => {
     if (!item || !position) { setPos(null); return; }
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let left = position.right + 8;
-    let top = position.top;
+    const rightEdgePadding = isRightAnchored ? RIGHT_ANCHORED_EDGE_PADDING : EDGE_PADDING;
+    const previewMaxWidth = isMiniMode ? MINI_MAX_WIDTH : DESKTOP_MAX_WIDTH;
+    const previewMinWidth = isMiniMode ? MINI_MIN_WIDTH : DESKTOP_MIN_WIDTH;
+    const availableWidth = Math.max(previewMinWidth, vw - rightEdgePadding - EDGE_PADDING);
+    const previewWidth = Math.min(previewMaxWidth, availableWidth);
+    const maxLeft = Math.max(EDGE_PADDING, vw - previewWidth - rightEdgePadding);
+    let left = isRightAnchored ? maxLeft : position.right + previewGap;
+    let top = position.top - (isCollapsedWorkspace ? 6 : 0);
 
-    if (vw - left < MAX_WIDTH + 16) {
-      left = position.left - MAX_WIDTH - 8;
-      if (left < 8) left = 8;
+    if (!isRightAnchored && left > maxLeft) {
+      const fallbackLeft = position.left - previewWidth - previewGap;
+      left = fallbackLeft >= EDGE_PADDING ? fallbackLeft : maxLeft;
     }
-    const estimatedHeight = 300;
-    if (top + estimatedHeight > vh) {
-      top = Math.max(8, vh - estimatedHeight - 8);
+    const estimatedHeight = isMiniMode ? 300 : 340;
+    if (top + estimatedHeight > vh - EDGE_PADDING) {
+      top = Math.max(EDGE_PADDING, vh - estimatedHeight - EDGE_PADDING);
     }
+    if (top < EDGE_PADDING) top = EDGE_PADDING;
     setPos({ top, left });
-  }, [item, position]);
+  }, [item, position, previewGap, isCollapsedWorkspace, isRightAnchored, isMiniMode]);
 
   useEffect(() => {
     if (!item) return;
@@ -221,41 +243,47 @@ function HoverPreviewInner() {
   return createPortal(
     <div
       ref={panelRef}
-      className="hover-preview"
+      className={`hover-preview ${isMiniMode ? 'mini' : ''}`}
       style={{ top: pos.top, left: pos.left }}
       onMouseDown={handlePanelMouseDown}
       onMouseMove={handlePanelMouseMove}
       onMouseUp={handlePanelMouseUp}
       onClick={handlePanelClick}
     >
-      <div className="hover-preview-actions">
-        <button
-          className={`hover-preview-action-btn ${copiedItemId === item.id ? 'copied' : ''}`}
-          onClick={handleCopyClick}
-          title={t('item.copy')}
-        >
-          <Copy size={16} />
-        </button>
-        <button
-          className={`hover-preview-action-btn favorite ${item.is_favorite ? 'active' : ''}`}
-          onClick={handleFavoriteClick}
-          title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
-        >
-          <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
-        </button>
-        <button
-          className={`hover-preview-action-btn delete ${showDeleteConfirm ? 'confirm' : ''}`}
-          onClick={handleDeleteClick}
-          title={showDeleteConfirm ? t('item.confirmDelete') : t('item.delete')}
-        >
-          <Trash2 size={16} />
-        </button>
+      <div className="hover-preview-header">
+        <div className="hover-preview-meta-top">
+          <span className="hover-preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
+          {sourceApp !== 'Unknown' && (
+            <span className="hover-preview-meta-source" title={sourceApp}>
+              {sourceApp}
+            </span>
+          )}
+        </div>
+        <div className="hover-preview-actions">
+          <button
+            className={`hover-preview-action-btn ${copiedItemId === item.id ? 'copied' : ''}`}
+            onClick={handleCopyClick}
+            title={t('item.copy')}
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            className={`hover-preview-action-btn favorite ${item.is_favorite ? 'active' : ''}`}
+            onClick={handleFavoriteClick}
+            title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+          >
+            <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            className={`hover-preview-action-btn delete ${showDeleteConfirm ? 'confirm' : ''}`}
+            onClick={handleDeleteClick}
+            title={showDeleteConfirm ? t('item.confirmDelete') : t('item.delete')}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       </div>
       <div className="hover-preview-content">{renderContent()}</div>
-      <div className="hover-preview-meta">
-        <span>{formatDate(item.created_at, i18n.language)}</span>
-        {sourceApp !== 'Unknown' && <span>{sourceApp}</span>}
-      </div>
     </div>,
     document.body
   );

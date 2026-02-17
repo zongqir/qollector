@@ -421,7 +421,7 @@ impl AIService {
                 .split(&[',', '\u{ff0c}', '\n'][..])
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty() && !s.starts_with("LANG:"))
-                .take(3)
+                .take(8) // Store up to 8 tags (ordered by importance)
                 .collect();
 
             println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);

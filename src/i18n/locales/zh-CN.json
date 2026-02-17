@@ -45,6 +45,7 @@
     "showFavorites": "显示收藏",
     "showPinned": "显示收集",
     "showAll": "显示全部",
+    "filterType": "类型筛选",
     "dateFilter": "日期筛选",
     "dateFilterActive": "日期筛选中",
     "clearDateFilter": "清除日期",

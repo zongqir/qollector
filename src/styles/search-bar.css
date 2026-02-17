@@ -143,6 +143,12 @@
   min-width: max-content;
 }
 
+.type-select-wrapper {
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
 .type-filter-btn {
   width: 28px;
   height: 26px;
@@ -175,6 +181,23 @@
 
 @container (max-width: 460px) {
   .settings-btn {
+    display: none;
+  }
+}
+
+/* On narrow widths, collapse type filter to dropdown first. */
+@container (max-width: 380px) {
+  .type-filter-group {
+    display: none;
+  }
+
+  .type-select-wrapper {
+    display: block;
+  }
+}
+
+@container (max-width: 340px) {
+  .date-select-wrapper {
     display: none;
   }
 }
@@ -219,27 +242,49 @@
 
 /* Mini 模式隐藏低优先级 */
 .app.mini-mode .type-filter-group,
+.app.mini-mode .type-select-wrapper,
 .app.mini-mode .tag-select-wrapper,
 .app.mini-mode .settings-btn {
   display: none;
 }
 
 .app.mini-mode .header {
-  padding: 8px 10px;
+  padding: 6px 8px;
+  gap: 4px;
+}
+
+.app.mini-mode .header-row {
+  gap: 4px;
 }
 
 .app.mini-mode .search-input {
-  padding: 4px 22px 4px 8px;
+  padding: 3px 20px 3px 8px;
   font-size: 12px;
   border-radius: 6px;
+  min-height: 24px;
 }
 
 .app.mini-mode .clear-search {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  right: 4px;
 }
 
 .app.mini-mode .header-icon-btn {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+}
+
+.app.mini-mode .header-icon-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.app.mini-mode .icon-btn-badge {
+  min-width: 12px;
+  height: 12px;
+  font-size: 8px;
+  top: -2px;
+  right: -2px;
 }

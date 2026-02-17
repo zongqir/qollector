@@ -76,6 +76,28 @@ export const parseUrl = (url) => {
 };
 
 const OPENABLE_SCHEMES = new Set(['http:', 'https:', 'ftp:', 'ftps:', 'ws:', 'wss:']);
+const WINDOWS_DRIVE_PATH_RE = /^[a-zA-Z]:[\\/]/;
+const WINDOWS_UNC_PATH_RE = /^\\\\[^\\/\s]+[\\/][^\\/\s]+/;
+const POSIX_ABSOLUTE_PATH_RE = /^\//;
+
+const normalizePathCandidate = (line) => {
+  if (typeof line !== 'string') return '';
+  const trimmed = line.trim();
+  if (!trimmed) return '';
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
+
+const isLikelyAbsolutePath = (candidate) => (
+  WINDOWS_DRIVE_PATH_RE.test(candidate) ||
+  WINDOWS_UNC_PATH_RE.test(candidate) ||
+  POSIX_ABSOLUTE_PATH_RE.test(candidate)
+);
 
 export const extractOpenableUrls = (content, maxUrls = 5) => {
   if (!content || typeof content !== 'string') return [];
@@ -101,6 +123,26 @@ export const extractOpenableUrls = (content, maxUrls = 5) => {
   }
 
   return urls;
+};
+
+export const extractOpenableFilePaths = (content, maxPaths = 5) => {
+  if (!content || typeof content !== 'string') return [];
+
+  const paths = [];
+  const seen = new Set();
+  const lines = content.split(/\r?\n/);
+
+  for (const line of lines) {
+    if (paths.length >= maxPaths) break;
+    const normalized = normalizePathCandidate(line);
+    if (!normalized || !isLikelyAbsolutePath(normalized)) continue;
+    const dedupeKey = normalized.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    paths.push(normalized);
+  }
+
+  return paths;
 };
 
 export const getLinkPreviewTitle = (item) => {

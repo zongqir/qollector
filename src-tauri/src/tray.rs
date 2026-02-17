@@ -92,6 +92,12 @@ fn build_tray_menu(app: &AppHandle, lang: &str, is_paused: bool) -> tauri::Resul
 }
 
 pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    // Clean up any existing tray icon first
+    if let Some(existing_tray) = app.tray_by_id("main") {
+        println!("[Tray] Removing existing tray icon");
+        let _ = app.remove_tray_by_id("main");
+    }
+
     let lang = match config_language {
         Some(l) if !l.is_empty() => l.to_string(),
         _ => get_system_language(),
@@ -223,6 +229,11 @@ fn toggle_main_window(app: &tauri::AppHandle) {
 }
 
 pub fn perform_shutdown(app: &tauri::AppHandle) {
+    println!("[Shutdown] Cleaning up tray icon");
+    if let Some(_tray) = app.tray_by_id("main") {
+        let _ = app.remove_tray_by_id("main");
+    }
+
     if let Some(mcp_state) = app.try_state::<crate::commands::mcp_commands::McpState>() {
         if let Some(server) = &mcp_state.server {
             let server_clone = Arc::clone(server);

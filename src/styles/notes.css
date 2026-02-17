@@ -85,7 +85,7 @@
   background: transparent;
   border-radius: 4px;
   border: none;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: inherit;
   letter-spacing: 0.02em;
   opacity: 0.7;
 }

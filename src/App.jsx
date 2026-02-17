@@ -36,6 +36,7 @@ function App() {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -198,6 +199,8 @@ function App() {
         setMiniMode(false);
       }
     };
+    // Apply once on startup so initial layout does not wait for a manual resize.
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isMiniMode, isAlwaysOnTop, pinBeforeMini, collectionPanelEnabled, collectionPanelBeforeMini]);
@@ -323,7 +326,7 @@ function App() {
           </>
         )}
       </div>
-      {!isMiniMode && !collectionPanelEnabled && <HoverPreview />}
+      {shouldUseHoverPreview && <HoverPreview />}
     </div>
   );
 }
