@@ -311,19 +311,28 @@ const useAppStore = create((set, get) => ({
 
   // ========== 数据加载 Actions ==========
   loadItems: async () => {
+    console.log('[Perf:Store] loadItems START at', performance.now().toFixed(1), 'ms');
     try {
+      console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
       const result = await getRecentItemsLight(PAGE_SIZE);
+      console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
+
       const { loading, processedItemIds } = get();
       const mergedItems = mergeUniqueById([], result);
+
+      console.log('[Perf:Store] Setting items state at', performance.now().toFixed(1), 'ms');
       set((state) => ({
         items: mergedItems,
         hasMore: result.length >= PAGE_SIZE,
         itemsRevision: state.itemsRevision + 1,
       }));
+
       logItemsMemoryProbe('loadItems', mergedItems, {
         fetched: result.length,
         pageSize: PAGE_SIZE,
       });
+
+      console.log('[Perf:Store] Calling detectAndUpdateCodeLanguage at', performance.now().toFixed(1), 'ms');
       detectAndUpdateCodeLanguage(mergedItems, (id, lang) => {
         set((state) => ({
           items: state.items.map((it) =>
@@ -331,7 +340,9 @@ const useAppStore = create((set, get) => ({
           ),
         }));
       });
+
       if (!loading) {
+        console.log('[Perf:Store] Calling autoGenerateAITagsSvc at', performance.now().toFixed(1), 'ms');
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
           const current = get().processedItemIds;
           const next = typeof updater === 'function' ? updater(current) : updater;
@@ -339,9 +350,14 @@ const useAppStore = create((set, get) => ({
         });
       }
 
-      if (loading) set({ loading: false });
+      if (loading) {
+        console.log('[Perf:Store] Setting loading=false at', performance.now().toFixed(1), 'ms');
+        set({ loading: false });
+      }
+
+      console.log('[Perf:Store] loadItems COMPLETE at', performance.now().toFixed(1), 'ms');
     } catch (error) {
-      console.error('加载失败:', error);
+      console.error('[Perf:Store] loadItems ERROR at', performance.now().toFixed(1), 'ms:', error);
       if (get().loading) set({ loading: false });
     }
   },

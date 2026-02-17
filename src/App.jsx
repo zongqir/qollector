@@ -13,12 +13,16 @@ import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
 import HoverPreview from './components/HoverPreview';
 
+console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
+
 const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
 const EditModal = lazy(() => import('./EditModal'));
 const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
 
 function App() {
+  console.log('[Perf:App] App() function called at', performance.now().toFixed(1), 'ms');
+
   const { t } = useTranslation();
 
   // Store state
@@ -68,12 +72,19 @@ function App() {
 
   // 初始化
   useEffect(() => {
+    console.log('[Perf:App] Init useEffect START at', performance.now().toFixed(1), 'ms');
+
+    console.log('[Perf:App] Calling loadItems() at', performance.now().toFixed(1), 'ms');
     loadItems();
+
+    console.log('[Perf:App] Calling loadConfigs() at', performance.now().toFixed(1), 'ms');
     loadConfigs();
 
+    console.log('[Perf:App] Calling openWidgetWindow() at', performance.now().toFixed(1), 'ms');
     // Auto-launch widget
     openWidgetWindow().catch(err => console.warn('widget auto-launch failed:', err));
 
+    console.log('[Perf:App] Setting up event listeners at', performance.now().toFixed(1), 'ms');
     const unlistenClipboardPromise = listen('clipboard-changed', () => {
       loadItems();
     });
@@ -83,6 +94,8 @@ function App() {
     const unlistenOpenSettingsPromise = listen('open-settings', () => {
       setShowSettings(true);
     });
+
+    console.log('[Perf:App] Init useEffect COMPLETE at', performance.now().toFixed(1), 'ms');
 
     return () => {
       unlistenClipboardPromise.then(unlisten => unlisten());
