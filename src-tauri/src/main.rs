@@ -496,6 +496,7 @@ fn main() {
             test_share_s3_connection,
             preview_file,
             open_file_path,
+            reveal_file_path,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

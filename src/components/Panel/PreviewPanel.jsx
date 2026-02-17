@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
   ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
-import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
+import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls, extractOpenableFilePaths } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
@@ -79,10 +80,15 @@ function PreviewPanel() {
     if (item.type_ !== 'text') return [];
     return extractOpenableUrls(item.content);
   }, [item.type_, item.content]);
-  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenableUrls.length > 0;
+  const textOpenablePaths = useMemo(() => {
+    if (item.type_ !== 'text') return [];
+    return extractOpenableFilePaths(item.content);
+  }, [item.type_, item.content]);
+  const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenablePaths.length > 0 || textOpenableUrls.length > 0;
+  const shouldShowRevealButton = item.type_ === 'file' || textOpenablePaths.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
-  const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
+  const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
 
   // Check if toolbar needs compact mode (when buttons would wrap to multiple lines)
   useEffect(() => {
@@ -226,10 +232,28 @@ function PreviewPanel() {
       handleOpenItem(item);
       return;
     }
+    if (textOpenablePaths.length > 0) {
+      invoke('open_file_path', { path: textOpenablePaths[0] }).catch((error) => {
+        console.error('open file path failed:', error);
+      });
+      return;
+    }
     if (textOpenableUrls.length > 0) {
       handleOpenUrl(textOpenableUrls[0]);
     }
-  }, [handleOpenItem, handleOpenUrl, item, textOpenableUrls]);
+  }, [handleOpenItem, handleOpenUrl, item, textOpenablePaths, textOpenableUrls]);
+
+  const handleReveal = useCallback(() => {
+    if (item.type_ === 'file') {
+      handleRevealInFolder(item);
+      return;
+    }
+    if (textOpenablePaths.length > 0) {
+      invoke('reveal_file_path', { path: textOpenablePaths[0] }).catch((error) => {
+        console.error('reveal file path failed:', error);
+      });
+    }
+  }, [handleRevealInFolder, item, textOpenablePaths]);
 
   const handleFormatJsonCopy = useCallback(() => {
     try {
@@ -464,8 +488,8 @@ function PreviewPanel() {
                 <span>{t('item.open')}</span>
               </button>
             )}
-            {item.type_ === 'file' && (
-              <button className="preview-tool-btn" onClick={() => handleRevealInFolder(item)} title={t('item.revealInFolder')}>
+            {shouldShowRevealButton && (
+              <button className="preview-tool-btn" onClick={handleReveal} title={t('item.revealInFolder')}>
                 <FolderOpen size={14} />
                 <span>{t('item.revealInFolder')}</span>
               </button>
