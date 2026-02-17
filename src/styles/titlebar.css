@@ -151,6 +151,53 @@
   height: 13px;
 }
 
+.app.mini-mode .titlebar-buttons {
+  gap: 2px;
+  padding-right: 2px;
+}
+
+.app.mini-mode .titlebar-btn {
+  border-radius: 7px;
+  color: var(--text-secondary);
+}
+
+.app.mini-mode .titlebar-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.app.mini-mode .titlebar-btn.quick-add-btn,
+.app.mini-mode .titlebar-btn.mini-btn,
+.app.mini-mode .titlebar-btn.pin-btn {
+  color: var(--text-secondary);
+}
+
+.app.mini-mode .titlebar-btn.quick-add-btn {
+  font-weight: 500;
+}
+
+.app.mini-mode .titlebar-btn.quick-add-btn:hover,
+.app.mini-mode .titlebar-btn.mini-btn:hover,
+.app.mini-mode .titlebar-btn.pin-btn:hover {
+  color: var(--text-primary);
+}
+
+.app.mini-mode .titlebar-btn.quick-add-btn:hover,
+.app.mini-mode .titlebar-btn.quick-add-btn:active {
+  transform: none;
+}
+
+.app.mini-mode .titlebar-btn.mini-btn.active,
+.app.mini-mode .titlebar-btn.pin-btn.active {
+  color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.app.mini-mode .titlebar-btn.mini-btn.active:hover,
+.app.mini-mode .titlebar-btn.pin-btn.active:hover {
+  background: var(--accent-medium);
+}
+
 /* ========== Glass opacity indicator ========== */
 .glass-indicator {
   display: flex;

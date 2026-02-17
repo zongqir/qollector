@@ -346,8 +346,18 @@ impl ClipboardManager {
             if let Some(existing) = repo_lock.find_by_id(&item_id).await? {
                 if !existing.is_pinned {
                     let pinned_items = repo_lock.get_pinned_items().await?;
+                    println!(
+                        "[DoubleCopyPin] item_id={} pinned_count={} max_pinned_items={}",
+                        item_id,
+                        pinned_items.len(),
+                        general_config.max_pinned_items
+                    );
                     if pinned_items.len() >= general_config.max_pinned_items {
                         if let Some(oldest_pinned) = pinned_items.first() {
+                            println!(
+                                "[DoubleCopyPin] unpin oldest item_id={} before pinning {}",
+                                oldest_pinned.id, item_id
+                            );
                             repo_lock.unpin(&oldest_pinned.id).await?;
                         }
                     }

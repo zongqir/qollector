@@ -59,4 +59,7 @@
 ## 安全与配置提示
 - 禁止提交真实 API Key、Token、数据库产物或其他敏感信息。
 - 修改 `src-tauri/tauri.conf.json` 的权限与 capability 时必须做最小权限复核。
+- git操作允许add 评论等 但是不能改已经提交的 
 
+## 文本注释
+任何注释 以及print 之类的内容不允许有中文
