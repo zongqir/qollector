@@ -14,7 +14,7 @@ use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use url::Host;
 
 const APP_NAME: &str = "ClipBox";
-const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 180;
+const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
@@ -26,6 +26,8 @@ struct DoubleCopyEmphasisState {
     last_source_app: Option<String>,
     last_seen_at_ms: u128,
     last_emphasis_at_ms: u128,
+    last_emphasis_hash: Option<String>,
+    last_emphasis_source_app: Option<String>,
 }
 
 pub struct ClipboardManager {
@@ -798,19 +800,31 @@ impl ClipboardManager {
         let mut state = state.lock().unwrap();
         let same_hash = state.last_hash.as_deref() == Some(content_hash);
         let source_app_valid = !source_app.is_empty() && source_app != "Unknown";
-        let same_source_app =
-            source_app_valid && state.last_source_app.as_deref() == Some(source_app);
+        let last_source_app_valid = state
+            .last_source_app
+            .as_deref()
+            .map(|s| !s.is_empty() && s != "Unknown")
+            .unwrap_or(false);
+        // If source app cannot be identified on either side, do not block double-copy.
+        let same_source_app = if source_app_valid && last_source_app_valid {
+            state.last_source_app.as_deref() == Some(source_app)
+        } else {
+            true
+        };
         let delta_ms = now_ms.saturating_sub(state.last_seen_at_ms);
         let interval_ok = delta_ms >= DOUBLE_COPY_MIN_INTERVAL_MS && delta_ms <= window_ms;
-        let cooldown_ok =
-            now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
+        let same_as_last_emphasis = state.last_emphasis_hash.as_deref() == Some(content_hash)
+            && state.last_emphasis_source_app.as_deref() == Some(source_app);
+        let cooldown_ok = !same_as_last_emphasis
+            || now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
 
         let should_pin = enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
 
         println!(
-            "[DoubleCopy] enabled={} same_hash={} same_source_app={} interval_ok={} cooldown_ok={} delta_ms={} window_ms={} source_app={:?} last_source_app={:?} => {}",
-            enabled, same_hash, same_source_app, interval_ok, cooldown_ok,
-            delta_ms, window_ms, source_app, state.last_source_app, should_pin
+            "[DoubleCopy] enabled={} same_hash={} same_source_app={} source_app_valid={} last_source_app_valid={} interval_ok={} cooldown_ok={} same_as_last_emphasis={} delta_ms={} window_ms={} source_app={:?} last_source_app={:?} => {}",
+            enabled, same_hash, same_source_app, source_app_valid, last_source_app_valid,
+            interval_ok, cooldown_ok, same_as_last_emphasis, delta_ms, window_ms,
+            source_app, state.last_source_app, should_pin
         );
 
         state.last_hash = Some(content_hash.to_string());
@@ -818,6 +832,8 @@ impl ClipboardManager {
         state.last_seen_at_ms = now_ms;
         if should_pin {
             state.last_emphasis_at_ms = now_ms;
+            state.last_emphasis_hash = Some(content_hash.to_string());
+            state.last_emphasis_source_app = Some(source_app.to_string());
         }
 
         should_pin

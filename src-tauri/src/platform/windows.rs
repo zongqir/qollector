@@ -5,7 +5,7 @@ pub mod windows {
     use async_trait::async_trait;
     use once_cell::sync::Lazy;
     use std::collections::HashMap;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::mpsc;
     use std::sync::{Arc, Mutex};
     use windows::core::w;
@@ -16,6 +16,11 @@ pub mod windows {
     /// 友好应用名缓存：key = exe 路径, value = 友好名称
     static APP_NAME_CACHE: Lazy<Mutex<HashMap<String, String>>> =
         Lazy::new(|| Mutex::new(HashMap::new()));
+    const CLIPBOARD_POLL_INTERVAL_MS: u64 = 80;
+    const CLIPBOARD_READ_RETRIES: usize = 6;
+    const CLIPBOARD_READ_RETRY_DELAY_MS: u64 = 25;
+    const INTERNAL_SEQUENCE_CAPTURE_RETRIES: usize = 20;
+    const INTERNAL_SEQUENCE_CAPTURE_DELAY_MS: u64 = 5;
 
     // Wrapper to make HWND Send
     #[derive(Clone, Copy)]
@@ -26,7 +31,7 @@ pub mod windows {
     pub struct WindowsClipboard {
         hwnd: SendHwnd,
         last_sequence: Arc<Mutex<u32>>,
-        skip_next: Arc<AtomicBool>,
+        skip_sequence: Arc<AtomicU32>,
     }
 
     unsafe impl Send for WindowsClipboard {}
@@ -86,8 +91,57 @@ pub mod windows {
             Ok(Self {
                 hwnd: SendHwnd(hwnd),
                 last_sequence: Arc::new(Mutex::new(0)),
-                skip_next: Arc::new(AtomicBool::new(false)),
+                skip_sequence: Arc::new(AtomicU32::new(0)),
             })
+        }
+
+        fn get_clipboard_content_with_retry(
+            max_retries: usize,
+            retry_delay_ms: u64,
+        ) -> Result<ClipboardContent, ClipboardError> {
+            let retries = max_retries.max(1);
+            let mut last_error: Option<ClipboardError> = None;
+
+            for attempt in 0..retries {
+                match Self::get_clipboard_content_sync() {
+                    Ok(content) => return Ok(content),
+                    Err(ClipboardError::UnsupportedType) => {
+                        return Err(ClipboardError::UnsupportedType);
+                    }
+                    Err(error) => {
+                        last_error = Some(error);
+                        if attempt + 1 < retries {
+                            std::thread::sleep(std::time::Duration::from_millis(retry_delay_ms));
+                        }
+                    }
+                }
+            }
+
+            Err(last_error.unwrap_or_else(|| {
+                ClipboardError::AccessError("Failed to read clipboard content".to_string())
+            }))
+        }
+
+        fn mark_internal_sequence_for_skip(&self, sequence_before: u32) {
+            let mut observed_sequence = 0u32;
+            for _ in 0..INTERNAL_SEQUENCE_CAPTURE_RETRIES {
+                let current = unsafe { GetClipboardSequenceNumber() };
+                if current != 0 && current != sequence_before {
+                    observed_sequence = current;
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(
+                    INTERNAL_SEQUENCE_CAPTURE_DELAY_MS,
+                ));
+            }
+
+            self.skip_sequence.store(observed_sequence, Ordering::SeqCst);
+            if observed_sequence != 0 {
+                println!(
+                    "Marked internal clipboard sequence for skip: {}",
+                    observed_sequence
+                );
+            }
         }
     }
 
@@ -106,7 +160,7 @@ pub mod windows {
             println!("Clipboard listener registered successfully");
 
             let last_sequence = self.last_sequence.clone();
-            let skip_next = self.skip_next.clone();
+            let skip_sequence = self.skip_sequence.clone();
 
             // Create a tokio runtime for callbacks
             let rt = tokio::runtime::Runtime::new().unwrap();
@@ -115,31 +169,51 @@ pub mod windows {
             std::thread::spawn(move || {
                 println!("Clipboard polling started...");
                 loop {
-                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    std::thread::sleep(std::time::Duration::from_millis(
+                        CLIPBOARD_POLL_INTERVAL_MS,
+                    ));
 
                     unsafe {
                         let sequence = GetClipboardSequenceNumber();
                         let mut last = last_sequence.lock().unwrap();
 
-                        if sequence != *last && *last != 0 {
+                        if *last == 0 {
                             *last = sequence;
-                            drop(last);
+                            continue;
+                        }
 
-                            // Skip if this change was triggered by our own set_content
-                            if skip_next.swap(false, Ordering::SeqCst) {
-                                println!(
-                                    "Skipping self-triggered clipboard change (sequence: {})",
-                                    sequence
-                                );
-                                continue;
-                            }
+                        if sequence == *last {
+                            continue;
+                        }
 
-                            println!("Clipboard change detected (sequence: {})", sequence);
+                        let pending_skip_sequence = skip_sequence.load(Ordering::SeqCst);
+                        if pending_skip_sequence == u32::MAX
+                            || (pending_skip_sequence != 0 && sequence == pending_skip_sequence)
+                        {
+                            *last = sequence;
+                            skip_sequence.store(0, Ordering::SeqCst);
+                            println!(
+                                "Skipping self-triggered clipboard change (sequence: {})",
+                                sequence
+                            );
+                            continue;
+                        }
+                        drop(last);
 
-                            // Capture window info immediately in polling thread
-                            let metadata = Self::get_active_window_info_static();
+                        println!("Clipboard change detected (sequence: {})", sequence);
 
-                            if let Ok(content) = Self::get_clipboard_content_sync() {
+                        // Capture window info immediately in polling thread
+                        let metadata = Self::get_active_window_info_static();
+
+                        match Self::get_clipboard_content_with_retry(
+                            CLIPBOARD_READ_RETRIES,
+                            CLIPBOARD_READ_RETRY_DELAY_MS,
+                        ) {
+                            Ok(content) => {
+                                let mut last = last_sequence.lock().unwrap();
+                                *last = sequence;
+                                drop(last);
+
                                 // Spawn async callback so polling thread is not blocked
                                 let fut = callback(content, metadata);
                                 rt.spawn(async move {
@@ -147,11 +221,23 @@ pub mod windows {
                                         eprintln!("Callback error: {:?}", e);
                                     }
                                 });
-                            } else {
-                                println!("Failed to get clipboard content");
                             }
-                        } else if *last == 0 {
-                            *last = sequence;
+                            Err(ClipboardError::UnsupportedType) => {
+                                let mut last = last_sequence.lock().unwrap();
+                                *last = sequence;
+                                println!(
+                                    "Ignoring unsupported clipboard content (sequence: {})",
+                                    sequence
+                                );
+                            }
+                            Err(error) => {
+                                let mut last = last_sequence.lock().unwrap();
+                                *last = sequence;
+                                eprintln!(
+                                    "Failed to get clipboard content (sequence={}): {}",
+                                    sequence, error
+                                );
+                            }
                         }
                     }
                 }
@@ -165,11 +251,12 @@ pub mod windows {
         }
 
         async fn set_content(&self, content: ClipboardContent) -> Result<(), ClipboardError> {
-            // Mark to skip the next clipboard change detection
-            self.skip_next.store(true, Ordering::SeqCst);
+            let sequence_before = unsafe { GetClipboardSequenceNumber() };
+            // Mark "pending internal write" first, then narrow down to exact sequence.
+            self.skip_sequence.store(u32::MAX, Ordering::SeqCst);
 
             // Use block_in_place to run synchronously, avoid cross-thread clipboard issues
-            tokio::task::block_in_place(|| {
+            let write_result = tokio::task::block_in_place(|| {
                 match content {
                     ClipboardContent::Text { plain, raw_formats } => {
                         if let Some(ref formats) = raw_formats {
@@ -207,7 +294,15 @@ pub mod windows {
                     }
                 }
                 Ok(())
-            })
+            });
+
+            if let Err(error) = write_result {
+                self.skip_sequence.store(0, Ordering::SeqCst);
+                return Err(error);
+            }
+
+            self.mark_internal_sequence_for_skip(sequence_before);
+            Ok(())
         }
 
         fn get_active_window_info(&self) -> Result<WindowMetadata, ClipboardError> {
