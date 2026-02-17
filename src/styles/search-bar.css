@@ -143,6 +143,12 @@
   min-width: max-content;
 }
 
+.type-select-wrapper {
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
 .type-filter-btn {
   width: 28px;
   height: 26px;
@@ -179,8 +185,18 @@
   }
 }
 
-/* On narrow widths, collapse date filter first to keep type buttons intact. */
+/* On narrow widths, collapse type filter to dropdown first. */
 @container (max-width: 380px) {
+  .type-filter-group {
+    display: none;
+  }
+
+  .type-select-wrapper {
+    display: block;
+  }
+}
+
+@container (max-width: 340px) {
   .date-select-wrapper {
     display: none;
   }
@@ -226,6 +242,7 @@
 
 /* Mini 模式隐藏低优先级 */
 .app.mini-mode .type-filter-group,
+.app.mini-mode .type-select-wrapper,
 .app.mini-mode .tag-select-wrapper,
 .app.mini-mode .settings-btn {
   display: none;

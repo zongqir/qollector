@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Inbox, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
+import { X, Star, Inbox, Tag, ChevronDown, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -24,6 +24,8 @@ function SearchBar({
   const { t } = useTranslation();
   const tagWrapperRef = useRef(null);
   const dateWrapperRef = useRef(null);
+  const typeWrapperRef = useRef(null);
+  const [showTypeFilter, setShowTypeFilter] = useState(false);
 
   useEffect(() => {
     if (!showTagFilter) return;
@@ -47,6 +49,17 @@ function SearchBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDateFilter, onToggleDateFilter]);
 
+  useEffect(() => {
+    if (!showTypeFilter) return;
+    const handleClickOutside = (e) => {
+      if (typeWrapperRef.current && !typeWrapperRef.current.contains(e.target)) {
+        setShowTypeFilter(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTypeFilter]);
+
   const datePresets = [
     { key: 'today', label: t('toolbar.dateToday'), badge: '1d' },
     { key: 'yesterday', label: t('toolbar.dateYesterday'), badge: '1d' },
@@ -67,6 +80,7 @@ function SearchBar({
     { key: 'link', icon: <Link size={14} /> },
     { key: 'code', icon: <Braces size={14} /> },
   ];
+  const selectedTypeOption = typeOptions.find(({ key }) => key === selectedType) || typeOptions[0];
 
   return (
     <header className="header" onClick={(e) => e.stopPropagation()}>
@@ -260,6 +274,39 @@ function SearchBar({
               {icon}
             </button>
           ))}
+        </div>
+
+        <div className="type-select-wrapper" ref={typeWrapperRef}>
+          <button
+            onClick={() => setShowTypeFilter(!showTypeFilter)}
+            className={`header-icon-btn type-select-btn ${selectedType !== 'all' ? 'has-selection' : ''} ${showTypeFilter ? 'active' : ''}`}
+            title={t('toolbar.filterType')}
+          >
+            {selectedTypeOption.icon}
+            <ChevronDown size={12} className={`type-select-arrow ${showTypeFilter ? 'open' : ''}`} />
+          </button>
+          {showTypeFilter && (
+            <div className="type-dropdown">
+              <div className="type-dropdown-list">
+                {typeOptions.map(({ key, icon }) => (
+                  <div
+                    key={key}
+                    onClick={() => {
+                      onTypeChange(key);
+                      setShowTypeFilter(false);
+                    }}
+                    className={`type-dropdown-item ${selectedType === key ? 'selected' : ''}`}
+                  >
+                    <span className="type-check">
+                      {selectedType === key ? <Check size={14} /> : ''}
+                    </span>
+                    <span className="type-option-icon">{icon}</span>
+                    <span className="type-option-label">{t(`search.typeFilter.${key}`)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <button onClick={onOpenSettings} className="header-icon-btn settings-btn" title={t('settings.title')}>
