@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
+import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
 import {
   formatDate,
   getTimelineColor,
@@ -167,7 +167,7 @@ function CompactCard({
             onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
             title={t('preview.pin')}
           >
-            <Pin size={10} />
+            <Inbox size={10} />
           </button>
           <button
             className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}

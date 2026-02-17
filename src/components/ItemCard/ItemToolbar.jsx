@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Pin, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2 } from 'lucide-react';
+import { GripVertical, Inbox, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2 } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
@@ -42,7 +42,7 @@ function ItemToolbar({
         className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
         title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
       >
-        <Pin size={14} className="toolbar-btn-icon" />
+        <Inbox size={14} className="toolbar-btn-icon" />
         <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 5 })}</span>
       </button>
       <div className="toolbar-divider"></div>

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Pin, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
+import { X, Star, Inbox, Tag, ChevronDown, ChevronUp, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -101,7 +101,7 @@ function SearchBar({
             className={`header-icon-btn pin-filter-btn ${showPinnedOnly ? 'active pin-active' : ''}`}
             title={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
           >
-            <Pin size={15} fill={showPinnedOnly ? 'currentColor' : 'none'} />
+            <Inbox size={15} fill={showPinnedOnly ? 'currentColor' : 'none'} />
           </button>
         )}
 
