@@ -466,7 +466,10 @@ fn main() {
             clear_all_data,
             get_share_config,
             update_share_config,
-            share_clipboard_item,
+            get_item_share_data,
+            upload_to_free_host,
+            generate_qr,
+            share_via_s3,
             test_share_s3_connection,
         ])
         .build(tauri::generate_context!())

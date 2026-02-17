@@ -5,6 +5,7 @@ import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } fr
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
 import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
+import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 50;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -664,12 +665,48 @@ const useAppStore = create((set, get) => ({
     set({ showEditModal: false, editingItem: null });
   },
 
-  // ========== 分享 Actions ==========
+  // ========== share Actions ==========
   openShareModal: async (item) => {
     set({ shareModalItem: item, shareResult: null, shareLoading: true, shareError: null });
     try {
-      const result = await invoke('share_clipboard_item', { itemId: item.id });
-      set({ shareResult: result, shareLoading: false });
+      const config = await invoke('get_share_config');
+
+      if (config.provider === 'S3') {
+        const result = await invoke('share_via_s3', { itemId: item.id });
+        set({ shareResult: result, shareLoading: false });
+        return;
+      }
+
+      // Step 1: get item data (may return LocalQr directly)
+      const itemData = await invoke('get_item_share_data', { itemId: item.id });
+      if (itemData.method === 'LocalQr') {
+        set({ shareResult: itemData, shareLoading: false });
+        return;
+      }
+
+      // Step 2: upload via generic proxy
+      const provider = FREE_PROVIDERS[config.provider];
+      if (!provider) {
+        throw new Error(`Unknown provider: ${config.provider}`);
+      }
+      const resp = await invoke('upload_to_free_host', {
+        url: provider.url,
+        fileField: provider.fileField,
+        fileDataBase64: itemData.data_base64,
+        filename: itemData.filename,
+        extraFields: provider.extraFields,
+      });
+
+      // Step 3: frontend parses response
+      const downloadUrl = provider.parseResponse(resp.status_code, resp.body);
+
+      // Step 4: generate QR
+      const qrCode = await invoke('generate_qr', { text: downloadUrl });
+
+      set({
+        shareResult: { method: 'CloudUpload', qr_code: qrCode, url: downloadUrl },
+        shareLoading: false,
+      });
     } catch (error) {
       set({ shareError: String(error), shareLoading: false });
     }
@@ -684,8 +721,39 @@ const useAppStore = create((set, get) => ({
     if (!item) return;
     set({ shareResult: null, shareLoading: true, shareError: null });
     try {
-      const result = await invoke('share_clipboard_item', { itemId: item.id });
-      set({ shareResult: result, shareLoading: false });
+      const config = await invoke('get_share_config');
+
+      if (config.provider === 'S3') {
+        const result = await invoke('share_via_s3', { itemId: item.id });
+        set({ shareResult: result, shareLoading: false });
+        return;
+      }
+
+      const itemData = await invoke('get_item_share_data', { itemId: item.id });
+      if (itemData.method === 'LocalQr') {
+        set({ shareResult: itemData, shareLoading: false });
+        return;
+      }
+
+      const provider = FREE_PROVIDERS[config.provider];
+      if (!provider) {
+        throw new Error(`Unknown provider: ${config.provider}`);
+      }
+      const resp = await invoke('upload_to_free_host', {
+        url: provider.url,
+        fileField: provider.fileField,
+        fileDataBase64: itemData.data_base64,
+        filename: itemData.filename,
+        extraFields: provider.extraFields,
+      });
+
+      const downloadUrl = provider.parseResponse(resp.status_code, resp.body);
+      const qrCode = await invoke('generate_qr', { text: downloadUrl });
+
+      set({
+        shareResult: { method: 'CloudUpload', qr_code: qrCode, url: downloadUrl },
+        shareLoading: false,
+      });
     } catch (error) {
       set({ shareError: String(error), shareLoading: false });
     }

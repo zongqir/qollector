@@ -105,7 +105,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [clearing, setClearing] = useState(false);
 
   // Share config
-  const [shareConfig, setShareConfig] = useState({ provider: 'FileIo', s3_config: null });
+  const [shareConfig, setShareConfig] = useState({ provider: 'ZeroX0', s3_config: null });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
 
@@ -489,7 +489,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         invoke('get_mcp_config'),
         invoke('get_mcp_port').catch(() => 38470),
         invoke('get_general_config'),
-        invoke('get_share_config').catch(() => ({ provider: 'FileIo', s3_config: null }))
+        invoke('get_share_config').catch(() => ({ provider: 'ZeroX0', s3_config: null }))
       ]);
       console.log('后端返回的 AI 配置:', ai);
       console.log('后端返回的 OCR 配置:', ocr);
@@ -518,6 +518,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
+      // Migrate old FileIo provider name to ZeroX0
+      if (share.provider === 'FileIo') {
+        share.provider = 'ZeroX0';
+      }
       setShareConfig(share);
       console.log('✅ 配置加载完成');
     } catch (error) {
@@ -1853,51 +1857,37 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         {activeTab === 'share' && (
           <div className="settings-content">
             <label className="setting-label">{t('settings.share.provider')}</label>
-            <div className="feature-toggles">
-              <label className="setting-toggle-row">
-                <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.share.fileio')}</span>
-                  <span className="toggle-desc">{t('settings.share.fileioDesc')}</span>
-                </span>
-                <span className="toggle-switch">
-                  <input
-                    type="radio"
-                    name="share-provider"
-                    checked={shareConfig.provider === 'FileIo'}
-                    onChange={() => {
-                      const updated = { ...shareConfig, provider: 'FileIo' };
-                      setShareConfig(updated);
-                      invoke('update_share_config', { config: updated }).catch(console.error);
-                    }}
-                  />
-                </span>
-              </label>
-              <label className="setting-toggle-row">
-                <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.share.s3')}</span>
-                  <span className="toggle-desc">{t('settings.share.s3Desc')}</span>
-                </span>
-                <span className="toggle-switch">
-                  <input
-                    type="radio"
-                    name="share-provider"
-                    checked={shareConfig.provider === 'S3'}
-                    onChange={() => {
-                      const updated = {
-                        ...shareConfig,
-                        provider: 'S3',
-                        s3_config: shareConfig.s3_config || {
-                          endpoint: '', region: '', bucket: '',
-                          access_key: '', secret_key: '', custom_domain: null,
-                        },
-                      };
-                      setShareConfig(updated);
-                      invoke('update_share_config', { config: updated }).catch(console.error);
-                    }}
-                  />
-                </span>
-              </label>
-            </div>
+            <select
+              className="setting-select"
+              value={shareConfig.provider}
+              onChange={(e) => {
+                const key = e.target.value;
+                const updated = { ...shareConfig, provider: key };
+                if (key === 'S3' && !shareConfig.s3_config) {
+                  updated.s3_config = {
+                    endpoint: '', region: '', bucket: '',
+                    access_key: '', secret_key: '', custom_domain: null,
+                  };
+                }
+                setShareConfig(updated);
+                invoke('update_share_config', { config: updated }).catch(console.error);
+              }}
+            >
+              {[
+                { key: 'ZeroX0', label: 'fileio' },
+                { key: 'Tmpfiles', label: 'tmpfiles' },
+                { key: 'Catbox', label: 'catbox' },
+                { key: 'Litterbox', label: 'litterbox' },
+                { key: 'S3', label: 's3' },
+              ].map(({ key, label }) => (
+                <option key={key} value={key}>{t(`settings.share.${label}`)}</option>
+              ))}
+            </select>
+            <small className="setting-hint-block">
+              {t(`settings.share.${
+                { ZeroX0: 'fileioDesc', Tmpfiles: 'tmpfilesDesc', Catbox: 'catboxDesc', Litterbox: 'litterboxDesc', S3: 's3Desc' }[shareConfig.provider]
+              }`)}
+            </small>
 
             {shareConfig.provider === 'S3' && (
               <div className="setting-group" style={{ marginTop: '1rem' }}>
