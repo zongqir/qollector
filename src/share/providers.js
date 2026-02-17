@@ -6,6 +6,7 @@ export const FREE_PROVIDERS = {
     url: 'https://0x0.st',
     fileField: 'file',
     extraFields: {},
+    ttlSeconds: 30 * 24 * 3600, // 30 days minimum
     parseResponse: (status, body) => {
       if (status === 429) throw new Error('rate_limited');
       const text = body.trim();
@@ -17,6 +18,7 @@ export const FREE_PROVIDERS = {
     url: 'https://tmpfiles.org/api/v1/upload',
     fileField: 'file',
     extraFields: {},
+    ttlSeconds: 50 * 60, // 50 min (1h retention, leave margin)
     parseResponse: (status, body) => {
       if (status === 429) throw new Error('rate_limited');
       const json = JSON.parse(body);
@@ -29,6 +31,7 @@ export const FREE_PROVIDERS = {
     url: 'https://catbox.moe/user/api.php',
     fileField: 'fileToUpload',
     extraFields: { reqtype: 'fileupload' },
+    ttlSeconds: 365 * 24 * 3600, // permanent, use 1 year
     parseResponse: (status, body) => {
       if (status === 429) throw new Error('rate_limited');
       const text = body.trim();
@@ -40,6 +43,7 @@ export const FREE_PROVIDERS = {
     url: 'https://litterbox.catbox.moe/resources/internals/api.php',
     fileField: 'fileToUpload',
     extraFields: { reqtype: 'fileupload', time: '72h' },
+    ttlSeconds: 70 * 3600, // 70h (72h retention, leave margin)
     parseResponse: (status, body) => {
       if (status === 429) throw new Error('rate_limited');
       const text = body.trim();
