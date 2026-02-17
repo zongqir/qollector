@@ -896,6 +896,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: preview-panel;
 }
 
 .preview-nav {
@@ -1121,6 +1123,36 @@
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
+}
+
+.preview-tool-btn span {
+  white-space: nowrap;
+}
+
+/* When preview panel is narrow, hide button text */
+@container preview-panel (max-width: 450px) {
+  .preview-tool-btn span {
+    display: none;
+  }
+
+  .preview-tool-btn {
+    padding: 5px;
+    min-width: 28px;
+    justify-content: center;
+  }
+}
+
+/* Fallback for browsers without container query support */
+@media (max-width: 800px) {
+  .preview-panel .preview-tool-btn span {
+    display: none;
+  }
+
+  .preview-panel .preview-tool-btn {
+    padding: 5px;
+    min-width: 28px;
+    justify-content: center;
+  }
 }
 
 .preview-tool-btn:hover {
