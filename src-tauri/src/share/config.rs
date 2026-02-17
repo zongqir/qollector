@@ -9,7 +9,7 @@ pub struct ShareConfig {
 impl Default for ShareConfig {
     fn default() -> Self {
         Self {
-            provider: ShareProvider::FileIo,
+            provider: ShareProvider::ZeroX0,
             s3_config: None,
         }
     }
@@ -17,7 +17,11 @@ impl Default for ShareConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ShareProvider {
-    FileIo,
+    #[serde(alias = "FileIo")]
+    ZeroX0,
+    Tmpfiles,
+    Catbox,
+    Litterbox,
     S3,
 }
 

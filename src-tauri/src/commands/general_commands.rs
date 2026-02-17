@@ -3,7 +3,7 @@ use crate::config::GeneralConfig;
 use crate::shortcuts::{apply_shortcut_config, ShortcutBindingState};
 use crate::startup_metrics::{StartupMetricsSnapshot, StartupMetricsState};
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 #[tauri::command]
 pub async fn get_general_config(ai_state: State<'_, AIState>) -> Result<GeneralConfig, String> {

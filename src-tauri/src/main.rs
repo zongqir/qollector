@@ -100,6 +100,10 @@ fn main() {
 
     tauri::Builder::default()
         .manage(startup_metrics)
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 当尝试启动第二个实例时，聚焦到现有窗口
             if let Some(window) = app.get_webview_window("main") {
@@ -466,8 +470,13 @@ fn main() {
             clear_all_data,
             get_share_config,
             update_share_config,
-            share_clipboard_item,
+            get_item_share_data,
+            upload_to_free_host,
+            generate_qr,
+            share_via_s3,
             test_share_s3_connection,
+            preview_file,
+            open_file_path,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

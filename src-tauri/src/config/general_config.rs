@@ -46,6 +46,9 @@ pub struct GeneralConfig {
     /// Max age in days for items (1–3650).
     #[serde(default = "default_cleanup_max_age_days")]
     pub cleanup_max_age_days: u32,
+    /// Enable autostart on system boot.
+    #[serde(default)]
+    pub autostart_enabled: bool,
 }
 
 fn default_language() -> String {
@@ -114,6 +117,7 @@ impl Default for GeneralConfig {
             auto_cleanup_enabled: true,
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,
+            autostart_enabled: false,
         }
     }
 }

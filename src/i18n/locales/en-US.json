@@ -58,9 +58,9 @@
     "dateApply": "Apply"
   },
   "item": {
-    "pinned": "Collected",
-    "pin": "Collect (Max {{max}})",
-    "unpin": "Remove",
+    "pinned": "Pinned",
+    "pin": "Pin (Max {{max}})",
+    "unpin": "Unpin",
     "copy": "Copy",
     "copied": "Copied",
     "copyPlainText": "Copy Plain Text",
@@ -81,12 +81,15 @@
     "clickToCopy": "Click to copy",
     "doubleClickToPreview": "Double-click to preview",
     "doubleClickToEdit": "Double-click to edit",
+    "doubleClickToOpen": "Double-click to open",
     "recognizedText": "Recognized Text",
     "file": "File",
     "source": "Source",
     "unknown": "Unknown",
     "clickToFilter": "Click to filter this tag",
     "clickToFilterType": "Click to filter this type",
+    "delete": "Delete",
+    "confirmDelete": "Click again to confirm",
     "clickToFilterSource": "Click to filter this source",
     "clickToFilterAI": "Click to filter this AI tag",
     "clickToEditNote": "Click to edit note",
@@ -264,8 +267,14 @@
     "share": {
       "title": "Share Settings",
       "provider": "Upload Service",
-      "fileio": "File.io (Default)",
-      "fileioDesc": "No config needed, free, files retained for 30 days",
+      "fileio": "0x0.st (Default)",
+      "fileioDesc": "No config needed, free, files retained 30 days to 1 year",
+      "tmpfiles": "tmpfiles.org",
+      "tmpfilesDesc": "No config needed, free, files retained for 1 hour",
+      "catbox": "catbox.moe",
+      "catboxDesc": "No config needed, free, permanent retention",
+      "litterbox": "litterbox (catbox)",
+      "litterboxDesc": "No config needed, free, 72-hour retention, up to 1GB",
       "s3": "Custom S3 Storage",
       "s3Desc": "Supports AWS S3, Aliyun OSS, Tencent COS, MinIO, etc.",
       "endpoint": "Endpoint",
@@ -425,6 +434,19 @@
     "saveContent": "Save",
     "cancelEdit": "Cancel"
   },
+  "filePreview": {
+    "loading": "Loading preview...",
+    "loadFailed": "Cannot load preview",
+    "textTruncated": "Showing first 10KB only",
+    "fileTooLarge": "File too large to preview",
+    "pdfFirstPage": "PDF first page preview",
+    "pdfLoadFailed": "PDF load failed",
+    "fileSize": "Size",
+    "fileNotFound": "File not found",
+    "directoryItems": "Directory Contents",
+    "clickToOpen": "Click to open",
+    "emptyDirectory": "Empty directory"
+  },
   "widget": {
     "title": "Quick Drop",
     "dropHint": "Drop here"
@@ -446,13 +468,13 @@
     "retry": "Retry",
     "localQrReady": "Local text mode (offline)",
     "localQrHint": "Scan to get text content",
-    "cloudHint": "Link valid for 30 days",
+    "cloudHint": "Link validity depends on selected service",
     "cloudHintS3": "Uploaded to custom storage",
     "uploadSuccess": "Upload successful",
     "copyLink": "Copy link",
     "copied": "Copied",
     "close": "Close",
     "button": "Share",
-    "rateLimited": "Rate limited. Try again later or configure S3."
+    "rateLimited": "Rate limited. Try again later or switch to another provider."
   }
 }

@@ -42,6 +42,9 @@ function App() {
   const setIsMiniMode = useAppStore(s => s.setIsMiniMode);
   const setPinBeforeMini = useAppStore(s => s.setPinBeforeMini);
   const pinBeforeMini = useAppStore(s => s.pinBeforeMini);
+  const setCollectionPanelBeforeMini = useAppStore(s => s.setCollectionPanelBeforeMini);
+  const collectionPanelBeforeMini = useAppStore(s => s.collectionPanelBeforeMini);
+  const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
   const setThemeMode = useAppStore(s => s.setThemeMode);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
@@ -140,6 +143,7 @@ function App() {
 
   // Mini 模式
   const MINI_THRESHOLD = 450;
+  const PANEL_CLOSE_THRESHOLD = 350;
 
   const setMiniMode = async (enterMini) => {
     if (enterMini === isMiniMode) return;
@@ -162,6 +166,19 @@ function App() {
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
+
+      // Handle panel auto-close/restore
+      if (width <= PANEL_CLOSE_THRESHOLD && collectionPanelEnabled) {
+        // Save current state and close panel
+        setCollectionPanelBeforeMini(true);
+        setCollectionPanelEnabled(false);
+      } else if (width > PANEL_CLOSE_THRESHOLD && collectionPanelBeforeMini === true && !collectionPanelEnabled) {
+        // Restore panel when window gets bigger
+        setCollectionPanelEnabled(true);
+        setCollectionPanelBeforeMini(null);
+      }
+
+      // Handle mini mode
       if (width <= MINI_THRESHOLD && !isMiniMode) {
         setMiniMode(true);
       } else if (width > MINI_THRESHOLD && isMiniMode) {
@@ -170,7 +187,7 @@ function App() {
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isMiniMode, isAlwaysOnTop, pinBeforeMini]);
+  }, [isMiniMode, isAlwaysOnTop, pinBeforeMini, collectionPanelEnabled, collectionPanelBeforeMini]);
 
   // 窗口置顶
   const toggleWindowAlwaysOnTop = async () => {

@@ -1,5 +1,6 @@
 ﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
+use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::{Manager, State};
@@ -379,6 +380,147 @@ fn reveal_path_in_explorer(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Serialize)]
+pub struct DirectoryItem {
+    pub name: String,
+    pub path: String,
+    pub is_directory: bool,
+    pub size: u64,
+    pub extension: String,
+}
+
+#[derive(Serialize)]
+pub struct FilePreviewData {
+    pub preview_type: String,
+    pub file_path: String,
+    pub file_name: String,
+    pub file_size: u64,
+    pub text_content: Option<String>,
+    pub text_truncated: bool,
+    pub is_directory: bool,
+    pub directory_items: Option<Vec<DirectoryItem>>,
+}
+
+const IMAGE_EXTS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico",
+];
+const TEXT_EXTS: &[&str] = &[
+    "txt", "md", "json", "csv", "log", "xml", "yaml", "yml", "toml", "ini", "conf",
+    "js", "ts", "jsx", "tsx", "py", "rs", "go", "java", "c", "cpp", "h", "hpp",
+    "sh", "bat", "ps1", "html", "css", "sql",
+];
+const AUDIO_EXTS: &[&str] = &["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"];
+const VIDEO_EXTS: &[&str] = &["mp4", "webm", "mkv", "avi", "mov"];
+const PDF_EXTS: &[&str] = &["pdf"];
+
+fn classify_extension(ext: &str) -> &'static str {
+    let lower = ext.to_ascii_lowercase();
+    let lower = lower.as_str();
+    if IMAGE_EXTS.contains(&lower) {
+        "image"
+    } else if TEXT_EXTS.contains(&lower) {
+        "text"
+    } else if AUDIO_EXTS.contains(&lower) {
+        "audio"
+    } else if VIDEO_EXTS.contains(&lower) {
+        "video"
+    } else if PDF_EXTS.contains(&lower) {
+        "pdf"
+    } else {
+        "binary"
+    }
+}
+
+const MAX_TEXT_READ: u64 = 5 * 1024 * 1024; // 5MB
+const TEXT_PREVIEW_BYTES: usize = 10240; // 10KB
+
+#[tauri::command]
+pub async fn preview_file(file_path: String) -> Result<FilePreviewData, String> {
+    let path = Path::new(&file_path);
+
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    let metadata = std::fs::metadata(path).map_err(|e| format!("Cannot read file: {}", e))?;
+    let file_size = metadata.len();
+    let is_directory = metadata.is_dir();
+
+    let (preview_type, text_content, text_truncated, directory_items) = if is_directory {
+        let mut items = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(path) {
+            for entry in entries.flatten() {
+                if let Ok(meta) = entry.metadata() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    let path_str = entry.path().to_string_lossy().to_string();
+                    let is_dir = meta.is_dir();
+                    let size = meta.len();
+                    let extension = entry
+                        .path()
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    items.push(DirectoryItem {
+                        name,
+                        path: path_str,
+                        is_directory: is_dir,
+                        size,
+                        extension,
+                    });
+                }
+            }
+            items.sort_by(|a, b| {
+                match (a.is_directory, b.is_directory) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+                }
+            });
+        }
+        ("directory".to_string(), None, false, Some(items))
+    } else {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        let preview_type = classify_extension(ext).to_string();
+
+        let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ {
+            match std::fs::read(path) {
+                Ok(bytes) => {
+                    let truncated = bytes.len() > TEXT_PREVIEW_BYTES;
+                    let slice = if truncated {
+                        &bytes[..TEXT_PREVIEW_BYTES]
+                    } else {
+                        &bytes[..]
+                    };
+                    let text = String::from_utf8_lossy(slice).to_string();
+                    (Some(text), truncated)
+                }
+                Err(_) => (None, false),
+            }
+        } else {
+            (None, false)
+        };
+        (preview_type, text_content, text_truncated, None)
+    };
+
+    Ok(FilePreviewData {
+        preview_type,
+        file_path: file_path.clone(),
+        file_name,
+        file_size,
+        text_content,
+        text_truncated,
+        is_directory,
+        directory_items,
+    })
+}
+
 fn open_with_system(target: &str) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
@@ -405,4 +547,9 @@ fn open_with_system(target: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn open_file_path(path: String) -> Result<(), String> {
+    open_with_system(&path)
 }

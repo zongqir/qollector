@@ -23,6 +23,80 @@
   to { opacity: 1; }
 }
 
+/* ========== Action Buttons ========== */
+.hover-preview-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.hover-preview-action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.85;
+}
+
+.hover-preview-action-btn:hover {
+  opacity: 1;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hover-preview-action-btn:active {
+  transform: translateY(0);
+}
+
+/* Copy button - copied state */
+.hover-preview-action-btn.copied {
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+/* Favorite button - active state */
+.hover-preview-action-btn.favorite.active {
+  color: var(--color-warning);
+}
+
+.hover-preview-action-btn.favorite.active:hover {
+  color: var(--color-warning);
+}
+
+/* Delete button - danger state */
+.hover-preview-action-btn.delete:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.hover-preview-action-btn.delete.confirm {
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+  animation: deleteConfirmPulse 0.5s ease;
+}
+
+@keyframes deleteConfirmPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
 .hover-preview-content {
   flex: 1;
   overflow: auto;
@@ -30,6 +104,20 @@
   position: relative;
   max-height: 350px;
   overscroll-behavior: contain;
+}
+
+.hover-preview-text,
+.hover-preview-image,
+.hover-preview-files {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  outline: none;
+}
+
+.hover-preview-text:hover,
+.hover-preview-image:hover,
+.hover-preview-files:hover {
+  opacity: 0.85;
 }
 
 .hover-preview-text {

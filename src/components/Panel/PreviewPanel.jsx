@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
@@ -11,11 +11,15 @@ import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
 import CodeBlock from '../CodeBlock/CodeBlock';
+import FilePreviewItem from './FilePreview';
 
 function PreviewPanel() {
   const { t, i18n } = useTranslation();
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editContent, setEditContent] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const toolbarRef = useRef(null);
 
   const previewItem = useAppStore(s => s.previewItem);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -79,6 +83,54 @@ function PreviewPanel() {
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
+  // Check if toolbar needs compact mode (when buttons would wrap to multiple lines)
+  useEffect(() => {
+    if (!toolbarRef.current) return;
+
+    let timeoutId = null;
+
+    const checkToolbarWidth = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+
+      timeoutId = setTimeout(() => {
+        const toolbar = toolbarRef.current;
+        if (!toolbar) return;
+
+        // Create a temporary clone to measure full width
+        const clone = toolbar.cloneNode(true);
+        clone.style.position = 'absolute';
+        clone.style.visibility = 'hidden';
+        clone.style.width = 'auto';
+        clone.style.display = 'flex';
+        clone.style.flexWrap = 'nowrap';
+        clone.classList.remove('compact');
+
+        toolbar.parentElement.appendChild(clone);
+
+        // Measure the natural width needed
+        const naturalWidth = clone.scrollWidth;
+        const availableWidth = toolbar.clientWidth;
+
+        // Clean up
+        toolbar.parentElement.removeChild(clone);
+
+        // Add buffer for safety
+        const needsCompact = naturalWidth > (availableWidth - 10);
+
+        setIsToolbarCompact(needsCompact);
+      }, 150);
+    };
+
+    checkToolbarWidth();
+    const resizeObserver = new ResizeObserver(checkToolbarWidth);
+    resizeObserver.observe(toolbarRef.current);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [item.id, isEditingContent]);
+
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
     if (!item.is_pinned) {
@@ -91,6 +143,41 @@ function PreviewPanel() {
   const handleStartEditContent = () => {
     setEditContent(item.content || '');
     setIsEditingContent(true);
+  };
+
+  // 内容区键盘事件处理
+  const handleContentKeyDown = (e) => {
+    // Ctrl+A / Cmd+A: select all content in the content area only
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.stopPropagation();
+      // Let the default behavior work within the content area
+    }
+  };
+
+  // 内容区双击行为
+  const handleContentDoubleClick = async () => {
+    if (item.type_ === 'file') {
+      // file open
+      await handleOpenItem(item);
+    } else {
+      // copy content only (not the whole item)
+      if (item.content) {
+        await handleCopyPlainText(item.content);
+      } else if (item.type_ === 'image') {
+        // for image, copy the image itself
+        await handleCopy(item);
+      }
+    }
+  };
+
+  // 删除按钮点击
+  const handleDeleteClick = () => {
+    if (showDeleteConfirm) {
+      deleteItem(item);
+    } else {
+      setShowDeleteConfirm(true);
+      setTimeout(() => setShowDeleteConfirm(false), 3000);
+    }
   };
 
   // 保存内容编辑
@@ -179,7 +266,13 @@ function PreviewPanel() {
 
     if (item.type_ === 'image' && item.image_paths) {
       return (
-        <div className="preview-image-content">
+        <div
+          className="preview-image-content"
+          onDoubleClick={handleContentDoubleClick}
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
+          title={t('item.doubleClickToCopy')}
+        >
           <img src={getImageOriginal(item.image_paths)} alt="" />
           {item.ocr_text && (
             <div className="preview-ocr">
@@ -191,13 +284,17 @@ function PreviewPanel() {
       );
     }
     if (item.type_ === 'file') {
+      const files = getFileList(item.content);
       return (
-        <div className="preview-file-content">
-          {getFileList(item.content).map((path, idx) => (
-            <div key={idx} className="file-item">
-              <FileText size={16} />
-              <span>{getFileName(path)}</span>
-            </div>
+        <div
+          className="preview-file-content"
+          onDoubleClick={handleContentDoubleClick}
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
+          title={t('item.doubleClickToOpen')}
+        >
+          {files.map((path, idx) => (
+            <FilePreviewItem key={idx} filePath={path.trim()} />
           ))}
         </div>
       );
@@ -205,7 +302,10 @@ function PreviewPanel() {
     return (
       <div
         className="preview-text-content"
-        onDoubleClick={item.has_raw_formats ? undefined : handleStartEditContent}
+        onDoubleClick={handleContentDoubleClick}
+        onKeyDown={handleContentKeyDown}
+        tabIndex={0}
+        title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
       >
         {getContentPreview(item.content)}
       </div>
@@ -221,11 +321,32 @@ function PreviewPanel() {
         </button>
         <div className="preview-nav-actions">
           <button
-            className={`preview-action-btn ${item.is_pinned ? 'active' : ''}`}
-            onClick={item.is_pinned ? () => togglePin(item) : handlePinAndBack}
+            className={`preview-action-btn copy-btn ${isCopied ? 'copied' : ''}`}
+            onClick={() => handleCopy(item)}
+            title={t('item.copy')}
           >
-            {item.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
-            <span>{item.is_pinned ? t('collection.removeFromCollection') : t('collection.addToCollection')}</span>
+            <Copy size={16} />
+          </button>
+          <button
+            className={`preview-action-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
+            onClick={() => toggleFavorite(item)}
+            title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+          >
+            <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            className={`preview-action-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
+            onClick={() => togglePin(item)}
+            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
+          >
+            <Pin size={16} />
+          </button>
+          <button
+            className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
+            onClick={handleDeleteClick}
+            title={showDeleteConfirm ? t('item.confirmDelete') : t('item.delete')}
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       </div>
@@ -288,7 +409,7 @@ function PreviewPanel() {
       )}
 
       {/* 工具栏 */}
-      <div className="preview-toolbar">
+      <div ref={toolbarRef} className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''}`}>
         {isEditingContent ? (
           <>
             <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
@@ -302,10 +423,6 @@ function PreviewPanel() {
           </>
         ) : (
           <>
-            <button className="preview-tool-btn" onClick={() => handleCopy(item)}>
-              <Copy size={14} />
-              <span>{t('item.copy')}</span>
-            </button>
             {item.has_raw_formats && item.content && (
               <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
                 <FileText size={14} />
@@ -318,13 +435,6 @@ function PreviewPanel() {
                 <span>{t('item.formatJsonCopy')}</span>
               </button>
             )}
-            <button
-              className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
-              onClick={() => toggleFavorite(item)}
-            >
-              <Star size={14} fill={item.is_favorite ? 'currentColor' : 'none'} />
-              <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-            </button>
             {shouldShowAIButton && (
               <button
                 className="preview-tool-btn"
@@ -369,16 +479,13 @@ function PreviewPanel() {
             )}
             {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
+                <Edit2 size={14} />
                 <span>{t('panel.editContent')}</span>
               </button>
             )}
             <button className="preview-tool-btn" onClick={() => openShareModal(item)}>
               <Share2 size={14} />
               <span>{t('share.button')}</span>
-            </button>
-            <button className="preview-tool-btn danger" onClick={() => deleteItem(item)}>
-              <Trash2 size={14} />
-              <span>{t('item.delete')}</span>
             </button>
           </>
         )}
