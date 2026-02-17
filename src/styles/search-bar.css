@@ -179,6 +179,13 @@
   }
 }
 
+/* On narrow widths, collapse date filter first to keep type buttons intact. */
+@container (max-width: 380px) {
+  .date-select-wrapper {
+    display: none;
+  }
+}
+
 /* 标签筛选下拉 */
 .tag-select-wrapper {
   position: relative;

@@ -198,6 +198,8 @@ function App() {
         setMiniMode(false);
       }
     };
+    // Apply once on startup so initial layout does not wait for a manual resize.
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isMiniMode, isAlwaysOnTop, pinBeforeMini, collectionPanelEnabled, collectionPanelBeforeMini]);
