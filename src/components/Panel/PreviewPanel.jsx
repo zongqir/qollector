@@ -82,13 +82,13 @@ function PreviewPanel() {
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
 
-  // Check if toolbar needs compact mode (when buttons wrap to multiple lines)
+  // Check if toolbar needs compact mode (when buttons would wrap to multiple lines)
   useEffect(() => {
     if (!toolbarRef.current) return;
 
     let timeoutId = null;
 
-    const checkToolbarHeight = () => {
+    const checkToolbarWidth = () => {
       // Clear any pending check
       if (timeoutId) clearTimeout(timeoutId);
 
@@ -97,8 +97,7 @@ function PreviewPanel() {
         const toolbar = toolbarRef.current;
         if (!toolbar) return;
 
-        // Always measure with text visible to get true wrapping state
-        const hadCompactClass = toolbar.classList.contains('compact');
+        // Always measure with text visible to get true width needed
         toolbar.classList.remove('compact');
 
         // Force layout recalc
@@ -106,38 +105,38 @@ function PreviewPanel() {
 
         requestAnimationFrame(() => {
           const buttons = toolbar.querySelectorAll('.preview-tool-btn');
-          if (buttons.length === 0) {
-            if (hadCompactClass) toolbar.classList.add('compact');
-            return;
-          }
+          if (buttons.length === 0) return;
 
-          // Check if buttons are wrapping
-          const firstButtonTop = buttons[0].getBoundingClientRect().top;
-          let needsCompact = false;
+          // Calculate total width needed for all buttons with text
+          let totalButtonWidth = 0;
+          const gap = 4; // gap between buttons
 
-          for (let i = 1; i < buttons.length; i++) {
-            const buttonTop = buttons[i].getBoundingClientRect().top;
-            if (Math.abs(buttonTop - firstButtonTop) > 5) {
-              needsCompact = true;
-              break;
-            }
-          }
+          buttons.forEach((button) => {
+            totalButtonWidth += button.offsetWidth + gap;
+          });
 
-          // Update state only if changed
+          // Get available width (toolbar width minus padding)
+          const toolbarWidth = toolbar.offsetWidth;
+          const toolbarPadding = 32; // 16px * 2
+          const availableWidth = toolbarWidth - toolbarPadding;
+
+          // If buttons need more space than available, use compact mode
+          const needsCompact = totalButtonWidth > availableWidth;
+
           setIsToolbarCompact(needsCompact);
         });
       }, 100); // 100ms debounce
     };
 
-    checkToolbarHeight();
-    const resizeObserver = new ResizeObserver(checkToolbarHeight);
+    checkToolbarWidth();
+    const resizeObserver = new ResizeObserver(checkToolbarWidth);
     resizeObserver.observe(toolbarRef.current);
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
-  }, [item.id, isEditingContent]); // Don't include isToolbarCompact in deps
+  }, [item.id, isEditingContent]);
 
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
