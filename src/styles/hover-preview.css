@@ -111,6 +111,7 @@
 .hover-preview-files {
   cursor: pointer;
   transition: opacity 0.15s ease;
+  outline: none;
 }
 
 .hover-preview-text:hover,

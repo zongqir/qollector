@@ -93,8 +93,26 @@ function HoverPreviewInner() {
         console.error('open file failed:', error);
       }
     } else {
-      // copy
-      await handleCopy(item);
+      // copy content only (not the whole item)
+      if (item.content) {
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('copy_plain_text', { text: item.content });
+        } catch (error) {
+          console.error('copy failed:', error);
+        }
+      } else if (item.type_ === 'image') {
+        // for image, copy the image itself
+        await handleCopy(item);
+      }
+    }
+  };
+
+  const handleContentKeyDown = (e) => {
+    // Ctrl+A / Cmd+A: select all content in the content area only
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.stopPropagation();
+      // Let the default behavior work within the content area
     }
   };
 
@@ -144,6 +162,8 @@ function HoverPreviewInner() {
           <div
             className="hover-preview-image"
             onDoubleClick={handleContentDoubleClick}
+            onKeyDown={handleContentKeyDown}
+            tabIndex={0}
             title={doubleClickHint}
           >
             {thumb && <img src={thumb} alt="" />}
@@ -159,6 +179,8 @@ function HoverPreviewInner() {
           <div
             className="hover-preview-files"
             onDoubleClick={handleContentDoubleClick}
+            onKeyDown={handleContentKeyDown}
+            tabIndex={0}
             title={doubleClickHint}
           >
             {files.slice(0, 10).map((f, i) => (
@@ -173,6 +195,8 @@ function HoverPreviewInner() {
           <div
             className="hover-preview-text"
             onDoubleClick={handleContentDoubleClick}
+            onKeyDown={handleContentKeyDown}
+            tabIndex={0}
             title={doubleClickHint}
           >
             {item.content || ''}
@@ -183,6 +207,8 @@ function HoverPreviewInner() {
           <div
             className="hover-preview-text"
             onDoubleClick={handleContentDoubleClick}
+            onKeyDown={handleContentKeyDown}
+            tabIndex={0}
             title={doubleClickHint}
           >
             {item.content || ''}

@@ -94,14 +94,28 @@ function PreviewPanel() {
     setIsEditingContent(true);
   };
 
+  // 内容区键盘事件处理
+  const handleContentKeyDown = (e) => {
+    // Ctrl+A / Cmd+A: select all content in the content area only
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+      e.stopPropagation();
+      // Let the default behavior work within the content area
+    }
+  };
+
   // 内容区双击行为
   const handleContentDoubleClick = async () => {
     if (item.type_ === 'file') {
       // file open
       await handleOpenItem(item);
     } else {
-      // copy
-      await handleCopy(item);
+      // copy content only (not the whole item)
+      if (item.content) {
+        await handleCopyPlainText(item.content);
+      } else if (item.type_ === 'image') {
+        // for image, copy the image itself
+        await handleCopy(item);
+      }
     }
   };
 
@@ -204,6 +218,8 @@ function PreviewPanel() {
         <div
           className="preview-image-content"
           onDoubleClick={handleContentDoubleClick}
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
           title={t('item.doubleClickToCopy')}
         >
           <img src={getImageOriginal(item.image_paths)} alt="" />
@@ -221,6 +237,8 @@ function PreviewPanel() {
         <div
           className="preview-file-content"
           onDoubleClick={handleContentDoubleClick}
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
           title={t('item.doubleClickToOpen')}
         >
           {getFileList(item.content).map((path, idx) => (
@@ -236,6 +254,8 @@ function PreviewPanel() {
       <div
         className="preview-text-content"
         onDoubleClick={handleContentDoubleClick}
+        onKeyDown={handleContentKeyDown}
+        tabIndex={0}
         title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
       >
         {getContentPreview(item.content)}

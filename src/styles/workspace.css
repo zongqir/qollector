@@ -1024,6 +1024,7 @@
   cursor: pointer;
   transition: opacity 0.15s ease;
   user-select: text;
+  outline: none;
 }
 
 .preview-text-content:hover {
@@ -1033,6 +1034,7 @@
 .preview-image-content {
   cursor: pointer;
   transition: opacity 0.15s ease;
+  outline: none;
 }
 
 .preview-image-content:hover {
@@ -1054,6 +1056,7 @@
 .preview-file-content {
   cursor: pointer;
   transition: opacity 0.15s ease;
+  outline: none;
 }
 
 .preview-file-content:hover {
