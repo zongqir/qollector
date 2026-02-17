@@ -1108,6 +1108,11 @@
   opacity: 0.85;
 }
 
+.preview-code-content {
+  outline: none;
+  user-select: text;
+}
+
 .preview-image-content {
   cursor: pointer;
   transition: opacity 0.15s ease;

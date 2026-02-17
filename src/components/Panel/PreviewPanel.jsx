@@ -22,6 +22,8 @@ function PreviewPanel() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
   const toolbarRef = useRef(null);
+  const panelRef = useRef(null);
+  const contentSelectableRef = useRef(null);
 
   const previewItem = useAppStore(s => s.previewItem);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -89,6 +91,17 @@ function PreviewPanel() {
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
+  const selectPreviewContent = useCallback(() => {
+    const contentEl = contentSelectableRef.current;
+    const selection = window.getSelection();
+    if (!contentEl || !selection) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(contentEl);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  }, []);
 
   // Check if toolbar needs compact mode (when buttons would wrap to multiple lines)
   useEffect(() => {
@@ -138,6 +151,48 @@ function PreviewPanel() {
     };
   }, [item.id, isEditingContent]);
 
+  useEffect(() => {
+    const isEditableElement = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+      if (target.isContentEditable) return true;
+      return Boolean(target.closest('[contenteditable="true"]'));
+    };
+
+    const handleGlobalSelectAll = (e) => {
+      if (isEditingContent) return;
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'a') return;
+      if (isEditableElement(e.target)) return;
+
+      const panelEl = panelRef.current;
+      if (!panelEl) return;
+
+      const target = e.target;
+      const activeElement = document.activeElement;
+      const targetInsidePanel = target instanceof Node && panelEl.contains(target);
+      const activeInsidePanel = activeElement instanceof Node && panelEl.contains(activeElement);
+      const bodyTarget = target === document.body || target === document.documentElement;
+      if (!targetInsidePanel && !activeInsidePanel && !bodyTarget) return;
+
+      if (selectPreviewContent()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalSelectAll, true);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalSelectAll, true);
+    };
+  }, [isEditingContent, selectPreviewContent]);
+
+  useEffect(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    selection.removeAllRanges();
+  }, [item.id]);
+
   // 收集并切回收集箱
   const handlePinAndBack = async () => {
     if (!item.is_pinned) {
@@ -154,10 +209,12 @@ function PreviewPanel() {
 
   // 内容区键盘事件处理
   const handleContentKeyDown = (e) => {
-    // Ctrl+A / Cmd+A: select all content in the content area only
-    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-      e.stopPropagation();
-      // Let the default behavior work within the content area
+    // Ctrl+A / Cmd+A: select only current preview content block, not whole page
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+      if (selectPreviewContent()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
   };
 
@@ -283,7 +340,13 @@ function PreviewPanel() {
 
     if (item.code_language && item.content) {
       return (
-        <div>
+        <div
+          ref={contentSelectableRef}
+          className="preview-code-content"
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
+          title={t('item.doubleClickToCopy')}
+        >
           <Suspense fallback={<div className="preview-text-content">{item.content}</div>}>
             <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
           </Suspense>
@@ -294,6 +357,7 @@ function PreviewPanel() {
     if (item.type_ === 'image' && item.image_paths) {
       return (
         <div
+          ref={contentSelectableRef}
           className="preview-image-content"
           onDoubleClick={handleContentDoubleClick}
           onKeyDown={handleContentKeyDown}
@@ -314,6 +378,7 @@ function PreviewPanel() {
       const files = getFileList(item.content);
       return (
         <div
+          ref={contentSelectableRef}
           className="preview-file-content"
           onDoubleClick={handleContentDoubleClick}
           onKeyDown={handleContentKeyDown}
@@ -328,6 +393,7 @@ function PreviewPanel() {
     }
     return (
       <div
+        ref={contentSelectableRef}
         className="preview-text-content"
         onDoubleClick={handleContentDoubleClick}
         onKeyDown={handleContentKeyDown}
@@ -340,7 +406,7 @@ function PreviewPanel() {
   };
 
   return (
-    <div className="preview-panel">
+    <div className="preview-panel" ref={panelRef}>
       {/* 顶部导航 */}
       <div className="preview-nav">
         <button className="preview-back-btn" onClick={switchToCollection}>
