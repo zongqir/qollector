@@ -106,6 +106,19 @@
   overscroll-behavior: contain;
 }
 
+.hover-preview-text,
+.hover-preview-image,
+.hover-preview-files {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.hover-preview-text:hover,
+.hover-preview-image:hover,
+.hover-preview-files:hover {
+  opacity: 0.85;
+}
+
 .hover-preview-text {
   font-size: 13px;
   line-height: 1.5;

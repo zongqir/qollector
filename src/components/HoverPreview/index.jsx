@@ -80,6 +80,24 @@ function HoverPreviewInner() {
     }
   };
 
+  const handleContentDoubleClick = async (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (item.type_ === 'file') {
+      // file open
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('open_item', { id: item.id });
+      } catch (error) {
+        console.error('open file failed:', error);
+      }
+    } else {
+      // copy
+      await handleCopy(item);
+    }
+  };
+
   const handlePanelMouseDown = (event) => {
     pointerStartRef.current = {
       x: event.clientX,
@@ -115,11 +133,19 @@ function HoverPreviewInner() {
   };
 
   const renderContent = () => {
+    const doubleClickHint = item.type_ === 'file'
+      ? t('item.doubleClickToOpen')
+      : t('item.doubleClickToCopy');
+
     switch (item.type_) {
       case 'image': {
         const thumb = getImageThumbnail(item.image_paths);
         return (
-          <div className="hover-preview-image">
+          <div
+            className="hover-preview-image"
+            onDoubleClick={handleContentDoubleClick}
+            title={doubleClickHint}
+          >
             {thumb && <img src={thumb} alt="" />}
             {item.ocr_text && (
               <div className="hover-preview-ocr">{item.ocr_text}</div>
@@ -130,7 +156,11 @@ function HoverPreviewInner() {
       case 'file': {
         const files = (item.content || '').split('\n').filter(Boolean);
         return (
-          <div className="hover-preview-files">
+          <div
+            className="hover-preview-files"
+            onDoubleClick={handleContentDoubleClick}
+            title={doubleClickHint}
+          >
             {files.slice(0, 10).map((f, i) => (
               <div key={i} className="hover-preview-file-item">{getFileName(f)}</div>
             ))}
@@ -139,9 +169,25 @@ function HoverPreviewInner() {
         );
       }
       case 'link':
-        return <div className="hover-preview-text">{item.content || ''}</div>;
+        return (
+          <div
+            className="hover-preview-text"
+            onDoubleClick={handleContentDoubleClick}
+            title={doubleClickHint}
+          >
+            {item.content || ''}
+          </div>
+        );
       default: {
-        return <div className="hover-preview-text">{item.content || ''}</div>;
+        return (
+          <div
+            className="hover-preview-text"
+            onDoubleClick={handleContentDoubleClick}
+            title={doubleClickHint}
+          >
+            {item.content || ''}
+          </div>
+        );
       }
     }
   };
