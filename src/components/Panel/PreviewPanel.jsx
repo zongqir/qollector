@@ -266,6 +266,13 @@ function PreviewPanel() {
             <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
           </button>
           <button
+            className={`preview-action-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
+            onClick={() => togglePin(item)}
+            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
+          >
+            <Pin size={16} />
+          </button>
+          <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
             onClick={handleDeleteClick}
             title={showDeleteConfirm ? t('item.confirmDelete') : t('item.delete')}
@@ -347,10 +354,6 @@ function PreviewPanel() {
           </>
         ) : (
           <>
-            <button className="preview-tool-btn" onClick={() => handleCopy(item)}>
-              <Copy size={14} />
-              <span>{t('item.copy')}</span>
-            </button>
             {item.has_raw_formats && item.content && (
               <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
                 <FileText size={14} />
@@ -363,13 +366,6 @@ function PreviewPanel() {
                 <span>{t('item.formatJsonCopy')}</span>
               </button>
             )}
-            <button
-              className={`preview-tool-btn ${item.is_favorite ? 'active' : ''}`}
-              onClick={() => toggleFavorite(item)}
-            >
-              <Star size={14} fill={item.is_favorite ? 'currentColor' : 'none'} />
-              <span>{item.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
-            </button>
             {shouldShowAIButton && (
               <button
                 className="preview-tool-btn"
@@ -420,10 +416,6 @@ function PreviewPanel() {
             <button className="preview-tool-btn" onClick={() => openShareModal(item)}>
               <Share2 size={14} />
               <span>{t('share.button')}</span>
-            </button>
-            <button className="preview-tool-btn danger" onClick={() => deleteItem(item)}>
-              <Trash2 size={14} />
-              <span>{t('item.delete')}</span>
             </button>
           </>
         )}

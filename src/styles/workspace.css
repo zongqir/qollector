@@ -969,6 +969,11 @@
   color: var(--color-warning);
 }
 
+/* Pin button - active state */
+.preview-action-btn.pin-btn.active {
+  color: var(--accent-color);
+}
+
 /* Delete button - danger state */
 .preview-action-btn.delete-btn:hover {
   background: var(--color-danger-bg);
