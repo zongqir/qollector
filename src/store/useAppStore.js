@@ -142,6 +142,7 @@ const useAppStore = create((set, get) => ({
   isAlwaysOnTop: false,
   isMiniMode: false,
   pinBeforeMini: false,
+  collectionPanelBeforeMini: null,
 
   // ========== 配置 ==========
   aiEnabled: false,
@@ -815,6 +816,7 @@ const useAppStore = create((set, get) => ({
   setIsAlwaysOnTop: (v) => set({ isAlwaysOnTop: v }),
   setIsMiniMode: (v) => set({ isMiniMode: v }),
   setPinBeforeMini: (v) => set({ pinBeforeMini: v }),
+  setCollectionPanelBeforeMini: (v) => set({ collectionPanelBeforeMini: v }),
   setIsLocked: (v) => set({ isLocked: v }),
   setThemeMode: (v) => set({ themeMode: v }),
   setEditNote: (v) => set({ editNote: v }),

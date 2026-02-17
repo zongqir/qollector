@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls } from '../../utils/formatters';
@@ -479,6 +479,7 @@ function PreviewPanel() {
             )}
             {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
               <button className="preview-tool-btn" onClick={handleStartEditContent}>
+                <Edit2 size={14} />
                 <span>{t('panel.editContent')}</span>
               </button>
             )}
