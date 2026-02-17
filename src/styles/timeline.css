@@ -272,14 +272,7 @@
 
 /* Collection Panel Timeline Button */
 .collection-btn.timeline-btn {
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
-  color: white;
-  border: none;
-}
-
-.collection-btn.timeline-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  /* Use same style as other collection buttons */
 }
 
 /* Dark mode adjustments */

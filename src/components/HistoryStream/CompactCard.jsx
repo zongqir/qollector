@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
 import {
@@ -12,8 +12,9 @@ import {
 } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
-import CodeBlock from '../CodeBlock/CodeBlock';
 import useAppStore from '../../store/useAppStore';
+
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 const TypeIcon = ({ type, hasCodeLanguage }) => {
   const size = 11;
@@ -106,7 +107,11 @@ function CompactCard({
       );
     }
     if (item.code_language && item.content) {
-      return <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />;
+      return (
+        <Suspense fallback={<div className="compact-card-text">{getContentPreview(item.content)}</div>}>
+          <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />
+        </Suspense>
+      );
     }
     return (
       <div className="compact-card-text">

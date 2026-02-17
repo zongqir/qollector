@@ -1,4 +1,4 @@
-@import 'highlight.js/styles/vs2015.css';
+/* highlight.js CSS is loaded dynamically in CodeBlock.jsx */
 
 .code-block {
   position: relative;

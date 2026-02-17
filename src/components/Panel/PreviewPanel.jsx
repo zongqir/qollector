@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
@@ -10,8 +10,9 @@ import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
-import CodeBlock from '../CodeBlock/CodeBlock';
 import FilePreviewItem from './FilePreview';
+
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 function PreviewPanel() {
   const { t, i18n } = useTranslation();
@@ -259,7 +260,9 @@ function PreviewPanel() {
     if (item.code_language && item.content) {
       return (
         <div>
-          <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
+          <Suspense fallback={<div className="preview-text-content">{item.content}</div>}>
+            <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
+          </Suspense>
         </div>
       );
     }
