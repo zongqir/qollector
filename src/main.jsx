@@ -12,3 +12,14 @@ const app = <App />;
 ReactDOM.createRoot(document.getElementById('root')).render(
   import.meta.env.DEV ? app : <React.StrictMode>{app}</React.StrictMode>
 );
+
+// Remove splash screen after React renders
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+      splash.classList.add('fade-out');
+      setTimeout(() => splash.remove(), 300);
+    }
+  });
+});

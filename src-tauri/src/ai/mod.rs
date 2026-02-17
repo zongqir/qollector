@@ -436,9 +436,12 @@ impl AIService {
         items: &[crate::core::models::ClipboardItem],
         language: &str,
     ) -> Result<String, AIError> {
+        println!("[Timeline AI] Starting summary generation for {} items", items.len());
+
         let api_key = self.config.get_current_api_key();
 
         if api_key.is_empty() {
+            println!("[Timeline AI] Error: API key is empty");
             return Err(AIError::ConfigError("API key is empty".to_string()));
         }
 
@@ -451,8 +454,11 @@ impl AIService {
                 .unwrap_or(0);
 
             let content = item.content.as_deref().unwrap_or("");
-            let content_preview = if content.len() > 100 {
-                format!("{}...", &content[..100])
+
+            // Safely truncate content at char boundary
+            let content_preview = if content.chars().count() > 100 {
+                let truncated: String = content.chars().take(100).collect();
+                format!("{}...", truncated)
             } else {
                 content.to_string()
             };
@@ -461,6 +467,7 @@ impl AIService {
         }
 
         if timeline_data.is_empty() {
+            println!("[Timeline AI] No data to summarize");
             return Ok(match language {
                 "en-US" | "en" => "No clipboard activity for this period.".to_string(),
                 _ => "这段时间没有剪贴板活动。".to_string(),
@@ -470,6 +477,8 @@ impl AIService {
         // Get timeline prompt
         let system_prompt = get_timeline_prompt(language);
         let prompt = format!("{}\n\n{}", system_prompt, timeline_data);
+
+        println!("[Timeline AI] Prompt length: {} chars", prompt.len());
 
         let model = self.config.get_current_model();
         let request = ChatRequest {
@@ -487,6 +496,8 @@ impl AIService {
             self.config.current_provider.base_url()
         );
 
+        println!("[Timeline AI] Sending request to: {}", url);
+
         let response = self
             .client
             .post(&url)
@@ -497,18 +508,26 @@ impl AIService {
             .await?;
 
         let status = response.status();
+        println!("[Timeline AI] Response status: {}", status);
+
         if !status.is_success() {
             let error_text = response.text().await?;
+            println!("[Timeline AI] Error response: {}", error_text);
             return Err(AIError::ApiError(error_text));
         }
 
         let response_text = response.text().await?;
+        println!("[Timeline AI] Response received, length: {} chars", response_text.len());
+
         let chat_response: ChatResponse = serde_json::from_str(&response_text)
             .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;
 
         if let Some(choice) = chat_response.choices.first() {
-            Ok(choice.message.content.trim().to_string())
+            let summary = choice.message.content.trim().to_string();
+            println!("[Timeline AI] Summary generated successfully");
+            Ok(summary)
         } else {
+            println!("[Timeline AI] No choices in response");
             Ok(String::new())
         }
     }

@@ -7,7 +7,7 @@ import { initOcrService } from '../services/ocrService';
 import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
 import { FREE_PROVIDERS } from '../share/providers';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 30;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -123,6 +123,7 @@ const useAppStore = create((set, get) => ({
   timelineSummary: null,
   timelineLoading: false,
   timelineError: null,
+  timelineSummaryCache: {}, // { 'today': { summary: '...', timestamp: 123456 }, 'yesterday': { summary: '...', timestamp: 123456 } }
 
   // ========== 搜索/筛选 ==========
   searchQuery: '',
@@ -231,9 +232,20 @@ const useAppStore = create((set, get) => ({
       set({ timelineItems: items, timelineLoading: false });
 
       // Auto-generate AI summary if AI is enabled
-      const { aiEnabled } = get();
+      const { aiEnabled, timelineDate, timelineSummaryCache } = get();
       if (aiEnabled && items.length > 0) {
-        get().generateTimelineSummary(items);
+        // Check cache
+        const cached = timelineSummaryCache[date];
+        const now = Date.now();
+        const CACHE_DURATION = date === 'yesterday' ? Infinity : 30 * 60 * 1000; // yesterday: forever, today: 30 minutes
+
+        if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+          console.log('[Timeline] Using cached summary for', date);
+          set({ timelineSummary: cached.summary });
+        } else {
+          console.log('[Timeline] Cache miss or expired, generating new summary for', date);
+          get().generateTimelineSummary(items, date);
+        }
       }
     } catch (error) {
       console.error('load timeline data failed:', error);
@@ -241,11 +253,22 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  generateTimelineSummary: async (items) => {
+  generateTimelineSummary: async (items, date) => {
     set({ timelineSummary: null });
     try {
+      console.log('[Timeline] Generating AI summary for', items.length, 'items');
       const summary = await invoke('generate_timeline_summary', { items });
-      set({ timelineSummary: summary });
+      console.log('[Timeline] AI summary generated:', summary);
+
+      // Update cache
+      const now = Date.now();
+      set((state) => ({
+        timelineSummary: summary,
+        timelineSummaryCache: {
+          ...state.timelineSummaryCache,
+          [date]: { summary, timestamp: now }
+        }
+      }));
     } catch (error) {
       console.error('generate timeline summary failed:', error);
       set({ timelineSummary: null });
@@ -432,6 +455,11 @@ const useAppStore = create((set, get) => ({
       setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1000);
 
       if (!get().autoPasteOnDoubleClick) {
+        return;
+      }
+
+      // Only auto-paste for text/html/link types, skip image/file
+      if (item.type_ === 'image' || item.type_ === 'file') {
         return;
       }
 

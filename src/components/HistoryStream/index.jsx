@@ -53,6 +53,7 @@ function HistoryStream({ style }) {
   const lastFilterProbeLogAtRef = useRef(0);
 
   const items = useAppStore(s => s.items);
+  const loading = useAppStore(s => s.loading);
   const searchQuery = useAppStore(s => s.searchQuery);
   const debouncedSearchQuery = useAppStore(s => s.debouncedSearchQuery);
   const selectedType = useAppStore(s => s.selectedType);
@@ -87,6 +88,7 @@ function HistoryStream({ style }) {
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
+  const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
   const togglePin = useAppStore(s => s.togglePin);
@@ -325,8 +327,13 @@ function HistoryStream({ style }) {
       clickTimerRef.current = null;
     }
     clearHoverPreview();
-    handleCopyAndAutoPaste(item);
-  }, [handleCopyAndAutoPaste, clearHoverPreview]);
+    // Image/file: copy only, no auto-paste
+    if (item.type_ === 'image' || item.type_ === 'file') {
+      handleCopy(item);
+    } else {
+      handleCopyAndAutoPaste(item);
+    }
+  }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);
@@ -413,7 +420,12 @@ function HistoryStream({ style }) {
 
       if (e.key === 'Enter' && focusedIndex >= 0 && focusedIndex < filteredItems.length) {
         e.preventDefault();
-        handleCopyAndAutoPaste(filteredItems[focusedIndex]);
+        const focusedItem = filteredItems[focusedIndex];
+        if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
+          handleCopy(focusedItem);
+        } else {
+          handleCopyAndAutoPaste(focusedItem);
+        }
         return;
       }
 
@@ -528,7 +540,12 @@ function HistoryStream({ style }) {
       />
 
       <div className="history-stream-content">
-        {filteredItems.length === 0 ? (
+        {loading ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">{t('app.loading')}</div>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="empty">
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
