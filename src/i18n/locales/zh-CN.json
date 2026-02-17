@@ -434,6 +434,16 @@
     "saveContent": "保存",
     "cancelEdit": "取消"
   },
+  "filePreview": {
+    "loading": "加载预览...",
+    "loadFailed": "无法加载预览",
+    "textTruncated": "仅显示前 10KB 内容",
+    "fileTooLarge": "文件过大，无法预览",
+    "pdfFirstPage": "PDF 第一页预览",
+    "pdfLoadFailed": "PDF 加载失败",
+    "fileSize": "大小",
+    "fileNotFound": "文件不存在"
+  },
   "widget": {
     "title": "快捷投放",
     "dropHint": "拖放到这里"

@@ -471,6 +471,7 @@ fn main() {
             generate_qr,
             share_via_s3,
             test_share_s3_connection,
+            preview_file,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

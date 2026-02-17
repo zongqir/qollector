@@ -1,0 +1,117 @@
+.file-preview-item {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-secondary, rgba(255,255,255,0.03));
+  border: 1px solid var(--border-light, rgba(255,255,255,0.06));
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.06));
+}
+
+.file-preview-header .file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-header .file-size {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.file-preview-body {
+  padding: 8px;
+}
+
+/* Loading / Error states */
+.file-preview-loading,
+.file-preview-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+/* Image preview */
+.file-preview-body img {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+/* Text preview */
+.file-preview-text {
+  max-height: 200px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-primary);
+  padding: 4px;
+}
+
+.file-preview-text-truncated {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 4px 0 0;
+  opacity: 0.7;
+}
+
+/* Audio / Video */
+.file-preview-body audio {
+  width: 100%;
+  height: 36px;
+}
+
+.file-preview-body video {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 4px;
+}
+
+/* PDF canvas */
+.file-preview-pdf canvas {
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+  border-radius: 4px;
+}
+
+.file-preview-pdf-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 4px 0 0;
+  opacity: 0.7;
+}
+
+/* Binary fallback */
+.file-preview-binary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}

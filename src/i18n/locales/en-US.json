@@ -434,6 +434,16 @@
     "saveContent": "Save",
     "cancelEdit": "Cancel"
   },
+  "filePreview": {
+    "loading": "Loading preview...",
+    "loadFailed": "Cannot load preview",
+    "textTruncated": "Showing first 10KB only",
+    "fileTooLarge": "File too large to preview",
+    "pdfFirstPage": "PDF first page preview",
+    "pdfLoadFailed": "PDF load failed",
+    "fileSize": "Size",
+    "fileNotFound": "File not found"
+  },
   "widget": {
     "title": "Quick Drop",
     "dropHint": "Drop here"

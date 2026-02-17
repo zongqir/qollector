@@ -11,6 +11,7 @@ import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
 import CodeBlock from '../CodeBlock/CodeBlock';
+import FilePreviewItem from './FilePreview';
 
 function PreviewPanel() {
   const { t, i18n } = useTranslation();
@@ -283,6 +284,7 @@ function PreviewPanel() {
       );
     }
     if (item.type_ === 'file') {
+      const files = getFileList(item.content);
       return (
         <div
           className="preview-file-content"
@@ -291,11 +293,8 @@ function PreviewPanel() {
           tabIndex={0}
           title={t('item.doubleClickToOpen')}
         >
-          {getFileList(item.content).map((path, idx) => (
-            <div key={idx} className="file-item">
-              <FileText size={16} />
-              <span>{getFileName(path)}</span>
-            </div>
+          {files.map((path, idx) => (
+            <FilePreviewItem key={idx} filePath={path.trim()} />
           ))}
         </div>
       );

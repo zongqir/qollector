@@ -1,5 +1,6 @@
 ﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
+use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::{Manager, State};
@@ -377,6 +378,96 @@ fn reveal_path_in_explorer(path: &Path) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[derive(Serialize)]
+pub struct FilePreviewData {
+    pub preview_type: String,
+    pub file_path: String,
+    pub file_name: String,
+    pub file_size: u64,
+    pub text_content: Option<String>,
+    pub text_truncated: bool,
+}
+
+const IMAGE_EXTS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico",
+];
+const TEXT_EXTS: &[&str] = &[
+    "txt", "md", "json", "csv", "log", "xml", "yaml", "yml", "toml", "ini", "conf",
+    "js", "ts", "jsx", "tsx", "py", "rs", "go", "java", "c", "cpp", "h", "hpp",
+    "sh", "bat", "ps1", "html", "css", "sql",
+];
+const AUDIO_EXTS: &[&str] = &["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"];
+const VIDEO_EXTS: &[&str] = &["mp4", "webm", "mkv", "avi", "mov"];
+const PDF_EXTS: &[&str] = &["pdf"];
+
+fn classify_extension(ext: &str) -> &'static str {
+    let lower = ext.to_ascii_lowercase();
+    let lower = lower.as_str();
+    if IMAGE_EXTS.contains(&lower) {
+        "image"
+    } else if TEXT_EXTS.contains(&lower) {
+        "text"
+    } else if AUDIO_EXTS.contains(&lower) {
+        "audio"
+    } else if VIDEO_EXTS.contains(&lower) {
+        "video"
+    } else if PDF_EXTS.contains(&lower) {
+        "pdf"
+    } else {
+        "binary"
+    }
+}
+
+const MAX_TEXT_READ: u64 = 5 * 1024 * 1024; // 5MB
+const TEXT_PREVIEW_BYTES: usize = 10240; // 10KB
+
+#[tauri::command]
+pub async fn preview_file(file_path: String) -> Result<FilePreviewData, String> {
+    let path = Path::new(&file_path);
+
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    let metadata = std::fs::metadata(path).map_err(|e| format!("Cannot read file: {}", e))?;
+    let file_size = metadata.len();
+
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
+    let preview_type = classify_extension(ext).to_string();
+
+    let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ {
+        match std::fs::read(path) {
+            Ok(bytes) => {
+                let truncated = bytes.len() > TEXT_PREVIEW_BYTES;
+                let slice = if truncated {
+                    &bytes[..TEXT_PREVIEW_BYTES]
+                } else {
+                    &bytes[..]
+                };
+                let text = String::from_utf8_lossy(slice).to_string();
+                (Some(text), truncated)
+            }
+            Err(_) => (None, false),
+        }
+    } else {
+        (None, false)
+    };
+
+    Ok(FilePreviewData {
+        preview_type,
+        file_path: file_path.clone(),
+        file_name,
+        file_size,
+        text_content,
+        text_truncated,
+    })
 }
 
 fn open_with_system(target: &str) -> Result<(), String> {
