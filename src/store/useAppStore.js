@@ -691,30 +691,22 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  copySelectedItemsMerged: async () => {
+  copySelectedItemsMerged: async (sourceItems = null) => {
     const { selectedItemIds, items } = get();
     if (selectedItemIds.length === 0) return;
     try {
-      const idSet = new Set(selectedItemIds);
-      const selectedItems = items.filter(i => idSet.has(i.id));
-      const merged = selectedItems.map(i => i.content || '').filter(Boolean).join('\n');
+      const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
+      const preferredById = new Map(preferredItems.map(item => [item.id, item]));
+      const fallbackById = new Map(items.map(item => [item.id, item]));
+      const selectedItems = selectedItemIds
+        .map(id => preferredById.get(id) || fallbackById.get(id))
+        .filter(Boolean);
+      const merged = selectedItems
+        .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+        .filter(Boolean)
+        .join('\n');
       if (!merged) return;
-      const tempItem = {
-        id: 'temp-merge',
-        type_: 'text',
-        content: merged,
-        is_pinned: false,
-        is_favorite: false,
-        is_deleted: false,
-        tags: '[]',
-        metadata: '{}',
-        image_paths: null,
-        ocr_text: null,
-        user_note: null,
-        created_at: Math.floor(Date.now() / 1000),
-        updated_at: Math.floor(Date.now() / 1000),
-      };
-      await copyItemToClipboard(tempItem);
+      await invoke('copy_plain_text', { text: merged });
       set({ copiedItemId: 'merge-success', selectedItemIds: [] });
       setTimeout(() => set({ copiedItemId: null }), 1000);
     } catch (error) {
@@ -988,25 +980,13 @@ const useAppStore = create((set, get) => ({
     try {
       const { items } = get();
       const pinnedItems = items.filter(i => i.is_pinned);
-      const merged = pinnedItems.map(i => i.content || '').join('\n\n');
+      const merged = pinnedItems
+        .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+        .filter(Boolean)
+        .join('\n\n');
       if (merged) {
         // 构造临时 item 用于复制
-        const tempItem = {
-          id: 'temp-merge',
-          type_: 'text',
-          content: merged,
-          is_pinned: false,
-          is_favorite: false,
-          is_deleted: false,
-          tags: '[]',
-          metadata: '{}',
-          image_paths: null,
-          ocr_text: null,
-          user_note: null,
-          created_at: Math.floor(Date.now() / 1000),
-          updated_at: Math.floor(Date.now() / 1000),
-        };
-        await copyItemToClipboard(tempItem);
+        await invoke('copy_plain_text', { text: merged });
         set({ copiedItemId: 'merge-success' });
         setTimeout(() => set({ copiedItemId: null }), 1000);
       }

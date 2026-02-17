@@ -107,6 +107,7 @@ function HistoryStream({ style }) {
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+  const previewItemId = previewItem?.id;
 
   const virtuosoRef = useRef(null);
 
@@ -288,6 +289,16 @@ function HistoryStream({ style }) {
   const handleCardClick = useCallback((item, e) => {
     e.stopPropagation();
     if (e.ctrlKey || e.metaKey) {
+      const shouldIncludePreviewSelection =
+        selectedItemIds.length === 0 &&
+        panelMode === 'preview' &&
+        previewItemId &&
+        previewItemId !== item.id &&
+        filteredItems.some(candidate => candidate.id === previewItemId);
+
+      if (shouldIncludePreviewSelection) {
+        toggleSelectItem(previewItemId);
+      }
       toggleSelectItem(item.id);
       return;
     }
@@ -316,7 +327,7 @@ function HistoryStream({ style }) {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, panelMode, previewItemId, filteredItems, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -435,7 +446,7 @@ function HistoryStream({ style }) {
         deleteSelectedItems();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         e.preventDefault();
-        copySelectedItemsMerged();
+        copySelectedItemsMerged(filteredItems);
       } else if (e.key === 'Escape') {
         clearSelection();
         setFocusedIndex(-1);
@@ -569,7 +580,7 @@ function HistoryStream({ style }) {
             {t('multiSelect.selected', { count: selectedItemIds.length })}
           </span>
           <div className="multi-select-actions">
-            <button className="multi-select-btn copy" onClick={copySelectedItemsMerged}>
+            <button className="multi-select-btn copy" onClick={() => copySelectedItemsMerged(filteredItems)}>
               <Copy size={14} />
               <span>{t('multiSelect.mergeCopy')}</span>
             </button>
