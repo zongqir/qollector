@@ -58,6 +58,46 @@
   overflow: hidden;
 }
 
+/* Loading state */
+.loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+/* Empty state */
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 40px;
+}
+
 .history-stream-virtuoso {
   height: 100%;
 }
@@ -105,6 +145,11 @@
 .compact-card.multi-selected {
   background: var(--accent-light);
   border-color: var(--accent-color);
+}
+
+.compact-card.keyboard-focused {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }
 
 /* ========== multi-select bar ========== */
@@ -408,7 +453,7 @@
   pointer-events: auto;
 }
 
-/* ========== 搜集箱 ========== */
+/* ========== 收集箱 ========== */
 .collection-close-inline-btn {
   display: flex;
   align-items: center;
@@ -593,7 +638,7 @@
   cursor: not-allowed;
 }
 
-/* 搜集箱空状态 */
+/* 收集箱空状态 */
 .collection-empty {
   flex: 1;
   display: flex;
@@ -623,7 +668,7 @@
   line-height: 1.5;
 }
 
-/* 搜集箱卡片列表 */
+/* 收集箱卡片列表 */
 .collection-cards {
   flex: 1;
   overflow-y: auto;
@@ -854,7 +899,7 @@
   gap: 4px;
 }
 
-/* 搜集箱底部操作栏 */
+/* 收集箱底部操作栏 */
 .collection-bottom-bar {
   display: flex;
   gap: 8px;

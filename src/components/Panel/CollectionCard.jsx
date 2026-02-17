@@ -1,7 +1,6 @@
-import { memo } from 'react';
+import { memo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, Folder, ExternalLink } from 'lucide-react';
-import { FileIcon, defaultStyles } from 'react-file-icon';
+import { X, Check, Folder, ExternalLink, FileText } from 'lucide-react';
 import {
   getContentPreview,
   getFileList,
@@ -11,6 +10,16 @@ import {
 } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
+
+// Lazy load FileIcon to reduce initial bundle size
+const FileIconLazy = lazy(() =>
+  import('react-file-icon').then(module => ({
+    default: ({ extension, ...props }) => {
+      const { FileIcon, defaultStyles } = module;
+      return <FileIcon extension={extension} {...defaultStyles[extension]} {...props} />;
+    }
+  }))
+);
 
 const getExt = (filename) => {
   const parts = filename.split('.');
@@ -86,15 +95,16 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpe
             const name = getFileName(path);
             const folder = isFolder(path);
             const ext = getExt(name);
-            const styleProps = defaultStyles[ext] || {};
             return (
               <div key={idx} className="file-item">
                 {folder ? (
                   <Folder size={isSingle ? 32 : 20} color="#f5c542" fill="#f5c542" className="file-icon" />
                 ) : (
-                  <div className="file-icon" style={{ width: isSingle ? 32 : 20 }}>
-                    <FileIcon extension={ext} {...styleProps} />
-                  </div>
+                  <Suspense fallback={<FileText size={isSingle ? 32 : 20} className="file-icon" />}>
+                    <div className="file-icon" style={{ width: isSingle ? 32 : 20 }}>
+                      <FileIconLazy extension={ext} />
+                    </div>
+                  </Suspense>
                 )}
                 <span>{name}</span>
               </div>

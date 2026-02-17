@@ -53,6 +53,7 @@ function HistoryStream({ style }) {
   const lastFilterProbeLogAtRef = useRef(0);
 
   const items = useAppStore(s => s.items);
+  const loading = useAppStore(s => s.loading);
   const searchQuery = useAppStore(s => s.searchQuery);
   const debouncedSearchQuery = useAppStore(s => s.debouncedSearchQuery);
   const selectedType = useAppStore(s => s.selectedType);
@@ -87,6 +88,7 @@ function HistoryStream({ style }) {
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
+  const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
   const togglePin = useAppStore(s => s.togglePin);
@@ -103,6 +105,10 @@ function HistoryStream({ style }) {
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
+  const focusedIndex = useAppStore(s => s.focusedIndex);
+  const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+
+  const virtuosoRef = useRef(null);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -254,6 +260,9 @@ function HistoryStream({ style }) {
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
+  // reset keyboard focus when list changes
+  useEffect(() => { setFocusedIndex(-1); }, [filteredItems, setFocusedIndex]);
+
   useEffect(() => {
     const probe = filterProbeRef.current;
     if (!probe) return;
@@ -318,8 +327,13 @@ function HistoryStream({ style }) {
       clickTimerRef.current = null;
     }
     clearHoverPreview();
-    handleCopyAndAutoPaste(item);
-  }, [handleCopyAndAutoPaste, clearHoverPreview]);
+    // Image/file: copy only, no auto-paste
+    if (item.type_ === 'image' || item.type_ === 'file') {
+      handleCopy(item);
+    } else {
+      handleCopyAndAutoPaste(item);
+    }
+  }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     const paths = getExternalFilePaths(item);
@@ -375,7 +389,47 @@ function HistoryStream({ style }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (selectedItemIds.length === 0) return;
+      // skip when focus is inside an input / textarea / editable
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const total = filteredItems.length;
+        if (total === 0) return;
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const next = focusedIndex < 0
+          ? (dir === 1 ? 0 : total - 1)
+          : Math.max(0, Math.min(total - 1, focusedIndex + dir));
+        setFocusedIndex(next);
+        virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
+        const nextItem = filteredItems[next];
+        if (nextItem) {
+          if (collectionPanelEnabled) {
+            setPanelMode('preview', nextItem);
+          } else {
+            const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
+            if (el) {
+              const rect = el.getBoundingClientRect();
+              setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+            }
+          }
+        }
+        return;
+      }
+
+      if (e.key === 'Enter' && focusedIndex >= 0 && focusedIndex < filteredItems.length) {
+        e.preventDefault();
+        const focusedItem = filteredItems[focusedIndex];
+        if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
+          handleCopy(focusedItem);
+        } else {
+          handleCopyAndAutoPaste(focusedItem);
+        }
+        return;
+      }
+
+      if (selectedItemIds.length === 0 && focusedIndex < 0) return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSelectedItems();
@@ -384,11 +438,12 @@ function HistoryStream({ style }) {
         copySelectedItemsMerged();
       } else if (e.key === 'Escape') {
         clearSelection();
+        setFocusedIndex(-1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection]);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, collectionPanelEnabled]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -403,6 +458,7 @@ function HistoryStream({ style }) {
     if (!item) return null;
     const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
     const isMultiSelected = selectedItemIds.includes(item.id);
+    const isFocused = focusedIndex === index;
 
     return (
       <div
@@ -416,6 +472,7 @@ function HistoryStream({ style }) {
           item={item}
           isSelected={isSelected}
           isMultiSelected={isMultiSelected}
+          isFocused={isFocused}
           isCopied={copiedItemId === item.id}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
@@ -433,6 +490,7 @@ function HistoryStream({ style }) {
     previewItem?.id,
     copiedItemId,
     selectedItemIds,
+    focusedIndex,
     rowGap,
     handleCardClick,
     handleCardDoubleClick,
@@ -482,12 +540,18 @@ function HistoryStream({ style }) {
       />
 
       <div className="history-stream-content">
-        {filteredItems.length === 0 ? (
+        {loading ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">{t('app.loading')}</div>
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="empty">
             {searchQuery ? t('search.noResults') : t('app.noItems')}
           </div>
         ) : (
           <Virtuoso
+            ref={virtuosoRef}
             className="history-stream-virtuoso"
             components={{ Scroller: VirtuosoScroller }}
             totalCount={filteredItems.length}

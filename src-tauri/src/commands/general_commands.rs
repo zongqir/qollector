@@ -3,7 +3,8 @@ use crate::config::GeneralConfig;
 use crate::shortcuts::{apply_shortcut_config, ShortcutBindingState};
 use crate::startup_metrics::{StartupMetricsSnapshot, StartupMetricsState};
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt;
 
 #[tauri::command]
 pub async fn get_general_config(ai_state: State<'_, AIState>) -> Result<GeneralConfig, String> {
@@ -41,6 +42,31 @@ pub async fn update_general_config(
     // Update tray menu language if it changed
     if config.language != previous_config.language {
         crate::tray::update_tray_language(&app, &config.language);
+    }
+
+    // Update autostart if it changed
+    if config.autostart_enabled != previous_config.autostart_enabled {
+        if let Err(e) = update_autostart_state(&app, config.autostart_enabled) {
+            eprintln!("[Autostart] Failed to update autostart state: {}", e);
+        }
+    }
+
+    Ok(())
+}
+
+fn update_autostart_state(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    let autostart_manager = app.autolaunch();
+
+    if enabled {
+        if !autostart_manager.is_enabled().map_err(|e: tauri_plugin_autostart::Error| e.to_string())? {
+            autostart_manager.enable().map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
+            println!("[Autostart] Enabled");
+        }
+    } else {
+        if autostart_manager.is_enabled().map_err(|e: tauri_plugin_autostart::Error| e.to_string())? {
+            autostart_manager.disable().map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
+            println!("[Autostart] Disabled");
+        }
     }
 
     Ok(())

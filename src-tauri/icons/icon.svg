@@ -39,6 +39,6 @@
     </g>
 
     <!-- Accent dot - represents "active" state -->
-    <circle cx="340" cy="160" r="16" fill="#10b981"/>
+    <circle cx="340" cy="160" r="16" fill="#60a5fa"/>
   </g>
 </svg>

@@ -1,6 +1,6 @@
-import { memo } from 'react';
+import { memo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Pin, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
+import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
 import {
   formatDate,
   getTimelineColor,
@@ -12,8 +12,9 @@ import {
 } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
-import CodeBlock from '../CodeBlock/CodeBlock';
 import useAppStore from '../../store/useAppStore';
+
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 const TypeIcon = ({ type, hasCodeLanguage }) => {
   const size = 11;
@@ -30,6 +31,7 @@ function CompactCard({
   item,
   isSelected,
   isMultiSelected,
+  isFocused,
   isCopied,
   onDragStart,
   onStartExternalDrag,
@@ -52,6 +54,7 @@ function CompactCard({
     item.is_favorite && 'favorite',
     isSelected && 'selected',
     isMultiSelected && 'multi-selected',
+    isFocused && 'keyboard-focused',
     isCopied && 'copied',
   ].filter(Boolean).join(' ');
 
@@ -104,7 +107,11 @@ function CompactCard({
       );
     }
     if (item.code_language && item.content) {
-      return <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />;
+      return (
+        <Suspense fallback={<div className="compact-card-text">{getContentPreview(item.content)}</div>}>
+          <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />
+        </Suspense>
+      );
     }
     return (
       <div className="compact-card-text">
@@ -167,7 +174,7 @@ function CompactCard({
             onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
             title={t('preview.pin')}
           >
-            <Pin size={10} />
+            <Inbox size={10} />
           </button>
           <button
             className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}

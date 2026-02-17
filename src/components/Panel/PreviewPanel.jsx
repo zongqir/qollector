@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
+  ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
   ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
@@ -10,8 +10,9 @@ import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
-import CodeBlock from '../CodeBlock/CodeBlock';
 import FilePreviewItem from './FilePreview';
+
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 function PreviewPanel() {
   const { t, i18n } = useTranslation();
@@ -131,7 +132,7 @@ function PreviewPanel() {
     };
   }, [item.id, isEditingContent]);
 
-  // 收集并切回搜集箱
+  // 收集并切回收集箱
   const handlePinAndBack = async () => {
     if (!item.is_pinned) {
       await togglePin(item);
@@ -259,7 +260,9 @@ function PreviewPanel() {
     if (item.code_language && item.content) {
       return (
         <div>
-          <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
+          <Suspense fallback={<div className="preview-text-content">{item.content}</div>}>
+            <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
+          </Suspense>
         </div>
       );
     }
@@ -339,7 +342,7 @@ function PreviewPanel() {
             onClick={() => togglePin(item)}
             title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
           >
-            <Pin size={16} />
+            <Inbox size={16} />
           </button>
           <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}

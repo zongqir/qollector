@@ -553,3 +553,15 @@ fn open_with_system(target: &str) -> Result<(), String> {
 pub async fn open_file_path(path: String) -> Result<(), String> {
     open_with_system(&path)
 }
+
+#[tauri::command]
+pub async fn get_items_by_date_range(
+    manager: State<'_, Arc<ClipboardManager>>,
+    start_timestamp: i64,
+    end_timestamp: i64,
+) -> Result<Vec<ClipboardItem>, String> {
+    manager
+        .get_items_by_date_range(start_timestamp, end_timestamp)
+        .await
+        .map_err(|e| e.to_string())
+}

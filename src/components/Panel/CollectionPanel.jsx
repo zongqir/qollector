@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose } from 'lucide-react';
+import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose, Clock } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -66,6 +66,7 @@ function CollectionPanel() {
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
+  const handleCopy = useAppStore(s => s.handleCopy);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
 
@@ -140,8 +141,12 @@ function CollectionPanel() {
   }, [setPanelMode]);
 
   const handleCardDoubleClick = useCallback((item) => {
-    handleCopyAndAutoPaste(item);
-  }, [handleCopyAndAutoPaste]);
+    if (item.type_ === 'image' || item.type_ === 'file') {
+      handleCopy(item);
+    } else {
+      handleCopyAndAutoPaste(item);
+    }
+  }, [handleCopyAndAutoPaste, handleCopy]);
 
   const quickNoteSection = (
     <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
@@ -245,9 +250,9 @@ function CollectionPanel() {
         </SortableContext>
       </DndContext>
       <div className="collection-bottom-bar">
-        <button className="collection-btn merge-btn" onClick={mergeCopyPinned} title={t('collection.mergeCopy')}>
-          <Copy size={14} />
-          <span>{t('collection.mergeCopy')}</span>
+        <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
+          <Clock size={14} />
+          <span>{t('collection.timeTravel')}</span>
         </button>
         <button className="collection-btn clear-btn" onClick={clearAllPinned} title={t('collection.clearAll')}>
           <Trash2 size={14} />

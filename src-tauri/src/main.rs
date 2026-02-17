@@ -32,6 +32,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
 use tauri::Manager;
+use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
 
 struct StartupMeter {
@@ -408,6 +409,22 @@ fn main() {
             tray::setup_tray(&app_handle_for_shortcuts, Some(&startup_general_config.language))?;
             setup_meter.mark("setup_tray");
 
+            // Sync autostart state with system
+            let app_for_autostart = app_handle_for_shortcuts.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Some(ai_state) = app_for_autostart.try_state::<AIState>() {
+                    if let Ok(Some(mut config)) = ai_state.config_repo.load_general_config().await {
+                        if let Ok(is_enabled) = app_for_autostart.autolaunch().is_enabled() {
+                            if config.autostart_enabled != is_enabled {
+                                println!("[Autostart] Syncing state: DB={}, System={}", config.autostart_enabled, is_enabled);
+                                config.autostart_enabled = is_enabled;
+                                let _ = ai_state.config_repo.save_general_config(&config).await;
+                            }
+                        }
+                    }
+                }
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -452,6 +469,8 @@ fn main() {
             reveal_in_folder,
             save_image_as,
             search_items,
+            get_items_by_date_range,
+            generate_timeline_summary,
             get_mcp_config,
             get_mcp_port,
             update_mcp_config,

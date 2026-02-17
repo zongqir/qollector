@@ -59,6 +59,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     auto_cleanup_enabled: true,
     cleanup_max_items: 50000,
     cleanup_max_age_days: 90,
+    autostart_enabled: false,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -1049,6 +1050,29 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         await invoke('update_mcp_config', { config: updated });
                       } catch (error) {
                         console.error('保存 MCP 配置失败:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.autostart')}</span>
+                  <span className="toggle-desc">{t('settings.general.autostartHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.autostart_enabled || false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      const updated = { ...generalConfig, autostart_enabled: checked };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('save autostart config failed:', error);
                       }
                     }}
                   />

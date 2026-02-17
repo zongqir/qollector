@@ -823,7 +823,7 @@ impl ClipboardManager {
     pub async fn run_cleanup(
         repo: Arc<TokioMutex<ClipboardRepository>>,
         config_repo: Arc<ConfigRepository>,
-        image_dir: PathBuf,
+        _image_dir: PathBuf,
         last_cleanup_at: Arc<AtomicI64>,
     ) -> usize {
         let now = chrono::Utc::now().timestamp();
@@ -889,6 +889,15 @@ impl ClipboardManager {
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.get_recent_paged(limit, offset).await
+    }
+
+    pub async fn get_items_by_date_range(
+        &self,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_items_by_date_range(start, end).await
     }
 
     pub async fn copy_to_clipboard(&self, item: &ClipboardItem) -> Result<(), ClipboardError> {

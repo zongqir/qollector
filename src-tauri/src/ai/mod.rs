@@ -2,9 +2,11 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use chrono::Timelike;
 
-// 系统提示词配置（打包进 EXE）
+// System prompts configuration (embedded in EXE)
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
+const TIMELINE_PROMPTS_JSON: &str = include_str!("../../prompts/timeline_summary.json");
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -19,17 +21,30 @@ struct PromptConfig {
     system_prompt: String,
 }
 
-// 懒加载系统提示词
+// Lazy load system prompts
 static SYSTEM_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
     serde_json::from_str(SYSTEM_PROMPTS_JSON).expect("Failed to parse system prompts JSON")
 });
 
-/// 获取系统提示词（根据语言）
+static TIMELINE_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
+    serde_json::from_str(TIMELINE_PROMPTS_JSON).expect("Failed to parse timeline prompts JSON")
+});
+
+/// Get system prompt (by language)
 pub fn get_system_prompt(language: &str) -> &'static str {
     match language {
         "zh-CN" | "zh" => &SYSTEM_PROMPTS.zh_cn.system_prompt,
         "en-US" | "en" => &SYSTEM_PROMPTS.en_us.system_prompt,
-        _ => &SYSTEM_PROMPTS.zh_cn.system_prompt, // 默认中文
+        _ => &SYSTEM_PROMPTS.zh_cn.system_prompt, // Default to Chinese
+    }
+}
+
+/// Get timeline summary prompt (by language)
+pub fn get_timeline_prompt(language: &str) -> &'static str {
+    match language {
+        "zh-CN" | "zh" => &TIMELINE_PROMPTS.zh_cn.system_prompt,
+        "en-US" | "en" => &TIMELINE_PROMPTS.en_us.system_prompt,
+        _ => &TIMELINE_PROMPTS.zh_cn.system_prompt, // Default to Chinese
     }
 }
 
@@ -413,6 +428,107 @@ impl AIService {
             Ok((tags, code_language))
         } else {
             Ok((Vec::new(), None))
+        }
+    }
+
+    pub async fn generate_timeline_summary(
+        &self,
+        items: &[crate::core::models::ClipboardItem],
+        language: &str,
+    ) -> Result<String, AIError> {
+        println!("[Timeline AI] Starting summary generation for {} items", items.len());
+
+        let api_key = self.config.get_current_api_key();
+
+        if api_key.is_empty() {
+            println!("[Timeline AI] Error: API key is empty");
+            return Err(AIError::ConfigError("API key is empty".to_string()));
+        }
+
+        // Build timeline data summary
+        let mut timeline_data = String::new();
+        for item in items {
+            let timestamp = item.updated_at;
+            let hour = chrono::DateTime::from_timestamp(timestamp, 0)
+                .map(|dt| dt.hour())
+                .unwrap_or(0);
+
+            let content = item.content.as_deref().unwrap_or("");
+
+            // Safely truncate content at char boundary
+            let content_preview = if content.chars().count() > 100 {
+                let truncated: String = content.chars().take(100).collect();
+                format!("{}...", truncated)
+            } else {
+                content.to_string()
+            };
+
+            timeline_data.push_str(&format!("{}:00 - {}\n", hour, content_preview));
+        }
+
+        if timeline_data.is_empty() {
+            println!("[Timeline AI] No data to summarize");
+            return Ok(match language {
+                "en-US" | "en" => "No clipboard activity for this period.".to_string(),
+                _ => "这段时间没有剪贴板活动。".to_string(),
+            });
+        }
+
+        // Get timeline prompt
+        let system_prompt = get_timeline_prompt(language);
+        let prompt = format!("{}\n\n{}", system_prompt, timeline_data);
+
+        println!("[Timeline AI] Prompt length: {} chars", prompt.len());
+
+        let model = self.config.get_current_model();
+        let request = ChatRequest {
+            model: model.clone(),
+            messages: vec![ChatMessage {
+                role: "user".to_string(),
+                content: prompt,
+            }],
+            max_tokens: 500,
+            temperature: 0.7,
+        };
+
+        let url = format!(
+            "{}/chat/completions",
+            self.config.current_provider.base_url()
+        );
+
+        println!("[Timeline AI] Sending request to: {}", url);
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await?;
+
+        let status = response.status();
+        println!("[Timeline AI] Response status: {}", status);
+
+        if !status.is_success() {
+            let error_text = response.text().await?;
+            println!("[Timeline AI] Error response: {}", error_text);
+            return Err(AIError::ApiError(error_text));
+        }
+
+        let response_text = response.text().await?;
+        println!("[Timeline AI] Response received, length: {} chars", response_text.len());
+
+        let chat_response: ChatResponse = serde_json::from_str(&response_text)
+            .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;
+
+        if let Some(choice) = chat_response.choices.first() {
+            let summary = choice.message.content.trim().to_string();
+            println!("[Timeline AI] Summary generated successfully");
+            Ok(summary)
+        } else {
+            println!("[Timeline AI] No choices in response");
+            Ok(String::new())
         }
     }
 }
