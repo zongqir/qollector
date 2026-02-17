@@ -55,7 +55,7 @@ function ItemTags({
           </span>
         );
       })()}
-      {getTags(item.tags).filter(tag => tag.startsWith('AI:')).map((tag, idx) => {
+      {getTags(item.tags).filter(tag => tag.startsWith('AI:')).slice(0, 3).map((tag, idx) => {
         const displayTag = tag.substring(3);
         return (
           <span

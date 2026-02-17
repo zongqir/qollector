@@ -115,7 +115,7 @@ pub mod windows {
             std::thread::spawn(move || {
                 println!("Clipboard polling started...");
                 loop {
-                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    std::thread::sleep(std::time::Duration::from_millis(300));
 
                     unsafe {
                         let sequence = GetClipboardSequenceNumber();
@@ -136,12 +136,14 @@ pub mod windows {
 
                             println!("Clipboard change detected (sequence: {})", sequence);
 
-                            // 立即获取前台窗口信息（时序修复：在轮询线程中获取，避免窗口切换）
+                            // Capture window info immediately in polling thread
                             let metadata = Self::get_active_window_info_static();
 
                             if let Ok(content) = Self::get_clipboard_content_sync() {
-                                rt.block_on(async {
-                                    if let Err(e) = callback(content, metadata).await {
+                                // Spawn async callback so polling thread is not blocked
+                                let fut = callback(content, metadata);
+                                rt.spawn(async move {
+                                    if let Err(e) = fut.await {
                                         eprintln!("Callback error: {:?}", e);
                                     }
                                 });

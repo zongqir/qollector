@@ -166,6 +166,9 @@ impl ClipboardManager {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
+        // Extract source_app early, before metadata is moved into item constructors
+        let source_app = metadata.source_app.clone();
+
         let item = match &content {
             ClipboardContent::Text { plain: text, .. } => {
                 // 妫€鏌ユ槸鍚︿负绌虹櫧鍐呭
@@ -291,6 +294,21 @@ impl ClipboardManager {
         let mut item_id = item.id.clone();
         let mut inserted_new_item = false;
 
+        // Evaluate double-copy BEFORE acquiring repo lock so timing is accurate
+        let general_config = config_repo
+            .load_general_config()
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+        let is_double_copy = Self::should_pin_on_double_copy(
+            &double_copy_state,
+            &content_hash,
+            &source_app,
+            general_config.double_copy_emphasis_enabled,
+            general_config.double_copy_window_ms,
+        );
+
         let repo_lock = repo.lock().await;
         if let Some(existing) = repo_lock.find_by_hash(&content_hash).await? {
             println!("Duplicate detected, moving to top: {}", existing.id);
@@ -321,27 +339,7 @@ impl ClipboardManager {
         let _ = app_handle.emit("clipboard-changed", ());
         println!("Clipboard item saved successfully!");
 
-        let source_app = item
-            .metadata
-            .as_ref()
-            .and_then(|v| serde_json::from_str::<WindowMetadata>(v).ok())
-            .map(|m| m.source_app)
-            .unwrap_or_else(|| "Unknown".to_string());
-
-        let general_config = config_repo
-            .load_general_config()
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-
-        if Self::should_pin_on_double_copy(
-            &double_copy_state,
-            &content_hash,
-            &source_app,
-            general_config.double_copy_emphasis_enabled,
-            general_config.double_copy_window_ms,
-        ) {
+        if is_double_copy {
             let repo_lock = repo.lock().await;
             if let Some(existing) = repo_lock.find_by_id(&item_id).await? {
                 if !existing.is_pinned {
@@ -808,6 +806,12 @@ impl ClipboardManager {
             now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
 
         let should_pin = enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
+
+        println!(
+            "[DoubleCopy] enabled={} same_hash={} same_source_app={} interval_ok={} cooldown_ok={} delta_ms={} window_ms={} source_app={:?} last_source_app={:?} => {}",
+            enabled, same_hash, same_source_app, interval_ok, cooldown_ok,
+            delta_ms, window_ms, source_app, state.last_source_app, should_pin
+        );
 
         state.last_hash = Some(content_hash.to_string());
         state.last_source_app = Some(source_app.to_string());
