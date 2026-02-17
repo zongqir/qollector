@@ -86,36 +86,58 @@ function PreviewPanel() {
   useEffect(() => {
     if (!toolbarRef.current) return;
 
+    let timeoutId = null;
+
     const checkToolbarHeight = () => {
-      const toolbar = toolbarRef.current;
-      if (!toolbar) return;
+      // Clear any pending check
+      if (timeoutId) clearTimeout(timeoutId);
 
-      // Get all buttons
-      const buttons = toolbar.querySelectorAll('.preview-tool-btn');
-      if (buttons.length === 0) return;
+      // Debounce to avoid rapid changes
+      timeoutId = setTimeout(() => {
+        const toolbar = toolbarRef.current;
+        if (!toolbar) return;
 
-      // Check if buttons are wrapping (height > single line)
-      const firstButtonTop = buttons[0].getBoundingClientRect().top;
-      let isWrapping = false;
+        // Always measure with text visible to get true wrapping state
+        const hadCompactClass = toolbar.classList.contains('compact');
+        toolbar.classList.remove('compact');
 
-      for (let i = 1; i < buttons.length; i++) {
-        const buttonTop = buttons[i].getBoundingClientRect().top;
-        if (Math.abs(buttonTop - firstButtonTop) > 5) {
-          isWrapping = true;
-          break;
-        }
-      }
+        // Force layout recalc
+        toolbar.offsetHeight;
 
-      setIsToolbarCompact(isWrapping);
+        requestAnimationFrame(() => {
+          const buttons = toolbar.querySelectorAll('.preview-tool-btn');
+          if (buttons.length === 0) {
+            if (hadCompactClass) toolbar.classList.add('compact');
+            return;
+          }
+
+          // Check if buttons are wrapping
+          const firstButtonTop = buttons[0].getBoundingClientRect().top;
+          let needsCompact = false;
+
+          for (let i = 1; i < buttons.length; i++) {
+            const buttonTop = buttons[i].getBoundingClientRect().top;
+            if (Math.abs(buttonTop - firstButtonTop) > 5) {
+              needsCompact = true;
+              break;
+            }
+          }
+
+          // Update state only if changed
+          setIsToolbarCompact(needsCompact);
+        });
+      }, 100); // 100ms debounce
     };
 
-    // Check on mount and when window resizes
     checkToolbarHeight();
     const resizeObserver = new ResizeObserver(checkToolbarHeight);
     resizeObserver.observe(toolbarRef.current);
 
-    return () => resizeObserver.disconnect();
-  }, [item.id, isEditingContent]); // Re-check when item or editing state changes
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [item.id, isEditingContent]); // Don't include isToolbarCompact in deps
 
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
