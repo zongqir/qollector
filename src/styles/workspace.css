@@ -1130,32 +1130,15 @@
   white-space: nowrap;
 }
 
-/* When preview panel is very narrow, hide button text to save space */
-@container preview-panel (max-width: 500px) {
-  .preview-tool-btn span {
-    display: none;
-  }
-
-  .preview-tool-btn {
-    padding: 6px;
-    min-width: 32px;
-    justify-content: center;
-  }
+/* Compact mode - hide text when toolbar is crowded */
+.preview-toolbar.compact .preview-tool-btn span {
+  display: none;
 }
 
-/* Fallback for browsers without container query support */
-@supports not (container-type: inline-size) {
-  @media (max-width: 850px) {
-    .preview-panel .preview-tool-btn span {
-      display: none;
-    }
-
-    .preview-panel .preview-tool-btn {
-      padding: 6px;
-      min-width: 32px;
-      justify-content: center;
-    }
-  }
+.preview-toolbar.compact .preview-tool-btn {
+  padding: 6px;
+  min-width: 32px;
+  justify-content: center;
 }
 
 .preview-tool-btn:hover {

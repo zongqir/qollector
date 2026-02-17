@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Pin, PinOff, Star, Sparkles, Search, StickyNote,
@@ -17,6 +17,8 @@ function PreviewPanel() {
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const toolbarRef = useRef(null);
 
   const previewItem = useAppStore(s => s.previewItem);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -79,6 +81,41 @@ function PreviewPanel() {
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const openButtonTitle = item.type_ === 'file' ? t('item.openFile') : t('item.openLink');
+
+  // Check if toolbar needs compact mode (when buttons wrap to multiple lines)
+  useEffect(() => {
+    if (!toolbarRef.current) return;
+
+    const checkToolbarHeight = () => {
+      const toolbar = toolbarRef.current;
+      if (!toolbar) return;
+
+      // Get all buttons
+      const buttons = toolbar.querySelectorAll('.preview-tool-btn');
+      if (buttons.length === 0) return;
+
+      // Check if buttons are wrapping (height > single line)
+      const firstButtonTop = buttons[0].getBoundingClientRect().top;
+      let isWrapping = false;
+
+      for (let i = 1; i < buttons.length; i++) {
+        const buttonTop = buttons[i].getBoundingClientRect().top;
+        if (Math.abs(buttonTop - firstButtonTop) > 5) {
+          isWrapping = true;
+          break;
+        }
+      }
+
+      setIsToolbarCompact(isWrapping);
+    };
+
+    // Check on mount and when window resizes
+    checkToolbarHeight();
+    const resizeObserver = new ResizeObserver(checkToolbarHeight);
+    resizeObserver.observe(toolbarRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [item.id, isEditingContent]); // Re-check when item or editing state changes
 
   // 收集并切回搜集箱
   const handlePinAndBack = async () => {
@@ -360,7 +397,7 @@ function PreviewPanel() {
       )}
 
       {/* 工具栏 */}
-      <div className="preview-toolbar">
+      <div ref={toolbarRef} className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''}`}>
         {isEditingContent ? (
           <>
             <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
