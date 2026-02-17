@@ -89,43 +89,35 @@ function PreviewPanel() {
     let timeoutId = null;
 
     const checkToolbarWidth = () => {
-      // Clear any pending check
       if (timeoutId) clearTimeout(timeoutId);
 
-      // Debounce to avoid rapid changes
       timeoutId = setTimeout(() => {
         const toolbar = toolbarRef.current;
         if (!toolbar) return;
 
-        // Always measure with text visible to get true width needed
-        toolbar.classList.remove('compact');
+        // Create a temporary clone to measure full width
+        const clone = toolbar.cloneNode(true);
+        clone.style.position = 'absolute';
+        clone.style.visibility = 'hidden';
+        clone.style.width = 'auto';
+        clone.style.display = 'flex';
+        clone.style.flexWrap = 'nowrap';
+        clone.classList.remove('compact');
 
-        // Force layout recalc
-        toolbar.offsetHeight;
+        toolbar.parentElement.appendChild(clone);
 
-        requestAnimationFrame(() => {
-          const buttons = toolbar.querySelectorAll('.preview-tool-btn');
-          if (buttons.length === 0) return;
+        // Measure the natural width needed
+        const naturalWidth = clone.scrollWidth;
+        const availableWidth = toolbar.clientWidth;
 
-          // Calculate total width needed for all buttons with text
-          let totalButtonWidth = 0;
-          const gap = 4; // gap between buttons
+        // Clean up
+        toolbar.parentElement.removeChild(clone);
 
-          buttons.forEach((button) => {
-            totalButtonWidth += button.offsetWidth + gap;
-          });
+        // Add buffer for safety
+        const needsCompact = naturalWidth > (availableWidth - 10);
 
-          // Get available width (toolbar width minus padding)
-          const toolbarWidth = toolbar.offsetWidth;
-          const toolbarPadding = 32; // 16px * 2
-          const availableWidth = toolbarWidth - toolbarPadding;
-
-          // If buttons need more space than available, use compact mode
-          const needsCompact = totalButtonWidth > availableWidth;
-
-          setIsToolbarCompact(needsCompact);
-        });
-      }, 100); // 100ms debounce
+        setIsToolbarCompact(needsCompact);
+      }, 150);
     };
 
     checkToolbarWidth();
