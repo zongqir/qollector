@@ -58,9 +58,9 @@
     "dateApply": "Apply"
   },
   "item": {
-    "pinned": "Collected",
-    "pin": "Collect (Max {{max}})",
-    "unpin": "Remove",
+    "pinned": "Pinned",
+    "pin": "Pin (Max {{max}})",
+    "unpin": "Unpin",
     "copy": "Copy",
     "copied": "Copied",
     "copyPlainText": "Copy Plain Text",
@@ -442,7 +442,10 @@
     "pdfFirstPage": "PDF first page preview",
     "pdfLoadFailed": "PDF load failed",
     "fileSize": "Size",
-    "fileNotFound": "File not found"
+    "fileNotFound": "File not found",
+    "directoryItems": "Directory Contents",
+    "clickToOpen": "Click to open",
+    "emptyDirectory": "Empty directory"
   },
   "widget": {
     "title": "Quick Drop",

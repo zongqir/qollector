@@ -381,6 +381,15 @@ fn reveal_path_in_explorer(path: &Path) -> Result<(), String> {
 }
 
 #[derive(Serialize)]
+pub struct DirectoryItem {
+    pub name: String,
+    pub path: String,
+    pub is_directory: bool,
+    pub size: u64,
+    pub extension: String,
+}
+
+#[derive(Serialize)]
 pub struct FilePreviewData {
     pub preview_type: String,
     pub file_path: String,
@@ -388,6 +397,8 @@ pub struct FilePreviewData {
     pub file_size: u64,
     pub text_content: Option<String>,
     pub text_truncated: bool,
+    pub is_directory: bool,
+    pub directory_items: Option<Vec<DirectoryItem>>,
 }
 
 const IMAGE_EXTS: &[&str] = &[
@@ -435,29 +446,67 @@ pub async fn preview_file(file_path: String) -> Result<FilePreviewData, String> 
 
     let metadata = std::fs::metadata(path).map_err(|e| format!("Cannot read file: {}", e))?;
     let file_size = metadata.len();
+    let is_directory = metadata.is_dir();
 
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("");
-    let preview_type = classify_extension(ext).to_string();
+    let (preview_type, text_content, text_truncated, directory_items) = if is_directory {
+        let mut items = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(path) {
+            for entry in entries.flatten() {
+                if let Ok(meta) = entry.metadata() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    let path_str = entry.path().to_string_lossy().to_string();
+                    let is_dir = meta.is_dir();
+                    let size = meta.len();
+                    let extension = entry
+                        .path()
+                        .extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("")
+                        .to_string();
 
-    let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ {
-        match std::fs::read(path) {
-            Ok(bytes) => {
-                let truncated = bytes.len() > TEXT_PREVIEW_BYTES;
-                let slice = if truncated {
-                    &bytes[..TEXT_PREVIEW_BYTES]
-                } else {
-                    &bytes[..]
-                };
-                let text = String::from_utf8_lossy(slice).to_string();
-                (Some(text), truncated)
+                    items.push(DirectoryItem {
+                        name,
+                        path: path_str,
+                        is_directory: is_dir,
+                        size,
+                        extension,
+                    });
+                }
             }
-            Err(_) => (None, false),
+            items.sort_by(|a, b| {
+                match (a.is_directory, b.is_directory) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+                }
+            });
         }
+        ("directory".to_string(), None, false, Some(items))
     } else {
-        (None, false)
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        let preview_type = classify_extension(ext).to_string();
+
+        let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ {
+            match std::fs::read(path) {
+                Ok(bytes) => {
+                    let truncated = bytes.len() > TEXT_PREVIEW_BYTES;
+                    let slice = if truncated {
+                        &bytes[..TEXT_PREVIEW_BYTES]
+                    } else {
+                        &bytes[..]
+                    };
+                    let text = String::from_utf8_lossy(slice).to_string();
+                    (Some(text), truncated)
+                }
+                Err(_) => (None, false),
+            }
+        } else {
+            (None, false)
+        };
+        (preview_type, text_content, text_truncated, None)
     };
 
     Ok(FilePreviewData {
@@ -467,6 +516,8 @@ pub async fn preview_file(file_path: String) -> Result<FilePreviewData, String> 
         file_size,
         text_content,
         text_truncated,
+        is_directory,
+        directory_items,
     })
 }
 
@@ -496,4 +547,9 @@ fn open_with_system(target: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn open_file_path(path: String) -> Result<(), String> {
+    open_with_system(&path)
 }

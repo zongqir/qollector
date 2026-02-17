@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
-import { FileText, Music, Film, File } from 'lucide-react';
+import { FileText, Music, Film, File, Folder, FolderOpen } from 'lucide-react';
 import PdfPreview from './PdfPreview';
 import { getFileName } from '../../utils/formatters';
 import './FilePreview.css';
@@ -52,6 +52,7 @@ function FilePreviewItem({ filePath }) {
 
   const assetSrc = convertFileSrc(data.file_path);
   const typeIcon = {
+    directory: <Folder size={14} />,
     image: <FileText size={14} />,
     text: <FileText size={14} />,
     audio: <Music size={14} />,
@@ -60,7 +61,46 @@ function FilePreviewItem({ filePath }) {
     binary: <File size={14} />,
   }[data.preview_type] || <File size={14} />;
 
+  const handleOpenFile = async (path) => {
+    try {
+      await invoke('open_file_path', { path });
+    } catch (error) {
+      console.error('Failed to open file:', error);
+    }
+  };
+
   const renderBody = () => {
+    if (data.preview_type === 'directory' && data.directory_items) {
+      if (data.directory_items.length === 0) {
+        return (
+          <div className="directory-empty">
+            <FolderOpen size={20} />
+            <span>{t('filePreview.emptyDirectory')}</span>
+          </div>
+        );
+      }
+      return (
+        <div className="directory-items">
+          {data.directory_items.map((item, idx) => (
+            <div
+              key={idx}
+              className="directory-item"
+              onClick={() => handleOpenFile(item.path)}
+              title={item.path}
+            >
+              <div className="directory-item-icon">
+                {item.is_directory ? <Folder size={14} /> : <File size={14} />}
+              </div>
+              <div className="directory-item-name">{item.name}</div>
+              {!item.is_directory && (
+                <div className="directory-item-size">{formatFileSize(item.size)}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     switch (data.preview_type) {
       case 'image':
         return <img src={assetSrc} alt={data.file_name} loading="lazy" />;
