@@ -16,6 +16,7 @@ function PreviewPanel() {
   const { t, i18n } = useTranslation();
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editContent, setEditContent] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const previewItem = useAppStore(s => s.previewItem);
   const switchToCollection = useAppStore(s => s.switchToCollection);
@@ -91,6 +92,27 @@ function PreviewPanel() {
   const handleStartEditContent = () => {
     setEditContent(item.content || '');
     setIsEditingContent(true);
+  };
+
+  // 内容区双击行为
+  const handleContentDoubleClick = async () => {
+    if (item.type_ === 'file') {
+      // file open
+      await handleOpenItem(item);
+    } else {
+      // copy
+      await handleCopy(item);
+    }
+  };
+
+  // 删除按钮点击
+  const handleDeleteClick = () => {
+    if (showDeleteConfirm) {
+      deleteItem(item);
+    } else {
+      setShowDeleteConfirm(true);
+      setTimeout(() => setShowDeleteConfirm(false), 3000);
+    }
   };
 
   // 保存内容编辑
@@ -179,7 +201,11 @@ function PreviewPanel() {
 
     if (item.type_ === 'image' && item.image_paths) {
       return (
-        <div className="preview-image-content">
+        <div
+          className="preview-image-content"
+          onDoubleClick={handleContentDoubleClick}
+          title={t('item.doubleClickToCopy')}
+        >
           <img src={getImageOriginal(item.image_paths)} alt="" />
           {item.ocr_text && (
             <div className="preview-ocr">
@@ -192,7 +218,11 @@ function PreviewPanel() {
     }
     if (item.type_ === 'file') {
       return (
-        <div className="preview-file-content">
+        <div
+          className="preview-file-content"
+          onDoubleClick={handleContentDoubleClick}
+          title={t('item.doubleClickToOpen')}
+        >
           {getFileList(item.content).map((path, idx) => (
             <div key={idx} className="file-item">
               <FileText size={16} />
@@ -205,7 +235,8 @@ function PreviewPanel() {
     return (
       <div
         className="preview-text-content"
-        onDoubleClick={item.has_raw_formats ? undefined : handleStartEditContent}
+        onDoubleClick={handleContentDoubleClick}
+        title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
       >
         {getContentPreview(item.content)}
       </div>
@@ -221,11 +252,25 @@ function PreviewPanel() {
         </button>
         <div className="preview-nav-actions">
           <button
-            className={`preview-action-btn ${item.is_pinned ? 'active' : ''}`}
-            onClick={item.is_pinned ? () => togglePin(item) : handlePinAndBack}
+            className={`preview-action-btn copy-btn ${isCopied ? 'copied' : ''}`}
+            onClick={() => handleCopy(item)}
+            title={t('item.copy')}
           >
-            {item.is_pinned ? <PinOff size={14} /> : <Pin size={14} />}
-            <span>{item.is_pinned ? t('collection.removeFromCollection') : t('collection.addToCollection')}</span>
+            <Copy size={16} />
+          </button>
+          <button
+            className={`preview-action-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}
+            onClick={() => toggleFavorite(item)}
+            title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+          >
+            <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
+            onClick={handleDeleteClick}
+            title={showDeleteConfirm ? t('item.confirmDelete') : t('item.delete')}
+          >
+            <Trash2 size={16} />
           </button>
         </div>
       </div>

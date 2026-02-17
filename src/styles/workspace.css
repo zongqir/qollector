@@ -934,8 +934,10 @@
 .preview-action-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid var(--border-btn);
   border-radius: 6px;
   background: var(--btn-bg);
@@ -947,12 +949,43 @@
 
 .preview-action-btn:hover {
   background: var(--btn-hover-bg);
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
-.preview-action-btn.active {
-  background: var(--accent-light);
-  color: var(--accent-color);
-  border-color: rgba(0, 122, 255, 0.2);
+.preview-action-btn:active {
+  transform: translateY(0);
+}
+
+/* Copy button - copied state */
+.preview-action-btn.copy-btn.copied {
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+/* Favorite button - active state */
+.preview-action-btn.favorite-btn.active {
+  color: var(--color-warning);
+}
+
+/* Delete button - danger state */
+.preview-action-btn.delete-btn:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.preview-action-btn.delete-btn.confirm {
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+  animation: deleteConfirmPulse 0.5s ease;
+}
+
+@keyframes deleteConfirmPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .preview-meta {
@@ -983,7 +1016,22 @@
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-all;
-  cursor: text;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  user-select: text;
+}
+
+.preview-text-content:hover {
+  opacity: 0.85;
+}
+
+.preview-image-content {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.preview-image-content:hover {
+  opacity: 0.85;
 }
 
 .preview-image-content img {
@@ -996,6 +1044,15 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed var(--border-light);
+}
+
+.preview-file-content {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.preview-file-content:hover {
+  opacity: 0.85;
 }
 
 .preview-file-content .file-item {
