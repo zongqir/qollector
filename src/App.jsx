@@ -36,6 +36,7 @@ function App() {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -325,7 +326,7 @@ function App() {
           </>
         )}
       </div>
-      {!isMiniMode && !collectionPanelEnabled && <HoverPreview />}
+      {shouldUseHoverPreview && <HoverPreview />}
     </div>
   );
 }

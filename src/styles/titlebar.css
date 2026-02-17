@@ -129,20 +129,26 @@
 
 /* Mini mode titlebar compact */
 .app.mini-mode .titlebar {
-  height: 32px;
+  height: 30px;
 }
 
 .app.mini-mode .titlebar-drag-area {
-  padding-left: 10px;
+  padding-left: 8px;
 }
 
 .app.mini-mode .titlebar-title {
-  font-size: 12px;
+  font-size: 11px;
+  opacity: 0.78;
 }
 
 .app.mini-mode .titlebar-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 30px;
+}
+
+.app.mini-mode .titlebar-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 /* ========== Glass opacity indicator ========== */

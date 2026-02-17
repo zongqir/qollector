@@ -2,15 +2,16 @@
 .hover-preview {
   position: fixed;
   z-index: 1000;
+  width: min(540px, calc(100vw - 24px));
   min-width: 320px;
-  max-width: 520px;
-  max-height: 420px;
-  background: var(--bg-card);
-  backdrop-filter: saturate(180%) blur(40px);
-  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  max-width: calc(100vw - 12px);
+  max-height: 440px;
+  background: color-mix(in srgb, var(--bg-card) 94%, white 6%);
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
   border: 1px solid var(--border-light);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -18,58 +19,122 @@
   pointer-events: auto;
 }
 
+.hover-preview.mini {
+  width: min(280px, calc(100vw - 8px));
+  min-width: 240px;
+  max-width: calc(100vw - 6px);
+  max-height: min(400px, calc(100vh - 12px));
+  border-radius: 12px;
+}
+
 @keyframes hoverPreviewFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hover-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+}
+
+.hover-preview.mini .hover-preview-header {
+  gap: 6px;
+  padding: 7px 8px;
+}
+
+.hover-preview-meta-top {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.hover-preview-meta-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.hover-preview-meta-source {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-hover) 78%, transparent);
+  border: 1px solid var(--border-light);
+}
+
+.hover-preview.mini .hover-preview-meta-top {
+  gap: 6px;
+  font-size: 10px;
+}
+
+.hover-preview.mini .hover-preview-meta-source {
+  max-width: 110px;
+  padding: 1px 6px;
 }
 
 /* ========== Action Buttons ========== */
 .hover-preview-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   display: flex;
   gap: 6px;
-  z-index: 10;
+  flex-shrink: 0;
 }
 
 .hover-preview-action-btn {
-  width: 28px;
-  height: 28px;
+  width: 29px;
+  height: 29px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-card);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border: 1px solid var(--border-light);
-  border-radius: 6px;
+  background: var(--btn-bg);
+  border: 1px solid var(--border-btn);
+  border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
-  opacity: 0.85;
+}
+
+.hover-preview.mini .hover-preview-action-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.hover-preview.mini .hover-preview-action-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .hover-preview-action-btn:hover {
-  opacity: 1;
-  background: var(--bg-hover);
+  background: var(--btn-hover-bg);
   color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .hover-preview-action-btn:active {
   transform: translateY(0);
 }
 
-/* Copy button - copied state */
 .hover-preview-action-btn.copied {
   background: var(--color-success);
-  color: white;
+  color: #fff;
   border-color: var(--color-success);
 }
 
-/* Favorite button - active state */
 .hover-preview-action-btn.favorite.active {
   color: var(--color-warning);
 }
@@ -78,7 +143,6 @@
   color: var(--color-warning);
 }
 
-/* Delete button - danger state */
 .hover-preview-action-btn.delete:hover {
   background: var(--color-danger-bg);
   color: var(--color-danger);
@@ -87,23 +151,32 @@
 
 .hover-preview-action-btn.delete.confirm {
   background: var(--color-danger);
-  color: white;
+  color: #fff;
   border-color: var(--color-danger);
   animation: deleteConfirmPulse 0.5s ease;
 }
 
 @keyframes deleteConfirmPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 .hover-preview-content {
   flex: 1;
   overflow: auto;
-  padding: 12px 14px;
+  padding: 13px 14px 14px;
   position: relative;
-  max-height: 350px;
+  max-height: 360px;
   overscroll-behavior: contain;
+}
+
+.hover-preview.mini .hover-preview-content {
+  padding: 9px 10px 10px;
+  max-height: 300px;
 }
 
 .hover-preview-text,
@@ -117,12 +190,12 @@
 .hover-preview-text:hover,
 .hover-preview-image:hover,
 .hover-preview-files:hover {
-  opacity: 0.85;
+  opacity: 0.88;
 }
 
 .hover-preview-text {
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;
@@ -130,10 +203,16 @@
   -webkit-user-select: text;
 }
 
+.hover-preview.mini .hover-preview-text,
+.hover-preview.mini .hover-preview-file-item {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .hover-preview-image img {
   max-width: 100%;
   max-height: 240px;
-  border-radius: 8px;
+  border-radius: 9px;
   display: block;
   object-fit: contain;
 }
@@ -143,7 +222,7 @@
   padding-top: 8px;
   border-top: 1px dashed var(--border-light);
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-secondary);
   white-space: pre-wrap;
   user-select: text;
@@ -153,7 +232,7 @@
 .hover-preview-files {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .hover-preview-file-item {
@@ -170,16 +249,6 @@
   color: var(--text-tertiary);
 }
 
-.hover-preview-meta {
-  display: flex;
-  gap: 10px;
-  padding: 8px 14px;
-  border-top: 1px solid var(--border-light);
-  font-size: 11px;
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-
 .dark-mode .hover-preview {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.2);
 }

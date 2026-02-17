@@ -108,6 +108,7 @@ function HistoryStream({ style }) {
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
   const previewItemId = previewItem?.id;
+  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
   const virtuosoRef = useRef(null);
 
@@ -309,7 +310,7 @@ function HistoryStream({ style }) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    if (!collectionPanelEnabled && !isMiniMode) {
+    if (shouldUseHoverPreview) {
       if (hoverPreviewItem?.id === item.id) {
         clearHoverPreview();
         return;
@@ -322,12 +323,11 @@ function HistoryStream({ style }) {
       }, 250);
       return;
     }
-    if (isMiniMode) return;
     clickTimerRef.current = setTimeout(() => {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, panelMode, previewItemId, filteredItems, collectionPanelEnabled, isMiniMode, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
+  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, panelMode, previewItemId, filteredItems, shouldUseHoverPreview, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -389,14 +389,20 @@ function HistoryStream({ style }) {
       clearSelection();
       return;
     }
-    if (!collectionPanelEnabled) {
+    if (shouldUseHoverPreview) {
       clearHoverPreview();
       return;
     }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, collectionPanelEnabled, clearHoverPreview]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearHoverPreview]);
+
+  useEffect(() => {
+    if (!shouldUseHoverPreview) {
+      clearHoverPreview();
+    }
+  }, [shouldUseHoverPreview, clearHoverPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -416,14 +422,14 @@ function HistoryStream({ style }) {
         virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
         const nextItem = filteredItems[next];
         if (nextItem) {
-          if (collectionPanelEnabled) {
-            setPanelMode('preview', nextItem);
-          } else {
+          if (shouldUseHoverPreview) {
             const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
             if (el) {
               const rect = el.getBoundingClientRect();
               setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
             }
+          } else {
+            setPanelMode('preview', nextItem);
           }
         }
         return;
@@ -454,7 +460,7 @@ function HistoryStream({ style }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, collectionPanelEnabled]);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, shouldUseHoverPreview]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
