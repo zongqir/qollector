@@ -848,7 +848,7 @@ const useAppStore = create((set, get) => ({
     hasPassword: false,
   })),
 
-  // ========== 快速笔记 (搜集箱) ==========
+  // ========== 快速笔记 (收集箱) ==========
   addQuickNote: async (content) => {
     if (!content.trim()) return;
     try {
@@ -903,7 +903,7 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // ========== 清空搜集箱 ==========
+  // ========== 清空收集箱 ==========
   clearAllPinned: async () => {
     try {
       const { items, loadItems } = get();
@@ -914,7 +914,7 @@ const useAppStore = create((set, get) => ({
       await loadItems();
       set({ panelMode: 'collection', previewItem: null });
     } catch (error) {
-      console.error('清空搜集箱失败:', error);
+      console.error('清空收集箱失败:', error);
     }
   },
 }));

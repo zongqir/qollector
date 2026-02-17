@@ -131,7 +131,7 @@ function PreviewPanel() {
     };
   }, [item.id, isEditingContent]);
 
-  // 收集并切回搜集箱
+  // 收集并切回收集箱
   const handlePinAndBack = async () => {
     if (!item.is_pinned) {
       await togglePin(item);

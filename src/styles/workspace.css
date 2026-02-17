@@ -408,7 +408,7 @@
   pointer-events: auto;
 }
 
-/* ========== 搜集箱 ========== */
+/* ========== 收集箱 ========== */
 .collection-close-inline-btn {
   display: flex;
   align-items: center;
@@ -593,7 +593,7 @@
   cursor: not-allowed;
 }
 
-/* 搜集箱空状态 */
+/* 收集箱空状态 */
 .collection-empty {
   flex: 1;
   display: flex;
@@ -623,7 +623,7 @@
   line-height: 1.5;
 }
 
-/* 搜集箱卡片列表 */
+/* 收集箱卡片列表 */
 .collection-cards {
   flex: 1;
   overflow-y: auto;
@@ -854,7 +854,7 @@
   gap: 4px;
 }
 
-/* 搜集箱底部操作栏 */
+/* 收集箱底部操作栏 */
 .collection-bottom-bar {
   display: flex;
   gap: 8px;
