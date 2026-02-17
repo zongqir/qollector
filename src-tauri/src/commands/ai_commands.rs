@@ -123,3 +123,30 @@ pub fn get_default_ai_model(provider: String) -> Result<String, String> {
 
     Ok(ai_provider.default_model())
 }
+
+#[tauri::command]
+pub async fn generate_timeline_summary(
+    state: State<'_, AIState>,
+    items: Vec<crate::core::models::ClipboardItem>,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+
+    if config.get_current_api_key().is_empty() {
+        return Err("AI not configured".to_string());
+    }
+
+    let language = state
+        .config_repo
+        .load_general_config()
+        .await
+        .ok()
+        .flatten()
+        .map(|c| c.language)
+        .unwrap_or_else(|| "zh-CN".to_string());
+
+    let service = AIService::new(config);
+    service
+        .generate_timeline_summary(&items, &language)
+        .await
+        .map_err(|e| e.to_string())
+}

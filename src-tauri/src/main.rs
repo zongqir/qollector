@@ -469,6 +469,8 @@ fn main() {
             reveal_in_folder,
             save_image_as,
             search_items,
+            get_items_by_date_range,
+            generate_timeline_summary,
             get_mcp_config,
             get_mcp_port,
             update_mcp_config,

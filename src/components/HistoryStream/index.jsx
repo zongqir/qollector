@@ -103,6 +103,10 @@ function HistoryStream({ style }) {
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
+  const focusedIndex = useAppStore(s => s.focusedIndex);
+  const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+
+  const virtuosoRef = useRef(null);
 
   const setDebouncedSearchQuery = useAppStore(s => s.setDebouncedSearchQuery);
   useEffect(() => {
@@ -254,6 +258,9 @@ function HistoryStream({ style }) {
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
+  // reset keyboard focus when list changes
+  useEffect(() => { setFocusedIndex(-1); }, [filteredItems, setFocusedIndex]);
+
   useEffect(() => {
     const probe = filterProbeRef.current;
     if (!probe) return;
@@ -375,7 +382,30 @@ function HistoryStream({ style }) {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (selectedItemIds.length === 0) return;
+      // skip when focus is inside an input / textarea / editable
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const total = filteredItems.length;
+        if (total === 0) return;
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const next = focusedIndex < 0
+          ? (dir === 1 ? 0 : total - 1)
+          : Math.max(0, Math.min(total - 1, focusedIndex + dir));
+        setFocusedIndex(next);
+        virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'center' });
+        return;
+      }
+
+      if (e.key === 'Enter' && focusedIndex >= 0 && focusedIndex < filteredItems.length) {
+        e.preventDefault();
+        handleCopyAndAutoPaste(filteredItems[focusedIndex]);
+        return;
+      }
+
+      if (selectedItemIds.length === 0 && focusedIndex < 0) return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         deleteSelectedItems();
@@ -384,11 +414,12 @@ function HistoryStream({ style }) {
         copySelectedItemsMerged();
       } else if (e.key === 'Escape') {
         clearSelection();
+        setFocusedIndex(-1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection]);
+  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -403,6 +434,7 @@ function HistoryStream({ style }) {
     if (!item) return null;
     const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
     const isMultiSelected = selectedItemIds.includes(item.id);
+    const isFocused = focusedIndex === index;
 
     return (
       <div
@@ -416,6 +448,7 @@ function HistoryStream({ style }) {
           item={item}
           isSelected={isSelected}
           isMultiSelected={isMultiSelected}
+          isFocused={isFocused}
           isCopied={copiedItemId === item.id}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
@@ -433,6 +466,7 @@ function HistoryStream({ style }) {
     previewItem?.id,
     copiedItemId,
     selectedItemIds,
+    focusedIndex,
     rowGap,
     handleCardClick,
     handleCardDoubleClick,
@@ -488,6 +522,7 @@ function HistoryStream({ style }) {
           </div>
         ) : (
           <Virtuoso
+            ref={virtuosoRef}
             className="history-stream-virtuoso"
             components={{ Scroller: VirtuosoScroller }}
             totalCount={filteredItems.length}

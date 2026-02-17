@@ -113,9 +113,16 @@ const useAppStore = create((set, get) => ({
   isMemorySuspended: false,
 
   // ========== 右栏面板状态机 ==========
-  // 'collection' | 'preview'
+  // 'collection' | 'preview' | 'timeline'
   panelMode: 'collection',
   previewItem: null,
+
+  // ========== 时间旅行状态 ==========
+  timelineDate: 'today', // 'today' | 'yesterday'
+  timelineItems: [],
+  timelineSummary: null,
+  timelineLoading: false,
+  timelineError: null,
 
   // ========== 搜索/筛选 ==========
   searchQuery: '',
@@ -133,6 +140,9 @@ const useAppStore = create((set, get) => ({
 
   // ========== 多选状态 ==========
   selectedItemIds: [],
+
+  // ========== keyboard focus ==========
+  focusedIndex: -1,
 
   // ========== UI 状态 ==========
   copiedItemId: null,
@@ -181,6 +191,10 @@ const useAppStore = create((set, get) => ({
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
       set({ panelMode: 'preview', previewItem: item });
+    } else if (mode === 'timeline') {
+      set({ panelMode: 'timeline', previewItem: null });
+      // Auto-load timeline data when entering timeline mode
+      get().loadTimelineData('today');
     } else {
       set({ panelMode: 'collection', previewItem: null });
     }
@@ -188,6 +202,58 @@ const useAppStore = create((set, get) => ({
 
   switchToCollection: () => {
     set({ panelMode: 'collection', previewItem: null });
+  },
+
+  // ========== 时间旅行 Actions ==========
+  loadTimelineData: async (date) => {
+    set({ timelineLoading: true, timelineError: null, timelineDate: date });
+    try {
+      const now = new Date();
+      let startTimestamp, endTimestamp;
+
+      if (date === 'today') {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        startTimestamp = Math.floor(startOfDay.getTime() / 1000);
+        endTimestamp = Math.floor(Date.now() / 1000);
+      } else if (date === 'yesterday') {
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+        const endOfYesterday = new Date(startOfYesterday.getTime() + 24 * 60 * 60 * 1000);
+        startTimestamp = Math.floor(startOfYesterday.getTime() / 1000);
+        endTimestamp = Math.floor(endOfYesterday.getTime() / 1000);
+      }
+
+      const items = await invoke('get_items_by_date_range', {
+        startTimestamp,
+        endTimestamp,
+      });
+
+      set({ timelineItems: items, timelineLoading: false });
+
+      // Auto-generate AI summary if AI is enabled
+      const { aiEnabled } = get();
+      if (aiEnabled && items.length > 0) {
+        get().generateTimelineSummary(items);
+      }
+    } catch (error) {
+      console.error('load timeline data failed:', error);
+      set({ timelineError: String(error), timelineLoading: false });
+    }
+  },
+
+  generateTimelineSummary: async (items) => {
+    set({ timelineSummary: null });
+    try {
+      const summary = await invoke('generate_timeline_summary', { items });
+      set({ timelineSummary: summary });
+    } catch (error) {
+      console.error('generate timeline summary failed:', error);
+      set({ timelineSummary: null });
+    }
+  },
+
+  switchTimelineDate: (date) => {
+    get().loadTimelineData(date);
   },
 
   // ========== 收集箱面板开关 ==========
@@ -491,6 +557,8 @@ const useAppStore = create((set, get) => ({
       console.error('删除失败:', error);
     }
   },
+
+  setFocusedIndex: (index) => set({ focusedIndex: index }),
 
   // ========== 备注 Actions ==========
   startEditNote: (item) => {

@@ -428,7 +428,19 @@
     "archivedToHistory": "Archived to history",
     "backToCollection": "Back to Collection",
     "addToCollection": "Add to Collection",
-    "removeFromCollection": "Remove from Collection"
+    "removeFromCollection": "Remove from Collection",
+    "timeTravel": "Time Travel",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "noDataForDate": "No records for this day",
+    "aiSummaryLoading": "AI is analyzing...",
+    "aiSummaryError": "AI summary failed",
+    "aiNotEnabled": "Please enable AI in settings first",
+    "timelineTitle": "Time Travel",
+    "backToCollectionFromTimeline": "Back to Collection"
   },
   "panel": {
     "preview": "Preview Detail",

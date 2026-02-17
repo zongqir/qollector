@@ -30,6 +30,7 @@ function CompactCard({
   item,
   isSelected,
   isMultiSelected,
+  isFocused,
   isCopied,
   onDragStart,
   onStartExternalDrag,
@@ -52,6 +53,7 @@ function CompactCard({
     item.is_favorite && 'favorite',
     isSelected && 'selected',
     isMultiSelected && 'multi-selected',
+    isFocused && 'keyboard-focused',
     isCopied && 'copied',
   ].filter(Boolean).join(' ');
 

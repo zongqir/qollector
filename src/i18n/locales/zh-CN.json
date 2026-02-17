@@ -428,7 +428,19 @@
     "archivedToHistory": "已归档至历史流",
     "backToCollection": "返回收集箱",
     "addToCollection": "加入收集",
-    "removeFromCollection": "移除收集"
+    "removeFromCollection": "移除收集",
+    "timeTravel": "时间旅行",
+    "today": "今天",
+    "yesterday": "昨天",
+    "morning": "上午",
+    "afternoon": "下午",
+    "evening": "晚上",
+    "noDataForDate": "这一天没有记录",
+    "aiSummaryLoading": "AI 正在分析...",
+    "aiSummaryError": "AI 总结失败",
+    "aiNotEnabled": "请先在设置中启用 AI 功能",
+    "timelineTitle": "时间旅行",
+    "backToCollectionFromTimeline": "返回收集箱"
   },
   "panel": {
     "preview": "预览详情",

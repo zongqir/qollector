@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose } from 'lucide-react';
+import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose, Clock } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -245,9 +245,9 @@ function CollectionPanel() {
         </SortableContext>
       </DndContext>
       <div className="collection-bottom-bar">
-        <button className="collection-btn merge-btn" onClick={mergeCopyPinned} title={t('collection.mergeCopy')}>
-          <Copy size={14} />
-          <span>{t('collection.mergeCopy')}</span>
+        <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
+          <Clock size={14} />
+          <span>{t('collection.timeTravel')}</span>
         </button>
         <button className="collection-btn clear-btn" onClick={clearAllPinned} title={t('collection.clearAll')}>
           <Trash2 size={14} />

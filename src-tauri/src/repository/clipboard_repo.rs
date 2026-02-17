@@ -655,6 +655,32 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    // ========== Timeline Query ==========
+
+    /// Get items by date range (for timeline mode)
+    pub async fn get_items_by_date_range(
+        &self,
+        start: i64,
+        end: i64,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT id, type, content, '' as original_content, content_hash,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+                    metadata, is_pinned, is_favorite, is_deleted,
+                    pinned_at, created_at, updated_at,
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+             FROM clipboard_items WHERE is_deleted = 0
+             AND updated_at >= ? AND updated_at < ?
+             ORDER BY updated_at ASC",
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
     // ========== Auto Cleanup ==========
 
     /// Find and hard-delete expired items. Returns targets for file cleanup.
