@@ -64,6 +64,64 @@ impl StartupMeter {
     }
 }
 
+fn overlap_area(a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)) -> i64 {
+    let ax2 = a.0 + a.2;
+    let ay2 = a.1 + a.3;
+    let bx2 = b.0 + b.2;
+    let by2 = b.1 + b.3;
+
+    let x_overlap = (ax2.min(bx2) - a.0.max(b.0)).max(0) as i64;
+    let y_overlap = (ay2.min(by2) - a.1.max(b.1)).max(0) as i64;
+    x_overlap * y_overlap
+}
+
+fn choose_window_position_near_cursor(
+    cursor_x: i32,
+    cursor_y: i32,
+    win_w: i32,
+    win_h: i32,
+    scr_x: i32,
+    scr_y: i32,
+    scr_w: i32,
+    scr_h: i32,
+) -> (i32, i32) {
+    let gap = 18;
+    let avoid_rect = (cursor_x - 150, cursor_y - 38, 300, 84);
+
+    let max_x = scr_x + (scr_w - win_w).max(0);
+    let max_y = scr_y + (scr_h - win_h).max(0);
+
+    let candidates = [
+        (cursor_x + gap, cursor_y + gap),
+        (cursor_x + gap, cursor_y - win_h - gap),
+        (cursor_x - win_w - gap, cursor_y + gap),
+        (cursor_x - win_w - gap, cursor_y - win_h - gap),
+        (cursor_x + gap, cursor_y - (win_h / 2)),
+        (cursor_x - win_w - gap, cursor_y - (win_h / 2)),
+    ];
+
+    let mut best = (scr_x, scr_y);
+    let mut best_score = (i64::MAX, i64::MAX, i64::MAX);
+
+    for (raw_x, raw_y) in candidates {
+        let x = raw_x.clamp(scr_x, max_x);
+        let y = raw_y.clamp(scr_y, max_y);
+
+        let win_rect = (x, y, win_w, win_h);
+        let overlap = overlap_area(win_rect, avoid_rect);
+        let clamp_penalty = (x - raw_x).abs() as i64 + (y - raw_y).abs() as i64;
+        let proximity = ((x - cursor_x).abs() + (y - cursor_y).abs()) as i64;
+
+        let score = (overlap, clamp_penalty, proximity);
+        if score < best_score {
+            best = (x, y);
+            best_score = score;
+        }
+    }
+
+    best
+}
+
 fn main() {
     let startup_metrics = Arc::new(StartupMetricsState::new());
     let startup_metrics_for_setup = startup_metrics.clone();
@@ -353,9 +411,22 @@ fn main() {
                                             // Move window near the cursor before showing
                                             if let Ok(size) = window.outer_size() {
                                                 let cursor = platform::cursor::get_cursor_position();
-                                                let mon = window.current_monitor()
+                                                let mon = window
+                                                    .available_monitors()
                                                     .ok()
-                                                    .flatten()
+                                                    .and_then(|monitors| {
+                                                        monitors.into_iter().find(|m| {
+                                                            let pos = m.position();
+                                                            let sz = m.size();
+                                                            let right = pos.x + sz.width as i32;
+                                                            let bottom = pos.y + sz.height as i32;
+                                                            cursor.x >= pos.x
+                                                                && cursor.x < right
+                                                                && cursor.y >= pos.y
+                                                                && cursor.y < bottom
+                                                        })
+                                                    })
+                                                    .or_else(|| window.current_monitor().ok().flatten())
                                                     .or_else(|| window.primary_monitor().ok().flatten());
 
                                                 let (scr_x, scr_y, scr_w, scr_h) = if let Some(m) = mon {
@@ -369,13 +440,16 @@ fn main() {
                                                 let win_w = size.width as i32;
                                                 let win_h = size.height as i32;
 
-                                                // Center the window on the cursor
-                                                let mut x = cursor.x - win_w / 2;
-                                                let mut y = cursor.y - win_h / 2;
-
-                                                // Clamp to monitor bounds
-                                                x = x.max(scr_x).min(scr_x + scr_w - win_w);
-                                                y = y.max(scr_y).min(scr_y + scr_h - win_h);
+                                                let (x, y) = choose_window_position_near_cursor(
+                                                    cursor.x,
+                                                    cursor.y,
+                                                    win_w,
+                                                    win_h,
+                                                    scr_x,
+                                                    scr_y,
+                                                    scr_w,
+                                                    scr_h,
+                                                );
 
                                                 let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
                                             }

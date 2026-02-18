@@ -517,11 +517,77 @@ const useAppStore = create((set, get) => ({
 
   togglePin: async (item) => {
     try {
-      const { maxPinnedItems, loadItems } = get();
-      await invoke('toggle_pin_item', { id: item.id, maxPinned: maxPinnedItems });
-      await loadItems();
+      const { maxPinnedItems } = get();
+      const nextPinnedState = await invoke('toggle_pin_item', { id: item.id, maxPinned: maxPinnedItems });
+      const now = Math.floor(Date.now() / 1000);
+
+      set((state) => {
+        let items = state.items;
+        const unpinnedByLimitIds = new Set();
+
+        if (nextPinnedState === true) {
+          const alreadyPinned = state.items.filter((it) => it.is_pinned && it.id !== item.id);
+          const overflow = alreadyPinned.length + 1 - maxPinnedItems;
+          if (overflow > 0) {
+            const oldestPinned = [...alreadyPinned]
+              .sort((a, b) => {
+                const aPinnedAt = a.pinned_at || 0;
+                const bPinnedAt = b.pinned_at || 0;
+                if (aPinnedAt !== bPinnedAt) return aPinnedAt - bPinnedAt;
+                return a.created_at - b.created_at;
+              })
+              .slice(0, overflow);
+            oldestPinned.forEach((it) => unpinnedByLimitIds.add(it.id));
+          }
+        }
+
+        items = items.map((it) => {
+          if (it.id === item.id) {
+            return {
+              ...it,
+              is_pinned: nextPinnedState,
+              pinned_at: nextPinnedState ? now : null,
+              updated_at: now,
+            };
+          }
+
+          if (unpinnedByLimitIds.has(it.id)) {
+            return {
+              ...it,
+              is_pinned: false,
+              pinned_at: null,
+              updated_at: now,
+            };
+          }
+
+          return it;
+        });
+
+        let previewItem = state.previewItem;
+        if (previewItem?.id === item.id) {
+          previewItem = {
+            ...previewItem,
+            is_pinned: nextPinnedState,
+            pinned_at: nextPinnedState ? now : null,
+            updated_at: now,
+          };
+        } else if (previewItem && unpinnedByLimitIds.has(previewItem.id)) {
+          previewItem = {
+            ...previewItem,
+            is_pinned: false,
+            pinned_at: null,
+            updated_at: now,
+          };
+        }
+
+        return {
+          items,
+          previewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
     } catch (error) {
-      console.error('切换置顶失败:', error);
+      console.error('toggle pin failed:', error);
     }
   },
 
