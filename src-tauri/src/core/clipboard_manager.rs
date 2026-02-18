@@ -316,6 +316,32 @@ impl ClipboardManager {
             println!("Duplicate detected, moving to top: {}", existing.id);
             repo_lock.touch(&existing.id).await?;
             item_id = existing.id;
+
+            // Keep raw formats aligned with the latest clipboard payload for this hash.
+            if let ClipboardContent::Text { raw_formats, .. } = &content {
+                match raw_formats {
+                    Some(formats) if !formats.is_empty() => {
+                        if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
+                            eprintln!("Failed to clear stale raw formats: {}", e);
+                        } else if let Err(e) = repo_lock.insert_raw_formats(&item_id, formats).await {
+                            eprintln!("Failed to refresh raw formats: {}", e);
+                        } else {
+                            println!(
+                                "Refreshed {} raw format(s) for duplicate item {}",
+                                formats.len(),
+                                item_id
+                            );
+                        }
+                    }
+                    _ => {
+                        if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
+                            eprintln!("Failed to clear raw formats for plain-text duplicate: {}", e);
+                        } else {
+                            println!("Cleared raw formats for plain-text duplicate item {}", item_id);
+                        }
+                    }
+                }
+            }
         } else {
             println!("Inserting new clipboard item: {}", item.id);
             repo_lock.insert(&item).await?;

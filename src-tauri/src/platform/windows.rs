@@ -436,74 +436,436 @@ pub mod windows {
             results
         }
 
-        /// Filter out trivial rich formats that are just code-editor syntax highlighting.
-        /// Editors like VS Code, IntelliJ, Sublime Text attach HTML Format and RTF
-        /// for syntax coloring, but this is not meaningful rich text.
+        /// Keep rich formats only when they carry semantic information that plain text cannot represent.
         fn filter_trivial_rich_formats(
             formats: Vec<(String, Vec<u8>)>,
-            _plain_text: &str,
+            plain_text: &str,
         ) -> Vec<(String, Vec<u8>)> {
-            // Check if HTML Format is trivial editor output
-            let html_is_trivial = formats
+            let html_data = formats
                 .iter()
-                .any(|(name, data)| name == "HTML Format" && Self::is_editor_html(data));
+                .find(|(name, _)| name == "HTML Format")
+                .map(|(_, data)| data.as_slice());
+            let rtf_data = formats
+                .iter()
+                .find(|(name, _)| name == "Rich Text Format")
+                .map(|(_, data)| data.as_slice());
 
-            if !html_is_trivial {
+            let has_semantic_delta = if let Some(html) = html_data {
+                Self::is_semantic_html(html, plain_text)
+            } else if let Some(rtf) = rtf_data {
+                Self::is_semantic_rtf(rtf, plain_text)
+            } else {
+                false
+            };
+
+            if has_semantic_delta {
                 return formats;
             }
 
-            // If HTML is trivial editor output, filter out both HTML and RTF
-            // (they come from the same copy source)
-            println!("[RichFormat] Detected editor syntax highlighting, removing rich formats");
+            println!("[RichFormat] Rich formats have no semantic delta, removing HTML/RTF");
             formats
                 .into_iter()
                 .filter(|(name, _)| name != "HTML Format" && name != "Rich Text Format")
                 .collect()
         }
 
-        /// Check if HTML Format clipboard data is just code-editor syntax highlighting.
-        fn is_editor_html(data: &[u8]) -> bool {
-            let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
-            let html = match std::str::from_utf8(&data[..end]) {
-                Ok(s) => s,
-                Err(_) => return false,
+        fn is_semantic_html(data: &[u8], plain_text: &str) -> bool {
+            let html = match Self::decode_html_format_payload(data) {
+                Some(v) => v,
+                None => return true,
             };
+            let lower = html.to_ascii_lowercase();
 
-            let lower = html.to_lowercase();
+            if Self::has_meaningful_links(&lower, plain_text) {
+                return true;
+            }
 
-            // Structural elements that indicate real rich text
-            let rich_tags = [
+            let semantic_markers = [
                 "<table",
                 "<img",
-                "<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
-                "<ul>", "<ol>", "<li>",
+                "<ul",
+                "<ol",
+                "<li",
                 "<blockquote",
-                "<hr",
+                "<pre",
+                "<code",
+                "<h1",
+                "<h2",
+                "<h3",
+                "<h4",
+                "<h5",
+                "<h6",
                 "<iframe",
-                "<video", "<audio",
-                "<figure", "<picture", "<svg",
+                "<video",
+                "<audio",
+                "<svg",
+                "<math",
+                "<figure",
+                "<picture",
+                "<hr",
             ];
+            if semantic_markers.iter().any(|m| lower.contains(m)) {
+                return true;
+            }
 
-            for tag in &rich_tags {
-                if lower.contains(tag) {
-                    return false;
+            let extracted_text = Self::extract_text_from_html(&html);
+            let normalized_plain = Self::normalize_for_rich_compare(plain_text);
+            let normalized_html = Self::normalize_for_rich_compare(&extracted_text);
+
+            if normalized_plain.is_empty() || normalized_html.is_empty() {
+                return true;
+            }
+
+            normalized_plain != normalized_html
+        }
+
+        fn decode_html_format_payload(data: &[u8]) -> Option<String> {
+            let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
+            let payload = std::str::from_utf8(&data[..end]).ok()?.to_string();
+            let lower = payload.to_ascii_lowercase();
+
+            if let (Some(start), Some(end)) = (
+                Self::parse_cf_html_offset(&lower, "startfragment"),
+                Self::parse_cf_html_offset(&lower, "endfragment"),
+            ) {
+                if let Some(fragment) = Self::slice_payload_by_offset(&payload, start, end) {
+                    return Some(fragment);
                 }
             }
 
-            // Links with href indicate real rich content
-            if lower.contains("<a ") && lower.contains("href") {
-                return false;
+            if let (Some(start), Some(end)) = (
+                Self::parse_cf_html_offset(&lower, "starthtml"),
+                Self::parse_cf_html_offset(&lower, "endhtml"),
+            ) {
+                if let Some(fragment) = Self::slice_payload_by_offset(&payload, start, end) {
+                    return Some(fragment);
+                }
             }
 
-            // Monospace font is a strong signal of code editor output
-            let monospace_indicators = [
-                "consolas", "courier", "monospace", "menlo", "monaco",
-                "source code pro", "fira code", "jetbrains mono", "cascadia",
-                "sf mono", "ubuntu mono", "droid sans mono", "liberation mono",
-                "roboto mono", "iosevka",
-            ];
+            if let Some(fragment_start) = lower.find("<!--startfragment-->") {
+                let content_start = fragment_start + "<!--startfragment-->".len();
+                let content_end = lower.find("<!--endfragment-->").unwrap_or(payload.len());
+                if content_end > content_start {
+                    return Some(payload[content_start..content_end].to_string());
+                }
+            }
 
-            monospace_indicators.iter().any(|f| lower.contains(f))
+            let html_start = lower
+                .find("<html")
+                .or_else(|| lower.find("<body"))
+                .or_else(|| lower.find("<div"))
+                .or_else(|| lower.find("<p"));
+
+            if let Some(idx) = html_start {
+                return Some(payload[idx..].to_string());
+            }
+
+            Some(payload)
+        }
+
+        fn parse_cf_html_offset(payload_lower: &str, key_lower: &str) -> Option<usize> {
+            let marker = format!("{}:", key_lower);
+            let pos = payload_lower.find(&marker)?;
+            let rest = payload_lower[pos + marker.len()..].trim_start();
+            let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if digits.is_empty() {
+                return None;
+            }
+            digits.parse::<usize>().ok()
+        }
+
+        fn slice_payload_by_offset(payload: &str, start: usize, end: usize) -> Option<String> {
+            if start >= end || end > payload.len() {
+                return None;
+            }
+            if !payload.is_char_boundary(start) || !payload.is_char_boundary(end) {
+                return None;
+            }
+            Some(payload[start..end].to_string())
+        }
+
+        fn has_meaningful_links(html_lower: &str, plain_text: &str) -> bool {
+            let normalized_plain = Self::normalize_for_rich_compare(plain_text);
+            let mut cursor = 0usize;
+
+            while let Some(rel_start) = html_lower[cursor..].find("<a") {
+                let start = cursor + rel_start;
+                let Some(rel_tag_end) = html_lower[start..].find('>') else {
+                    return true;
+                };
+                let open_end = start + rel_tag_end;
+                let open_tag = &html_lower[start..=open_end];
+                let content_start = open_end + 1;
+
+                let Some(rel_close) = html_lower[content_start..].find("</a>") else {
+                    return true;
+                };
+                let close_start = content_start + rel_close;
+                let inner_html = &html_lower[content_start..close_start];
+
+                if let Some(href) = Self::extract_href_from_anchor_tag(open_tag) {
+                    let normalized_href = Self::normalize_for_rich_compare(&href);
+                    if !normalized_href.is_empty() {
+                        let visible_text = Self::extract_text_from_html(inner_html);
+                        let normalized_visible = Self::normalize_for_rich_compare(&visible_text);
+
+                        if normalized_visible.is_empty() {
+                            return true;
+                        }
+                        if normalized_visible != normalized_href {
+                            let plain_has_both = normalized_plain.contains(&normalized_visible)
+                                && normalized_plain.contains(&normalized_href);
+                            if !plain_has_both {
+                                return true;
+                            }
+                        }
+                        if !normalized_plain.contains(&normalized_visible) {
+                            return true;
+                        }
+                    }
+                }
+
+                cursor = close_start + "</a>".len();
+            }
+
+            false
+        }
+
+        fn extract_href_from_anchor_tag(tag_lower: &str) -> Option<String> {
+            let href_pos = tag_lower.find("href")?;
+            let rest = &tag_lower[href_pos + 4..];
+            let eq_pos = rest.find('=')?;
+            let value = rest[eq_pos + 1..].trim_start();
+            if value.is_empty() {
+                return None;
+            }
+
+            if let Some(stripped) = value.strip_prefix('"') {
+                let end = stripped.find('"')?;
+                return Some(Self::decode_basic_html_entities(&stripped[..end]));
+            }
+
+            if let Some(stripped) = value.strip_prefix('\'') {
+                let end = stripped.find('\'')?;
+                return Some(Self::decode_basic_html_entities(&stripped[..end]));
+            }
+
+            let end = value
+                .find(|ch: char| ch.is_whitespace() || ch == '>')
+                .unwrap_or(value.len());
+            Some(Self::decode_basic_html_entities(&value[..end]))
+        }
+
+        fn extract_text_from_html(html: &str) -> String {
+            let mut normalized = html.replace("\r\n", "\n").replace('\r', "\n");
+            normalized = normalized.to_ascii_lowercase();
+
+            for marker in [
+                "<br>",
+                "<br/>",
+                "<br />",
+                "</p>",
+                "</div>",
+                "</li>",
+                "</tr>",
+                "</h1>",
+                "</h2>",
+                "</h3>",
+                "</h4>",
+                "</h5>",
+                "</h6>",
+                "</blockquote>",
+                "</pre>",
+            ] {
+                normalized = normalized.replace(marker, "\n");
+            }
+
+            normalized = Self::strip_tag_block(normalized, "script");
+            normalized = Self::strip_tag_block(normalized, "style");
+
+            let mut plain = String::with_capacity(normalized.len());
+            let mut in_tag = false;
+            for ch in normalized.chars() {
+                match ch {
+                    '<' => in_tag = true,
+                    '>' => in_tag = false,
+                    _ if !in_tag => plain.push(ch),
+                    _ => {}
+                }
+            }
+
+            Self::decode_basic_html_entities(&plain)
+        }
+
+        fn strip_tag_block(mut input: String, tag: &str) -> String {
+            let open = format!("<{}", tag);
+            let close = format!("</{}>", tag);
+
+            loop {
+                let Some(start) = input.find(&open) else {
+                    break;
+                };
+                let Some(relative_end) = input[start..].find(&close) else {
+                    input.replace_range(start.., "");
+                    break;
+                };
+                let end = start + relative_end + close.len();
+                input.replace_range(start..end, "");
+            }
+
+            input
+        }
+
+        fn decode_basic_html_entities(input: &str) -> String {
+            input
+                .replace("&nbsp;", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&apos;", "'")
+        }
+
+        fn normalize_for_rich_compare(input: &str) -> String {
+            let mut output = String::with_capacity(input.len());
+            let mut previous_was_space = false;
+
+            for ch in input.replace("\r\n", "\n").replace('\r', "\n").chars() {
+                let mapped = if ch.is_whitespace() {
+                    ' '
+                } else {
+                    ch.to_ascii_lowercase()
+                };
+
+                if mapped == ' ' {
+                    if !previous_was_space {
+                        output.push(' ');
+                    }
+                    previous_was_space = true;
+                } else {
+                    output.push(mapped);
+                    previous_was_space = false;
+                }
+            }
+
+            output.trim().to_string()
+        }
+
+        fn is_semantic_rtf(data: &[u8], plain_text: &str) -> bool {
+            let rtf = String::from_utf8_lossy(data).to_string();
+            let lower = rtf.to_ascii_lowercase();
+
+            // Semantic controls in RTF: link fields, images, objects, list metadata.
+            let semantic_markers = [
+                "\\field",
+                "\\pict",
+                "\\object",
+                "\\listtable",
+                "\\listoverride",
+                "\\footnote",
+                "\\annotation",
+                "\\xe ",
+                "\\tc ",
+            ];
+            if semantic_markers.iter().any(|m| lower.contains(m)) {
+                return true;
+            }
+
+            let extracted_text = Self::extract_text_from_rtf(&rtf);
+            let normalized_plain = Self::normalize_for_rich_compare(plain_text);
+            let normalized_rtf = Self::normalize_for_rich_compare(&extracted_text);
+
+            if normalized_plain.is_empty() || normalized_rtf.is_empty() {
+                return true;
+            }
+
+            normalized_plain != normalized_rtf
+        }
+
+        fn extract_text_from_rtf(rtf: &str) -> String {
+            let bytes = rtf.as_bytes();
+            let mut i = 0usize;
+            let mut out = String::with_capacity(rtf.len());
+
+            while i < bytes.len() {
+                match bytes[i] {
+                    b'{' | b'}' => {
+                        i += 1;
+                    }
+                    b'\\' => {
+                        i += 1;
+                        if i >= bytes.len() {
+                            break;
+                        }
+
+                        match bytes[i] {
+                            b'\\' | b'{' | b'}' => {
+                                out.push(bytes[i] as char);
+                                i += 1;
+                            }
+                            b'\'' => {
+                                if i + 2 < bytes.len() {
+                                    if let (Some(h1), Some(h2)) =
+                                        (Self::hex_value(bytes[i + 1]), Self::hex_value(bytes[i + 2]))
+                                    {
+                                        out.push((h1 * 16 + h2) as char);
+                                        i += 3;
+                                        continue;
+                                    }
+                                }
+                                i += 1;
+                            }
+                            b if (b as char).is_ascii_alphabetic() => {
+                                let word_start = i;
+                                while i < bytes.len() && (bytes[i] as char).is_ascii_alphabetic() {
+                                    i += 1;
+                                }
+                                let word = std::str::from_utf8(&bytes[word_start..i]).unwrap_or("");
+
+                                // Optional numeric argument.
+                                if i < bytes.len() && (bytes[i] == b'-' || (bytes[i] as char).is_ascii_digit()) {
+                                    i += 1;
+                                    while i < bytes.len() && (bytes[i] as char).is_ascii_digit() {
+                                        i += 1;
+                                    }
+                                }
+                                if i < bytes.len() && bytes[i] == b' ' {
+                                    i += 1;
+                                }
+
+                                if word == "par" || word == "line" {
+                                    out.push('\n');
+                                } else if word == "tab" {
+                                    out.push('\t');
+                                }
+                            }
+                            _ => {
+                                i += 1;
+                            }
+                        }
+                    }
+                    b'\r' | b'\n' => {
+                        out.push('\n');
+                        i += 1;
+                    }
+                    b => {
+                        out.push(b as char);
+                        i += 1;
+                    }
+                }
+            }
+
+            out
+        }
+
+        fn hex_value(b: u8) -> Option<u8> {
+            match b {
+                b'0'..=b'9' => Some(b - b'0'),
+                b'a'..=b'f' => Some(10 + (b - b'a')),
+                b'A'..=b'F' => Some(10 + (b - b'A')),
+                _ => None,
+            }
         }
 
         /// Write plain text + rich formats to the clipboard via Win32 API.
