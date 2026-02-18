@@ -73,6 +73,34 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
     }
 }
 
+fn load_tray_icon(app: &AppHandle, is_paused: bool) -> Image<'static> {
+    let icon_candidates: &[&str] = if is_paused {
+        &[
+            "icons/icon-disconnected-32.png",
+            "icons/32x32.png",
+            "icons/icon.png",
+        ]
+    } else {
+        &["icons/32x32.png", "icons/icon.png"]
+    };
+
+    for icon_path in icon_candidates {
+        if let Ok(icon) = Image::from_path(icon_path).or_else(|_| {
+            let resource_dir = app.path().resource_dir().unwrap_or_default();
+            Image::from_path(resource_dir.join(icon_path))
+        }) {
+            return icon;
+        }
+    }
+
+    let fallback = if is_paused {
+        include_bytes!("../icons/icon-disconnected-32.png").as_slice()
+    } else {
+        include_bytes!("../icons/32x32.png").as_slice()
+    };
+    Image::from_bytes(fallback).unwrap()
+}
+
 /// Build a tray menu for the given language and pause state.
 fn build_tray_menu(app: &AppHandle, lang: &str, is_paused: bool) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let show_hide = MenuItemBuilder::with_id("toggle", t("toggle", lang)).build(app)?;
@@ -92,27 +120,26 @@ fn build_tray_menu(app: &AppHandle, lang: &str, is_paused: bool) -> tauri::Resul
 }
 
 pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
-    // Clean up any existing tray icon first
-    if let Some(existing_tray) = app.tray_by_id("main") {
-        println!("[Tray] Removing existing tray icon");
-        let _ = app.remove_tray_by_id("main");
-    }
-
     let lang = match config_language {
         Some(l) if !l.is_empty() => l.to_string(),
         _ => get_system_language(),
     };
 
-    app.manage(TrayLanguage(Mutex::new(lang.clone())));
+    if let Some(lang_state) = app.try_state::<TrayLanguage>() {
+        *lang_state.0.lock().unwrap() = lang.clone();
+    } else {
+        app.manage(TrayLanguage(Mutex::new(lang.clone())));
+    }
 
     let menu = build_tray_menu(app, &lang, false)?;
+    let icon = load_tray_icon(app, false);
 
-    let icon = Image::from_path("icons/icon.png")
-        .or_else(|_| {
-            let resource_dir = app.path().resource_dir().unwrap_or_default();
-            Image::from_path(resource_dir.join("icons/icon.png"))
-        })
-        .unwrap_or_else(|_| Image::from_bytes(include_bytes!("../icons/icon.png")).unwrap());
+    if let Some(existing_tray) = app.tray_by_id("main") {
+        let _ = existing_tray.set_menu(Some(menu));
+        let _ = existing_tray.set_tooltip(Some(t("tooltip", &lang)));
+        let _ = existing_tray.set_icon(Some(icon));
+        return Ok(());
+    }
 
     TrayIconBuilder::with_id("main")
         .icon(icon)
@@ -154,19 +181,7 @@ pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), 
                             let tooltip = if new_paused { t("tooltip_paused", &current_lang) } else { t("tooltip", &current_lang) };
                             let _ = tray.set_tooltip(Some(tooltip));
 
-                            let icon_path = if new_paused {
-                                "icons/icon-disconnected-32.png"
-                            } else {
-                                "icons/icon.png"
-                            };
-                            if let Ok(new_icon) = Image::from_path(icon_path)
-                                .or_else(|_| {
-                                    let resource_dir = app.path().resource_dir().unwrap_or_default();
-                                    Image::from_path(resource_dir.join(icon_path))
-                                })
-                            {
-                                let _ = tray.set_icon(Some(new_icon));
-                            }
+                            let _ = tray.set_icon(Some(load_tray_icon(app, new_paused)));
                         }
                     }
                 }

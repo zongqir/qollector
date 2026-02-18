@@ -426,6 +426,7 @@
     "clearAll": "Clear Collection",
     "hidePanel": "Hide Collection",
     "showPanel": "Show Collection",
+    "longTermStorageHint": "Collection stores important items long-term so you can revisit and reuse them anytime.",
     "archivedToHistory": "Archived to history",
     "backToCollection": "Back to Collection",
     "addToCollection": "Add to Collection",

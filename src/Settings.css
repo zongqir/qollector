@@ -25,8 +25,8 @@
   backdrop-filter: saturate(200%) blur(40px);
   -webkit-backdrop-filter: saturate(200%) blur(40px);
   border-radius: 12px;
-  width: 90%;
-  max-width: 480px;
+  width: min(92vw, 980px);
+  max-width: 980px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
@@ -81,28 +81,41 @@
 }
 
 /* ---- macOS 分段控件 Tab ---- */
+.settings-main {
+  display: flex;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 0 20px;
+}
+
 .settings-tabs {
   display: flex;
-  margin: 0 20px;
-  padding: 2px;
-  gap: 1px;
+  flex-direction: column;
+  align-self: stretch;
+  width: 164px;
+  margin: 0;
+  padding: 6px;
+  gap: 4px;
   background: var(--bg-input);
-  border-radius: 7px;
+  border-radius: 10px;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 5px 0;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 8px 10px;
   background: transparent;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-tertiary);
   transition: all 0.15s ease;
-  text-align: center;
+  text-align: left;
   position: relative;
   white-space: nowrap;
 }
@@ -127,9 +140,10 @@
 
 /* ---- 内容区 ---- */
 .settings-content {
-  padding: 16px 20px;
+  padding: 16px 12px 16px 4px;
   overflow-y: auto;
   flex: 1;
+  min-width: 0;
 }
 
 /* ---- 分组卡片 (iOS inset grouped style) ---- */
@@ -1009,4 +1023,45 @@
   height: 16px;
   cursor: pointer;
   accent-color: var(--accent-color);
+}
+
+@media (max-width: 860px) {
+  .settings-modal {
+    width: 96vw;
+    max-width: 980px;
+  }
+
+  .settings-main {
+    flex-direction: row;
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .settings-tabs {
+    width: 132px;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    padding: 5px;
+    gap: 4px;
+    border-radius: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .tab-btn {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 7px 8px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .settings-content {
+    padding: 8px 4px 12px 0;
+  }
 }

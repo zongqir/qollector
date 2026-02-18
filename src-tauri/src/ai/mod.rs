@@ -1,12 +1,14 @@
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use chrono::Timelike;
 
 // System prompts configuration (embedded in EXE)
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
 const TIMELINE_PROMPTS_JSON: &str = include_str!("../../prompts/timeline_summary.json");
+const MAX_AI_TAGS: usize = 20;
+const MAX_AI_TAG_RESPONSE_TOKENS: u32 = 220;
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -336,7 +338,7 @@ impl AIService {
                 role: "user".to_string(),
                 content: prompt.clone(),
             }],
-            max_tokens: 100,
+            max_tokens: MAX_AI_TAG_RESPONSE_TOKENS,
             temperature: 0.7,
         };
 
@@ -417,11 +419,17 @@ impl AIService {
 
             // Remaining lines are tags (second line onward)
             let tags_text: String = lines.collect::<Vec<&str>>().join("\n");
+            let mut seen = HashSet::new();
             let tags: Vec<String> = tags_text
                 .split(&[',', '\u{ff0c}', '\n'][..])
-                .map(|s| s.trim().to_string())
+                .map(|s| {
+                    s.trim()
+                        .trim_matches(|c| matches!(c, '"' | '\'' | '`' | '*' | '-'))
+                        .to_string()
+                })
                 .filter(|s| !s.is_empty() && !s.starts_with("LANG:"))
-                .take(8) // Store up to 8 tags (ordered by importance)
+                .filter(|s| seen.insert(s.to_lowercase()))
+                .take(MAX_AI_TAGS) // Keep order, but hard-cap to avoid runaway output
                 .collect();
 
             println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);

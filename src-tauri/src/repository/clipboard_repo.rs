@@ -1,6 +1,7 @@
 use crate::core::models::{ClipboardItem, SearchFilters};
 use crate::core::tokenizer;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 /// Lightweight struct returned by cleanup queries.
@@ -239,16 +240,39 @@ impl ClipboardRepository {
         filters: &SearchFilters,
         limit: i32,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
-        // When there's a query, try FTS5 first
+        if limit <= 0 {
+            return Ok(vec![]);
+        }
+
+        // When there's a query, merge FTS and tag LIKE results first.
         if !query.is_empty() {
+            let mut merged_items: Vec<ClipboardItem> = Vec::new();
+            let mut seen_ids: HashSet<String> = HashSet::new();
+
             match self.search_fts(query, filters, limit).await {
-                Ok(results) if !results.is_empty() => return Ok(results),
-                Ok(_) => {
-                    // FTS returned empty — fall through to LIKE
+                Ok(results) => {
+                    for item in results {
+                        if seen_ids.insert(item.id.clone()) {
+                            merged_items.push(item);
+                        }
+                    }
                 }
                 Err(e) => {
-                    eprintln!("[FTS] search failed, falling back to LIKE: {}", e);
+                    eprintln!("[FTS] search failed, continue with tags/fallback: {}", e);
                 }
+            }
+
+            let tag_results = self.search_tags_like(query, filters, limit).await?;
+            for item in tag_results {
+                if seen_ids.insert(item.id.clone()) {
+                    merged_items.push(item);
+                }
+            }
+
+            if !merged_items.is_empty() {
+                // Keep FTS matches first; tag LIKE matches are supplemental recall.
+                merged_items.truncate(limit as usize);
+                return Ok(merged_items);
             }
         }
 
@@ -274,12 +298,56 @@ impl ClipboardRepository {
         }
 
         if !query.is_empty() {
+            let escaped_query = query.replace('\'', "''");
             sql.push_str(&format!(
                 " AND (content LIKE '%{}%' OR ocr_text LIKE '%{}%')",
-                query, query
+                escaped_query, escaped_query
             ));
         }
 
+        sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
+
+        let items = sqlx::query_as::<_, ClipboardItem>(&sql)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(items)
+    }
+
+    async fn search_tags_like(
+        &self,
+        query: &str,
+        filters: &SearchFilters,
+        limit: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        if query.is_empty() || limit <= 0 {
+            return Ok(vec![]);
+        }
+
+        // Tag search should be case-insensitive for mixed upper/lower tag text.
+        let escaped_query = query.to_lowercase().replace('\'', "''");
+        let mut sql =
+            String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0 AND tags IS NOT NULL");
+
+        if let Some(type_filter) = &filters.type_filter {
+            sql.push_str(&format!(" AND type = '{}'", type_filter));
+        }
+
+        if let Some(is_pinned) = filters.is_pinned {
+            sql.push_str(&format!(
+                " AND is_pinned = {}",
+                if is_pinned { 1 } else { 0 }
+            ));
+        }
+
+        if let Some(is_favorite) = filters.is_favorite {
+            sql.push_str(&format!(
+                " AND is_favorite = {}",
+                if is_favorite { 1 } else { 0 }
+            ));
+        }
+
+        sql.push_str(&format!(" AND LOWER(tags) LIKE '%{}%'", escaped_query));
         sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
 
         let items = sqlx::query_as::<_, ClipboardItem>(&sql)

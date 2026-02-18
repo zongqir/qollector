@@ -426,6 +426,7 @@
     "clearAll": "清空收集箱",
     "hidePanel": "隐藏收集箱",
     "showPanel": "显示收集箱",
+    "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。",
     "archivedToHistory": "已归档至历史流",
     "backToCollection": "返回收集箱",
     "addToCollection": "加入收集",

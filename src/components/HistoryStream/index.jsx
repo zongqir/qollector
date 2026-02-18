@@ -632,6 +632,12 @@ function HistoryStream({ style }) {
         )}
       </div>
 
+      {showFavoritesOnly && (
+        <div className="history-stream-helper-text">
+          {t('collection.longTermStorageHint')}
+        </div>
+      )}
+
       {selectedItemIds.length > 0 && (
         <div className="multi-select-bar">
           <span className="multi-select-count">
