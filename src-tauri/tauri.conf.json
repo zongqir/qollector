@@ -29,6 +29,9 @@
       "digestAlgorithm": "sha256",
       "timestampUrl": "",
       "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/nsis-header.bmp",
+        "sidebarImage": "icons/nsis-sidebar.bmp",
         "languages": ["English", "SimpChinese"],
         "displayLanguageSelector": true
       }
