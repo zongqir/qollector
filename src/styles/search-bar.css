@@ -70,6 +70,15 @@
   color: var(--text-primary);
 }
 
+.clear-search:focus {
+  outline: none;
+}
+
+.clear-search:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-medium);
+}
+
 /* 图标按钮 - macOS 风格 */
 .header-icon-btn {
   width: 30px;
@@ -90,6 +99,15 @@
 .header-icon-btn:hover {
   background: var(--btn-hover-bg);
   color: var(--text-secondary);
+}
+
+.header-icon-btn:focus {
+  outline: none;
+}
+
+.header-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-medium);
 }
 
 .header-icon-btn.active {
@@ -168,6 +186,15 @@
   background: rgba(0, 0, 0, 0.03);
 }
 
+.type-filter-btn:focus {
+  outline: none;
+}
+
+.type-filter-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-medium);
+}
+
 .type-filter-btn.active {
   background: var(--filter-btn-active-bg);
   color: var(--accent-color);
@@ -238,6 +265,15 @@
 
 .clear-filter-btn:hover {
   background: var(--accent-medium);
+}
+
+.clear-filter-btn:focus {
+  outline: none;
+}
+
+.clear-filter-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-medium);
 }
 
 /* Mini 模式隐藏低优先级 */

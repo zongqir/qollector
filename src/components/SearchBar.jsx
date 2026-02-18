@@ -20,12 +20,36 @@ function SearchBar({
   onCustomDateStartChange, onCustomDateEndChange,
   onApplyCustomDateRange,
   collectionPanelEnabled, onToggleCollectionPanel,
+  onSearchKeyDown,
 }) {
   const { t } = useTranslation();
+  const searchInputRef = useRef(null);
   const tagWrapperRef = useRef(null);
   const dateWrapperRef = useRef(null);
   const typeWrapperRef = useRef(null);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
+
+  useEffect(() => {
+    const focusSearchInput = () => {
+      const input = searchInputRef.current;
+      if (!input) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) {
+        return;
+      }
+      input.focus();
+      const cursor = input.value?.length ?? 0;
+      input.setSelectionRange(cursor, cursor);
+    };
+
+    const timer = window.setTimeout(focusSearchInput, 0);
+    window.addEventListener('focus', focusSearchInput);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', focusSearchInput);
+    };
+  }, []);
 
   useEffect(() => {
     if (!showTagFilter) return;
@@ -88,10 +112,12 @@ function SearchBar({
       <div className="header-row">
         <div className="search-box">
           <input
+            ref={searchInputRef}
             type="text"
             placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={onSearchKeyDown}
             className="search-input"
           />
           {searchQuery && (

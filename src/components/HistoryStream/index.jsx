@@ -450,6 +450,58 @@ function HistoryStream({ style }) {
     }
   }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearHoverPreview]);
 
+  const moveFocusedSelection = useCallback((dir) => {
+    const total = filteredItems.length;
+    if (total === 0) return;
+
+    const next = focusedIndex < 0
+      ? (dir === 1 ? 0 : total - 1)
+      : Math.max(0, Math.min(total - 1, focusedIndex + dir));
+
+    setFocusedIndex(next);
+    virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
+
+    const nextItem = filteredItems[next];
+    if (!nextItem) return;
+
+    if (shouldUseHoverPreview) {
+      const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+      }
+      return;
+    }
+
+    setPanelMode('preview', nextItem);
+  }, [filteredItems, focusedIndex, setFocusedIndex, shouldUseHoverPreview, setHoverPreview, setPanelMode]);
+
+  const submitFocusedSelection = useCallback(() => {
+    if (focusedIndex < 0 || focusedIndex >= filteredItems.length) return false;
+
+    const focusedItem = filteredItems[focusedIndex];
+    if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
+      handleCopy(focusedItem);
+    } else {
+      handleCopyAndAutoPaste(focusedItem);
+    }
+    return true;
+  }, [focusedIndex, filteredItems, handleCopy, handleCopyAndAutoPaste]);
+
+  const handleSearchInputKeyDown = useCallback((e) => {
+    if (e.nativeEvent?.isComposing || e.isComposing) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+
+    if (e.key === 'Enter' && submitFocusedSelection()) {
+      e.preventDefault();
+    }
+  }, [moveFocusedSelection, submitFocusedSelection]);
+
   useEffect(() => {
     if (!shouldUseHoverPreview) {
       clearHoverPreview();
@@ -464,37 +516,12 @@ function HistoryStream({ style }) {
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        const total = filteredItems.length;
-        if (total === 0) return;
-        const dir = e.key === 'ArrowDown' ? 1 : -1;
-        const next = focusedIndex < 0
-          ? (dir === 1 ? 0 : total - 1)
-          : Math.max(0, Math.min(total - 1, focusedIndex + dir));
-        setFocusedIndex(next);
-        virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
-        const nextItem = filteredItems[next];
-        if (nextItem) {
-          if (shouldUseHoverPreview) {
-            const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
-            }
-          } else {
-            setPanelMode('preview', nextItem);
-          }
-        }
+        moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
         return;
       }
 
-      if (e.key === 'Enter' && focusedIndex >= 0 && focusedIndex < filteredItems.length) {
+      if (e.key === 'Enter' && submitFocusedSelection()) {
         e.preventDefault();
-        const focusedItem = filteredItems[focusedIndex];
-        if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
-          handleCopy(focusedItem);
-        } else {
-          handleCopyAndAutoPaste(focusedItem);
-        }
         return;
       }
 
@@ -512,7 +539,16 @@ function HistoryStream({ style }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItemIds.length, deleteSelectedItems, copySelectedItemsMerged, clearSelection, focusedIndex, filteredItems, setFocusedIndex, handleCopyAndAutoPaste, setPanelMode, setHoverPreview, shouldUseHoverPreview]);
+  }, [
+    selectedItemIds.length,
+    deleteSelectedItems,
+    copySelectedItemsMerged,
+    clearSelection,
+    focusedIndex,
+    moveFocusedSelection,
+    submitFocusedSelection,
+    setFocusedIndex,
+  ]);
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -606,6 +642,7 @@ function HistoryStream({ style }) {
         onApplyCustomDateRange={handleApplyCustomDateRange}
         collectionPanelEnabled={collectionPanelEnabled}
         onToggleCollectionPanel={toggleCollectionPanel}
+        onSearchKeyDown={handleSearchInputKeyDown}
       />
 
       <div className="history-stream-content">

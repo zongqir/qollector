@@ -194,11 +194,12 @@ function PreviewPanel() {
   }, [item.id]);
 
   // 收集并切回收集箱
-  const handlePinAndBack = async () => {
-    if (!item.is_pinned) {
-      await togglePin(item);
+  const handlePreviewPinToggle = async () => {
+    const wasPinned = item.is_pinned;
+    await togglePin(item);
+    if (wasPinned) {
+      switchToCollection();
     }
-    switchToCollection();
   };
 
   // 开始编辑内容
@@ -429,7 +430,7 @@ function PreviewPanel() {
           </button>
           <button
             className={`preview-action-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-            onClick={() => togglePin(item)}
+            onClick={handlePreviewPinToggle}
             title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
           >
             <Inbox size={16} />
