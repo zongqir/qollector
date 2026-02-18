@@ -50,6 +50,8 @@
         "devtools": true,
         "decorations": false,
         "transparent": true,
+        "backgroundColor": "#00000000",
+        "shadow": false,
         "dragDropEnabled": true,
         "windowEffects": {
           "effects": ["mica", "acrylic", "hudWindow"],
