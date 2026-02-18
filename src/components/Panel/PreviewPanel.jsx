@@ -459,6 +459,7 @@ function PreviewPanel() {
           onAddTagToItem={addTagToItem}
           filteredUserTags={filteredUserTags}
           hideTypeTag
+          singleRow
         />
       </div>
 
