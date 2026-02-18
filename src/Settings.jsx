@@ -838,62 +838,63 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           <button onClick={handleClose} className="close-btn"><X size={20} /></button>
         </div>
 
-        <div className="settings-tabs">
-          <button
-            className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`}
-            onClick={() => setActiveTab('general')}
-          >
-            {t('settings.tabs.general')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'shortcuts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shortcuts')}
-          >
-            {t('settings.tabs.shortcuts')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
-            onClick={() => aiConfig.enabled && setActiveTab('ai')}
-            disabled={!aiConfig.enabled}
-          >
-            {t('settings.tabs.ai')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''} ${!ocrConfig.enabled ? 'disabled' : ''}`}
-            onClick={() => ocrConfig.enabled && setActiveTab('ocr')}
-            disabled={!ocrConfig.enabled}
-          >
-            {t('settings.tabs.ocr')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''} ${!mcpConfig.enabled ? 'disabled' : ''}`}
-            onClick={() => mcpConfig.enabled && setActiveTab('mcp')}
-            disabled={!mcpConfig.enabled}
-          >
-            {t('settings.tabs.mcp')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
-            onClick={() => setActiveTab('data')}
-          >
-            {t('settings.tabs.data')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
-          >
-            {t('settings.tabs.security')}
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'share' ? 'active' : ''}`}
-            onClick={() => setActiveTab('share')}
-          >
-            {t('settings.tabs.share')}
-          </button>
-        </div>
+        <div className="settings-main">
+          <div className="settings-tabs">
+            <button
+              className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`}
+              onClick={() => setActiveTab('general')}
+            >
+              {t('settings.tabs.general')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'shortcuts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('shortcuts')}
+            >
+              {t('settings.tabs.shortcuts')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
+              onClick={() => aiConfig.enabled && setActiveTab('ai')}
+              disabled={!aiConfig.enabled}
+            >
+              {t('settings.tabs.ai')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''} ${!ocrConfig.enabled ? 'disabled' : ''}`}
+              onClick={() => ocrConfig.enabled && setActiveTab('ocr')}
+              disabled={!ocrConfig.enabled}
+            >
+              {t('settings.tabs.ocr')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''} ${!mcpConfig.enabled ? 'disabled' : ''}`}
+              onClick={() => mcpConfig.enabled && setActiveTab('mcp')}
+              disabled={!mcpConfig.enabled}
+            >
+              {t('settings.tabs.mcp')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
+              onClick={() => setActiveTab('data')}
+            >
+              {t('settings.tabs.data')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
+              onClick={() => setActiveTab('security')}
+            >
+              {t('settings.tabs.security')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'share' ? 'active' : ''}`}
+              onClick={() => setActiveTab('share')}
+            >
+              {t('settings.tabs.share')}
+            </button>
+          </div>
 
-        {activeTab === 'general' && (
-          <div className="settings-content">
+          {activeTab === 'general' && (
+            <div className="settings-content">
             {/* 外观设置分组 */}
             <div className="setting-group">
               <div className="sg-row">
@@ -1080,11 +1081,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'shortcuts' && (
-          <div className="settings-content">
+          {activeTab === 'shortcuts' && (
+            <div className="settings-content">
             <div className="setting-group-title">{t('settings.shortcuts.globalHotkeys')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
@@ -1278,11 +1279,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </div>
             </div>
             <small className="setting-hint">{t('settings.shortcuts.emphasisCopyHint')}</small>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'ai' && (
-          <div className="settings-content">
+          {activeTab === 'ai' && (
+            <div className="settings-content">
             <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
@@ -1407,11 +1408,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               )}
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'ocr' && (
-          <div className="settings-content">
+          {activeTab === 'ocr' && (
+            <div className="settings-content">
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.ocr.autoOcr')}</span>
@@ -1528,11 +1529,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               )}
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'mcp' && (
-          <div className="settings-content">
+          {activeTab === 'mcp' && (
+            <div className="settings-content">
             <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
@@ -1600,11 +1601,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'data' && (
-          <div className="settings-content">
+          {activeTab === 'data' && (
+            <div className="settings-content">
             <div className="setting-options-group">
               <label className="setting-toggle-row">
                 <span>{t('settings.general.autoCleanup')}</span>
@@ -1779,11 +1780,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </small>
               )}
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'security' && (
-          <div className="settings-content">
+          {activeTab === 'security' && (
+            <div className="settings-content">
             <small className="setting-hint-block">
               {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
             </small>
@@ -1875,11 +1876,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </button>
               )}
             </div>
-          </div>
-        )}
+            </div>
+          )}
 
-        {activeTab === 'share' && (
-          <div className="settings-content">
+          {activeTab === 'share' && (
+            <div className="settings-content">
             <label className="setting-label">{t('settings.share.provider')}</label>
             <select
               className="setting-select"
@@ -2005,8 +2006,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <small className="setting-hint-block">{t('settings.share.networkHint')}</small>
               </div>
             )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
         <div className="settings-footer">
           <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
