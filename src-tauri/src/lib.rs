@@ -11,6 +11,7 @@ pub mod startup_metrics;
 pub mod tray;
 pub mod share;
 pub mod window_lifecycle;
+pub mod low_memory_mode;
 
 #[cfg(test)]
 mod tests;

@@ -1,10 +1,12 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use crate::low_memory_mode::LowMemoryModeState;
 use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder};
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
-pub const MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 30;
+pub const DEFAULT_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 30;
+pub const LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 2;
 
 #[derive(Default)]
 pub struct MainWindowLifecycleState {
@@ -59,15 +61,25 @@ pub fn schedule_main_window_release(app: AppHandle, reason: &str) {
         return;
     };
 
+    let release_delay_secs = if app
+        .try_state::<LowMemoryModeState>()
+        .map(|mode| mode.is_enabled())
+        .unwrap_or(false)
+    {
+        LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS
+    } else {
+        DEFAULT_MAIN_WINDOW_RELEASE_DELAY_SECS
+    };
+
     let generation = state.bump_release_generation();
     println!(
         "[MainWindow] schedule delayed release generation={} delay={}s reason={}",
-        generation, MAIN_WINDOW_RELEASE_DELAY_SECS, reason
+        generation, release_delay_secs, reason
     );
 
     let reason = reason.to_string();
     tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(MAIN_WINDOW_RELEASE_DELAY_SECS)).await;
+        tokio::time::sleep(Duration::from_secs(release_delay_secs)).await;
 
         let Some(state) = app.try_state::<MainWindowLifecycleState>() else {
             return;

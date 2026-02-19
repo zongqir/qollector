@@ -7,6 +7,7 @@ use tauri::{
 };
 
 use crate::core::clipboard_manager::ClipboardManager;
+use crate::low_memory_mode::AppExitState;
 use crate::window_lifecycle::{
     cancel_main_window_release, ensure_main_window, hide_main_window_with_release, MAIN_WINDOW_LABEL,
 };
@@ -202,7 +203,9 @@ pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), 
                     }
                 }
                 "quit" => {
-                    perform_shutdown(app);
+                    if let Some(exit_state) = app.try_state::<AppExitState>() {
+                        exit_state.mark_user_requested_exit();
+                    }
                     app.exit(0);
                 }
                 _ => {}

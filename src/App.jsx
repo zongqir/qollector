@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
@@ -19,6 +20,12 @@ const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
 const EditModal = lazy(() => import('./EditModal'));
 const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
+
+const NORMAL_SIZE = { width: 800, height: 600 };
+const MINI_SIZE = { width: 320, height: 450 };
+const WINDOW_MODE_STORAGE_KEY = 'clipbox-window-mode';
+const WINDOW_MODE_MINI = 'mini';
+const WINDOW_MODE_NORMAL = 'normal';
 
 function App() {
   console.log('[Perf:App] App() function called at', performance.now().toFixed(1), 'ms');
@@ -46,8 +53,6 @@ function App() {
   const setIsLocked = useAppStore(s => s.setIsLocked);
   const setIsAlwaysOnTop = useAppStore(s => s.setIsAlwaysOnTop);
   const setIsMiniMode = useAppStore(s => s.setIsMiniMode);
-  const setPinBeforeMini = useAppStore(s => s.setPinBeforeMini);
-  const pinBeforeMini = useAppStore(s => s.pinBeforeMini);
   const setCollectionPanelBeforeMini = useAppStore(s => s.setCollectionPanelBeforeMini);
   const collectionPanelBeforeMini = useAppStore(s => s.collectionPanelBeforeMini);
   const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
@@ -65,6 +70,7 @@ function App() {
   const shareError = useAppStore(s => s.shareError);
   const closeShareModal = useAppStore(s => s.closeShareModal);
   const retryShare = useAppStore(s => s.retryShare);
+  const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
 
   // Theme
   const { setThemeMode: applyTheme } = useTheme(themeMode);
@@ -168,22 +174,49 @@ function App() {
   const setMiniMode = async (enterMini) => {
     if (enterMini === isMiniMode) return;
     const appWindow = getCurrentWindow();
-    if (enterMini) {
-      setPinBeforeMini(isAlwaysOnTop);
-      if (!isAlwaysOnTop) {
-        await appWindow.setAlwaysOnTop(true);
-        setIsAlwaysOnTop(true);
-      }
-    } else {
-      if (!pinBeforeMini && isAlwaysOnTop) {
-        await appWindow.setAlwaysOnTop(false);
-        setIsAlwaysOnTop(false);
-      }
-    }
+    const targetSize = enterMini ? MINI_SIZE : NORMAL_SIZE;
+    await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
+    localStorage.setItem(
+      WINDOW_MODE_STORAGE_KEY,
+      enterMini ? WINDOW_MODE_MINI : WINDOW_MODE_NORMAL
+    );
     setIsMiniMode(enterMini);
   };
 
   useEffect(() => {
+    let cancelled = false;
+
+    const applyInitialWindowMode = async () => {
+      const storedWindowMode = localStorage.getItem(WINDOW_MODE_STORAGE_KEY);
+      const mode = storedWindowMode === WINDOW_MODE_NORMAL ? WINDOW_MODE_NORMAL : WINDOW_MODE_MINI;
+      const enterMini = mode === WINDOW_MODE_MINI;
+      const targetSize = enterMini ? MINI_SIZE : NORMAL_SIZE;
+
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
+        if (!cancelled) {
+          setIsMiniMode(enterMini);
+        }
+      } catch (error) {
+        console.error('failed to apply initial window mode:', error);
+      } finally {
+        if (!cancelled) {
+          setInitialWindowModeReady(true);
+        }
+      }
+    };
+
+    applyInitialWindowMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setIsMiniMode]);
+
+  useEffect(() => {
+    if (!initialWindowModeReady) return undefined;
+
     const handleResize = () => {
       const width = window.innerWidth;
 
@@ -209,7 +242,7 @@ function App() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isMiniMode, isAlwaysOnTop, pinBeforeMini, collectionPanelEnabled, collectionPanelBeforeMini]);
+  }, [initialWindowModeReady, isMiniMode, collectionPanelEnabled, collectionPanelBeforeMini]);
 
   // 窗口置顶
   const toggleWindowAlwaysOnTop = async () => {

@@ -1,12 +1,16 @@
 use crate::commands::ai_commands::AIState;
 use crate::config::GeneralConfig;
+use crate::low_memory_mode::LowMemoryModeState;
 use crate::shortcuts::{apply_shortcut_config, ShortcutBindingState};
 use crate::startup_metrics::{StartupMetricsSnapshot, StartupMetricsState};
+use crate::window_lifecycle::{
+    cancel_main_window_release, schedule_main_window_release, MAIN_WINDOW_LABEL,
+};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 
 fn shortcut_fields_changed(next: &GeneralConfig, previous: &GeneralConfig) -> bool {
@@ -63,6 +67,22 @@ pub async fn update_general_config(
     if config.autostart_enabled != previous_config.autostart_enabled {
         if let Err(e) = update_autostart_state(&app, config.autostart_enabled) {
             eprintln!("[Autostart] Failed to update autostart state: {}", e);
+        }
+    }
+
+    if config.low_memory_mode_enabled != previous_config.low_memory_mode_enabled {
+        if let Some(low_memory_mode_state) = app.try_state::<LowMemoryModeState>() {
+            low_memory_mode_state.set_enabled(config.low_memory_mode_enabled);
+        }
+
+        if config.low_memory_mode_enabled {
+            if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                if !main_window.is_visible().unwrap_or(false) {
+                    schedule_main_window_release(app.clone(), "settings_low_memory_mode_enabled");
+                }
+            }
+        } else {
+            cancel_main_window_release(&app, "settings_low_memory_mode_disabled");
         }
     }
 

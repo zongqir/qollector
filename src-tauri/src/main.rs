@@ -13,6 +13,7 @@ mod shortcuts;
 mod startup_metrics;
 mod tray;
 mod window_lifecycle;
+mod low_memory_mode;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
@@ -35,8 +36,10 @@ use std::time::Instant;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
+use low_memory_mode::{AppExitState, LowMemoryModeState};
 use window_lifecycle::{
     cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
+    schedule_main_window_release,
     MainWindowLifecycleState, MAIN_WINDOW_LABEL,
 };
 
@@ -296,6 +299,8 @@ fn main() {
 
     tauri::Builder::default()
         .manage(MainWindowLifecycleState::default())
+        .manage(LowMemoryModeState::default())
+        .manage(AppExitState::default())
         .manage(startup_metrics)
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -513,6 +518,19 @@ fn main() {
             setup_meter.mark("setup_complete");
             startup_metrics_for_setup.mark_setup_complete();
 
+            if let Some(low_memory_mode_state) =
+                app_handle_for_shortcuts.try_state::<LowMemoryModeState>()
+            {
+                low_memory_mode_state.set_enabled(startup_general_config.low_memory_mode_enabled);
+            }
+
+            if startup_general_config.low_memory_mode_enabled {
+                schedule_main_window_release(
+                    app_handle_for_shortcuts.clone(),
+                    "startup_low_memory_mode",
+                );
+            }
+
             // Register global shortcuts
             #[cfg(desktop)]
             {
@@ -679,9 +697,22 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            if let tauri::RunEvent::Exit = event {
-                println!("[Shutdown] Application exiting");
-                tray::perform_shutdown(app);
+            match event {
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    let user_requested_exit = app
+                        .try_state::<AppExitState>()
+                        .map(|state| state.is_user_requested_exit())
+                        .unwrap_or(false);
+                    if !user_requested_exit {
+                        api.prevent_exit();
+                        println!("[Shutdown] Exit requested without explicit quit, keeping app alive");
+                    }
+                }
+                tauri::RunEvent::Exit => {
+                    println!("[Shutdown] Application exiting");
+                    tray::perform_shutdown(app);
+                }
+                _ => {}
             }
         });
 }
