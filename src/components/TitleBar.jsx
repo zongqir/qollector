@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { LogicalSize } from '@tauri-apps/api/dpi';
 import { useTranslation } from 'react-i18next';
 import { SquarePen, Minimize2, Maximize2, X, Pin, Shrink, Expand } from 'lucide-react';
-
-const NORMAL_SIZE = { width: 800, height: 600 };
-const MINI_SIZE = { width: 320, height: 450 };
 
 const GLASS_STORAGE_KEY = 'clipbox-glass-opacity';
 const GLASS_DEFAULT = 0.55;
@@ -45,11 +41,7 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
     hideTimerRef.current = setTimeout(() => setShowIndicator(false), 800);
   }, []);
 
-  const handleToggleMini = async () => {
-    const appWindow = getCurrentWindow();
-    const nextMini = !isMiniMode;
-    const size = nextMini ? MINI_SIZE : NORMAL_SIZE;
-    await appWindow.setSize(new LogicalSize(size.width, size.height));
+  const handleToggleMini = () => {
     onToggleMiniMode();
   };
 
