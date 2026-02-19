@@ -7,6 +7,9 @@ use tauri::{
 };
 
 use crate::core::clipboard_manager::ClipboardManager;
+use crate::window_lifecycle::{
+    cancel_main_window_release, ensure_main_window, hide_main_window_with_release, MAIN_WINDOW_LABEL,
+};
 
 /// Shared tray language state so menu event handlers always use the latest language.
 pub struct TrayLanguage(pub Mutex<String>);
@@ -157,12 +160,25 @@ pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), 
                     toggle_main_window(app);
                 }
                 "settings" => {
-                    if let Some(window) = app.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.unminimize();
-                        let _ = window.set_focus();
-                    }
-                    let _ = app.emit("open-settings", ());
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        cancel_main_window_release(&app_handle, "tray_settings_show");
+                        match ensure_main_window(&app_handle) {
+                            Ok(window) => {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                            Err(error) => {
+                                eprintln!(
+                                    "[Tray] failed to ensure main window for settings: {}",
+                                    error
+                                );
+                            }
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                        let _ = app_handle.emit("open-settings", ());
+                    });
                 }
                 "pause" => {
                     if let Some(manager) = app.try_state::<Arc<ClipboardManager>>() {
@@ -229,18 +245,30 @@ pub fn update_tray_language(app: &AppHandle, lang: &str) {
 }
 
 fn toggle_main_window(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let is_visible = window.is_visible().unwrap_or(false);
-        let is_minimized = window.is_minimized().unwrap_or(false);
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Some(window) = app_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+            let is_visible = window.is_visible().unwrap_or(false);
+            let is_minimized = window.is_minimized().unwrap_or(false);
 
-        if is_visible && !is_minimized {
-            let _ = window.hide();
-        } else {
-            let _ = window.show();
-            let _ = window.unminimize();
-            let _ = window.set_focus();
+            if is_visible && !is_minimized {
+                hide_main_window_with_release(&app_handle, "tray_toggle_hide");
+                return;
+            }
         }
-    }
+
+        cancel_main_window_release(&app_handle, "tray_toggle_show");
+        match ensure_main_window(&app_handle) {
+            Ok(window) => {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+            Err(error) => {
+                eprintln!("[Tray] failed to ensure main window on toggle: {}", error);
+            }
+        }
+    });
 }
 
 pub fn perform_shutdown(app: &tauri::AppHandle) {

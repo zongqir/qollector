@@ -10,6 +10,7 @@ pub mod shortcuts;
 pub mod startup_metrics;
 pub mod tray;
 pub mod share;
+pub mod window_lifecycle;
 
 #[cfg(test)]
 mod tests;
