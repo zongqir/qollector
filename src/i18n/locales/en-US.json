@@ -217,6 +217,8 @@
       "autostartHint": "Automatically run ClipBox when your system starts",
       "autoCleanup": "Auto-clean old data",
       "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and collected items are never removed.",
+      "enableWidget": "Floating Widget",
+      "enableWidgetHint": "Show a floating drop zone on screen for quick content collection",
       "cleanupMaxItems": "Max items to keep",
       "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
       "cleanupMaxAgeDays": "Max days to keep",

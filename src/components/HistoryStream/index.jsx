@@ -133,7 +133,7 @@ function HistoryStream({ style }) {
     }
     let cancelled = false;
     setIsSearching(true);
-    searchItems(query, 500)
+    searchItems(query, 200)
       .then((results) => {
         if (!cancelled) setBackendSearchResults(results);
       })

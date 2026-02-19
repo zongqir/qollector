@@ -8,6 +8,7 @@ import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
 import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 30;
+const MAX_ITEMS_IN_MEMORY = 150;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 let loadItemsRequestSeq = 0;
 
@@ -166,6 +167,7 @@ const useAppStore = create((set, get) => ({
   collectionPanelEnabled: true,
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
+  widgetEnabled: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -192,13 +194,13 @@ const useAppStore = create((set, get) => ({
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
-      set({ panelMode: 'preview', previewItem: item });
+      set({ panelMode: 'preview', previewItem: item, timelineItems: [], timelineSummary: null });
     } else if (mode === 'timeline') {
       set({ panelMode: 'timeline', previewItem: null });
       // Auto-load timeline data when entering timeline mode
       get().loadTimelineData('today');
     } else {
-      set({ panelMode: 'collection', previewItem: null });
+      set({ panelMode: 'collection', previewItem: null, timelineItems: [], timelineSummary: null });
     }
   },
 
@@ -382,14 +384,17 @@ const useAppStore = create((set, get) => ({
       const more = await getMoreItems(PAGE_SIZE, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
       let mergedItemsSnapshot = null;
-      set((state) => ({
-        items: (() => {
-          const merged = mergeUniqueById(state.items, more);
-          mergedItemsSnapshot = merged;
-          return merged;
-        })(),
-        hasMore: more.length >= PAGE_SIZE,
-      }));
+      set((state) => {
+        let merged = mergeUniqueById(state.items, more);
+        if (merged.length > MAX_ITEMS_IN_MEMORY) {
+          merged = merged.slice(0, MAX_ITEMS_IN_MEMORY);
+        }
+        mergedItemsSnapshot = merged;
+        return {
+          items: merged,
+          hasMore: more.length >= PAGE_SIZE && merged.length < MAX_ITEMS_IN_MEMORY,
+        };
+      });
       if (mergedItemsSnapshot) {
         logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
           fetched: more.length,
@@ -454,6 +459,7 @@ const useAppStore = create((set, get) => ({
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
+        widgetEnabled: generalConfig.widget_enabled || false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });

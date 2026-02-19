@@ -262,6 +262,12 @@ impl ClipboardRepository {
                 }
             }
 
+            // If FTS already filled the requested quota, skip extra recall query.
+            if merged_items.len() >= limit as usize {
+                merged_items.truncate(limit as usize);
+                return Ok(merged_items);
+            }
+
             let tag_results = self.search_tags_like(query, filters, limit).await?;
             for item in tag_results {
                 if seen_ids.insert(item.id.clone()) {
@@ -276,8 +282,15 @@ impl ClipboardRepository {
             }
         }
 
-        // Fallback: original LIKE-based search
-        let mut sql = String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0");
+        // Fallback: LIKE-based search over the lightweight projection.
+        let mut sql = String::from(
+            "SELECT id, type, content, '' as original_content, content_hash,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+                    metadata, is_pinned, is_favorite, is_deleted,
+                    pinned_at, created_at, updated_at,
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+             FROM clipboard_items WHERE is_deleted = 0",
+        );
 
         if let Some(type_filter) = &filters.type_filter {
             sql.push_str(&format!(" AND type = '{}'", type_filter));
@@ -326,8 +339,14 @@ impl ClipboardRepository {
 
         // Tag search should be case-insensitive for mixed upper/lower tag text.
         let escaped_query = query.to_lowercase().replace('\'', "''");
-        let mut sql =
-            String::from("SELECT * FROM clipboard_items WHERE is_deleted = 0 AND tags IS NOT NULL");
+        let mut sql = String::from(
+            "SELECT id, type, content, '' as original_content, content_hash,
+                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+                    metadata, is_pinned, is_favorite, is_deleted,
+                    pinned_at, created_at, updated_at,
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+             FROM clipboard_items WHERE is_deleted = 0 AND tags IS NOT NULL",
+        );
 
         if let Some(type_filter) = &filters.type_filter {
             sql.push_str(&format!(" AND type = '{}'", type_filter));
@@ -704,7 +723,12 @@ impl ClipboardRepository {
         }
 
         let sql = format!(
-            r#"SELECT ci.* FROM clipboard_items ci
+            r#"SELECT ci.id, ci.type, ci.content, '' as original_content, ci.content_hash,
+                      ci.image_paths, ci.ocr_text, ci.code_language, NULL as embedding, ci.tags, ci.user_note,
+                      ci.metadata, ci.is_pinned, ci.is_favorite, ci.is_deleted,
+                      ci.pinned_at, ci.created_at, ci.updated_at,
+                      EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = ci.id) as has_raw_formats
+               FROM clipboard_items ci
                INNER JOIN clipboard_fts fts ON ci.id = fts.item_id
                WHERE ci.is_deleted = 0
                AND clipboard_fts MATCH ?

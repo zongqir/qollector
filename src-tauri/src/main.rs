@@ -499,6 +499,42 @@ fn main() {
                 }
             });
 
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(1800)).await;
+
+                let snapshot = collect_runtime_diagnostics_snapshot();
+                let app_mb = snapshot.app_memory_bytes as f64 / 1024.0 / 1024.0;
+                let webview_mb = snapshot.webview2_memory_bytes_total as f64 / 1024.0 / 1024.0;
+
+                println!(
+                    "[RuntimeDiag] app_pid={} app_mem_mb={:.1} descendants={} webview2_count={} webview2_mem_mb={:.1} windows={}",
+                    snapshot.app_pid,
+                    app_mb,
+                    snapshot.descendant_process_count,
+                    snapshot.webview2_process_count,
+                    webview_mb,
+                    snapshot.windows.len()
+                );
+
+                for p in snapshot.webview2_processes.iter().take(8) {
+                    println!(
+                        "[RuntimeDiag] webview2 pid={} parent={:?} mem_mb={:.1} vmem_mb={:.1} cpu={:.1}",
+                        p.pid,
+                        p.parent_pid,
+                        p.memory_bytes as f64 / 1024.0 / 1024.0,
+                        p.virtual_memory_bytes as f64 / 1024.0 / 1024.0,
+                        p.cpu_usage_percent
+                    );
+                }
+
+                for w in snapshot.windows.iter().filter(|w| w.visible || !w.title.is_empty()) {
+                    println!(
+                        "[RuntimeDiag] window handle={} visible={} size={}x{} pos=({}, {}) title={}",
+                        w.handle, w.visible, w.width, w.height, w.x, w.y, w.title
+                    );
+                }
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -554,6 +590,7 @@ fn main() {
             get_general_config,
             update_general_config,
             get_startup_metrics,
+            get_runtime_diagnostics,
             has_lock_password,
             verify_lock_password,
             set_lock_password,

@@ -1059,6 +1059,30 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </label>
               <label className="setting-toggle-row">
                 <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableWidget')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableWidgetHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.widget_enabled || false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      const updated = { ...generalConfig, widget_enabled: checked };
+                      setGeneralConfig(updated);
+                      useAppStore.setState({ widgetEnabled: checked });
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('save widget_enabled config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
                   <span className="toggle-label">{t('settings.general.autostart')}</span>
                   <span className="toggle-desc">{t('settings.general.autostartHint')}</span>
                 </span>
