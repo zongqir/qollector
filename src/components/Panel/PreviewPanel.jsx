@@ -39,6 +39,7 @@ function PreviewPanel() {
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const generatingAI = useAppStore(s => s.generatingAI);
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const ocrProcessing = useAppStore(s => s.ocrProcessing);
@@ -73,7 +74,7 @@ function PreviewPanel() {
     return null;
   }
 
-  const isCopied = copiedItemId === item.id;
+  const isCopied = copiedItemId === item.id && copyFeedbackSource === 'preview';
   const tags = getTags(item.tags);
   const hasAITags = tags.some(tag => tag.startsWith('AI:'));
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags;
@@ -227,10 +228,10 @@ function PreviewPanel() {
     } else {
       // copy content only (not the whole item)
       if (item.content) {
-        await handleCopyPlainText(item.content);
+        await handleCopyPlainText(item.content, 'preview');
       } else if (item.type_ === 'image') {
         // for image, copy the image itself
-        await handleCopy(item);
+        await handleCopy(item, 'preview');
       }
     }
   };
@@ -316,9 +317,9 @@ function PreviewPanel() {
   const handleFormatJsonCopy = useCallback(() => {
     try {
       const formatted = JSON.stringify(JSON.parse(item.content), null, 2);
-      handleCopyPlainText(formatted);
+      handleCopyPlainText(formatted, 'preview');
     } catch {
-      handleCopyPlainText(item.content);
+      handleCopyPlainText(item.content, 'preview');
     }
   }, [item.content, handleCopyPlainText]);
 
@@ -416,7 +417,7 @@ function PreviewPanel() {
         <div className="preview-nav-actions">
           <button
             className={`preview-action-btn copy-btn ${isCopied ? 'copied' : ''}`}
-            onClick={() => handleCopy(item)}
+            onClick={() => handleCopy(item, 'preview')}
             title={t('item.copy')}
           >
             <Copy size={16} />
@@ -519,7 +520,7 @@ function PreviewPanel() {
         ) : (
           <>
             {item.has_raw_formats && item.content && (
-              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content)}>
+              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content, 'preview')}>
                 <FileText size={14} />
                 <span>{t('item.copyPlainText')}</span>
               </button>

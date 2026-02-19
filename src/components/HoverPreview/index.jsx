@@ -29,6 +29,7 @@ function HoverPreviewInner() {
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const deleteItem = useAppStore(s => s.deleteItem);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
   const panelRef = useRef(null);
@@ -83,7 +84,7 @@ function HoverPreviewInner() {
 
   const handleCopyClick = async (e) => {
     e.stopPropagation();
-    await handleCopy(item);
+    await handleCopy(item, 'hover');
   };
 
   const handleFavoriteClick = async (e) => {
@@ -125,7 +126,7 @@ function HoverPreviewInner() {
         }
       } else if (item.type_ === 'image') {
         // for image, copy the image itself
-        await handleCopy(item);
+        await handleCopy(item, 'hover');
       }
     }
   };
@@ -261,7 +262,7 @@ function HoverPreviewInner() {
         </div>
         <div className="hover-preview-actions">
           <button
-            className={`hover-preview-action-btn ${copiedItemId === item.id ? 'copied' : ''}`}
+            className={`hover-preview-action-btn ${copiedItemId === item.id && copyFeedbackSource === 'hover' ? 'copied' : ''}`}
             onClick={handleCopyClick}
             title={t('item.copy')}
           >

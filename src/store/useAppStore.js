@@ -8,10 +8,17 @@ import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
 import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 30;
+const MAX_ITEMS_IN_MEMORY = 150;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
+const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'collection', 'global']);
+const normalizeCopyFeedbackSource = (source) => {
+  if (typeof source !== 'string') return 'global';
+  const normalized = source.trim().toLowerCase();
+  return COPY_FEEDBACK_SOURCES.has(normalized) ? normalized : 'global';
+};
 
 const summarizeItemsForMemory = (items) => {
   let totalContentChars = 0;
@@ -148,6 +155,8 @@ const useAppStore = create((set, get) => ({
 
   // ========== UI 状态 ==========
   copiedItemId: null,
+  copyFeedbackSource: null,
+  copyFeedbackToken: 0,
   generatingAI: null,
   ocrProcessing: null,
   showSettings: false,
@@ -166,6 +175,7 @@ const useAppStore = create((set, get) => ({
   collectionPanelEnabled: true,
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
+  widgetEnabled: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -192,13 +202,13 @@ const useAppStore = create((set, get) => ({
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
-      set({ panelMode: 'preview', previewItem: item });
+      set({ panelMode: 'preview', previewItem: item, timelineItems: [], timelineSummary: null });
     } else if (mode === 'timeline') {
       set({ panelMode: 'timeline', previewItem: null });
       // Auto-load timeline data when entering timeline mode
       get().loadTimelineData('today');
     } else {
-      set({ panelMode: 'collection', previewItem: null });
+      set({ panelMode: 'collection', previewItem: null, timelineItems: [], timelineSummary: null });
     }
   },
 
@@ -382,14 +392,17 @@ const useAppStore = create((set, get) => ({
       const more = await getMoreItems(PAGE_SIZE, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
       let mergedItemsSnapshot = null;
-      set((state) => ({
-        items: (() => {
-          const merged = mergeUniqueById(state.items, more);
-          mergedItemsSnapshot = merged;
-          return merged;
-        })(),
-        hasMore: more.length >= PAGE_SIZE,
-      }));
+      set((state) => {
+        let merged = mergeUniqueById(state.items, more);
+        if (merged.length > MAX_ITEMS_IN_MEMORY) {
+          merged = merged.slice(0, MAX_ITEMS_IN_MEMORY);
+        }
+        mergedItemsSnapshot = merged;
+        return {
+          items: merged,
+          hasMore: more.length >= PAGE_SIZE && merged.length < MAX_ITEMS_IN_MEMORY,
+        };
+      });
       if (mergedItemsSnapshot) {
         logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
           fetched: more.length,
@@ -454,6 +467,7 @@ const useAppStore = create((set, get) => ({
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
+        widgetEnabled: generalConfig.widget_enabled || false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
@@ -464,21 +478,59 @@ const useAppStore = create((set, get) => ({
   },
 
   // ========== 剪贴板操作 ==========
-  handleCopy: async (item) => {
+  handleCopy: async (item, source = 'global') => {
+    const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
       await copyItemToClipboard(item);
-      set({ copiedItemId: item.id });
-      setTimeout(() => set({ copiedItemId: null }), 1000);
+      let feedbackToken = null;
+      set((state) => {
+        feedbackToken = state.copyFeedbackToken + 1;
+        return {
+          copiedItemId: item.id,
+          copyFeedbackSource: feedbackSource,
+          copyFeedbackToken: feedbackToken,
+          lastCopyWasAutoPaste: false,
+        };
+      });
+      setTimeout(() => {
+        set((state) => {
+          if (state.copyFeedbackToken !== feedbackToken) return {};
+          return {
+            copiedItemId: null,
+            copyFeedbackSource: null,
+            lastCopyWasAutoPaste: false,
+          };
+        });
+      }, 1000);
     } catch (error) {
       console.error('复制失败:', error);
     }
   },
 
-  handleCopyAndAutoPaste: async (item) => {
+  handleCopyAndAutoPaste: async (item, source = 'global') => {
+    const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
       await copyItemToClipboard(item);
-      set({ copiedItemId: item.id, lastCopyWasAutoPaste: false });
-      setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1000);
+      let copiedToken = null;
+      set((state) => {
+        copiedToken = state.copyFeedbackToken + 1;
+        return {
+          copiedItemId: item.id,
+          copyFeedbackSource: feedbackSource,
+          copyFeedbackToken: copiedToken,
+          lastCopyWasAutoPaste: false,
+        };
+      });
+      setTimeout(() => {
+        set((state) => {
+          if (state.copyFeedbackToken !== copiedToken) return {};
+          return {
+            copiedItemId: null,
+            copyFeedbackSource: null,
+            lastCopyWasAutoPaste: false,
+          };
+        });
+      }, 1000);
 
       if (!get().autoPasteOnDoubleClick) {
         return;
@@ -492,8 +544,26 @@ const useAppStore = create((set, get) => ({
       try {
         const pasted = await invoke('try_paste_foreground');
         if (pasted) {
-          set({ copiedItemId: item.id, lastCopyWasAutoPaste: true });
-          setTimeout(() => set({ copiedItemId: null, lastCopyWasAutoPaste: false }), 1500);
+          let pastedToken = null;
+          set((state) => {
+            pastedToken = state.copyFeedbackToken + 1;
+            return {
+              copiedItemId: item.id,
+              copyFeedbackSource: feedbackSource,
+              copyFeedbackToken: pastedToken,
+              lastCopyWasAutoPaste: true,
+            };
+          });
+          setTimeout(() => {
+            set((state) => {
+              if (state.copyFeedbackToken !== pastedToken) return {};
+              return {
+                copiedItemId: null,
+                copyFeedbackSource: null,
+                lastCopyWasAutoPaste: false,
+              };
+            });
+          }, 1500);
         } else {
           console.info('[AutoPaste] Platform not implemented, copied only');
         }
@@ -505,11 +575,29 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  handleCopyPlainText: async (text) => {
+  handleCopyPlainText: async (text, source = 'global') => {
+    const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
       await invoke('copy_plain_text', { text });
-      set({ copiedItemId: 'plain-text' });
-      setTimeout(() => set({ copiedItemId: null }), 1000);
+      let feedbackToken = null;
+      set((state) => {
+        feedbackToken = state.copyFeedbackToken + 1;
+        return {
+          copiedItemId: 'plain-text',
+          copyFeedbackSource: feedbackSource,
+          copyFeedbackToken: feedbackToken,
+          lastCopyWasAutoPaste: false,
+        };
+      });
+      setTimeout(() => {
+        set((state) => {
+          if (state.copyFeedbackToken !== feedbackToken) return {};
+          return {
+            copiedItemId: null,
+            copyFeedbackSource: null,
+          };
+        });
+      }, 1000);
     } catch (error) {
       console.error('复制纯文本失败:', error);
     }
@@ -783,8 +871,23 @@ const useAppStore = create((set, get) => ({
         .join('\n');
       if (!merged) return;
       await invoke('copy_plain_text', { text: merged });
-      set({ copiedItemId: 'merge-success', selectedItemIds: [] });
-      setTimeout(() => set({ copiedItemId: null }), 1000);
+      let feedbackToken = null;
+      set((state) => {
+        feedbackToken = state.copyFeedbackToken + 1;
+        return {
+          copiedItemId: 'merge-success',
+          copyFeedbackSource: 'history',
+          copyFeedbackToken: feedbackToken,
+          selectedItemIds: [],
+          lastCopyWasAutoPaste: false,
+        };
+      });
+      setTimeout(() => {
+        set((state) => {
+          if (state.copyFeedbackToken !== feedbackToken) return {};
+          return { copiedItemId: null, copyFeedbackSource: null };
+        });
+      }, 1000);
     } catch (error) {
       console.error('merge copy failed:', error);
     }
@@ -1001,7 +1104,12 @@ const useAppStore = create((set, get) => ({
   setThemeMode: (v) => set({ themeMode: v }),
   setEditNote: (v) => set({ editNote: v }),
   setNewTagInput: (v) => set({ newTagInput: v }),
-  setCopiedItemId: (v) => set({ copiedItemId: v }),
+  setCopiedItemId: (v, source = 'global') => set((state) => ({
+    copiedItemId: v,
+    copyFeedbackSource: v ? normalizeCopyFeedbackSource(source) : null,
+    copyFeedbackToken: state.copyFeedbackToken + 1,
+    lastCopyWasAutoPaste: false,
+  })),
   setDebouncedSearchQuery: (v) => set({ debouncedSearchQuery: v }),
   resetRuntimeStateAfterDataReset: () => set((state) => ({
     items: [],
@@ -1016,6 +1124,8 @@ const useAppStore = create((set, get) => ({
     hoverPreviewPosition: null,
     selectedItemIds: [],
     copiedItemId: null,
+    copyFeedbackSource: null,
+    copyFeedbackToken: state.copyFeedbackToken + 1,
     generatingAI: null,
     ocrProcessing: null,
     editingNoteId: null,
@@ -1063,8 +1173,22 @@ const useAppStore = create((set, get) => ({
       if (merged) {
         // 构造临时 item 用于复制
         await invoke('copy_plain_text', { text: merged });
-        set({ copiedItemId: 'merge-success' });
-        setTimeout(() => set({ copiedItemId: null }), 1000);
+        let feedbackToken = null;
+        set((state) => {
+          feedbackToken = state.copyFeedbackToken + 1;
+          return {
+            copiedItemId: 'merge-success',
+            copyFeedbackSource: 'collection',
+            copyFeedbackToken: feedbackToken,
+            lastCopyWasAutoPaste: false,
+          };
+        });
+        setTimeout(() => {
+          set((state) => {
+            if (state.copyFeedbackToken !== feedbackToken) return {};
+            return { copiedItemId: null, copyFeedbackSource: null };
+          });
+        }, 1000);
       }
     } catch (error) {
       console.error('合并复制失败:', error);

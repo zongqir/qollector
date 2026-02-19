@@ -163,3 +163,14 @@ export const openWidgetWindow = async () => {
 
   return webview;
 };
+
+export const closeWidgetWindow = async () => {
+  const existing = await WebviewWindow.getByLabel(WIDGET_WINDOW_LABEL);
+  if (existing) {
+    try {
+      await existing.close();
+    } catch {
+      // window may already be closed
+    }
+  }
+};

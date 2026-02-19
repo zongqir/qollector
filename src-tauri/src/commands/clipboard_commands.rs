@@ -1,9 +1,10 @@
 ﻿use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
 use serde::Serialize;
+use crate::window_lifecycle::hide_main_window_with_release;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::{Manager, State};
+use tauri::State;
 
 #[tauri::command]
 pub async fn get_recent_items(
@@ -162,9 +163,7 @@ pub async fn open_url(url: String) -> Result<(), String> {
 pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.hide();
-        }
+        hide_main_window_with_release(&app, "auto_paste_hide");
 
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
         send_ctrl_v_input().map_err(|e| format!("Failed to simulate paste: {}", e))?;

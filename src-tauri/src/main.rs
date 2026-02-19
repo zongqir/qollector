@@ -12,6 +12,7 @@ mod share;
 mod shortcuts;
 mod startup_metrics;
 mod tray;
+mod window_lifecycle;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
@@ -34,6 +35,10 @@ use std::time::Instant;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
+use window_lifecycle::{
+    cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
+    MainWindowLifecycleState, MAIN_WINDOW_LABEL,
+};
 
 struct StartupMeter {
     scope: &'static str,
@@ -122,54 +127,201 @@ fn choose_window_position_near_cursor(
     best
 }
 
+fn show_main_window_near_cursor(app: &tauri::AppHandle) {
+    cancel_main_window_release(app, "show_main_window_near_cursor");
+
+    let window = match ensure_main_window(app) {
+        Ok(window) => window,
+        Err(error) => {
+            eprintln!(
+                "[MainWindow] failed to ensure main window for shortcut show: {}",
+                error
+            );
+            return;
+        }
+    };
+
+    if let Ok(size) = window.outer_size() {
+        let cursor = platform::cursor::get_cursor_position();
+        let mon = window
+            .available_monitors()
+            .ok()
+            .and_then(|monitors| {
+                monitors.into_iter().find(|m| {
+                    let pos = m.position();
+                    let sz = m.size();
+                    let right = pos.x + sz.width as i32;
+                    let bottom = pos.y + sz.height as i32;
+                    cursor.x >= pos.x
+                        && cursor.x < right
+                        && cursor.y >= pos.y
+                        && cursor.y < bottom
+                })
+            })
+            .or_else(|| window.current_monitor().ok().flatten())
+            .or_else(|| window.primary_monitor().ok().flatten());
+
+        let (scr_x, scr_y, scr_w, scr_h) = if let Some(m) = mon {
+            let pos = m.position();
+            let sz = m.size();
+            (pos.x, pos.y, sz.width as i32, sz.height as i32)
+        } else {
+            (0, 0, 3840, 2160)
+        };
+
+        let win_w = size.width as i32;
+        let win_h = size.height as i32;
+
+        let (x, y) = choose_window_position_near_cursor(
+            cursor.x, cursor.y, win_w, win_h, scr_x, scr_y, scr_w, scr_h,
+        );
+
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+    }
+
+    let _ = window.show();
+    let _ = window.unminimize();
+    let _ = window.set_focus();
+}
+
+fn toggle_main_window_from_shortcut(app: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+            let is_visible = window.is_visible().unwrap_or(false);
+            let is_minimized = window.is_minimized().unwrap_or(false);
+
+            if is_visible && !is_minimized {
+                hide_main_window_with_release(&app, "shortcut_toggle_hide");
+                return;
+            }
+        }
+
+        show_main_window_near_cursor(&app);
+    });
+}
+
+fn log_runtime_diagnostics(stage: &str, snapshot: &RuntimeDiagnosticsSnapshot) {
+    let app_mb = snapshot.app_memory_bytes as f64 / 1024.0 / 1024.0;
+    let webview_mb = snapshot.webview2_memory_bytes_total as f64 / 1024.0 / 1024.0;
+
+    println!(
+        "[RuntimeDiag:{}] app_pid={} app_mem_mb={:.1} descendants={} webview2_count={} webview2_mem_mb={:.1} windows={}",
+        stage,
+        snapshot.app_pid,
+        app_mb,
+        snapshot.descendant_process_count,
+        snapshot.webview2_process_count,
+        webview_mb,
+        snapshot.windows.len()
+    );
+
+    if let Some(browser_host_pid) = snapshot.webview2_browser_host_pid {
+        println!(
+            "[RuntimeDiag:{}] webview2 browser_host_pid={}",
+            stage, browser_host_pid
+        );
+    }
+
+    for role in &snapshot.webview2_role_summary {
+        println!(
+            "[RuntimeDiag:{}] webview2 role={} count={} mem_mb={:.1} vmem_mb={:.1}",
+            stage,
+            role.role,
+            role.process_count,
+            role.memory_bytes_total as f64 / 1024.0 / 1024.0,
+            role.virtual_memory_bytes_total as f64 / 1024.0 / 1024.0
+        );
+    }
+
+    for p in snapshot.webview2_processes.iter().take(10) {
+        println!(
+            "[RuntimeDiag:{}] webview2 pid={} parent={:?} role={} role_source={} role_confidence={} utility_sub_type={:?} mem_mb={:.1} vmem_mb={:.1} cpu={:.1} exe={:?} cmd={}",
+            stage,
+            p.pid,
+            p.parent_pid,
+            p.process_role,
+            p.role_source,
+            p.role_confidence,
+            p.utility_sub_type,
+            p.memory_bytes as f64 / 1024.0 / 1024.0,
+            p.virtual_memory_bytes as f64 / 1024.0 / 1024.0,
+            p.cpu_usage_percent,
+            p.exe_path,
+            p.command_line_preview
+        );
+    }
+
+    for w in snapshot.windows.iter().filter(|w| w.visible || !w.title.is_empty()) {
+        println!(
+            "[RuntimeDiag:{}] window handle={} visible={} size={}x{} pos=({}, {}) title={}",
+            stage, w.handle, w.visible, w.width, w.height, w.x, w.y, w.title
+        );
+    }
+}
+
 fn main() {
     let startup_metrics = Arc::new(StartupMetricsState::new());
     let startup_metrics_for_setup = startup_metrics.clone();
 
-    // WebView2 内存优化：通过 Chromium 启动参数降低内存占用
-    // ClipBox 是剪贴板管理器，大量 Web 功能用不到，全部关掉
+    // WebView2 memory tuning via Chromium startup arguments.
+    // ClipBox does not rely on most browser capabilities.
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
-        // === 进程与内存 ===
-        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 堆上限 128MB + 精简模式
-        "--renderer-process-limit=1",            // 限制渲染进程数
-        // === 禁用不需要的 Chromium 功能 ===
+        // === Process and memory ===
+        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 heap cap + lite mode
+        "--renderer-process-limit=1",            // Limit renderer process count
+        // === Disable unneeded Chromium features ===
         "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP",
-        "--disable-background-networking",       // 后台网络
-        "--disable-component-update",            // 组件更新
-        "--disable-domain-reliability",          // 域名监控
-        "--no-pings",                            // 超链接审计
-        "--disable-breakpad",                    // 崩溃报告
-        // === 禁用 Web API（ClipBox 不需要） ===
-        "--disable-speech-api",                  // 语音识别/合成
-        "--disable-notifications",               // 系统通知（用 Tauri 原生通知）
-        "--disable-webgl",                       // WebGL（不做 3D 渲染）
+        "--disable-background-networking",       // Background networking
+        "--disable-component-update",            // Component updater
+        "--disable-domain-reliability",          // Domain reliability
+        "--no-pings",                            // Hyperlink auditing
+        "--disable-breakpad",                    // Crash reporting
+        // === Disable unused Web APIs ===
+        "--disable-speech-api",                  // Speech APIs
+        "--disable-notifications",               // Browser notifications
+        "--disable-webgl",                       // WebGL
         "--disable-webgl2",                      // WebGL2
-        "--disable-client-side-phishing-detection", // 钓鱼检测
-        "--disable-sync",                        // 账号同步
-        "--disable-translate",                   // 翻译功能
-        "--disable-default-apps",                // 默认应用
-        "--disable-extensions",                  // 扩展系统
-        "--disable-hang-monitor",                // 挂起监控
-        "--disable-popup-blocking",              // 弹窗拦截
-        "--disable-prompt-on-repost",            // 重复提交提示
-        // === GPU 缓存 ===
-        "--disable-gpu-shader-disk-cache",       // 着色器缓存
-        "--gpu-disk-cache-size-kb=1",            // GPU 磁盘缓存最小化
+        "--disable-client-side-phishing-detection", // Phishing detection
+        "--disable-sync",                        // Account sync
+        "--disable-translate",                   // Translation
+        "--disable-default-apps",                // Default apps
+        "--disable-extensions",                  // Extension system
+        "--disable-hang-monitor",                // Hang monitor
+        "--disable-popup-blocking",              // Popup blocker
+        "--disable-prompt-on-repost",            // Repost prompts
+        // === GPU cache ===
+        "--disable-gpu-shader-disk-cache",       // Shader disk cache
+        "--gpu-disk-cache-size-kb=1",            // Minimal GPU disk cache
     ].join(" "));
 
     tauri::Builder::default()
+        .manage(MainWindowLifecycleState::default())
         .manage(startup_metrics)
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
         ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // 当尝试启动第二个实例时，聚焦到现有窗口
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_focus();
-                let _ = window.unminimize();
-                println!("[SingleInstance] 检测到重复启动，已聚焦到现有窗口");
-            }
+            let app_handle = app.clone();
+            tauri::async_runtime::spawn(async move {
+                cancel_main_window_release(&app_handle, "single_instance_focus");
+                match ensure_main_window(&app_handle) {
+                    Ok(window) => {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                        println!(
+                            "[SingleInstance] detected duplicate launch and focused existing window"
+                        );
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "[SingleInstance] failed to focus main window on duplicate launch: {}",
+                            error
+                        );
+                    }
+                }
+            });
         }))
         .setup(move |app| {
             let mut setup_meter = StartupMeter::new("setup");
@@ -187,17 +339,14 @@ fn main() {
             let db_path = app_dir.join("clipbox.db");
             println!("Database path: {:?}", db_path);
 
-            // 获取主窗口并确保拖放已启用
+            // Verify main window is available during setup.
             if let Some(_window) = app.get_webview_window("main") {
-                println!("设置窗口拖放功能...");
-                // Tauri v2 中拖放应该通过配置自动启用
-                // 但我们可以验证窗口是否正确创建
-                println!("主窗口已创建");
+                println!("[Window] main window is ready");
             } else {
-                eprintln!("警告: 无法获取主窗口");
+                eprintln!("[Window] warning: failed to get main window in setup");
             }
 
-            // 启动时恢复数据库文件头
+            // Restore database file header during startup.
             core::db_obfuscate::deobfuscate_db(&db_path);
             setup_meter.mark("db_deobfuscate");
 
@@ -214,7 +363,7 @@ fn main() {
 
                 println!("Database initialized successfully");
 
-                // 初始化配置仓库
+                // Initialize config repository.
                 let config_repo = Arc::new(ConfigRepository::new(repository.pool().clone()));
                 config_repo
                     .init_table()
@@ -226,7 +375,7 @@ fn main() {
                 let platform = platform::create_platform().expect("Failed to initialize clipboard");
                 init_meter.mark("create_platform");
 
-                // 加载或初始化 AI 配置
+                // Load startup AI/OCR/MCP/general configs.
                 let (ai_config_opt, ocr_config_opt, mcp_config_opt, general_config_opt) =
                     tokio::try_join!(
                         config_repo.load_ai_config(),
@@ -247,27 +396,27 @@ fn main() {
                     config_repo: config_repo.clone(),
                 };
 
-                // 加载或初始化 OCR 配置
+                // OCR config.
                 let ocr_config = ocr_config_opt.unwrap_or_default();
                 println!(
                     "OCR config loaded: enabled={}, provider={:?}",
                     ocr_config.enabled, ocr_config.current_provider
                 );
 
-                // 初始化 OCR 服务
+                // OCR service container.
                 let ocr_service_arc = Arc::new(Mutex::new(None));
                 let ocr_state = OcrState {
                     service: ocr_service_arc.clone(),
                     config_repo: config_repo.clone(),
                 };
 
-                // 加载或初始化 MCP 配置
+                // MCP config.
                 let mcp_config = mcp_config_opt.unwrap_or_default();
                 println!("MCP config loaded: enabled={}", mcp_config.enabled);
 
                 let mcp_config_arc = Arc::new(TokioMutex::new(mcp_config.clone()));
 
-                // 克隆 app_dir 用于后续使用
+                // Clone app_dir for MCP server usage.
                 let app_dir_for_mcp = app_dir.clone();
 
                 let manager = Arc::new(ClipboardManager::new(
@@ -283,7 +432,7 @@ fn main() {
                 let drag_out_backend = platform::drag_out::create_drag_out_backend();
                 init_meter.mark("create_drag_out_backend");
 
-                // 启动 MCP 服务器 (如果启用)
+                // Start MCP server if enabled.
                 let mcp_state = if mcp_config.enabled {
                     let mcp_server = Arc::new(mcp::McpServer::new(
                         mcp_config_arc.clone(),
@@ -294,11 +443,11 @@ fn main() {
                     let server_clone = mcp_server.clone();
                     tokio::spawn(async move {
                         if let Err(e) = server_clone.start().await {
-                            eprintln!("[MCP] 服务器启动失败: {}", e);
+                            eprintln!("[MCP] server startup failed: {}", e);
                         }
                     });
 
-                    println!("[MCP] 服务器已启动");
+                    println!("[MCP] server started");
                     McpState {
                         config: mcp_config_arc.clone(),
                         config_repo: config_repo.clone(),
@@ -401,64 +550,7 @@ fn main() {
                                     });
                                 }
                                 ShortcutAction::ToggleWindow => {
-                                    if let Some(window) = app.get_webview_window("main") {
-                                        let is_visible = window.is_visible().unwrap_or(false);
-                                        let is_minimized = window.is_minimized().unwrap_or(false);
-
-                                        if is_visible && !is_minimized {
-                                            let _ = window.hide();
-                                        } else {
-                                            // Move window near the cursor before showing
-                                            if let Ok(size) = window.outer_size() {
-                                                let cursor = platform::cursor::get_cursor_position();
-                                                let mon = window
-                                                    .available_monitors()
-                                                    .ok()
-                                                    .and_then(|monitors| {
-                                                        monitors.into_iter().find(|m| {
-                                                            let pos = m.position();
-                                                            let sz = m.size();
-                                                            let right = pos.x + sz.width as i32;
-                                                            let bottom = pos.y + sz.height as i32;
-                                                            cursor.x >= pos.x
-                                                                && cursor.x < right
-                                                                && cursor.y >= pos.y
-                                                                && cursor.y < bottom
-                                                        })
-                                                    })
-                                                    .or_else(|| window.current_monitor().ok().flatten())
-                                                    .or_else(|| window.primary_monitor().ok().flatten());
-
-                                                let (scr_x, scr_y, scr_w, scr_h) = if let Some(m) = mon {
-                                                    let pos = m.position();
-                                                    let sz = m.size();
-                                                    (pos.x, pos.y, sz.width as i32, sz.height as i32)
-                                                } else {
-                                                    (0, 0, 3840, 2160)
-                                                };
-
-                                                let win_w = size.width as i32;
-                                                let win_h = size.height as i32;
-
-                                                let (x, y) = choose_window_position_near_cursor(
-                                                    cursor.x,
-                                                    cursor.y,
-                                                    win_w,
-                                                    win_h,
-                                                    scr_x,
-                                                    scr_y,
-                                                    scr_w,
-                                                    scr_h,
-                                                );
-
-                                                let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
-                                            }
-
-                                            let _ = window.show();
-                                            let _ = window.unminimize();
-                                            let _ = window.set_focus();
-                                        }
-                                    }
+                                    toggle_main_window_from_shortcut(app.clone());
                                 }
                                 ShortcutAction::None => {}
                             }
@@ -499,14 +591,25 @@ fn main() {
                 }
             });
 
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(1800)).await;
+                let snapshot_early = collect_runtime_diagnostics_snapshot();
+                log_runtime_diagnostics("t+1.8s", &snapshot_early);
+
+                tokio::time::sleep(std::time::Duration::from_millis(6200)).await;
+                let snapshot_settled = collect_runtime_diagnostics_snapshot();
+                log_runtime_diagnostics("t+8.0s", &snapshot_settled);
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
             // Intercept close on main window: hide to tray instead
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
+                if window.label() == MAIN_WINDOW_LABEL {
                     api.prevent_close();
-                    let _ = window.hide();
+                    let app_handle = window.app_handle().clone();
+                    hide_main_window_with_release(&app_handle, "close_button_hide");
                 }
             }
         })
@@ -554,6 +657,7 @@ fn main() {
             get_general_config,
             update_general_config,
             get_startup_metrics,
+            get_runtime_diagnostics,
             has_lock_password,
             verify_lock_password,
             set_lock_password,
@@ -582,3 +686,4 @@ fn main() {
         });
 }
 // test
+

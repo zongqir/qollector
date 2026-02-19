@@ -39,7 +39,6 @@ export default defineConfig({
     exclude: [
       'highlight.js',
       'pdfjs-dist',
-      'react-file-icon',
     ],
   },
   build: {

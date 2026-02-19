@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
-import { openQuickInputWindow, openWidgetWindow } from './services/windowService';
+import { openQuickInputWindow, openWidgetWindow, closeWidgetWindow } from './services/windowService';
 import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
 import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
@@ -36,6 +36,7 @@ function App() {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const widgetEnabled = useAppStore(s => s.widgetEnabled);
   const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
   // Store actions
@@ -81,10 +82,6 @@ function App() {
     console.log('[Perf:App] Calling loadConfigs() at', performance.now().toFixed(1), 'ms');
     loadConfigs();
 
-    console.log('[Perf:App] Calling openWidgetWindow() at', performance.now().toFixed(1), 'ms');
-    // Auto-launch widget
-    openWidgetWindow().catch(err => console.warn('widget auto-launch failed:', err));
-
     console.log('[Perf:App] Setting up event listeners at', performance.now().toFixed(1), 'ms');
     const unlistenClipboardPromise = listen('clipboard-changed', () => {
       loadItems();
@@ -104,6 +101,15 @@ function App() {
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
     };
   }, []);
+
+  // Widget window lifecycle driven by config
+  useEffect(() => {
+    if (widgetEnabled) {
+      openWidgetWindow().catch(err => console.warn('widget launch failed:', err));
+    } else {
+      closeWidgetWindow().catch(err => console.warn('widget close failed:', err));
+    }
+  }, [widgetEnabled]);
 
   useEffect(() => {
     let raf1 = 0;
