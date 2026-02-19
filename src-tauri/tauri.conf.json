@@ -49,9 +49,9 @@
         "visible": false,
         "devtools": false,
         "decorations": false,
-        "transparent": false,
-        "backgroundColor": "#F7F8FA",
-        "shadow": true,
+        "transparent": true,
+        "backgroundColor": "#00000000",
+        "shadow": false,
         "dragDropEnabled": true
       }
     ],
