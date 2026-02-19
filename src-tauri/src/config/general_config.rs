@@ -49,6 +49,9 @@ pub struct GeneralConfig {
     /// Enable autostart on system boot.
     #[serde(default)]
     pub autostart_enabled: bool,
+    /// Enable aggressive hidden-window webview release to reduce memory usage.
+    #[serde(default = "default_low_memory_mode_enabled")]
+    pub low_memory_mode_enabled: bool,
     /// Enable the floating widget window.
     #[serde(default)]
     pub widget_enabled: bool,
@@ -102,6 +105,10 @@ fn default_cleanup_max_age_days() -> u32 {
     90
 }
 
+fn default_low_memory_mode_enabled() -> bool {
+    false
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -121,6 +128,7 @@ impl Default for GeneralConfig {
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,
             autostart_enabled: false,
+            low_memory_mode_enabled: default_low_memory_mode_enabled(),
             widget_enabled: false,
         }
     }

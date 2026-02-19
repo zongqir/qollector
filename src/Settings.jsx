@@ -60,6 +60,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     cleanup_max_items: 50000,
     cleanup_max_age_days: 90,
     autostart_enabled: false,
+    low_memory_mode_enabled: false,
   });
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -1104,7 +1105,35 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   <span className="toggle-slider" />
                 </span>
               </label>
+              <label className="setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.lowMemoryMode')}</span>
+                  <span className="toggle-desc">{t('settings.general.lowMemoryModeHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.low_memory_mode_enabled || false}
+                    onChange={async (e) => {
+                      const checked = e.target.checked;
+                      const updated = { ...generalConfig, low_memory_mode_enabled: checked };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('save low_memory_mode config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
             </div>
+            {generalConfig.low_memory_mode_enabled && (
+              <small className="setting-hint">
+                <span className="setting-warning">{t('settings.general.lowMemoryModeNotice')}</span>
+              </small>
+            )}
             </div>
           )}
 
