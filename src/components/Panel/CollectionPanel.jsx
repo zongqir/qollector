@@ -65,6 +65,7 @@ function CollectionPanel() {
   const togglePin = useAppStore(s => s.togglePin);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
@@ -142,9 +143,9 @@ function CollectionPanel() {
 
   const handleCardDoubleClick = useCallback((item) => {
     if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item);
+      handleCopy(item, 'collection');
     } else {
-      handleCopyAndAutoPaste(item);
+      handleCopyAndAutoPaste(item, 'collection');
     }
   }, [handleCopyAndAutoPaste, handleCopy]);
 
@@ -239,7 +240,7 @@ function CollectionPanel() {
               <SortableCard
                 key={item.id}
                 item={item}
-                isCopied={copiedItemId === item.id}
+                isCopied={copiedItemId === item.id && copyFeedbackSource === 'collection'}
                 onUnpin={() => togglePin(item)}
                 onClick={() => handleCardClick(item)}
                 onDoubleClick={() => handleCardDoubleClick(item)}

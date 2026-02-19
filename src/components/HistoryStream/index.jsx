@@ -66,6 +66,7 @@ function HistoryStream({ style }) {
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
   const copiedItemId = useAppStore(s => s.copiedItemId);
+  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
@@ -392,9 +393,9 @@ function HistoryStream({ style }) {
     clearHoverPreview();
     // Image/file: copy only, no auto-paste
     if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item);
+      handleCopy(item, 'history');
     } else {
-      handleCopyAndAutoPaste(item);
+      handleCopyAndAutoPaste(item, 'history');
     }
   }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
 
@@ -481,9 +482,9 @@ function HistoryStream({ style }) {
 
     const focusedItem = filteredItems[focusedIndex];
     if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
-      handleCopy(focusedItem);
+      handleCopy(focusedItem, 'history');
     } else {
-      handleCopyAndAutoPaste(focusedItem);
+      handleCopyAndAutoPaste(focusedItem, 'history');
     }
     return true;
   }, [focusedIndex, filteredItems, handleCopy, handleCopyAndAutoPaste]);
@@ -578,7 +579,7 @@ function HistoryStream({ style }) {
           isSelected={isSelected}
           isMultiSelected={isMultiSelected}
           isFocused={isFocused}
-          isCopied={copiedItemId === item.id}
+          isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
           onTogglePin={togglePin}
@@ -594,6 +595,7 @@ function HistoryStream({ style }) {
     panelMode,
     previewItem?.id,
     copiedItemId,
+    copyFeedbackSource,
     selectedItemIds,
     focusedIndex,
     rowGap,

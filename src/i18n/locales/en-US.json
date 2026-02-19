@@ -463,6 +463,9 @@
     "fileNotFound": "File not found",
     "directoryItems": "Directory Contents",
     "clickToOpen": "Click to open",
+    "back": "Back",
+    "pathLabel": "Path",
+    "folderNavigationHint": "Click folder to enter, double-click folder to open",
     "emptyDirectory": "Empty directory"
   },
   "widget": {

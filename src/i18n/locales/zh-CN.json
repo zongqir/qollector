@@ -463,6 +463,9 @@
     "fileNotFound": "文件不存在",
     "directoryItems": "文件夹内容",
     "clickToOpen": "点击打开",
+    "back": "返回",
+    "pathLabel": "路径",
+    "folderNavigationHint": "单击文件夹进入，双击文件夹打开",
     "emptyDirectory": "空文件夹"
   },
   "widget": {
