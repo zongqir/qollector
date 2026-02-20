@@ -570,7 +570,7 @@ function PreviewPanel() {
           <button
             className={`preview-action-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
             onClick={handlePreviewPinToggle}
-            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
+            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
           >
             <Inbox size={16} />
           </button>

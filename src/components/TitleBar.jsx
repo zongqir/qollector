@@ -48,7 +48,15 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
   return (
     <div className="titlebar" onWheel={handleWheel}>
       <div data-tauri-drag-region className="titlebar-drag-area">
-        <div className="titlebar-title">{t('app.title')}</div>
+        <div className="titlebar-brand">
+          <img
+            src="/clipbox-logo.svg"
+            alt="ClipBox logo"
+            className="titlebar-logo"
+            draggable="false"
+          />
+          <div className="titlebar-title">{t('app.title')}</div>
+        </div>
       </div>
       {showIndicator && !isMiniMode && (
         <div className="glass-indicator">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './Settings.css';
 
@@ -47,7 +47,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     mode: 'http',
   });
   const [generalConfig, setGeneralConfig] = useState({
-    max_pinned_items: 3,
+    max_pinned_items: 10,
     language: 'zh-CN',
     theme_mode: themeMode || 'system',
     double_copy_emphasis_enabled: true,
@@ -143,6 +143,27 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   };
 
   const normalizeShortcutText = (value) => (value || '').trim().toLowerCase();
+
+  const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const parseInteger = (rawValue, fallback) => {
+    const parsed = parseInt(rawValue, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const getWheelNextNumber = ({
+    rawValue,
+    fallback,
+    min,
+    max,
+    step = 1,
+    deltaY,
+  }) => {
+    const current = clampNumber(parseInteger(rawValue, fallback), min, max);
+    if (deltaY === 0) return current;
+    const direction = deltaY < 0 ? 1 : -1;
+    return clampNumber(current + (direction * step), min, max);
+  };
 
   const normalizeShortcutToken = (token) => {
     const value = (token || '').trim().toLowerCase();
@@ -428,21 +449,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   useEffect(() => {
     if (activeTab !== 'shortcuts' && recordingTarget) {
       setRecordingTarget(null);
-      return;
     }
-    if (recordingTarget === 'toggle_window_shortcut' && !generalConfig.toggle_window_shortcut_enabled) {
-      setRecordingTarget(null);
-      return;
-    }
-    if (recordingTarget === 'copy_pin_shortcut' && !generalConfig.ctrl_shift_c_shortcut_enabled) {
-      setRecordingTarget(null);
-    }
-  }, [
-    activeTab,
-    recordingTarget,
-    generalConfig.toggle_window_shortcut_enabled,
-    generalConfig.ctrl_shift_c_shortcut_enabled,
-  ]);
+  }, [activeTab, recordingTarget]);
 
   // 辅助函数：获取供应商的键名
   const getProviderKey = (provider) => {
@@ -903,9 +911,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   type="number"
                   value={generalConfig.max_pinned_items}
                   onChange={async (e) => {
-                    let value = parseInt(e.target.value) || 3;
+                    let value = parseInt(e.target.value) || 10;
                     if (value < 1) value = 1;
-                    if (value > 10) value = 10;
+                    if (value > 100) value = 100;
                     const updated = { ...generalConfig, max_pinned_items: value };
                     setGeneralConfig(updated);
                     try {
@@ -914,13 +922,33 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       console.error('保存置顶数配置失败:', error);
                     }
                   }}
+                  onWheel={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const currentValue = generalConfig.max_pinned_items ?? 10;
+                    const value = getWheelNextNumber({
+                      rawValue: e.currentTarget.value,
+                      fallback: currentValue,
+                      min: 1,
+                      max: 100,
+                      deltaY: e.deltaY,
+                    });
+                    if (value === currentValue) return;
+                    const updated = { ...generalConfig, max_pinned_items: value };
+                    setGeneralConfig(updated);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('Failed to save max pinned items config:', error);
+                    }
+                  }}
                   min="1"
-                  max="10"
-                  className="setting-input-small"
+                  max="100"
+                  className="setting-input-small setting-input-count"
                 />
               </div>
             </div>
-            {generalConfig.max_pinned_items > 5 && (
+            {generalConfig.max_pinned_items > 20 && (
               <small className="setting-hint">
                 <span className="setting-warning">
                   {t('settings.general.maxPinnedItemsWarning')}
@@ -929,7 +957,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             )}
 
             {/* 功能模块分组 */}
-            <div className="setting-group-title">{t('settings.general.featureModules')}</div>
+            <div className="setting-group-title section-title">{t('settings.general.featureModules')}</div>
             <div className="feature-toggles">
               <label className="setting-toggle-row">
                 <span className="toggle-label-group">
@@ -1036,7 +1064,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'shortcuts' && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.shortcuts.globalHotkeys')}</div>
+            <div className="setting-group-title section-title">{t('settings.shortcuts.globalHotkeys')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.toggleWindow')}</span>
@@ -1079,7 +1107,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                     className="shortcut-input"
-                    disabled={!generalConfig.toggle_window_shortcut_enabled || recordingTarget === 'toggle_window_shortcut'}
+                    disabled={recordingTarget === 'toggle_window_shortcut'}
                   />
                   <button
                     type="button"
@@ -1091,7 +1119,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         startShortcutRecording('toggle_window_shortcut');
                       }
                     }}
-                    disabled={!generalConfig.toggle_window_shortcut_enabled}
                   >
                     {recordingTarget === 'toggle_window_shortcut'
                       ? t('settings.shortcuts.stopRecording')
@@ -1140,7 +1167,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                     className="shortcut-input"
-                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled || recordingTarget === 'copy_pin_shortcut'}
+                    disabled={recordingTarget === 'copy_pin_shortcut'}
                   />
                   <button
                     type="button"
@@ -1152,7 +1179,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         startShortcutRecording('copy_pin_shortcut');
                       }
                     }}
-                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled}
                   >
                     {recordingTarget === 'copy_pin_shortcut'
                       ? t('settings.shortcuts.stopRecording')
@@ -1207,11 +1233,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 className="shortcut-reset-btn"
                 onClick={restoreShortcutDefaults}
               >
+                <span className="shortcut-reset-btn-icon" aria-hidden="true">
+                  <RotateCcw size={13} />
+                </span>
                 {t('settings.shortcuts.restoreDefaults')}
               </button>
             </div>
 
-            <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
+            <div className="setting-group-title section-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span className="toggle-label-group">
@@ -1251,10 +1280,29 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     };
                     await saveShortcutConfig(updated);
                   }}
+                  onWheel={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const currentValue = generalConfig.double_copy_window_ms ?? 900;
+                    const value = getWheelNextNumber({
+                      rawValue: e.currentTarget.value,
+                      fallback: currentValue,
+                      min: 300,
+                      max: 2500,
+                      step: 50,
+                      deltaY: e.deltaY,
+                    });
+                    if (value === currentValue) return;
+                    const updated = {
+                      ...generalConfig,
+                      double_copy_window_ms: value,
+                    };
+                    await saveShortcutConfig(updated);
+                  }}
                   min="300"
                   max="2500"
                   step="50"
-                  className="setting-input-small"
+                  className="setting-input-small setting-input-interval"
                 />
               </div>
             </div>
@@ -1596,6 +1644,20 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 type="number"
                 value={mcpConfig.port || 38470}
                 onChange={(e) => setMcpConfig({ ...mcpConfig, port: parseInt(e.target.value) || 38470 })}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const currentValue = mcpConfig.port || 38470;
+                  const value = getWheelNextNumber({
+                    rawValue: e.currentTarget.value,
+                    fallback: currentValue,
+                    min: 1024,
+                    max: 65535,
+                    deltaY: e.deltaY,
+                  });
+                  if (value === currentValue) return;
+                  setMcpConfig({ ...mcpConfig, port: value });
+                }}
                 placeholder="38470"
                 className="setting-input"
                 min="1024"
@@ -1696,6 +1758,23 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         setGeneralConfig(updated);
                         invoke('update_general_config', { config: updated });
                       }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentValue = generalConfig.cleanup_max_items ?? 50000;
+                        const value = getWheelNextNumber({
+                          rawValue: e.currentTarget.value,
+                          fallback: currentValue,
+                          min: 100,
+                          max: 999999,
+                          step: 100,
+                          deltaY: e.deltaY,
+                        });
+                        if (value === currentValue) return;
+                        const updated = { ...generalConfig, cleanup_max_items: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
                       className="setting-input compact"
                     />
                   </div>
@@ -1710,6 +1789,22 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       value={generalConfig.cleanup_max_age_days}
                       onChange={(e) => {
                         const value = Math.max(1, Math.min(3650, parseInt(e.target.value) || 90));
+                        const updated = { ...generalConfig, cleanup_max_age_days: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentValue = generalConfig.cleanup_max_age_days ?? 90;
+                        const value = getWheelNextNumber({
+                          rawValue: e.currentTarget.value,
+                          fallback: currentValue,
+                          min: 1,
+                          max: 3650,
+                          deltaY: e.deltaY,
+                        });
+                        if (value === currentValue) return;
                         const updated = { ...generalConfig, cleanup_max_age_days: value };
                         setGeneralConfig(updated);
                         invoke('update_general_config', { config: updated });
@@ -1808,12 +1903,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </small>
             )}
 
-            <div className="setting-group" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <label className="setting-label">{t('export.clearData')}</label>
-              <small className="setting-hint-block" style={{ color: '#ff6b6b' }}>
+            <div className="clear-data-zone">
+              <label className="setting-label clear-data-title">{t('export.clearData')}</label>
+              <small className="setting-hint-block clear-data-warning">
                 {t('export.clearDataWarning')}
               </small>
-              <div className="setting-btn-row">
+              <div className="setting-btn-row clear-data-actions">
                 <button
                   className={`test-btn ${clearDataConfirm ? 'danger' : 'secondary'}`}
                   onClick={handleClearAllData}
@@ -1832,7 +1927,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 )}
               </div>
               {clearDataResult && (
-                <small className={`setting-status ${clearDataResult.success ? 'success' : 'error'}`}>
+                <small className={`setting-status clear-data-status ${clearDataResult.success ? 'success' : 'error'}`}>
                   {clearDataResult.message}
                 </small>
               )}

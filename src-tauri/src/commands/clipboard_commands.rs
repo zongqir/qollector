@@ -82,7 +82,7 @@ pub async fn toggle_pin_item(
     max_pinned: Option<usize>,
 ) -> Result<bool, String> {
     manager
-        .toggle_pin(&id, max_pinned.unwrap_or(5))
+        .toggle_pin(&id, max_pinned.unwrap_or(10))
         .await
         .map_err(|e| e.to_string())
 }
@@ -94,7 +94,7 @@ pub async fn pin_item(
     max_pinned: Option<usize>,
 ) -> Result<bool, String> {
     manager
-        .pin_item(&id, max_pinned.unwrap_or(5))
+        .pin_item(&id, max_pinned.unwrap_or(10))
         .await
         .map_err(|e| e.to_string())
 }

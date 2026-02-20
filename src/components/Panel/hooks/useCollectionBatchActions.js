@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
+import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 import { getTags } from '../../../utils/tagHelpers';
 
 function useCollectionBatchActions({
@@ -225,7 +226,7 @@ function useCollectionBatchActions({
         taskType,
         input: batchAiSourceText.trim(),
         uiLanguage,
-        outputLanguage: 'auto',
+        outputLanguage: resolveOutputLanguageFromUi(uiLanguage),
         tone: 'neutral',
         length: 'medium',
         extraInstruction: null,

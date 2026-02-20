@@ -10,6 +10,7 @@ import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
 import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
+import { resolveOutputLanguageFromUi } from '../../features/ai-assistant/utils/language';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -529,7 +530,7 @@ function HistoryStream({ style }) {
         taskType,
         input: batchAiSourceText.trim(),
         uiLanguage: i18n.language,
-        outputLanguage: 'auto',
+        outputLanguage: resolveOutputLanguageFromUi(i18n.language),
         tone: 'neutral',
         length: 'medium',
         extraInstruction: null,

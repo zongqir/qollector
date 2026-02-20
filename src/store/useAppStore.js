@@ -10,6 +10,10 @@ import { FREE_PROVIDERS } from '../share/providers';
 const PAGE_SIZE = 30;
 const MAX_ITEMS_IN_MEMORY = 150;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
+const HISTORY_SNAPSHOT_KEY = 'clipbox-history-snapshot-v1';
+const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
+const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
+const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -85,6 +89,64 @@ const mergeUniqueById = (baseItems, incomingItems) => {
   });
   return Array.from(map.values()).sort(sortByUpdatedAtDesc);
 };
+
+const truncateText = (value, limit) => {
+  if (typeof value !== 'string') return value;
+  if (value.length <= limit) return value;
+  return value.slice(0, limit);
+};
+
+const toHistorySnapshotItem = (item) => {
+  if (!item || !item.id) return null;
+  return {
+    ...item,
+    original_content: '',
+    embedding: null,
+    content: truncateText(item.content, HISTORY_SNAPSHOT_MAX_CONTENT_CHARS),
+    ocr_text: truncateText(item.ocr_text, HISTORY_SNAPSHOT_MAX_OCR_CHARS),
+  };
+};
+
+const readHistorySnapshot = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_SNAPSHOT_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map(toHistorySnapshotItem)
+      .filter(Boolean)
+      .slice(0, HISTORY_SNAPSHOT_MAX_ITEMS);
+  } catch (error) {
+    console.warn('[HistorySnapshot] read failed:', error);
+    return [];
+  }
+};
+
+const persistHistorySnapshot = (items) => {
+  if (typeof window === 'undefined') return;
+  try {
+    const snapshot = (Array.isArray(items) ? items : [])
+      .map(toHistorySnapshotItem)
+      .filter(Boolean)
+      .slice(0, HISTORY_SNAPSHOT_MAX_ITEMS);
+    localStorage.setItem(HISTORY_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch (error) {
+    console.warn('[HistorySnapshot] persist failed:', error);
+  }
+};
+
+const clearHistorySnapshot = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(HISTORY_SNAPSHOT_KEY);
+  } catch (error) {
+    console.warn('[HistorySnapshot] clear failed:', error);
+  }
+};
+
+const initialHistorySnapshot = readHistorySnapshot();
 // ========== Share cache helpers ==========
 // Cache is stored in item.metadata as JSON: { share_cache: { [provider]: { url, expires_at } } }
 const getShareCache = (item, provider) => {
@@ -117,8 +179,8 @@ const saveShareCache = async (item, provider, url, ttlSeconds) => {
 
 const useAppStore = create((set, get) => ({
   // ========== 历史数据 ==========
-  items: [],
-  loading: true,
+  items: initialHistorySnapshot,
+  loading: initialHistorySnapshot.length === 0,
   hasMore: true,
   loadingMore: false,
   itemsRevision: 0,
@@ -173,11 +235,12 @@ const useAppStore = create((set, get) => ({
   // ========== 配置 ==========
   aiEnabled: false,
   ocrEnabled: false,
-  maxPinnedItems: 3,
+  maxPinnedItems: 10,
   themeMode: 'system',
   isLocked: true,
   hasPassword: false,
   collectionPanelEnabled: true,
+  lowMemoryModeEnabled: false,
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,
@@ -348,6 +411,7 @@ const useAppStore = create((set, get) => ({
         hasMore: result.length >= PAGE_SIZE,
         itemsRevision: state.itemsRevision + 1,
       }));
+      persistHistorySnapshot(mergedItems);
 
       logItemsMemoryProbe('loadItems', mergedItems, {
         fetched: result.length,
@@ -410,6 +474,7 @@ const useAppStore = create((set, get) => ({
         };
       });
       if (mergedItemsSnapshot) {
+        persistHistorySnapshot(mergedItemsSnapshot);
         logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
           fetched: more.length,
           offset: requestOffset,
@@ -434,6 +499,7 @@ const useAppStore = create((set, get) => ({
   suspendForMinimize: () => {
     const state = get();
     if (state.isMemorySuspended) return;
+    persistHistorySnapshot(state.items);
 
     set({
       items: [],
@@ -452,7 +518,14 @@ const useAppStore = create((set, get) => ({
     const state = get();
     if (!state.isMemorySuspended) return;
 
-    set({ isMemorySuspended: false, loading: true });
+    const snapshot = readHistorySnapshot();
+    set({
+      isMemorySuspended: false,
+      items: snapshot,
+      hasMore: true,
+      loadingMore: false,
+      loading: snapshot.length === 0,
+    });
     console.log('[MemorySuspend] restoring list state after window became visible');
     await get().loadItems();
   },
@@ -468,10 +541,11 @@ const useAppStore = create((set, get) => ({
       set({
         aiEnabled: aiConfig.enabled || false,
         ocrEnabled: ocrConfig.enabled || false,
-        maxPinnedItems: generalConfig.max_pinned_items || 3,
+        maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
+        lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
         autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
         widgetEnabled: generalConfig.widget_enabled || false,
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
@@ -1230,32 +1304,35 @@ const useAppStore = create((set, get) => ({
     lastCopyWasAutoPaste: false,
   })),
   setDebouncedSearchQuery: (v) => set({ debouncedSearchQuery: v }),
-  resetRuntimeStateAfterDataReset: () => set((state) => ({
-    items: [],
-    loading: false,
-    hasMore: true,
-    loadingMore: false,
-    itemsRevision: state.itemsRevision + 1,
-    processedItemIds: new Set(),
-    panelMode: 'collection',
-    previewItem: null,
-    hoverPreviewItem: null,
-    hoverPreviewPosition: null,
-    selectedItemIds: [],
-    copiedItemId: null,
-    copyFeedbackSource: null,
-    copyFeedbackToken: state.copyFeedbackToken + 1,
-    generatingAI: null,
-    ocrProcessing: null,
-    editingNoteId: null,
-    editNote: '',
-    addingTagItemId: null,
-    newTagInput: '',
-    showEditModal: false,
-    editingItem: null,
-    isMemorySuspended: false,
-    hasPassword: false,
-  })),
+  resetRuntimeStateAfterDataReset: () => {
+    clearHistorySnapshot();
+    set((state) => ({
+      items: [],
+      loading: false,
+      hasMore: true,
+      loadingMore: false,
+      itemsRevision: state.itemsRevision + 1,
+      processedItemIds: new Set(),
+      panelMode: 'collection',
+      previewItem: null,
+      hoverPreviewItem: null,
+      hoverPreviewPosition: null,
+      selectedItemIds: [],
+      copiedItemId: null,
+      copyFeedbackSource: null,
+      copyFeedbackToken: state.copyFeedbackToken + 1,
+      generatingAI: null,
+      ocrProcessing: null,
+      editingNoteId: null,
+      editNote: '',
+      addingTagItemId: null,
+      newTagInput: '',
+      showEditModal: false,
+      editingItem: null,
+      isMemorySuspended: false,
+      hasPassword: false,
+    }));
+  },
 
   // ========== 快速笔记 (收集箱) ==========
   addQuickNote: async (content) => {
