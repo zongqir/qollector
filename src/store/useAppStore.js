@@ -109,12 +109,19 @@ const truncateText = (value, limit) => {
 
 const toHistorySnapshotItem = (item) => {
   if (!item || !item.id) return null;
+  const contentTruncatedInSnapshot = typeof item.content === 'string'
+    && item.content.length > HISTORY_SNAPSHOT_MAX_CONTENT_CHARS;
+  const ocrTruncatedInSnapshot = typeof item.ocr_text === 'string'
+    && item.ocr_text.length > HISTORY_SNAPSHOT_MAX_OCR_CHARS;
   return {
     ...item,
     original_content: '',
     embedding: null,
     content: truncateText(item.content, HISTORY_SNAPSHOT_MAX_CONTENT_CHARS),
     ocr_text: truncateText(item.ocr_text, HISTORY_SNAPSHOT_MAX_OCR_CHARS),
+    content_truncated: Boolean(item.content_truncated || contentTruncatedInSnapshot),
+    ocr_truncated: Boolean(item.ocr_truncated || ocrTruncatedInSnapshot),
+    content_updated: false,
   };
 };
 
@@ -155,6 +162,44 @@ const clearHistorySnapshot = () => {
   } catch (error) {
     console.warn('[HistorySnapshot] clear failed:', error);
   }
+};
+
+const itemNeedsHydration = (item) => (
+  Boolean(item?.content_truncated || item?.ocr_truncated)
+);
+
+const fetchItemByIdSafe = async (id) => {
+  if (!id) return null;
+  try {
+    return await invoke('get_item_by_id', { id });
+  } catch (error) {
+    console.warn('[ItemHydration] fetch failed:', error);
+    return null;
+  }
+};
+
+const hydrateItemIfNeeded = async (item) => {
+  if (!item || !item.id || !itemNeedsHydration(item)) return item;
+  const full = await fetchItemByIdSafe(item.id);
+  return full || item;
+};
+
+const hydrateItemsIfNeeded = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const uniqueById = new Map();
+  items.forEach((item) => {
+    if (!item?.id || uniqueById.has(item.id)) return;
+    uniqueById.set(item.id, item);
+  });
+
+  const hydratedById = new Map();
+  await Promise.all(Array.from(uniqueById.values()).map(async (item) => {
+    if (!itemNeedsHydration(item)) return;
+    const full = await fetchItemByIdSafe(item.id);
+    if (full?.id) hydratedById.set(full.id, full);
+  }));
+
+  return items.map(item => hydratedById.get(item.id) || item);
 };
 
 const initialHistorySnapshot = readHistorySnapshot();
@@ -283,6 +328,20 @@ const useAppStore = create((set, get) => ({
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
       set({ panelMode: 'preview', previewItem: item, timelineItems: [], timelineSummary: null });
+      if (itemNeedsHydration(item)) {
+        const targetId = item.id;
+        hydrateItemIfNeeded(item)
+          .then((fullItem) => {
+            if (!fullItem?.id || fullItem.id !== targetId) return;
+            set((state) => {
+              if (state.panelMode !== 'preview' || state.previewItem?.id !== targetId) return {};
+              return { previewItem: fullItem };
+            });
+          })
+          .catch((error) => {
+            console.warn('[ItemHydration] preview hydration failed:', error);
+          });
+      }
     } else if (mode === 'timeline') {
       set({ panelMode: 'timeline', previewItem: null });
       // Auto-load timeline data when entering timeline mode
@@ -439,7 +498,7 @@ const useAppStore = create((set, get) => ({
         }));
       });
 
-      if (!loading) {
+      if (!loading && get().aiEnabled) {
         if (requestSeq !== loadItemsRequestSeq) return;
         console.log('[Perf:Store] Calling autoGenerateAITagsSvc at', performance.now().toFixed(1), 'ms');
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
@@ -574,12 +633,13 @@ const useAppStore = create((set, get) => ({
   handleCopy: async (item, source = 'global') => {
     const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
-      await copyItemToClipboard(item);
+      const itemForCopy = await hydrateItemIfNeeded(item);
+      await copyItemToClipboard(itemForCopy);
       let feedbackToken = null;
       set((state) => {
         feedbackToken = state.copyFeedbackToken + 1;
         return {
-          copiedItemId: item.id,
+          copiedItemId: itemForCopy.id,
           copyFeedbackSource: feedbackSource,
           copyFeedbackToken: feedbackToken,
           lastCopyWasAutoPaste: false,
@@ -603,12 +663,13 @@ const useAppStore = create((set, get) => ({
   handleCopyAndAutoPaste: async (item, source = 'global') => {
     const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
-      await copyItemToClipboard(item);
+      const itemForCopy = await hydrateItemIfNeeded(item);
+      await copyItemToClipboard(itemForCopy);
       let copiedToken = null;
       set((state) => {
         copiedToken = state.copyFeedbackToken + 1;
         return {
-          copiedItemId: item.id,
+          copiedItemId: itemForCopy.id,
           copyFeedbackSource: feedbackSource,
           copyFeedbackToken: copiedToken,
           lastCopyWasAutoPaste: false,
@@ -630,7 +691,7 @@ const useAppStore = create((set, get) => ({
       }
 
       // Only auto-paste for text/html/link types, skip image/file
-      if (item.type_ === 'image' || item.type_ === 'file') {
+      if (itemForCopy.type_ === 'image' || itemForCopy.type_ === 'file') {
         return;
       }
 
@@ -641,7 +702,7 @@ const useAppStore = create((set, get) => ({
           set((state) => {
             pastedToken = state.copyFeedbackToken + 1;
             return {
-              copiedItemId: item.id,
+              copiedItemId: itemForCopy.id,
               copyFeedbackSource: feedbackSource,
               copyFeedbackToken: pastedToken,
               lastCopyWasAutoPaste: true,
@@ -782,10 +843,11 @@ const useAppStore = create((set, get) => ({
   },
 
   generateAITags: async (item) => {
-    if (!item.content) return;
-    set({ generatingAI: item.id });
+    const itemForAI = await hydrateItemIfNeeded(item);
+    if (!itemForAI?.content) return;
+    set({ generatingAI: itemForAI.id });
     try {
-      await generateAITagsForItem(item);
+      await generateAITagsForItem(itemForAI);
       await get().loadItems();
     } catch (error) {
       console.error('AI 标签生成失败:', error);
@@ -1070,7 +1132,8 @@ const useAppStore = create((set, get) => ({
       const selectedItems = selectedItemIds
         .map(id => preferredById.get(id) || fallbackById.get(id))
         .filter(Boolean);
-      const merged = selectedItems
+      const hydratedSelectedItems = await hydrateItemsIfNeeded(selectedItems);
+      const merged = hydratedSelectedItems
         .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
         .filter(Boolean)
         .join('\n');
@@ -1134,6 +1197,20 @@ const useAppStore = create((set, get) => ({
   openEditModal: (item = null) => {
     if (item) {
       set({ editModalMode: 'edit', editingItem: item, showEditModal: true });
+      if (itemNeedsHydration(item)) {
+        const editingId = item.id;
+        hydrateItemIfNeeded(item)
+          .then((fullItem) => {
+            if (!fullItem?.id || fullItem.id !== editingId) return;
+            set((state) => {
+              if (!state.showEditModal || state.editModalMode !== 'edit' || state.editingItem?.id !== editingId) return {};
+              return { editingItem: fullItem };
+            });
+          })
+          .catch((error) => {
+            console.warn('[ItemHydration] edit hydration failed:', error);
+          });
+      }
     } else {
       set({ editModalMode: 'new', editingItem: null, showEditModal: true });
     }
@@ -1164,9 +1241,12 @@ const useAppStore = create((set, get) => ({
           }
         }
       } else {
+        const nextContent = data.content ?? editingItem.content;
+        const contentUpdated = nextContent !== editingItem.content;
         const updatedItem = {
           ...editingItem,
-          content: data.content || editingItem.content,
+          content: nextContent,
+          content_updated: contentUpdated,
           user_note: data.note,
           tags: JSON.stringify(data.tags),
           updated_at: Math.floor(Date.now() / 1000)
@@ -1374,7 +1454,8 @@ const useAppStore = create((set, get) => ({
     try {
       const { items } = get();
       const pinnedItems = items.filter(i => i.is_pinned);
-      const merged = pinnedItems
+      const hydratedPinnedItems = await hydrateItemsIfNeeded(pinnedItems);
+      const merged = hydratedPinnedItems
         .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
         .filter(Boolean)
         .join('\n\n');

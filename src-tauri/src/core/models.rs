@@ -24,6 +24,15 @@ pub struct ClipboardItem {
     pub updated_at: i64,
     #[sqlx(default)]
     pub has_raw_formats: bool,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub content_truncated: bool,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub ocr_truncated: bool,
+    #[serde(default)]
+    #[sqlx(default)]
+    pub content_updated: bool,
 }
 
 impl ClipboardItem {
@@ -58,6 +67,9 @@ impl ClipboardItem {
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
+            content_truncated: false,
+            ocr_truncated: false,
+            content_updated: false,
         }
     }
 
@@ -126,6 +138,9 @@ impl ClipboardItem {
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
+            content_truncated: false,
+            ocr_truncated: false,
+            content_updated: false,
         }
     }
 

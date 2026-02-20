@@ -15,6 +15,9 @@ pub struct ClipboardRepository {
     pool: SqlitePool,
 }
 
+const LIGHT_CONTENT_PREVIEW_CHARS: i32 = 4000;
+const LIGHT_OCR_PREVIEW_CHARS: i32 = 3000;
+
 impl ClipboardRepository {
     /// 获取数据库连接池的引用
     pub fn pool(&self) -> &SqlitePool {
@@ -199,18 +202,41 @@ impl ClipboardRepository {
 
     /// 轻量查询：排除 embedding 和 original_content 大字段
     pub async fn get_recent_light(&self, limit: i32) -> Result<Vec<ClipboardItem>, sqlx::Error> {
-        let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+        let sql = format!(
+            "SELECT id, type,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN SUBSTR(content, 1, {content_limit})
+                        ELSE content
+                    END as content,
+                    '' as original_content, content_hash,
+                    image_paths,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN SUBSTR(ocr_text, 1, {ocr_limit})
+                        ELSE ocr_text
+                    END as ocr_text,
+                    code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at,
-                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN 1 ELSE 0
+                    END as content_truncated,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN 1 ELSE 0
+                    END as ocr_truncated
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ?",
-        )
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await?;
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
+        );
+        let items = sqlx::query_as::<_, ClipboardItem>(&sql)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(items)
     }
@@ -221,19 +247,42 @@ impl ClipboardRepository {
         limit: i32,
         offset: i32,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
-        let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+        let sql = format!(
+            "SELECT id, type,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN SUBSTR(content, 1, {content_limit})
+                        ELSE content
+                    END as content,
+                    '' as original_content, content_hash,
+                    image_paths,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN SUBSTR(ocr_text, 1, {ocr_limit})
+                        ELSE ocr_text
+                    END as ocr_text,
+                    code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at,
-                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN 1 ELSE 0
+                    END as content_truncated,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN 1 ELSE 0
+                    END as ocr_truncated
              FROM clipboard_items WHERE is_deleted = 0
              ORDER BY updated_at DESC LIMIT ? OFFSET ?",
-        )
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
+        );
+        let items = sqlx::query_as::<_, ClipboardItem>(&sql)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(items)
     }
@@ -287,13 +336,35 @@ impl ClipboardRepository {
         }
 
         // Fallback: LIKE-based search over the lightweight projection.
-        let mut sql = String::from(
-            "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+        let mut sql = format!(
+            "SELECT id, type,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN SUBSTR(content, 1, {content_limit})
+                        ELSE content
+                    END as content,
+                    '' as original_content, content_hash,
+                    image_paths,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN SUBSTR(ocr_text, 1, {ocr_limit})
+                        ELSE ocr_text
+                    END as ocr_text,
+                    code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at,
-                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN 1 ELSE 0
+                    END as content_truncated,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN 1 ELSE 0
+                    END as ocr_truncated
              FROM clipboard_items WHERE is_deleted = 0",
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
         );
 
         if let Some(type_filter) = &filters.type_filter {
@@ -343,13 +414,35 @@ impl ClipboardRepository {
 
         // Tag search should be case-insensitive for mixed upper/lower tag text.
         let escaped_query = query.to_lowercase().replace('\'', "''");
-        let mut sql = String::from(
-            "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+        let mut sql = format!(
+            "SELECT id, type,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN SUBSTR(content, 1, {content_limit})
+                        ELSE content
+                    END as content,
+                    '' as original_content, content_hash,
+                    image_paths,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN SUBSTR(ocr_text, 1, {ocr_limit})
+                        ELSE ocr_text
+                    END as ocr_text,
+                    code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at,
-                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN 1 ELSE 0
+                    END as content_truncated,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN 1 ELSE 0
+                    END as ocr_truncated
              FROM clipboard_items WHERE is_deleted = 0 AND tags IS NOT NULL",
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
         );
 
         if let Some(type_filter) = &filters.type_filter {
@@ -381,14 +474,17 @@ impl ClipboardRepository {
     }
 
     pub async fn update(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
+        let should_update_content = item.content_updated;
         sqlx::query(
             r#"
             UPDATE clipboard_items SET
-                content = ?, tags = ?, user_note = ?, code_language = ?,
+                content = CASE WHEN ? THEN ? ELSE content END,
+                tags = ?, user_note = ?, code_language = ?,
                 is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
             WHERE id = ?
             "#,
         )
+        .bind(should_update_content)
         .bind(&item.content)
         .bind(&item.tags)
         .bind(&item.user_note)
@@ -401,7 +497,9 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
-        self.update_fts(item).await;
+        if let Ok(Some(latest)) = self.find_by_id(&item.id).await {
+            self.update_fts(&latest).await;
+        }
 
         Ok(())
     }
@@ -727,11 +825,31 @@ impl ClipboardRepository {
         }
 
         let sql = format!(
-            r#"SELECT ci.id, ci.type, ci.content, '' as original_content, ci.content_hash,
-                      ci.image_paths, ci.ocr_text, ci.code_language, NULL as embedding, ci.tags, ci.user_note,
+            r#"SELECT ci.id, ci.type,
+                      CASE
+                          WHEN ci.content IS NOT NULL AND LENGTH(ci.content) > {content_limit}
+                              THEN SUBSTR(ci.content, 1, {content_limit})
+                          ELSE ci.content
+                      END as content,
+                      '' as original_content, ci.content_hash,
+                      ci.image_paths,
+                      CASE
+                          WHEN ci.ocr_text IS NOT NULL AND LENGTH(ci.ocr_text) > {ocr_limit}
+                              THEN SUBSTR(ci.ocr_text, 1, {ocr_limit})
+                          ELSE ci.ocr_text
+                      END as ocr_text,
+                      ci.code_language, NULL as embedding, ci.tags, ci.user_note,
                       ci.metadata, ci.is_pinned, ci.is_favorite, ci.is_deleted,
                       ci.pinned_at, ci.created_at, ci.updated_at,
-                      EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = ci.id) as has_raw_formats
+                      EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = ci.id) as has_raw_formats,
+                      CASE
+                          WHEN ci.content IS NOT NULL AND LENGTH(ci.content) > {content_limit}
+                              THEN 1 ELSE 0
+                      END as content_truncated,
+                      CASE
+                          WHEN ci.ocr_text IS NOT NULL AND LENGTH(ci.ocr_text) > {ocr_limit}
+                              THEN 1 ELSE 0
+                      END as ocr_truncated
                FROM clipboard_items ci
                INNER JOIN clipboard_fts fts ON ci.id = fts.item_id
                WHERE ci.is_deleted = 0
@@ -739,7 +857,9 @@ impl ClipboardRepository {
                {}
                ORDER BY ci.updated_at DESC
                LIMIT ?"#,
-            filter_sql
+            filter_sql,
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS
         );
 
         let items = sqlx::query_as::<_, ClipboardItem>(&sql)
@@ -759,20 +879,44 @@ impl ClipboardRepository {
         start: i64,
         end: i64,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
-        let items = sqlx::query_as::<_, ClipboardItem>(
-            "SELECT id, type, content, '' as original_content, content_hash,
-                    image_paths, ocr_text, code_language, NULL as embedding, tags, user_note,
+        let sql = format!(
+            "SELECT id, type,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN SUBSTR(content, 1, {content_limit})
+                        ELSE content
+                    END as content,
+                    '' as original_content, content_hash,
+                    image_paths,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN SUBSTR(ocr_text, 1, {ocr_limit})
+                        ELSE ocr_text
+                    END as ocr_text,
+                    code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
                     pinned_at, created_at, updated_at,
-                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats
+                    EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
+                    CASE
+                        WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
+                            THEN 1 ELSE 0
+                    END as content_truncated,
+                    CASE
+                        WHEN ocr_text IS NOT NULL AND LENGTH(ocr_text) > {ocr_limit}
+                            THEN 1 ELSE 0
+                    END as ocr_truncated
              FROM clipboard_items WHERE is_deleted = 0
              AND updated_at >= ? AND updated_at < ?
              ORDER BY updated_at ASC",
-        )
-        .bind(start)
-        .bind(end)
-        .fetch_all(&self.pool)
-        .await?;
+            content_limit = LIGHT_CONTENT_PREVIEW_CHARS,
+            ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
+        );
+
+        let items = sqlx::query_as::<_, ClipboardItem>(&sql)
+            .bind(start)
+            .bind(end)
+            .fetch_all(&self.pool)
+            .await?;
 
         Ok(items)
     }

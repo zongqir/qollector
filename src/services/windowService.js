@@ -41,7 +41,15 @@ export const openImagePreview = async (imagePath, t) => {
       // 如果不是 JSON，直接使用原路径
     }
 
-    const windowLabel = `preview-${Date.now()}`;
+    const windowLabel = 'preview';
+    const existing = await WebviewWindow.getByLabel(windowLabel);
+    if (existing) {
+      try {
+        await existing.close();
+      } catch {
+        // Ignore if stale preview window is already closed.
+      }
+    }
 
     const webview = new WebviewWindow(windowLabel, {
       url: `${resolveSubWindowUrl('public/preview.html', 'preview.html')}?path=${encodeURIComponent(originalPath)}`,

@@ -844,6 +844,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       setAiConfig(updated);
                       try {
                         await invoke('update_ai_config', { config: updated });
+                        if (onConfigChange) onConfigChange();
                       } catch (error) {
                         console.error('save ai config failed:', error);
                       }

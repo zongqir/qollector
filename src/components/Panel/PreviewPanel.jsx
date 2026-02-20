@@ -83,8 +83,20 @@ function PreviewPanel() {
   const addTagToItem = useAppStore(s => s.addTagToItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
 
-  // 从 items 中获取最新的 previewItem 数据（因为可能被更新了）
-  const item = items.find(i => i.id === previewItem?.id) || previewItem;
+  // Prefer hydrated preview payload while still inheriting fast-changing flags from list state.
+  const item = useMemo(() => {
+    if (!previewItem?.id) return null;
+    const latest = items.find(i => i.id === previewItem.id);
+    if (!latest) return previewItem;
+    return {
+      ...latest,
+      content: previewItem.content ?? latest.content,
+      original_content: previewItem.original_content ?? latest.original_content,
+      ocr_text: previewItem.ocr_text ?? latest.ocr_text,
+      content_truncated: Boolean(previewItem.content_truncated),
+      ocr_truncated: Boolean(previewItem.ocr_truncated),
+    };
+  }, [items, previewItem]);
 
   if (!item) {
     switchToCollection();
@@ -309,6 +321,7 @@ function PreviewPanel() {
       const updatedItem = {
         ...item,
         content: editContent,
+        content_updated: true,
         updated_at: Math.floor(Date.now() / 1000)
       };
       await invoke('update_item', { item: updatedItem });

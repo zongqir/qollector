@@ -380,6 +380,9 @@ pub async fn import_data(
             created_at: ei.created_at,
             updated_at: ei.updated_at,
             has_raw_formats: false,
+            content_truncated: false,
+            ocr_truncated: false,
+            content_updated: false,
         };
 
         match manager.insert_item_if_not_exists(&item).await {

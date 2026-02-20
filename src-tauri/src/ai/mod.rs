@@ -293,9 +293,13 @@ impl AIService {
         content: &str,
         language: &str,
     ) -> Result<(Vec<String>, Option<String>), AIError> {
+        if !self.config.enabled {
+            return Ok((Vec::new(), None));
+        }
+
         let api_key = self.config.get_current_api_key();
 
-        // Only try if API key exists, don't check enabled flag
+        // Only try if API key exists.
         if api_key.is_empty() {
             return Ok((Vec::new(), None));
         }
@@ -449,6 +453,10 @@ impl AIService {
         max_tokens: u32,
         temperature: f32,
     ) -> Result<String, AIError> {
+        if !self.config.enabled {
+            return Err(AIError::ConfigError("AI feature is disabled".to_string()));
+        }
+
         let api_key = self.config.get_current_api_key();
         if api_key.is_empty() {
             return Err(AIError::ConfigError("API key is empty".to_string()));
@@ -525,6 +533,10 @@ impl AIService {
         items: &[crate::core::models::ClipboardItem],
         language: &str,
     ) -> Result<String, AIError> {
+        if !self.config.enabled {
+            return Err(AIError::ConfigError("AI feature is disabled".to_string()));
+        }
+
         println!(
             "[Timeline AI] Starting summary generation for {} items",
             items.len()

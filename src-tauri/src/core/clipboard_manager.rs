@@ -254,6 +254,9 @@ impl ClipboardManager {
                     created_at: now,
                     updated_at: now,
                     has_raw_formats: false,
+                    content_truncated: false,
+                    ocr_truncated: false,
+                    content_updated: false,
                 }
             }
             ClipboardContent::File(paths_str) => {
@@ -466,7 +469,7 @@ impl ClipboardManager {
 
                         if !ocr_text.is_empty() {
                             let ai_config = ai_config_clone.lock().unwrap().clone();
-                            if !ai_config.get_current_api_key().is_empty() {
+                            if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                                 let _permit = ai_semaphore_clone.acquire().await.unwrap();
                                 println!(
                                     "[AI] lock acquired for OCR text tags: item_id={}",
@@ -512,6 +515,12 @@ impl ClipboardManager {
                                     }
                                 }
                                 println!("[AI] lock released");
+                            } else {
+                                println!(
+                                    "[AI] skipped OCR text tags: enabled={}, has_api_key={}",
+                                    ai_config.enabled,
+                                    !ai_config.get_current_api_key().is_empty()
+                                );
                             }
                         } else {
                             println!("Image has no OCR text, skipping AI tags");
@@ -519,7 +528,7 @@ impl ClipboardManager {
                     }
                 } else if let Some(content) = item_content.as_ref() {
                     let ai_config = ai_config_clone.lock().unwrap().clone();
-                    if !ai_config.get_current_api_key().is_empty() {
+                    if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!(
                             "[AI] lock acquired for content tags: item_id={}, type={}",
@@ -566,6 +575,12 @@ impl ClipboardManager {
                             Err(e) => eprintln!("[AI] tag generation failed: {}", e),
                         }
                         println!("[AI] lock released");
+                    } else {
+                        println!(
+                            "[AI] skipped content tags: enabled={}, has_api_key={}",
+                            ai_config.enabled,
+                            !ai_config.get_current_api_key().is_empty()
+                        );
                     }
                 }
             });

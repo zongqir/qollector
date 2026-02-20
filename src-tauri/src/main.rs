@@ -637,6 +637,7 @@ fn main() {
             get_recent_items,
             get_recent_items_light,
             get_more_items,
+            get_item_by_id,
             copy_item,
             copy_plain_text,
             update_item,

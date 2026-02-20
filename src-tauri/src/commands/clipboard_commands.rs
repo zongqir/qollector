@@ -38,6 +38,14 @@ pub async fn get_more_items(
 }
 
 #[tauri::command]
+pub async fn get_item_by_id(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<Option<ClipboardItem>, String> {
+    manager.get_item_by_id(&id).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn copy_item(
     manager: State<'_, Arc<ClipboardManager>>,
     item: ClipboardItem,
