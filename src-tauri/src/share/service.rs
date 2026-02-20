@@ -156,7 +156,7 @@ pub async fn upload_to_free_host(
     form = form.part(file_field.to_string(), part);
 
     let client = reqwest::Client::builder()
-        .user_agent("ClipBox/1.0")
+        .user_agent("PasteHarbor/1.0")
         .build()
         .map_err(|e| ShareError::Upload(e.to_string()))?;
 

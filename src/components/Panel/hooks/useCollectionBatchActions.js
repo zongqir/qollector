@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
-import { getTags } from '../../../utils/tagHelpers';
+import { getTags, hasReservedTagPrefix } from '../../../utils/tagHelpers';
 
 function useCollectionBatchActions({
   selectedPinnedItems,
@@ -60,14 +60,7 @@ function useCollectionBatchActions({
       return;
     }
 
-    const normalizedLower = normalizedTag.toLowerCase();
-    if (
-      normalizedLower.startsWith('ai:')
-      || normalizedLower.startsWith('source:')
-      || normalizedLower.startsWith('type:')
-      || normalizedLower.startsWith('\u6765\u6e90:')
-      || normalizedLower.startsWith('\u7c7b\u578b:')
-    ) {
+    if (hasReservedTagPrefix(normalizedTag)) {
       setMultiSelectFeedback({ type: 'error', text: t('multiSelect.addTagReservedPrefix') });
       return;
     }

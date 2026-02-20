@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-import { getTags } from '../utils/tagHelpers';
+import { getTags, hasReservedTagPrefix } from '../utils/tagHelpers';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
@@ -14,6 +14,8 @@ const HISTORY_SNAPSHOT_KEY = 'clipbox-history-snapshot-v1';
 const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
 const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
 const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
+const MANUAL_ENTRY_SOURCE = 'Quick Input';
+const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -37,11 +39,6 @@ const detectClientPlatform = () => {
   return 'other';
 };
 const SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK = detectClientPlatform() === 'windows';
-const RESERVED_TAG_PREFIXES = ['ai:', '来源:', '类型:', 'source:', 'type:', '鏉ユ簮:', '绫诲瀷:'];
-const hasReservedTagPrefix = (tag) => {
-  const normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
-  return RESERVED_TAG_PREFIXES.some(prefix => normalized.startsWith(prefix));
-};
 
 const summarizeItemsForMemory = (items) => {
   let totalContentChars = 0;
@@ -1149,7 +1146,7 @@ const useAppStore = create((set, get) => ({
         await invoke('add_clipboard_item_manual', {
           content: data.content,
           contentType: 'text',
-          source: '快速输入',
+          source: MANUAL_ENTRY_SOURCE,
           autoFavorite: false
         });
         if (data.tags.length > 0 || data.note) {
@@ -1358,7 +1355,7 @@ const useAppStore = create((set, get) => ({
       await invoke('add_clipboard_item_manual', {
         content: content.trim(),
         contentType: 'text',
-        source: '快速笔记',
+        source: QUICK_NOTE_SOURCE,
         autoFavorite: false
       });
       // 获取刚创建的条目并 pin 它

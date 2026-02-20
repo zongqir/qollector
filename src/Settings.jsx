@@ -1205,7 +1205,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <pre className="code-block">
 {`{
   "mcpServers": {
-    "clipbox": {
+    "pasteharbor": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }
@@ -1215,7 +1215,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   onClick={() => {
                     const config = `{
   "mcpServers": {
-    "clipbox": {
+    "pasteharbor": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }

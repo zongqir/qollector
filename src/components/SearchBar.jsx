@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Star, Inbox, Tag, ChevronDown, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
+import { parseSystemTag } from '../utils/tagHelpers';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -173,14 +174,15 @@ function SearchBar({
                   {filteredTagsList.length > 0 ? (
                     <>
                       {filteredTagsList.slice(0, 20).map(tag => {
-                        const isAITag = tag.startsWith('AI:');
-                        const isSourceTag = tag.startsWith('来源:');
-                        const isTypeTag = tag.startsWith('类型:');
+                        const parsed = parseSystemTag(tag, {
+                          sourcePrefix: t('tag.source'),
+                          typePrefix: t('tag.type'),
+                        });
+                        const isAITag = parsed.kind === 'ai';
+                        const isSourceTag = parsed.kind === 'source';
+                        const isTypeTag = parsed.kind === 'type';
                         const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
-                        const displayTag = isAITag ? tag.substring(3) :
-                                          isSourceTag ? tag.substring(3) :
-                                          isTypeTag ? tag.substring(3) :
-                                          tag;
+                        const displayTag = parsed.displayText;
                         return (
                           <div
                             key={tag}

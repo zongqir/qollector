@@ -269,7 +269,7 @@ fn main() {
     let startup_metrics_for_setup = startup_metrics.clone();
 
     // WebView2 memory tuning via Chromium startup arguments.
-    // ClipBox does not rely on most browser capabilities.
+    // PasteHarbor does not rely on most browser capabilities.
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
         // === Process and memory ===
         "--js-flags=--max-old-space-size=128 --lite-mode", // V8 heap cap + lite mode

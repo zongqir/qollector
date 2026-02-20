@@ -104,16 +104,16 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
         }
         "tooltip" => {
             if is_zh {
-                "ClipBox"
+                "PasteHarbor"
             } else {
-                "ClipBox"
+                "PasteHarbor"
             }
         }
         "tooltip_paused" => {
             if is_zh {
-                "ClipBox (已暂停)"
+                "PasteHarbor (已暂停)"
             } else {
-                "ClipBox (Paused)"
+                "PasteHarbor (Paused)"
             }
         }
         _ => key,

@@ -1,4 +1,4 @@
-/* macOS 风格滚动�?*/
+/* macOS-style scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -16,7 +16,7 @@
   background: var(--scrollbar-thumb-hover);
 }
 
-/* 仅在 hover 时显示滚动条 */
+/* Show scrollbar thumbs only on hover */
 .history-stream-scroller::-webkit-scrollbar-thumb,
 .preview-content-area::-webkit-scrollbar-thumb,
 .collection-cards::-webkit-scrollbar-thumb {
@@ -28,4 +28,3 @@
 .collection-cards:hover::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
 }
-

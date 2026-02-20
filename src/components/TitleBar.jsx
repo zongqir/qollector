@@ -51,7 +51,7 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
         <div className="titlebar-brand">
           <img
             src="/clipbox-logo.svg"
-            alt="ClipBox logo"
+            alt="PasteHarbor logo"
             className="titlebar-logo"
             draggable="false"
           />

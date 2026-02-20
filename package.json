@@ -1,7 +1,7 @@
 {
-  "name": "pith",
+  "name": "pasteharbor",
   "version": "1.0.0",
-  "description": "",
+  "description": "PasteHarbor - cross-platform clipboard manager",
   "main": "index.js",
   "scripts": {
     "dev": "vite",

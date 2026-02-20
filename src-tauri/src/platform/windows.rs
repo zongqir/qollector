@@ -47,7 +47,7 @@ pub mod windows {
                     let hwnd = CreateWindowExW(
                         WINDOW_EX_STYLE(0),
                         w!("STATIC"),
-                        w!("ClipBox Clipboard Listener"),
+                        w!("PasteHarbor Clipboard Listener"),
                         WS_OVERLAPPEDWINDOW,
                         0,
                         0,

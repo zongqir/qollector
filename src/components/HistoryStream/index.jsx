@@ -6,7 +6,7 @@ import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import MultiSelectBar from './MultiSelectBar';
-import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
 import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
@@ -205,13 +205,11 @@ function HistoryStream({ style }) {
         else userTags.add(tag);
       });
 
-      const sourceApp = getSourceApp(item.metadata);
-      if (sourceApp && sourceApp !== 'Unknown') sourceTags.add(`来源:${sourceApp}`);
+      const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+      if (sourceTag) sourceTags.add(sourceTag);
 
-      if (item.type_) {
-        const typeMap = { text: '类型:文本', image: '类型:图片', file: '类型:文件', link: '类型:链接' };
-        if (typeMap[item.type_]) typeTags.add(typeMap[item.type_]);
-      }
+      const typeTag = buildTypeTag(item.type_, t);
+      if (typeTag) typeTags.add(typeTag);
     });
 
     return [
@@ -220,7 +218,7 @@ function HistoryStream({ style }) {
       ...Array.from(sourceTags).sort(),
       ...Array.from(aiTags).sort(),
     ];
-  }, [items]);
+  }, [items, t, i18n.language]);
 
   const rankedUserTags = useMemo(() => {
     const statsByTag = new Map();
@@ -318,10 +316,8 @@ function HistoryStream({ style }) {
 
       if (selectedTags.length > 0) {
         const itemTags = getTags(item.tags);
-        const sourceApp = getSourceApp(item.metadata);
-        const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
-        const typeMap = { text: '类型:文本', image: '类型:图片', file: '类型:文件', link: '类型:链接' };
-        const typeTag = typeMap[item.type_];
+        const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+        const typeTag = buildTypeTag(item.type_, t);
         const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
         if (!selectedTags.some(st => allItemTags.includes(st))) return false;
       }
@@ -335,7 +331,7 @@ function HistoryStream({ style }) {
       return true;
     });
 
-    // Pin 筛选时�?pinned_at 降序排序
+    // Keep pinned-only results sorted by pin time (newest first).
     if (showPinnedOnly) {
       result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
     }
@@ -356,7 +352,7 @@ function HistoryStream({ style }) {
     };
 
     return result;
-  }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
+  }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange, t, i18n.language]);
 
   const selectedItemsForBatchActions = useMemo(() => {
     if (selectedItemIds.length === 0) return [];
