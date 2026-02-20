@@ -114,7 +114,8 @@
     "convertTimestamp": "转换时间戳",
     "timestampConverted": "转换时间",
     "delete": "删除",
-    "autoPasted": "已粘贴到前台应用"
+    "autoPasted": "已粘贴到前台应用",
+    "justNow": "刚刚"
   },
   "edit": {
     "content": "内容:",

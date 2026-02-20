@@ -31,6 +31,37 @@ export const formatDate = (timestamp, language) => {
   });
 };
 
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+export const formatHistoryCardTime = (
+  timestamp,
+  language,
+  nowMs = Date.now(),
+  justNowLabel = null,
+) => {
+  const createdMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(createdMs)) return formatDate(timestamp, language);
+
+  const diffMs = nowMs - createdMs;
+  if (diffMs < 0 || diffMs >= DAY_MS) {
+    return formatDate(timestamp, language);
+  }
+
+  const rtf = new Intl.RelativeTimeFormat(language || undefined, { numeric: 'auto' });
+  if (diffMs < MINUTE_MS) {
+    if (typeof justNowLabel === 'string' && justNowLabel.trim()) {
+      return justNowLabel;
+    }
+    return rtf.format(0, 'second');
+  }
+  if (diffMs < HOUR_MS) {
+    return rtf.format(-Math.floor(diffMs / MINUTE_MS), 'minute');
+  }
+  return rtf.format(-Math.floor(diffMs / HOUR_MS), 'hour');
+};
+
 /**
  * 根据时间戳计算时间线颜色
  * 越新的条目颜色越鲜明，越旧的越淡

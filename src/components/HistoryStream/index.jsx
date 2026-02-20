@@ -125,6 +125,14 @@ function HistoryStream({ style }) {
 
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [timeTick, setTimeTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTimeTick(Date.now());
+    }, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const query = debouncedSearchQuery.trim();
@@ -580,6 +588,7 @@ function HistoryStream({ style }) {
           isMultiSelected={isMultiSelected}
           isFocused={isFocused}
           isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
+          timeTick={timeTick}
           onDragStart={handleDragStart}
           onStartExternalDrag={handleStartExternalDrag}
           onTogglePin={togglePin}
@@ -599,6 +608,7 @@ function HistoryStream({ style }) {
     selectedItemIds,
     focusedIndex,
     rowGap,
+    timeTick,
     handleCardClick,
     handleCardDoubleClick,
     handleDragStart,

@@ -114,7 +114,8 @@
     "convertTimestamp": "Convert Timestamp",
     "timestampConverted": "Converted Time",
     "delete": "Delete",
-    "autoPasted": "Pasted to foreground app"
+    "autoPasted": "Pasted to foreground app",
+    "justNow": "Just now"
   },
   "edit": {
     "content": "Content:",
