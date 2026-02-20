@@ -534,24 +534,26 @@ function CollectionPanel() {
           </div>
         </div>
       ) : (
-        <div className="quick-note-input-wrapper">
+        <div className="quick-note-collapsed-row">
+          <div className="quick-note-input-wrapper">
+            <button
+              className="quick-note-expand-btn"
+              onClick={() => setIsExpanded(true)}
+              title={t('collection.expandedNotePlaceholder')}
+            >
+              <Plus size={16} />
+            </button>
+            <input
+              type="text"
+              className="quick-note-input"
+              placeholder={t('collection.quickNotePlaceholder')}
+              value={quickNote}
+              onChange={(e) => setQuickNote(e.target.value)}
+              onKeyDown={handleQuickNoteSubmit}
+            />
+          </div>
           <button
-            className="quick-note-expand-btn"
-            onClick={() => setIsExpanded(true)}
-            title={t('collection.expandedNotePlaceholder')}
-          >
-            <Plus size={16} />
-          </button>
-          <input
-            type="text"
-            className="quick-note-input"
-            placeholder={t('collection.quickNotePlaceholder')}
-            value={quickNote}
-            onChange={(e) => setQuickNote(e.target.value)}
-            onKeyDown={handleQuickNoteSubmit}
-          />
-          <button
-            className="collection-close-inline-btn"
+            className="collection-close-inline-btn quick-note-panel-close-btn"
             onClick={toggleCollectionPanel}
             title={t('collection.hidePanel')}
           >

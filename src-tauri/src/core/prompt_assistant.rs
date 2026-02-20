@@ -77,27 +77,33 @@ fn build_system_prompt(request: &PromptAssistantRequest, output_locale: &str) ->
     let output_language = locale_display_name(output_locale);
     let tone_rule = tone_instruction(request.tone.as_deref());
     let length_rule = length_instruction(request.length.as_deref());
-    let task_rule = match request.task_type {
-        PromptTaskType::Summarize => {
-            "Summarize the source clearly. Keep key facts, decisions, and action points."
-        }
-        PromptTaskType::Rewrite => {
-            "Rewrite the source for better clarity and readability without changing factual meaning."
-        }
-        PromptTaskType::Extract => {
-            "Extract practical information with short sections: Key Points, Action Items, and Important Entities."
-        }
-        PromptTaskType::Translate => {
-            "Translate the source faithfully. Keep names, numbers, code, and URLs unchanged unless translation is required."
-        }
-        PromptTaskType::Reply => {
-            "Draft a response that can be sent directly. Keep it relevant and actionable."
-        }
+    let (task_rule, output_contract) = match request.task_type {
+        PromptTaskType::Summarize => (
+            "Preserve the source's reasoning order and structural skeleton. Remove ornamental wording while keeping all key facts.",
+            "Return one concise paragraph. Hard cap: 300 Chinese characters or 180 English words. Avoid bullet lists unless the source itself is list-like.",
+        ),
+        PromptTaskType::Rewrite => (
+            "Rewrite the source for better clarity and readability without changing factual meaning.",
+            "Return a polished version suitable for direct reuse. Keep meaning equivalent to the source.",
+        ),
+        PromptTaskType::Extract => (
+            "Ignore surface details and identify the underlying mechanism or core contradiction behind the source.",
+            "Return exactly two sections:\n1) Core Logic/Contradiction: one sentence.\n2) Actionable Principle: one sentence starting with an imperative verb.\nDo not restate examples, anecdotes, or minor facts.",
+        ),
+        PromptTaskType::Translate => (
+            "Translate the source faithfully. Keep names, numbers, code, and URLs unchanged unless translation is required.",
+            "Return translation only, with no added explanation.",
+        ),
+        PromptTaskType::Reply => (
+            "Draft a response that can be sent directly. Keep it relevant and actionable.",
+            "Return a message ready to send as-is.",
+        ),
     };
 
     format!(
         "You are an AI writing assistant embedded in a desktop productivity app.\n\
 Task rule: {task_rule}\n\
+Output contract: {output_contract}\n\
 Output language: {output_language}\n\
 Tone rule: {tone_rule}\n\
 Length rule: {length_rule}\n\
@@ -112,6 +118,22 @@ Hard rules:\n\
 fn build_user_prompt(request: &PromptAssistantRequest, output_locale: &str) -> String {
     let truncated_input = truncate_with_notice(&request.input, MAX_INPUT_CHARS);
     let mut sections = vec![format!("Source content:\n{}", truncated_input)];
+
+    match request.task_type {
+        PromptTaskType::Summarize => {
+            sections.push(
+                "Focus requirement: keep the original logic flow and compress to essential facts only."
+                    .to_string(),
+            );
+        }
+        PromptTaskType::Extract => {
+            sections.push(
+                "Focus requirement: do not summarize details; infer one reusable principle from the underlying logic."
+                    .to_string(),
+            );
+        }
+        _ => {}
+    }
 
     if let Some(extra) = request.extra_instruction.as_deref().map(str::trim) {
         if !extra.is_empty() {

@@ -797,6 +797,21 @@
   transition: box-shadow 0.2s;
 }
 
+.quick-note-collapsed-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-note-collapsed-row .quick-note-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-note-panel-close-btn {
+  flex-shrink: 0;
+}
+
 .quick-note-input-wrapper:focus-within {
   box-shadow: 0 0 0 3px var(--accent-medium);
 }
