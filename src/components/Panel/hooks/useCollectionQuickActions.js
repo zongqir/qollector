@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
+import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 
 const SNAPSHOT_STORAGE_KEY = 'clipbox.collection.snapshot.v1';
 const QUICK_OUTPUT_TASKS = ['summarize', 'extract', 'reply', 'rewrite'];
@@ -183,7 +184,7 @@ function useCollectionQuickActions({
         taskType,
         input: sourceText,
         uiLanguage,
-        outputLanguage: 'auto',
+        outputLanguage: resolveOutputLanguageFromUi(uiLanguage),
         tone: 'neutral',
         length: 'medium',
         extraInstruction: null,
