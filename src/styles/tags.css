@@ -207,7 +207,16 @@
   color: var(--accent-color);
 }
 
+.tag-suggestion-item.active {
+  background: var(--tag-suggestion-hover);
+  color: var(--accent-color);
+}
+
 .tag-suggestion-item:hover .tag-suggestion-icon {
+  opacity: 0.8;
+}
+
+.tag-suggestion-item.active .tag-suggestion-icon {
   opacity: 0.8;
 }
 

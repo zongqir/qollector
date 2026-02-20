@@ -37,6 +37,7 @@ function HoverPreviewInner() {
   const pointerMovedRef = useRef(false);
   const [pos, setPos] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [modifierPressed, setModifierPressed] = useState(false);
   const isCollapsedWorkspace = !isMiniMode && !collectionPanelEnabled;
   const isRightAnchored = isMiniMode || isCollapsedWorkspace;
   const previewGap = isCollapsedWorkspace
@@ -77,6 +78,23 @@ function HoverPreviewInner() {
     document.addEventListener('mousedown', handleMouseDown, true);
     return () => document.removeEventListener('mousedown', handleMouseDown, true);
   }, [item, clearHoverPreview]);
+
+  useEffect(() => {
+    const updateModifierState = (event) => {
+      setModifierPressed(Boolean(event.ctrlKey || event.metaKey || event.shiftKey));
+    };
+    const resetModifierState = () => setModifierPressed(false);
+
+    window.addEventListener('keydown', updateModifierState, true);
+    window.addEventListener('keyup', updateModifierState, true);
+    window.addEventListener('blur', resetModifierState);
+
+    return () => {
+      window.removeEventListener('keydown', updateModifierState, true);
+      window.removeEventListener('keyup', updateModifierState, true);
+      window.removeEventListener('blur', resetModifierState);
+    };
+  }, []);
 
   if (!item || !pos) return null;
 
@@ -245,7 +263,11 @@ function HoverPreviewInner() {
     <div
       ref={panelRef}
       className={`hover-preview ${isMiniMode ? 'mini' : ''}`}
-      style={{ top: pos.top, left: pos.left }}
+      style={{
+        top: pos.top,
+        left: pos.left,
+        pointerEvents: modifierPressed ? 'none' : 'auto',
+      }}
       onMouseDown={handlePanelMouseDown}
       onMouseMove={handlePanelMouseMove}
       onMouseUp={handlePanelMouseUp}

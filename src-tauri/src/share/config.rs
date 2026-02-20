@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub struct ShareConfig {
     pub provider: ShareProvider,
     pub s3_config: Option<S3Config>,
+    #[serde(default = "default_force_upload_non_ascii_text")]
+    pub force_upload_non_ascii_text: bool,
 }
 
 impl Default for ShareConfig {
@@ -11,8 +13,13 @@ impl Default for ShareConfig {
         Self {
             provider: ShareProvider::ZeroX0,
             s3_config: None,
+            force_upload_non_ascii_text: default_force_upload_non_ascii_text(),
         }
     }
+}
+
+fn default_force_upload_non_ascii_text() -> bool {
+    false
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

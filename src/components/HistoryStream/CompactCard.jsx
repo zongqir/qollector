@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
 import {
   formatDate,
+  formatHistoryCardTime,
   getTimelineColor,
   getContentPreview,
   getFileName,
@@ -33,6 +34,7 @@ function CompactCard({
   isMultiSelected,
   isFocused,
   isCopied,
+  timeTick,
   onDragStart,
   onStartExternalDrag,
   onTogglePin,
@@ -43,6 +45,12 @@ function CompactCard({
 }) {
   const { t, i18n } = useTranslation();
   const timelineColor = getTimelineColor(item.created_at);
+  const timeLabel = formatHistoryCardTime(
+    item.created_at,
+    i18n.language,
+    timeTick,
+    t('item.justNow'),
+  );
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
   const canDragOut = item.type_ === 'file' || item.type_ === 'image';
@@ -131,7 +139,7 @@ function CompactCard({
       <div className="compact-card-header">
         <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
         <span className="compact-card-time">
-          {formatDate(item.created_at, i18n.language)}
+          {timeLabel}
         </span>
         <div className="compact-card-badges">
           {canDragOut && (

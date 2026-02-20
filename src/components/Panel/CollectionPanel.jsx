@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Package, Copy, Trash2, Plus, X, Send, PanelRightClose, Clock } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Package } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -13,57 +14,31 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
-  useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import useAppStore from '../../store/useAppStore';
-import CollectionCard from './CollectionCard';
-
-// 可排序的卡片包装器
-function SortableCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 100 : 'auto',
-  };
-
-  return (
-    <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...attributes} {...listeners}>
-      <CollectionCard
-        item={item}
-        isCopied={isCopied}
-        onUnpin={onUnpin}
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onOpenItem={onOpenItem}
-      />
-    </div>
-  );
-}
+import SortableCollectionCard from './SortableCollectionCard';
+import CollectionQuickNoteSection from './CollectionQuickNoteSection';
+import CollectionMultiSelectBar from './CollectionMultiSelectBar';
+import CollectionQuickActionsBar from './CollectionQuickActionsBar';
+import useCollectionQuickActions from './hooks/useCollectionQuickActions';
+import useCollectionBatchActions from './hooks/useCollectionBatchActions';
 
 function CollectionPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
   const [pinnedOrder, setPinnedOrder] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
+  const selectionAnchorIndexRef = useRef(-1);
 
   const items = useAppStore(s => s.items);
+  const aiEnabled = useAppStore(s => s.aiEnabled);
+  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const addQuickNote = useAppStore(s => s.addQuickNote);
-  const mergeCopyPinned = useAppStore(s => s.mergeCopyPinned);
-  const clearAllPinned = useAppStore(s => s.clearAllPinned);
   const togglePin = useAppStore(s => s.togglePin);
   const setPanelMode = useAppStore(s => s.setPanelMode);
+  const loadItems = useAppStore(s => s.loadItems);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
@@ -82,6 +57,31 @@ function CollectionPanel() {
     });
   }, [items, pinnedOrder]);
 
+  const selectedPinnedItems = useMemo(() => {
+    if (selectedPinnedIds.length === 0) return [];
+    const selectedIdSet = new Set(selectedPinnedIds);
+    return pinnedItems.filter(item => selectedIdSet.has(item.id));
+  }, [selectedPinnedIds, pinnedItems]);
+
+  const allSelectedAreText = useMemo(
+    () => selectedPinnedItems.length > 0 && selectedPinnedItems.every(item => item.type_ === 'text'),
+    [selectedPinnedItems],
+  );
+
+  const batchAiSourceText = useMemo(
+    () => selectedPinnedItems
+      .map(item => item.content || '')
+      .filter(Boolean)
+      .join('\n\n'),
+    [selectedPinnedItems],
+  );
+
+  const canRunBatchAi = aiEnabled && allSelectedAreText && batchAiSourceText.trim().length > 0;
+  const allSelectedAreFavorite = selectedPinnedItems.length > 0
+    && selectedPinnedItems.every(item => item.is_favorite);
+  const allSelectedArePinned = selectedPinnedItems.length > 0
+    && selectedPinnedItems.every(item => item.is_pinned);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -96,6 +96,19 @@ function CollectionPanel() {
     const newOrder = arrayMove(pinnedItems.map(i => i.id), oldIndex, newIndex);
     setPinnedOrder(newOrder);
   }, [pinnedItems]);
+
+  useEffect(() => {
+    const pinnedIdSet = new Set(pinnedItems.map(item => item.id));
+    setSelectedPinnedIds((current) => {
+      const next = current.filter(id => pinnedIdSet.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [pinnedItems]);
+
+  useEffect(() => {
+    if (selectedPinnedIds.length > 0) return;
+    selectionAnchorIndexRef.current = -1;
+  }, [selectedPinnedIds.length]);
 
   const handleQuickNoteSubmit = useCallback(async (e) => {
     if (e.key === 'Enter' && !e.shiftKey && quickNote.trim()) {
@@ -132,87 +145,110 @@ function CollectionPanel() {
           await togglePin(item);
         }
       } catch (err) {
-        console.error('拖入失败:', err);
+        console.error('Drop pin failed:', err);
       }
     }
   }, [items, togglePin]);
 
-  const handleCardClick = useCallback((item) => {
-    setPanelMode('preview', item);
-  }, [setPanelMode]);
+  const handleCardPointerDownCapture = useCallback((item, index, event) => {
+    if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
+    event.stopPropagation();
+    event.preventDefault();
 
-  const handleCardDoubleClick = useCallback((item) => {
+    if (event.shiftKey) {
+      const anchorCandidate = selectionAnchorIndexRef.current >= 0
+        ? selectionAnchorIndexRef.current
+        : index;
+      const anchorIndex = Math.max(0, Math.min(pinnedItems.length - 1, anchorCandidate));
+      const start = Math.min(anchorIndex, index);
+      const end = Math.max(anchorIndex, index);
+      const rangeIds = pinnedItems.slice(start, end + 1).map(candidate => candidate.id);
+      setSelectedPinnedIds(rangeIds);
+      selectionAnchorIndexRef.current = anchorIndex;
+      return;
+    }
+
+    setSelectedPinnedIds((current) => (
+      current.includes(item.id)
+        ? current.filter(id => id !== item.id)
+        : [...current, item.id]
+    ));
+    selectionAnchorIndexRef.current = index;
+  }, [pinnedItems]);
+
+  const handleCardClick = useCallback((item, index, event) => {
+    event.stopPropagation();
+    if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      event.preventDefault();
+      return;
+    }
+    if (selectedPinnedIds.length > 0) {
+      setSelectedPinnedIds([]);
+    }
+    selectionAnchorIndexRef.current = index;
+    setPanelMode('preview', item);
+  }, [selectedPinnedIds.length, setPanelMode]);
+
+  const handleCardDoubleClick = useCallback((item, event) => {
+    event.stopPropagation();
+    if (selectedPinnedIds.length > 0) return;
     if (item.type_ === 'image' || item.type_ === 'file') {
       handleCopy(item, 'collection');
     } else {
       handleCopyAndAutoPaste(item, 'collection');
     }
-  }, [handleCopyAndAutoPaste, handleCopy]);
+  }, [selectedPinnedIds.length, handleCopyAndAutoPaste, handleCopy]);
+
+  const clearPinnedSelection = useCallback(() => {
+    setSelectedPinnedIds([]);
+  }, []);
+
+  const handleExpandedNoteKeyDown = useCallback((event) => {
+    if (event.key === 'Enter' && event.ctrlKey && quickNote.trim()) {
+      handleExpandedSubmit();
+    }
+    if (event.key === 'Escape') {
+      setIsExpanded(false);
+    }
+  }, [quickNote, handleExpandedSubmit]);
+
+  const batchActions = useCollectionBatchActions({
+    selectedPinnedItems,
+    selectedCount: selectedPinnedIds.length,
+    allSelectedAreFavorite,
+    allSelectedArePinned,
+    canRunBatchAi,
+    batchAiSourceText,
+    uiLanguage: i18n.language,
+    maxPinnedItems,
+    loadItems,
+    t,
+  });
+
+  const quickActions = useCollectionQuickActions({
+    pinnedItems,
+    items,
+    aiEnabled,
+    uiLanguage: i18n.language,
+    selectionMode: selectedPinnedIds.length > 0,
+    addQuickNote,
+    loadItems,
+    setPanelMode,
+    t,
+  });
 
   const quickNoteSection = (
-    <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
-      {isExpanded ? (
-        <div className="quick-note-expanded">
-          <div className="quick-note-expanded-body">
-            <textarea
-              className="quick-note-textarea"
-              placeholder={t('collection.expandedNotePlaceholder')}
-              value={quickNote}
-              onChange={(e) => setQuickNote(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey && quickNote.trim()) {
-                  handleExpandedSubmit();
-                }
-                if (e.key === 'Escape') setIsExpanded(false);
-              }}
-              autoFocus
-            />
-            <button
-              className="quick-note-close-btn"
-              onClick={() => setIsExpanded(false)}
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <div className="quick-note-expanded-footer">
-            <span className="quick-note-hint">Ctrl+Enter</span>
-            <button
-              className="quick-note-submit-btn"
-              onClick={handleExpandedSubmit}
-              disabled={!quickNote.trim()}
-            >
-              <Send size={14} />
-              <span>{t('collection.expandedNoteSubmit')}</span>
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="quick-note-input-wrapper">
-          <button
-            className="quick-note-expand-btn"
-            onClick={() => setIsExpanded(true)}
-            title={t('collection.expandedNotePlaceholder')}
-          >
-            <Plus size={16} />
-          </button>
-          <input
-            type="text"
-            className="quick-note-input"
-            placeholder={t('collection.quickNotePlaceholder')}
-            value={quickNote}
-            onChange={(e) => setQuickNote(e.target.value)}
-            onKeyDown={handleQuickNoteSubmit}
-          />
-          <button
-            className="collection-close-inline-btn"
-            onClick={toggleCollectionPanel}
-            title={t('collection.hidePanel')}
-          >
-            <PanelRightClose size={14} />
-          </button>
-        </div>
-      )}
-    </div>
+    <CollectionQuickNoteSection
+      isExpanded={isExpanded}
+      quickNote={quickNote}
+      onQuickNoteChange={setQuickNote}
+      onQuickNoteKeyDown={handleQuickNoteSubmit}
+      onExpandedKeyDown={handleExpandedNoteKeyDown}
+      onExpandedSubmit={handleExpandedSubmit}
+      onCollapse={() => setIsExpanded(false)}
+      onExpand={() => setIsExpanded(true)}
+      onToggleCollectionPanel={toggleCollectionPanel}
+    />
   );
 
   if (pinnedItems.length === 0) {
@@ -236,32 +272,77 @@ function CollectionPanel() {
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
           <div className="collection-cards">
-            {pinnedItems.map(item => (
-              <SortableCard
+            {pinnedItems.map((item, index) => (
+              <SortableCollectionCard
                 key={item.id}
                 item={item}
                 isCopied={copiedItemId === item.id && copyFeedbackSource === 'collection'}
+                isMultiSelected={selectedPinnedIds.includes(item.id)}
+                isSelectionMode={selectedPinnedIds.length > 0}
                 onUnpin={() => togglePin(item)}
-                onClick={() => handleCardClick(item)}
-                onDoubleClick={() => handleCardDoubleClick(item)}
+                onPointerDownCapture={(event) => handleCardPointerDownCapture(item, index, event)}
+                onClick={(event) => handleCardClick(item, index, event)}
+                onDoubleClick={(event) => handleCardDoubleClick(item, event)}
                 onOpenItem={handleOpenItem}
               />
             ))}
           </div>
         </SortableContext>
       </DndContext>
-      <div className="collection-bottom-bar">
-        <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
-          <Clock size={14} />
-          <span>{t('collection.timeTravel')}</span>
-        </button>
-        <button className="collection-btn clear-btn" onClick={clearAllPinned} title={t('collection.clearAll')}>
-          <Trash2 size={14} />
-          <span>{t('collection.clearAll')}</span>
-        </button>
-      </div>
+      {selectedPinnedIds.length > 0 ? (
+        <CollectionMultiSelectBar
+          selectedCount={selectedPinnedIds.length}
+          showBatchTagEditor={batchActions.showBatchTagEditor}
+          onToggleBatchTagEditor={batchActions.handleToggleBatchTagEditor}
+          batchTagPending={batchActions.batchTagPending}
+          batchFlagPending={batchActions.batchFlagPending}
+          batchAiRunningTask={batchActions.batchAiRunningTask}
+          onBatchFavoriteToggle={batchActions.handleBatchFavoriteToggle}
+          allSelectedAreFavorite={allSelectedAreFavorite}
+          onBatchPinToggle={batchActions.handleBatchPinToggle}
+          allSelectedArePinned={allSelectedArePinned}
+          onMergeCopy={batchActions.handleMergeCopySelected}
+          canRunBatchAi={canRunBatchAi}
+          onBatchAiAction={batchActions.handleBatchAiAction}
+          onClearSelection={clearPinnedSelection}
+          batchTagEditorRef={batchActions.batchTagEditorRef}
+          batchTagInput={batchActions.batchTagInput}
+          onBatchTagInputChange={batchActions.handleBatchTagInputChange}
+          onBatchTagInputKeyDown={batchActions.handleBatchTagInputKeyDown}
+          onApplyBatchTag={batchActions.applyBatchTag}
+          onCloseBatchTagEditor={batchActions.closeBatchTagEditor}
+          multiSelectFeedback={batchActions.multiSelectFeedback}
+        />
+      ) : (
+        <CollectionQuickActionsBar
+          t={t}
+          setPanelMode={setPanelMode}
+          quickOutputTask={quickActions.quickOutputTask}
+          quickOutputRunning={quickActions.quickOutputRunning}
+          showQuickOutputMenu={quickActions.showQuickOutputMenu}
+          setShowQuickOutputMenu={quickActions.setShowQuickOutputMenu}
+          quickOutputMenuRef={quickActions.quickOutputMenuRef}
+          quickOutputTasks={quickActions.quickOutputTasks}
+          showCollectionMoreMenu={quickActions.showCollectionMoreMenu}
+          setShowCollectionMoreMenu={quickActions.setShowCollectionMoreMenu}
+          collectionMoreMenuRef={quickActions.collectionMoreMenuRef}
+          activeAction={quickActions.activeAction}
+          feedback={quickActions.feedback}
+          lastClearedPinnedIds={quickActions.lastClearedPinnedIds}
+          hasSnapshot={quickActions.hasSnapshot}
+          handleRunQuickOutput={quickActions.handleRunQuickOutput}
+          handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
+          handleSaveSnapshot={quickActions.handleSaveSnapshot}
+          handleRestoreSnapshot={quickActions.handleRestoreSnapshot}
+          handleExportCollection={quickActions.handleExportCollection}
+          handleDedupeCollection={quickActions.handleDedupeCollection}
+          handleClearAll={quickActions.handleClearAll}
+          handleUndoClearAll={quickActions.handleUndoClearAll}
+        />
+      )}
     </div>
   );
 }
 
 export default CollectionPanel;
+

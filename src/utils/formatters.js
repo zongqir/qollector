@@ -31,6 +31,37 @@ export const formatDate = (timestamp, language) => {
   });
 };
 
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+export const formatHistoryCardTime = (
+  timestamp,
+  language,
+  nowMs = Date.now(),
+  justNowLabel = null,
+) => {
+  const createdMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(createdMs)) return formatDate(timestamp, language);
+
+  const diffMs = nowMs - createdMs;
+  if (diffMs < 0 || diffMs >= DAY_MS) {
+    return formatDate(timestamp, language);
+  }
+
+  const rtf = new Intl.RelativeTimeFormat(language || undefined, { numeric: 'auto' });
+  if (diffMs < MINUTE_MS) {
+    if (typeof justNowLabel === 'string' && justNowLabel.trim()) {
+      return justNowLabel;
+    }
+    return rtf.format(0, 'second');
+  }
+  if (diffMs < HOUR_MS) {
+    return rtf.format(-Math.floor(diffMs / MINUTE_MS), 'minute');
+  }
+  return rtf.format(-Math.floor(diffMs / HOUR_MS), 'hour');
+};
+
 /**
  * 根据时间戳计算时间线颜色
  * 越新的条目颜色越鲜明，越旧的越淡
@@ -156,4 +187,230 @@ export const getLinkPreviewTitle = (item) => {
   } catch {
     return null;
   }
+};
+
+const TIMESTAMP_SECONDS_RE = /^\d{10}$/;
+const TIMESTAMP_MILLISECONDS_RE = /^\d{13}$/;
+const MIN_REASONABLE_TIMESTAMP_MS = Date.UTC(2000, 0, 1, 0, 0, 0);
+const MAX_REASONABLE_TIMESTAMP_MS = Date.UTC(2100, 0, 1, 0, 0, 0);
+
+const trimTimestampCandidate = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
+
+export const detectTimestampCandidate = (value) => {
+  const candidate = trimTimestampCandidate(value);
+  if (!candidate || /\s/.test(candidate)) {
+    return null;
+  }
+
+  let milliseconds = null;
+  let unit = null;
+
+  if (TIMESTAMP_SECONDS_RE.test(candidate)) {
+    milliseconds = Number(candidate) * 1000;
+    unit = 's';
+  } else if (TIMESTAMP_MILLISECONDS_RE.test(candidate)) {
+    milliseconds = Number(candidate);
+    unit = 'ms';
+  }
+
+  if (milliseconds === null || !Number.isFinite(milliseconds)) {
+    return null;
+  }
+
+  if (milliseconds < MIN_REASONABLE_TIMESTAMP_MS || milliseconds > MAX_REASONABLE_TIMESTAMP_MS) {
+    return null;
+  }
+
+  const date = new Date(milliseconds);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return {
+    raw: candidate,
+    unit,
+    milliseconds,
+  };
+};
+
+export const formatTimestampCandidate = (candidate, language) => {
+  if (!candidate || typeof candidate.milliseconds !== 'number') {
+    return '';
+  }
+
+  const date = new Date(candidate.milliseconds);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleString(language, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+};
+
+const COLOR_TEXT_MAX_LENGTH = 64;
+
+const trimQuotedCandidate = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
+
+const clampByte = (value) => Math.max(0, Math.min(255, value | 0));
+
+const toHexByte = (value) => clampByte(value).toString(16).toUpperCase().padStart(2, '0');
+
+const toAlphaText = (alpha) => {
+  const rounded = Number(alpha.toFixed(3));
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+};
+
+const rgbToHsl = (r, g, b) => {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+
+  let h = 0;
+  if (delta !== 0) {
+    if (max === rn) {
+      h = ((gn - bn) / delta) % 6;
+    } else if (max === gn) {
+      h = (bn - rn) / delta + 2;
+    } else {
+      h = (rn - gn) / delta + 4;
+    }
+  }
+
+  h = Math.round((h * 60 + 360) % 360);
+  const l = (max + min) / 2;
+  const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+  return {
+    h,
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+};
+
+let colorProbeContext = null;
+
+const getColorProbeContext = () => {
+  if (colorProbeContext) return colorProbeContext;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  colorProbeContext = canvas.getContext('2d', { willReadFrequently: true });
+  return colorProbeContext;
+};
+
+const supportsCssColor = (candidate) => {
+  if (!candidate) return false;
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function') {
+    return CSS.supports('color', candidate);
+  }
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  const probe = document.createElement('option');
+  probe.style.color = '';
+  probe.style.color = candidate;
+  return probe.style.color !== '';
+};
+
+const normalizeRawRgbTriplet = (candidate) => {
+  if (!candidate) return null;
+  const hasDelimiter = candidate.includes(',') || /\s/.test(candidate);
+  if (!hasDelimiter) return null;
+
+  const tokens = candidate.split(/[,\s]+/).filter(Boolean);
+  if (tokens.length !== 3) return null;
+  if (!tokens.every((token) => /^\d{1,3}$/.test(token))) return null;
+
+  const [r, g, b] = tokens.map((token) => Number(token));
+  if ([r, g, b].some((value) => !Number.isFinite(value) || value < 0 || value > 255)) {
+    return null;
+  }
+
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+export const parsePureColorText = (value) => {
+  const candidate = trimQuotedCandidate(value);
+  if (!candidate || candidate.length > COLOR_TEXT_MAX_LENGTH) {
+    return null;
+  }
+  if (/[\r\n]/.test(candidate)) {
+    return null;
+  }
+  const normalizedColor = normalizeRawRgbTriplet(candidate) || candidate;
+  if (!supportsCssColor(normalizedColor)) {
+    return null;
+  }
+
+  const ctx = getColorProbeContext();
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+  ctx.fillStyle = normalizedColor;
+  ctx.fillRect(0, 0, 1, 1);
+  const rgba = ctx.getImageData(0, 0, 1, 1).data;
+  const r = rgba[0];
+  const g = rgba[1];
+  const b = rgba[2];
+  const alpha = rgba[3] / 255;
+  const alphaText = toAlphaText(alpha);
+
+  if (alpha === 0) {
+    return null;
+  }
+
+  const hex = alpha < 1
+    ? `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}${toHexByte(Math.round(alpha * 255))}`
+    : `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`;
+  const rgb = alpha < 1
+    ? `rgba(${r}, ${g}, ${b}, ${alphaText})`
+    : `rgb(${r}, ${g}, ${b})`;
+  const hslInfo = rgbToHsl(r, g, b);
+  const hsl = alpha < 1
+    ? `hsla(${hslInfo.h}, ${hslInfo.s}%, ${hslInfo.l}%, ${alphaText})`
+    : `hsl(${hslInfo.h}, ${hslInfo.s}%, ${hslInfo.l}%)`;
+
+  return {
+    raw: candidate,
+    previewCss: alpha < 1 ? `rgba(${r}, ${g}, ${b}, ${alphaText})` : `rgb(${r}, ${g}, ${b})`,
+    hex,
+    rgb,
+    hsl,
+  };
 };

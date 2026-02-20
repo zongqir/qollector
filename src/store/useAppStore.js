@@ -19,6 +19,11 @@ const normalizeCopyFeedbackSource = (source) => {
   const normalized = source.trim().toLowerCase();
   return COPY_FEEDBACK_SOURCES.has(normalized) ? normalized : 'global';
 };
+const RESERVED_TAG_PREFIXES = ['ai:', '来源:', '类型:', 'source:', 'type:', '鏉ユ簮:', '绫诲瀷:'];
+const hasReservedTagPrefix = (tag) => {
+  const normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
+  return RESERVED_TAG_PREFIXES.some(prefix => normalized.startsWith(prefix));
+};
 
 const summarizeItemsForMemory = (items) => {
   let totalContentChars = 0;
@@ -176,6 +181,7 @@ const useAppStore = create((set, get) => ({
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,
+  historyTagShortcutEnabled: true,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -468,6 +474,7 @@ const useAppStore = create((set, get) => ({
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
         widgetEnabled: generalConfig.widget_enabled || false,
+        historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
       });
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
@@ -824,6 +831,15 @@ const useAppStore = create((set, get) => ({
   },
 
   // ========== 多选 Actions ==========
+  setSelectedItemIds: (itemIds) => {
+    if (!Array.isArray(itemIds)) {
+      set({ selectedItemIds: [] });
+      return;
+    }
+    const normalized = Array.from(new Set(itemIds.filter(Boolean)));
+    set({ selectedItemIds: normalized });
+  },
+
   toggleSelectItem: (itemId) => {
     const { selectedItemIds } = get();
     if (selectedItemIds.includes(itemId)) {
@@ -835,6 +851,109 @@ const useAppStore = create((set, get) => ({
 
   clearSelection: () => {
     set({ selectedItemIds: [] });
+  },
+
+  addTagToSelectedItems: async (tagToAdd, sourceItems = null) => {
+    const normalizedTag = typeof tagToAdd === 'string' ? tagToAdd.trim() : '';
+    if (!normalizedTag) {
+      return { ok: false, reason: 'empty-tag' };
+    }
+
+    if (hasReservedTagPrefix(normalizedTag)) {
+      return { ok: false, reason: 'reserved-prefix' };
+    }
+
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) {
+      return { ok: false, reason: 'empty-selection' };
+    }
+
+    const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
+    const preferredById = new Map(preferredItems.map(item => [item.id, item]));
+    const fallbackById = new Map(items.map(item => [item.id, item]));
+    const selectedItems = selectedItemIds
+      .map(id => preferredById.get(id) || fallbackById.get(id))
+      .filter(Boolean);
+
+    if (selectedItems.length === 0) {
+      return { ok: false, reason: 'items-not-found' };
+    }
+
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const settledResults = await Promise.allSettled(selectedItems.map(async (item) => {
+      const existingTags = getTags(item.tags);
+      if (existingTags.includes(normalizedTag)) {
+        return { id: item.id, changed: false };
+      }
+
+      const tags = JSON.stringify([...existingTags, normalizedTag]);
+      const updatedItem = {
+        ...item,
+        tags,
+        updated_at: updatedAt,
+      };
+      await invoke('update_item', { item: updatedItem });
+      return { id: item.id, changed: true, tags, updated_at: updatedAt };
+    }));
+
+    const updates = [];
+    let updatedCount = 0;
+    let unchangedCount = 0;
+    let failedCount = 0;
+    let firstError = null;
+
+    settledResults.forEach((result) => {
+      if (result.status === 'fulfilled') {
+        if (result.value.changed) {
+          updatedCount += 1;
+          updates.push(result.value);
+        } else {
+          unchangedCount += 1;
+        }
+      } else {
+        failedCount += 1;
+        if (!firstError) firstError = result.reason;
+      }
+    });
+
+    if (updates.length > 0) {
+      const updatesById = new Map(updates.map(update => [update.id, update]));
+      set((state) => {
+        const nextItems = state.items.map((item) => {
+          const updated = updatesById.get(item.id);
+          if (!updated) return item;
+          return {
+            ...item,
+            tags: updated.tags,
+            updated_at: updated.updated_at,
+          };
+        });
+
+        const nextPreviewItem = state.previewItem && updatesById.has(state.previewItem.id)
+          ? {
+            ...state.previewItem,
+            tags: updatesById.get(state.previewItem.id).tags,
+            updated_at: updatesById.get(state.previewItem.id).updated_at,
+          }
+          : state.previewItem;
+
+        return {
+          items: nextItems,
+          previewItem: nextPreviewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
+    }
+
+    return {
+      ok: true,
+      tag: normalizedTag,
+      updatedCount,
+      unchangedCount,
+      failedCount,
+      updates,
+      error: firstError ? String(firstError) : null,
+    };
   },
 
   deleteSelectedItems: async () => {

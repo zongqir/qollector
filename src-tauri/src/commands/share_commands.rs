@@ -51,8 +51,16 @@ pub async fn update_share_config(
 #[tauri::command]
 pub async fn get_item_share_data(
     item_id: String,
+    state: tauri::State<'_, ShareState>,
     manager: tauri::State<'_, Arc<ClipboardManager>>,
 ) -> Result<ShareResult, String> {
+    let share_config = state
+        .config_repo
+        .load_share_config()
+        .await
+        .map_err(|e| e.to_string())?
+        .unwrap_or_default();
+
     let item = manager
         .get_item_by_id(&item_id)
         .await
@@ -88,6 +96,7 @@ pub async fn get_item_share_data(
         item.content.as_deref(),
         image_bytes,
         image_ext.as_deref(),
+        share_config.force_upload_non_ascii_text,
     )
     .map_err(|e| e.to_string())
 }
@@ -178,6 +187,7 @@ pub async fn share_via_s3(
         image_bytes,
         image_ext.as_deref(),
         s3_config,
+        config.force_upload_non_ascii_text,
     )
     .await
     .map_err(|e| e.to_string())

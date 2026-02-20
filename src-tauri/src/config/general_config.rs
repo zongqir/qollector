@@ -31,6 +31,9 @@ pub struct GeneralConfig {
     /// Global shortcut for show/hide main window.
     #[serde(default = "default_toggle_window_shortcut")]
     pub toggle_window_shortcut: String,
+    /// Enable Ctrl/Cmd+T quick-tag shortcut in history/preview UI.
+    #[serde(default = "default_history_tag_shortcut_enabled")]
+    pub history_tag_shortcut_enabled: bool,
     /// Whether the collection panel is visible.
     #[serde(default = "default_collection_panel_enabled")]
     pub collection_panel_enabled: bool,
@@ -89,6 +92,10 @@ fn default_toggle_window_shortcut() -> String {
     "alt+x".to_string()
 }
 
+fn default_history_tag_shortcut_enabled() -> bool {
+    true
+}
+
 fn default_collection_panel_enabled() -> bool {
     true
 }
@@ -122,6 +129,7 @@ impl Default for GeneralConfig {
             copy_pin_shortcut: default_copy_pin_shortcut(),
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
+            history_tag_shortcut_enabled: default_history_tag_shortcut_enabled(),
             collection_panel_enabled: true,
             auto_paste_on_double_click: false,
             auto_cleanup_enabled: true,

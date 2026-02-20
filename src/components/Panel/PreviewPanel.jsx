@@ -3,12 +3,23 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
-import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls, extractOpenableFilePaths } from '../../utils/formatters';
+import {
+  getContentPreview,
+  getFileList,
+  getFileName,
+  formatDate,
+  extractOpenableUrls,
+  extractOpenableFilePaths,
+  detectTimestampCandidate,
+  formatTimestampCandidate,
+  parsePureColorText,
+} from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import AIAssistantPanel from '../../features/ai-assistant/components/AIAssistantPanel';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
 import FilePreviewItem from './FilePreview';
@@ -21,7 +32,11 @@ function PreviewPanel() {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
+  const [showTimestampConverted, setShowTimestampConverted] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const toolbarRef = useRef(null);
+  const toolbarCopyTimerRef = useRef(null);
   const panelRef = useRef(null);
   const contentSelectableRef = useRef(null);
 
@@ -47,6 +62,8 @@ function PreviewPanel() {
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const items = useAppStore(s => s.items);
   const openShareModal = useAppStore(s => s.openShareModal);
+  const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
+  const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
   // 备注相关
   const editingNoteId = useAppStore(s => s.editingNoteId);
@@ -91,6 +108,25 @@ function PreviewPanel() {
   const shouldShowRevealButton = item.type_ === 'file' || textOpenablePaths.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
+  const assistantSourceText = useMemo(() => {
+    if (item.type_ === 'image') {
+      return item.ocr_text || item.content || '';
+    }
+    return item.content || '';
+  }, [item.content, item.ocr_text, item.type_]);
+  const canUseAIAssistant = assistantSourceText.trim().length > 0;
+  const pureColorPreview = useMemo(() => {
+    if (item.type_ !== 'text') return null;
+    return parsePureColorText(item.content);
+  }, [item.type_, item.content]);
+  const timestampCandidate = useMemo(() => {
+    if (item.type_ !== 'text') return null;
+    return detectTimestampCandidate(item.content);
+  }, [item.type_, item.content]);
+  const convertedTimestampText = useMemo(() => (
+    timestampCandidate ? formatTimestampCandidate(timestampCandidate, i18n.language) : ''
+  ), [timestampCandidate, i18n.language]);
+  const shouldShowTimestampConvertButton = Boolean(timestampCandidate && convertedTimestampText);
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
   const selectPreviewContent = useCallback(() => {
     const contentEl = contentSelectableRef.current;
@@ -194,6 +230,26 @@ function PreviewPanel() {
     selection.removeAllRanges();
   }, [item.id]);
 
+  useEffect(() => {
+    return () => {
+      if (toolbarCopyTimerRef.current) {
+        clearTimeout(toolbarCopyTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setCopiedToolbarAction(null);
+  }, [item.id]);
+
+  useEffect(() => {
+    setShowTimestampConverted(false);
+  }, [item.id]);
+
+  useEffect(() => {
+    setShowAIAssistant(false);
+  }, [item.id]);
+
   // 收集并切回收集箱
   const handlePreviewPinToggle = async () => {
     const wasPinned = item.is_pinned;
@@ -264,19 +320,49 @@ function PreviewPanel() {
   };
 
   // 计算用户标签（用于标签建议）
-  const allUserTags = [];
-  items.forEach(i => {
-    const t = getTags(i.tags);
-    t.forEach(tag => {
-      if (!tag.startsWith('AI:') && !allUserTags.includes(tag)) {
-        allUserTags.push(tag);
+  const rankedUserTags = useMemo(() => {
+    const statsByTag = new Map();
+    items.forEach((candidate) => {
+      const rankTimestamp = Math.max(candidate.updated_at || 0, candidate.created_at || 0);
+      const uniqueUserTags = new Set(
+        getTags(candidate.tags).filter(tag => !tag.startsWith('AI:')),
+      );
+      uniqueUserTags.forEach((tag) => {
+        const existing = statsByTag.get(tag);
+        if (existing) {
+          existing.count += 1;
+          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
+          return;
+        }
+        statsByTag.set(tag, { tag, count: 1, lastUsedAt: rankTimestamp });
+      });
+    });
+    return Array.from(statsByTag.values())
+      .sort((a, b) => (
+        b.count - a.count
+        || b.lastUsedAt - a.lastUsedAt
+        || a.tag.localeCompare(b.tag)
+      ))
+      .map(stat => stat.tag);
+  }, [items]);
+
+  const filteredUserTags = useMemo(() => {
+    const query = newTagInput.trim().toLowerCase();
+    if (!query) return rankedUserTags;
+
+    const prefixMatches = [];
+    const partialMatches = [];
+    rankedUserTags.forEach((tag) => {
+      const normalizedTag = tag.toLowerCase();
+      if (!normalizedTag.includes(query)) return;
+      if (normalizedTag.startsWith(query)) {
+        prefixMatches.push(tag);
+      } else {
+        partialMatches.push(tag);
       }
     });
-  });
-  allUserTags.sort();
-  const filteredUserTags = newTagInput.trim()
-    ? allUserTags.filter(tag => tag.toLowerCase().includes(newTagInput.toLowerCase()))
-    : allUserTags;
+    return [...prefixMatches, ...partialMatches];
+  }, [rankedUserTags, newTagInput]);
 
   const handleTagInputKeyDown = (itemObj, e) => {
     if (e.key === 'Enter' && newTagInput.trim()) {
@@ -285,6 +371,42 @@ function PreviewPanel() {
       cancelAddTag();
     }
   };
+
+  useEffect(() => {
+    const isEditableElement = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+      if (target.isContentEditable) return true;
+      return Boolean(target.closest('[contenteditable="true"]'));
+    };
+
+    const handleQuickTagShortcut = (e) => {
+      if (!historyTagShortcutEnabled || isEditingContent) return;
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 't') return;
+      if (isEditableElement(e.target)) return;
+      if (selectedItemIds.length > 0) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (addingTagItemId !== item.id) {
+        startAddTag(item);
+        return;
+      }
+
+      const inputEl = panelRef.current?.querySelector('.preview-tags-section .add-tag-input');
+      if (inputEl instanceof HTMLInputElement) {
+        inputEl.focus();
+        inputEl.select();
+      }
+    };
+
+    window.addEventListener('keydown', handleQuickTagShortcut, true);
+    return () => {
+      window.removeEventListener('keydown', handleQuickTagShortcut, true);
+    };
+  }, [historyTagShortcutEnabled, isEditingContent, addingTagItemId, item, startAddTag, selectedItemIds.length]);
 
   const handleOpen = useCallback(() => {
     if (item.type_ === 'link' || item.type_ === 'file') {
@@ -322,6 +444,22 @@ function PreviewPanel() {
       handleCopyPlainText(item.content, 'preview');
     }
   }, [item.content, handleCopyPlainText]);
+
+  const setToolbarCopiedFeedback = useCallback((actionKey) => {
+    setCopiedToolbarAction(actionKey);
+    if (toolbarCopyTimerRef.current) {
+      clearTimeout(toolbarCopyTimerRef.current);
+    }
+    toolbarCopyTimerRef.current = setTimeout(() => {
+      setCopiedToolbarAction((current) => (current === actionKey ? null : current));
+      toolbarCopyTimerRef.current = null;
+    }, 1100);
+  }, []);
+
+  const runToolbarCopyAction = useCallback(async (actionKey, copyAction) => {
+    await copyAction();
+    setToolbarCopiedFeedback(actionKey);
+  }, [setToolbarCopiedFeedback]);
 
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
@@ -466,17 +604,45 @@ function PreviewPanel() {
       </div>
 
       {/* 内容区 */}
-      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''}`}>
+      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
         {isCopied && (
           <div className="copy-success-toast">
             <Check size={16} /> {t('item.copied')}
           </div>
         )}
-        {renderContent()}
+        <AIAssistantPanel
+          open={showAIAssistant}
+          sourceText={assistantSourceText}
+          sourceType={item.type_}
+          onClose={() => setShowAIAssistant(false)}
+        />
+        {!showAIAssistant && !isEditingContent && pureColorPreview && (
+          <div className="preview-color-card">
+            <div
+              className="preview-color-card-swatch"
+              style={{ backgroundColor: pureColorPreview.previewCss }}
+            />
+            <div className="preview-color-card-values">
+              <div className="preview-color-card-row">
+                <span className="preview-color-card-label">HEX</span>
+                <code>{pureColorPreview.hex}</code>
+              </div>
+              <div className="preview-color-card-row">
+                <span className="preview-color-card-label">RGB</span>
+                <code>{pureColorPreview.rgb}</code>
+              </div>
+              <div className="preview-color-card-row">
+                <span className="preview-color-card-label">HSL</span>
+                <code>{pureColorPreview.hsl}</code>
+              </div>
+            </div>
+          </div>
+        )}
+        {!showAIAssistant && renderContent()}
       </div>
 
       {/* 备注区 - 内容下方，作为批注 */}
-      {!isEditingContent && (
+      {!showAIAssistant && !isEditingContent && (
         <div className="preview-note-section">
           <NoteDisplay
             item={item}
@@ -497,8 +663,22 @@ function PreviewPanel() {
       )}
 
       {/* 元信息 - 底部参考 */}
-      {!isEditingContent && (
+      {!showAIAssistant && !isEditingContent && (
         <div className="preview-meta">
+          {pureColorPreview && (
+            <span className="preview-meta-color">
+              <span
+                className="preview-meta-color-swatch"
+                style={{ backgroundColor: pureColorPreview.previewCss }}
+              />
+              <span className="preview-meta-color-text">{pureColorPreview.hex}</span>
+            </span>
+          )}
+          {showTimestampConverted && convertedTimestampText && (
+            <span className="preview-meta-timestamp">
+              {t('item.timestampConverted')}: {convertedTimestampText}
+            </span>
+          )}
           <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
           <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
         </div>
@@ -520,15 +700,64 @@ function PreviewPanel() {
         ) : (
           <>
             {item.has_raw_formats && item.content && (
-              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content, 'preview')}>
-                <FileText size={14} />
-                <span>{t('item.copyPlainText')}</span>
+              <button
+                className={`preview-tool-btn ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('plain-text', () => handleCopyPlainText(item.content, 'preview'))}
+              >
+                {copiedToolbarAction === 'plain-text' ? <Check size={14} /> : <FileText size={14} />}
+                <span>{copiedToolbarAction === 'plain-text' ? t('item.copied') : t('item.copyPlainText')}</span>
               </button>
             )}
             {isJson && (
-              <button className="preview-tool-btn" onClick={handleFormatJsonCopy}>
-                <Braces size={14} />
-                <span>{t('item.formatJsonCopy')}</span>
+              <button
+                className={`preview-tool-btn ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
+              >
+                {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
+                <span>{copiedToolbarAction === 'json' ? t('item.copied') : t('item.formatJsonCopy')}</span>
+              </button>
+            )}
+            {pureColorPreview && (
+              <button
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('hex', () => handleCopyPlainText(pureColorPreview.hex, 'preview'))}
+                title={t('item.copyHex')}
+              >
+                {copiedToolbarAction === 'hex' ? <Check size={14} /> : <Palette size={14} />}
+                <span>{t('item.copyHex')}</span>
+                <span className="compact-label">HEX</span>
+              </button>
+            )}
+            {pureColorPreview && (
+              <button
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('rgb', () => handleCopyPlainText(pureColorPreview.rgb, 'preview'))}
+                title={t('item.copyRgb')}
+              >
+                {copiedToolbarAction === 'rgb' ? <Check size={14} /> : <Palette size={14} />}
+                <span>{t('item.copyRgb')}</span>
+                <span className="compact-label">RGB</span>
+              </button>
+            )}
+            {pureColorPreview && (
+              <button
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('hsl', () => handleCopyPlainText(pureColorPreview.hsl, 'preview'))}
+                title={t('item.copyHsl')}
+              >
+                {copiedToolbarAction === 'hsl' ? <Check size={14} /> : <Palette size={14} />}
+                <span>{t('item.copyHsl')}</span>
+                <span className="compact-label">HSL</span>
+              </button>
+            )}
+            {shouldShowTimestampConvertButton && (
+              <button
+                className={`preview-tool-btn ${showTimestampConverted ? 'active' : ''}`}
+                onClick={() => setShowTimestampConverted((prev) => !prev)}
+                title={t('item.convertTimestamp')}
+              >
+                <Clock3 size={14} />
+                <span>{t('item.convertTimestamp')}</span>
               </button>
             )}
             {shouldShowAIButton && (
@@ -541,6 +770,15 @@ function PreviewPanel() {
                 <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
               </button>
             )}
+            <button
+              className={`preview-tool-btn ${showAIAssistant ? 'active' : ''}`}
+              onClick={() => setShowAIAssistant(prev => !prev)}
+              disabled={!canUseAIAssistant}
+              title={!canUseAIAssistant ? t('aiAssistant.noInput') : t('aiAssistant.open')}
+            >
+              <Bot size={14} />
+              <span>{t('aiAssistant.open')}</span>
+            </button>
             {shouldShowOCRButton && (
               <button
                 className="preview-tool-btn"

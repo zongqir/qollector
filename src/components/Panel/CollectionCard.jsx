@@ -32,7 +32,16 @@ const isFolder = (path) => {
   return !name.includes('.');
 };
 
-function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpenItem }) {
+function CollectionCard({
+  item,
+  isCopied,
+  isMultiSelected,
+  onUnpin,
+  onPointerDownCapture,
+  onClick,
+  onDoubleClick,
+  onOpenItem,
+}) {
   const { t } = useTranslation();
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
 
@@ -122,9 +131,10 @@ function CollectionCard({ item, isCopied, onUnpin, onClick, onDoubleClick, onOpe
 
   return (
     <div
-      className={`collection-card ${isCopied ? 'copied' : ''}`}
+      className={`collection-card ${isCopied ? 'copied' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+      onPointerDownCapture={onPointerDownCapture}
       onClick={onClick}
-      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick(); }}
+      onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(e); }}
     >
       {isCopied && (
         <div className="copy-success-toast">
