@@ -469,14 +469,15 @@
     "backToCollectionFromTimeline": "返回收集箱"
   },
   "aiAssistant": {
-    "title": "AI 快捷工具台",
-    "subtitle": "基于当前内容，一步生成可用结果",
-    "open": "AI 快捷工具台",
+    "title": "AI 助手",
+    "subtitle": "基于当前内容，快速生成可用结果",
+    "open": "AI 助手",
     "close": "关闭",
     "run": "运行",
     "running": "处理中...",
     "reset": "重置输入",
     "result": "结果",
+    "resultLoading": "正在生成结果...",
     "resultPlaceholder": "执行任务后，结果会显示在这里。",
     "outputLanguage": "输出语言",
     "tone": "语气",

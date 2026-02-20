@@ -24,6 +24,7 @@ use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
 use commands::ocr_commands::*;
+use commands::prompt_commands::*;
 use commands::share_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use repository::clipboard_repo::ClipboardRepository;
@@ -666,6 +667,7 @@ fn main() {
             search_items,
             get_items_by_date_range,
             generate_timeline_summary,
+            run_prompt_assistant_task,
             get_mcp_config,
             get_mcp_port,
             update_mcp_config,

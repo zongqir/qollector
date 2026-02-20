@@ -439,6 +439,84 @@ impl AIService {
         }
     }
 
+    pub async fn generate_structured_text(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+        max_tokens: u32,
+        temperature: f32,
+    ) -> Result<String, AIError> {
+        let api_key = self.config.get_current_api_key();
+        if api_key.is_empty() {
+            return Err(AIError::ConfigError("API key is empty".to_string()));
+        }
+
+        let model = self.config.get_current_model();
+        let request = ChatRequest {
+            model,
+            messages: vec![
+                ChatMessage {
+                    role: "system".to_string(),
+                    content: system_prompt.to_string(),
+                },
+                ChatMessage {
+                    role: "user".to_string(),
+                    content: user_prompt.to_string(),
+                },
+            ],
+            max_tokens: max_tokens.clamp(128, 2200),
+            temperature: temperature.clamp(0.0, 1.2),
+        };
+
+        let url = format!(
+            "{}/chat/completions",
+            self.config.current_provider.base_url()
+        );
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await?;
+            return Err(AIError::ApiError(error_text));
+        }
+
+        let response_text = response.text().await?;
+        if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&response_text) {
+            if let Some(code) = error_response.code {
+                let detail = error_response
+                    .data
+                    .map(|value| format!(" | data: {}", value))
+                    .unwrap_or_default();
+                return Err(AIError::ApiError(format!(
+                    "API error code {}: {}{}",
+                    code, error_response.message, detail
+                )));
+            }
+        }
+
+        let chat_response: ChatResponse = serde_json::from_str(&response_text)
+            .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;
+
+        let output = chat_response
+            .choices
+            .first()
+            .map(|choice| choice.message.content.trim().to_string())
+            .unwrap_or_default();
+
+        if output.is_empty() {
+            return Err(AIError::ApiError("Empty response from model".to_string()));
+        }
+
+        Ok(output)
+    }
+
     pub async fn generate_timeline_summary(
         &self,
         items: &[crate::core::models::ClipboardItem],

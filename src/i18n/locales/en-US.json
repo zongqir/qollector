@@ -469,14 +469,15 @@
     "backToCollectionFromTimeline": "Back to Collection"
   },
   "aiAssistant": {
-    "title": "AI Quick Desk",
-    "subtitle": "Turn current content into a usable AI request in one step",
-    "open": "AI Quick Desk",
+    "title": "AI Assistant",
+    "subtitle": "Process current content and get a usable result quickly",
+    "open": "AI Assistant",
     "close": "Close",
     "run": "Run",
     "running": "Running...",
     "reset": "Reset Input",
     "result": "Result",
+    "resultLoading": "Generating result...",
     "resultPlaceholder": "Run a task and the output will appear here.",
     "outputLanguage": "Output Language",
     "tone": "Tone",

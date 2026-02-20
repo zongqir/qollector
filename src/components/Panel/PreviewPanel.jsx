@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Wand2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import {
@@ -604,13 +604,19 @@ function PreviewPanel() {
       </div>
 
       {/* 内容区 */}
-      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''}`}>
+      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
         {isCopied && (
           <div className="copy-success-toast">
             <Check size={16} /> {t('item.copied')}
           </div>
         )}
-        {!isEditingContent && pureColorPreview && (
+        <AIAssistantPanel
+          open={showAIAssistant}
+          sourceText={assistantSourceText}
+          sourceType={item.type_}
+          onClose={() => setShowAIAssistant(false)}
+        />
+        {!showAIAssistant && !isEditingContent && pureColorPreview && (
           <div className="preview-color-card">
             <div
               className="preview-color-card-swatch"
@@ -632,18 +638,11 @@ function PreviewPanel() {
             </div>
           </div>
         )}
-        {renderContent()}
+        {!showAIAssistant && renderContent()}
       </div>
 
-      <AIAssistantPanel
-        open={showAIAssistant}
-        sourceText={assistantSourceText}
-        sourceType={item.type_}
-        onClose={() => setShowAIAssistant(false)}
-      />
-
       {/* 备注区 - 内容下方，作为批注 */}
-      {!isEditingContent && (
+      {!showAIAssistant && !isEditingContent && (
         <div className="preview-note-section">
           <NoteDisplay
             item={item}
@@ -664,7 +663,7 @@ function PreviewPanel() {
       )}
 
       {/* 元信息 - 底部参考 */}
-      {!isEditingContent && (
+      {!showAIAssistant && !isEditingContent && (
         <div className="preview-meta">
           {pureColorPreview && (
             <span className="preview-meta-color">
@@ -777,7 +776,7 @@ function PreviewPanel() {
               disabled={!canUseAIAssistant}
               title={!canUseAIAssistant ? t('aiAssistant.noInput') : t('aiAssistant.open')}
             >
-              <Wand2 size={14} />
+              <Bot size={14} />
               <span>{t('aiAssistant.open')}</span>
             </button>
             {shouldShowOCRButton && (
