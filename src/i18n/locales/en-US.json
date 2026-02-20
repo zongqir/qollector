@@ -303,7 +303,9 @@
       "testConnection": "Test Connection",
       "testSuccess": "Connection successful",
       "testFailed": "Connection failed",
-      "networkHint": "For China network, Aliyun OSS is recommended for best stability"
+      "networkHint": "For China network, Aliyun OSS is recommended for best stability",
+      "forceUploadNonAscii": "Compatibility mode for Unicode text",
+      "forceUploadNonAsciiHint": "When enabled, short text containing non-ASCII characters is uploaded first and shared as a URL QR to avoid garbled scans on some apps."
     }
   },
   "dragDrop": {

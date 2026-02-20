@@ -108,7 +108,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [clearing, setClearing] = useState(false);
 
   // Share config
-  const [shareConfig, setShareConfig] = useState({ provider: 'ZeroX0', s3_config: null });
+  const [shareConfig, setShareConfig] = useState({
+    provider: 'ZeroX0',
+    s3_config: null,
+    force_upload_non_ascii_text: false,
+  });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
 
@@ -498,7 +502,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         invoke('get_mcp_config'),
         invoke('get_mcp_port').catch(() => 38470),
         invoke('get_general_config'),
-        invoke('get_share_config').catch(() => ({ provider: 'ZeroX0', s3_config: null }))
+        invoke('get_share_config').catch(() => ({
+          provider: 'ZeroX0',
+          s3_config: null,
+          force_upload_non_ascii_text: false,
+        }))
       ]);
       console.log('后端返回的 AI 配置:', ai);
       console.log('后端返回的 OCR 配置:', ocr);
@@ -527,11 +535,13 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
-      // Migrate old FileIo provider name to ZeroX0
-      if (share.provider === 'FileIo') {
-        share.provider = 'ZeroX0';
-      }
-      setShareConfig(share);
+      // Migrate old FileIo provider name to ZeroX0 and normalize optional fields.
+      const normalizedShareConfig = {
+        provider: share.provider === 'FileIo' ? 'ZeroX0' : share.provider,
+        s3_config: share.s3_config || null,
+        force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
+      };
+      setShareConfig(normalizedShareConfig);
       console.log('✅ 配置加载完成');
     } catch (error) {
       console.error('❌ 加载配置失败:', error);
@@ -2002,6 +2012,24 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               {t(`settings.share.${
                 { ZeroX0: 'fileioDesc', Tmpfiles: 'tmpfilesDesc', Catbox: 'catboxDesc', Litterbox: 'litterboxDesc', S3: 's3Desc' }[shareConfig.provider]
               }`)}
+            </small>
+            <label className="setting-label" style={{ marginTop: '10px' }}>
+              <input
+                type="checkbox"
+                checked={Boolean(shareConfig.force_upload_non_ascii_text)}
+                onChange={(e) => {
+                  const updated = {
+                    ...shareConfig,
+                    force_upload_non_ascii_text: e.target.checked,
+                  };
+                  setShareConfig(updated);
+                  invoke('update_share_config', { config: updated }).catch(console.error);
+                }}
+              />
+              <span>{t('settings.share.forceUploadNonAscii')}</span>
+            </label>
+            <small className="setting-hint-block">
+              {t('settings.share.forceUploadNonAsciiHint')}
             </small>
 
             {shareConfig.provider === 'S3' && (

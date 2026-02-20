@@ -303,7 +303,9 @@
       "testConnection": "测试连接",
       "testSuccess": "连接成功",
       "testFailed": "连接失败",
-      "networkHint": "国内网络环境下，建议配置阿里云 OSS 以获得最佳稳定性"
+      "networkHint": "国内网络环境下，建议配置阿里云 OSS 以获得最佳稳定性",
+      "forceUploadNonAscii": "Unicode 文本兼容模式",
+      "forceUploadNonAsciiHint": "开启后，含非 ASCII 字符的短文本会先上传再生成链接二维码，降低部分扫码器出现乱码的概率。"
     }
   },
   "dragDrop": {

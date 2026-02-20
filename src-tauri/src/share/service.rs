@@ -8,6 +8,16 @@ use crate::share::ShareError;
 
 const LOCAL_QR_TEXT_LIMIT: usize = 400;
 
+fn should_use_local_qr_for_text(text: &str, force_upload_non_ascii_text: bool) -> bool {
+    if text.is_empty() || text.len() > LOCAL_QR_TEXT_LIMIT {
+        return false;
+    }
+    if force_upload_non_ascii_text && !text.is_ascii() {
+        return false;
+    }
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShareMethod {
     LocalQr,
@@ -43,6 +53,7 @@ pub fn prepare_share_data(
     content: Option<&str>,
     image_bytes: Option<Vec<u8>>,
     image_ext: Option<&str>,
+    force_upload_non_ascii_text: bool,
 ) -> Result<ShareResult, ShareError> {
     match content_type {
         "text" | "link" | "code" => {
@@ -50,7 +61,7 @@ pub fn prepare_share_data(
             if text.is_empty() {
                 return Err(ShareError::InvalidConfig("No content to share".into()));
             }
-            if text.len() <= LOCAL_QR_TEXT_LIMIT {
+            if should_use_local_qr_for_text(text, force_upload_non_ascii_text) {
                 let qr = generate_qr_base64(text)?;
                 return Ok(ShareResult {
                     method: ShareMethod::LocalQr,
@@ -172,11 +183,12 @@ pub async fn share_via_s3(
     image_bytes: Option<Vec<u8>>,
     image_ext: Option<&str>,
     s3_config: &crate::share::config::S3Config,
+    force_upload_non_ascii_text: bool,
 ) -> Result<ShareResult, ShareError> {
     // For short text, still do local QR
     if matches!(content_type, "text" | "link" | "code") {
         let text = content.unwrap_or("");
-        if !text.is_empty() && text.len() <= LOCAL_QR_TEXT_LIMIT {
+        if should_use_local_qr_for_text(text, force_upload_non_ascii_text) {
             let qr = generate_qr_base64(text)?;
             return Ok(ShareResult {
                 method: ShareMethod::LocalQr,
@@ -243,4 +255,24 @@ pub async fn share_via_s3(
         data_base64: None,
         filename: None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_use_local_qr_for_text;
+
+    #[test]
+    fn local_qr_kept_for_ascii_when_compat_mode_enabled() {
+        assert!(should_use_local_qr_for_text("hello world", true));
+    }
+
+    #[test]
+    fn local_qr_disabled_for_non_ascii_when_compat_mode_enabled() {
+        assert!(!should_use_local_qr_for_text("中文文本", true));
+    }
+
+    #[test]
+    fn local_qr_still_enabled_for_non_ascii_when_compat_mode_disabled() {
+        assert!(should_use_local_qr_for_text("中文文本", false));
+    }
 }
