@@ -1,4 +1,4 @@
-use chrono::Timelike;
+use chrono::{Local, TimeZone, Timelike};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -541,7 +541,9 @@ impl AIService {
         let mut timeline_data = String::new();
         for item in items {
             let timestamp = item.updated_at;
-            let hour = chrono::DateTime::from_timestamp(timestamp, 0)
+            let hour = Local
+                .timestamp_opt(timestamp, 0)
+                .single()
                 .map(|dt| dt.hour())
                 .unwrap_or(0);
 
