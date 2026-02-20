@@ -180,9 +180,21 @@
   box-sizing: border-box;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: none;
   border: 1px solid transparent;
   position: relative;
+}
+
+.compact-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  background: var(--selection-color);
+  border-radius: 10px 0 0 10px;
+  pointer-events: none;
 }
 
 .compact-card:hover {
@@ -190,13 +202,15 @@
 }
 
 .compact-card.selected {
-  background: var(--accent-light);
-  border-color: var(--accent-color);
+  background: var(--bg-card);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .compact-card.multi-selected {
-  background: var(--accent-light);
-  border-color: var(--accent-color);
+  background: var(--bg-card);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .compact-card.keyboard-focused {
@@ -506,9 +520,10 @@
 
 .compact-card.pinned {
   background: var(--card-pinned-bg);
+  border-color: transparent;
 }
 
-.compact-card.pinned:hover {
+.compact-card.pinned:hover:not(.selected):not(.multi-selected) {
   background: var(--card-pinned-hover);
 }
 
@@ -516,12 +531,48 @@
   background: var(--card-favorite-bg);
 }
 
-.compact-card.favorite:hover {
+.compact-card.favorite:hover:not(.selected):not(.multi-selected) {
   background: var(--card-favorite-hover);
 }
 
 .compact-card.pinned.favorite {
   background: var(--card-pinned-fav-bg);
+}
+
+/* Keep pinned/favorite surface semantics while selection uses the left marker only. */
+.compact-card.pinned.selected,
+.compact-card.pinned.multi-selected {
+  background: var(--card-pinned-bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.compact-card.favorite.selected,
+.compact-card.favorite.multi-selected {
+  background: var(--card-favorite-bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.compact-card.pinned.favorite.selected,
+.compact-card.pinned.favorite.multi-selected {
+  background: var(--card-pinned-fav-bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.compact-card.selected::before,
+.compact-card.pinned.selected::before,
+.compact-card.favorite.selected::before,
+.compact-card.pinned.favorite.selected::before {
+  width: 3px;
+}
+
+.compact-card.multi-selected::before,
+.compact-card.pinned.multi-selected::before,
+.compact-card.favorite.multi-selected::before,
+.compact-card.pinned.favorite.multi-selected::before {
+  width: 4px;
 }
 
 .compact-card-header {
@@ -554,19 +605,19 @@
   gap: 2px;
   align-items: center;
   margin-left: auto;
-  min-width: 0;
+  width: 96px;
+  min-width: 96px;
   flex-shrink: 0;
-  max-width: 0;
   overflow: hidden;
   pointer-events: none;
   opacity: 0;
-  transition: max-width 0.15s ease, opacity 0.15s ease;
+  justify-content: flex-end;
+  transition: opacity 0.12s ease;
 }
 
 .compact-card:hover .compact-card-badges,
 .compact-card:focus-within .compact-card-badges,
 .compact-card-badges:has(.active) {
-  max-width: 180px;
   pointer-events: auto;
   opacity: 1;
 }
@@ -649,9 +700,9 @@
 
   .compact-card-badges {
     width: 100%;
+    min-width: 0;
     justify-content: flex-end;
     margin-left: 0;
-    max-width: none;
     overflow: visible;
   }
 }
@@ -1124,7 +1175,7 @@
   cursor: grabbing;
 }
 
-.collection-card:hover {
+.collection-card:hover:not(.multi-selected) {
   background: var(--bg-card-hover);
   box-shadow: 0 4px 12px var(--shadow-sm);
   transform: translateY(-2px);
@@ -1132,9 +1183,9 @@
 }
 
 .collection-card.multi-selected {
-  background: var(--accent-light);
-  border-color: var(--accent-color);
-  box-shadow: 0 4px 12px var(--shadow-sm);
+  background: color-mix(in srgb, var(--selection-bg-strong) 84%, var(--bg-card) 16%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent), 0 8px 20px color-mix(in srgb, var(--selection-shadow) 48%, transparent);
 }
 
 .collection-card.multi-selected:hover {
@@ -1143,6 +1194,10 @@
 
 .collection-card.copied {
   border-color: #34c759;
+}
+
+.collection-card.multi-selected.copied {
+  border-color: var(--selection-border);
 }
 
 .collection-card-remove {
