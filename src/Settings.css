@@ -169,12 +169,12 @@
 }
 
 .domain-section-header {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  padding: 0 4px 8px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  padding: 2px 4px 10px;
 }
 
 
@@ -194,6 +194,15 @@
   letter-spacing: 0.02em;
   padding: 0 4px 6px;
   margin-bottom: 0;
+}
+
+.setting-group-title.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  padding: 2px 4px 10px;
 }
 
 /* 分组内的行 */
@@ -1055,6 +1064,30 @@
   height: 16px;
   cursor: pointer;
   accent-color: var(--accent-color);
+}
+
+.setting-label.share-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+  cursor: default;
+}
+
+.setting-label.share-option-label {
+  margin-top: 10px;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.setting-label.share-option-label .share-option-text {
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 @media (max-width: 860px) {

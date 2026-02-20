@@ -1264,7 +1264,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'integrations' && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.general.featureModules')}</div>
+            <div className="setting-group-title section-title">{t('settings.general.featureModules')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span className="toggle-label-group">
@@ -1335,7 +1335,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
             {aiConfig.enabled && (
               <>
-                <div className="setting-group-title">{t('settings.tabs.ai')}</div>
+                <div className="setting-group-title section-title">{t('settings.tabs.ai')}</div>
                 <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
@@ -1467,7 +1467,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'integrations' && ocrConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.tabs.ocr')}</div>
+            <div className="setting-group-title section-title">{t('settings.tabs.ocr')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.ocr.autoOcr')}</span>
@@ -1589,7 +1589,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'integrations' && mcpConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.tabs.mcp')}</div>
+            <div className="setting-group-title section-title">{t('settings.tabs.mcp')}</div>
             <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
@@ -1939,8 +1939,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'integrations' && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.tabs.share')}</div>
-            <label className="setting-label">{t('settings.share.provider')}</label>
+            <div className="setting-group-title section-title">{t('settings.tabs.share')}</div>
+            <label className="setting-label share-field-label">{t('settings.share.provider')}</label>
             <select
               className="setting-select"
               value={shareConfig.provider}
@@ -1972,7 +1972,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 { ZeroX0: 'fileioDesc', Tmpfiles: 'tmpfilesDesc', Catbox: 'catboxDesc', Litterbox: 'litterboxDesc', S3: 's3Desc' }[shareConfig.provider]
               }`)}
             </small>
-            <label className="setting-label" style={{ marginTop: '10px' }}>
+            <label className="setting-label share-option-label">
               <input
                 type="checkbox"
                 checked={Boolean(shareConfig.force_upload_non_ascii_text)}
@@ -1985,7 +1985,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   invoke('update_share_config', { config: updated }).catch(console.error);
                 }}
               />
-              <span>{t('settings.share.forceUploadNonAscii')}</span>
+              <span className="share-option-text">{t('settings.share.forceUploadNonAscii')}</span>
             </label>
             <small className="setting-hint-block">
               {t('settings.share.forceUploadNonAsciiHint')}
