@@ -831,6 +831,15 @@ const useAppStore = create((set, get) => ({
   },
 
   // ========== 多选 Actions ==========
+  setSelectedItemIds: (itemIds) => {
+    if (!Array.isArray(itemIds)) {
+      set({ selectedItemIds: [] });
+      return;
+    }
+    const normalized = Array.from(new Set(itemIds.filter(Boolean)));
+    set({ selectedItemIds: normalized });
+  },
+
   toggleSelectItem: (itemId) => {
     const { selectedItemIds } = get();
     if (selectedItemIds.includes(itemId)) {

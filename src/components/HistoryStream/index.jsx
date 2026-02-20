@@ -2,13 +2,14 @@ import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'r
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
-import { Check, Copy, Tag, Trash2, X } from 'lucide-react';
+import { Bot, Check, Copy, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
+import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -47,8 +48,9 @@ function getDragText(item, externalPaths) {
 }
 
 function HistoryStream({ style }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const clickTimerRef = useRef(null);
+  const selectionAnchorIndexRef = useRef(-1);
   const filterProbeRef = useRef(null);
   const lastFilterProbeLogAtRef = useRef(0);
   const hasTopTrackerInitRef = useRef(false);
@@ -71,6 +73,8 @@ function HistoryStream({ style }) {
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
+  const aiEnabled = useAppStore(s => s.aiEnabled);
+  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
@@ -97,11 +101,13 @@ function HistoryStream({ style }) {
   const handleCopy = useAppStore(s => s.handleCopy);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
+  const loadItems = useAppStore(s => s.loadItems);
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
+  const setSelectedItemIds = useAppStore(s => s.setSelectedItemIds);
   const clearSelection = useAppStore(s => s.clearSelection);
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
@@ -135,6 +141,9 @@ function HistoryStream({ style }) {
   const [batchTagPending, setBatchTagPending] = useState(false);
   const [batchTagFeedback, setBatchTagFeedback] = useState(null);
   const [batchTagActiveSuggestionIndex, setBatchTagActiveSuggestionIndex] = useState(-1);
+  const [batchAiRunningTask, setBatchAiRunningTask] = useState(null);
+  const [batchAiFeedback, setBatchAiFeedback] = useState(null);
+  const [batchFlagPending, setBatchFlagPending] = useState(false);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -331,6 +340,43 @@ function HistoryStream({ style }) {
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
+  const selectedItemsForBatchActions = useMemo(() => {
+    if (selectedItemIds.length === 0) return [];
+    const selectedIdSet = new Set(selectedItemIds);
+    const preferredOrdered = filteredItems.filter(item => selectedIdSet.has(item.id));
+    if (preferredOrdered.length === selectedItemIds.length) {
+      return preferredOrdered;
+    }
+
+    const fallbackById = new Map(items.map(item => [item.id, item]));
+    const fallbackOrdered = selectedItemIds
+      .map(id => fallbackById.get(id))
+      .filter(Boolean);
+    const preferredIdSet = new Set(preferredOrdered.map(item => item.id));
+    return preferredOrdered.length > 0
+      ? [...preferredOrdered, ...fallbackOrdered.filter(item => !preferredIdSet.has(item.id))]
+      : fallbackOrdered;
+  }, [selectedItemIds, filteredItems, items]);
+
+  const allSelectedAreText = useMemo(
+    () => selectedItemsForBatchActions.length > 0 && selectedItemsForBatchActions.every(item => item.type_ === 'text'),
+    [selectedItemsForBatchActions],
+  );
+
+  const batchAiSourceText = useMemo(
+    () => selectedItemsForBatchActions
+      .map(item => item.content || '')
+      .filter(Boolean)
+      .join('\n\n'),
+    [selectedItemsForBatchActions],
+  );
+
+  const canRunBatchAi = aiEnabled && allSelectedAreText && batchAiSourceText.trim().length > 0;
+  const allSelectedAreFavorite = selectedItemsForBatchActions.length > 0
+    && selectedItemsForBatchActions.every(item => item.is_favorite);
+  const allSelectedArePinned = selectedItemsForBatchActions.length > 0
+    && selectedItemsForBatchActions.every(item => item.is_pinned);
+
   const closeBatchTagEditor = useCallback(() => {
     if (batchTagPending) return;
     setShowBatchTagEditor(false);
@@ -424,6 +470,95 @@ function HistoryStream({ style }) {
     }
   }, [addTagToSelectedItems, batchTagInput, batchTagPending, filteredItems, t]);
 
+  const handleBatchFavoriteToggle = useCallback(async () => {
+    if (batchFlagPending || selectedItemsForBatchActions.length === 0) return;
+    const targetFavoriteState = !allSelectedAreFavorite;
+    const targets = selectedItemsForBatchActions.filter(item => Boolean(item.is_favorite) !== targetFavoriteState);
+    if (targets.length === 0) return;
+
+    setBatchFlagPending(true);
+    try {
+      for (const item of targets) {
+        await invoke('toggle_favorite_item', { id: item.id });
+      }
+      await loadItems();
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setBatchAiFeedback({
+        type: 'error',
+        text: t('multiSelect.batchActionFailed', { error: message }),
+      });
+    } finally {
+      setBatchFlagPending(false);
+    }
+  }, [allSelectedAreFavorite, batchFlagPending, selectedItemsForBatchActions, loadItems, t]);
+
+  const handleBatchPinToggle = useCallback(async () => {
+    if (batchFlagPending || selectedItemsForBatchActions.length === 0) return;
+    const targetPinnedState = !allSelectedArePinned;
+    const targets = selectedItemsForBatchActions.filter(item => Boolean(item.is_pinned) !== targetPinnedState);
+    if (targets.length === 0) return;
+
+    setBatchFlagPending(true);
+    try {
+      const maxPinned = targetPinnedState ? maxPinnedItems : 999;
+      for (const item of targets) {
+        await invoke('toggle_pin_item', { id: item.id, maxPinned });
+      }
+      await loadItems();
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setBatchAiFeedback({
+        type: 'error',
+        text: t('multiSelect.batchActionFailed', { error: message }),
+      });
+    } finally {
+      setBatchFlagPending(false);
+    }
+  }, [allSelectedArePinned, batchFlagPending, selectedItemsForBatchActions, maxPinnedItems, loadItems, t]);
+
+  const handleBatchAiAction = useCallback(async (taskType) => {
+    if ((taskType !== 'summarize' && taskType !== 'rewrite') || !canRunBatchAi || batchAiRunningTask) {
+      return;
+    }
+
+    setBatchAiRunningTask(taskType);
+    setBatchAiFeedback(null);
+    try {
+      const response = await runPromptAssistantTask({
+        taskType,
+        input: batchAiSourceText.trim(),
+        uiLanguage: i18n.language,
+        outputLanguage: 'auto',
+        tone: 'neutral',
+        length: 'medium',
+        extraInstruction: null,
+      });
+
+      const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
+      if (!outputText) {
+        setBatchAiFeedback({ type: 'warning', text: t('multiSelect.batchAiEmpty') });
+        return;
+      }
+
+      await invoke('copy_plain_text', { text: outputText });
+      setBatchAiFeedback({
+        type: 'success',
+        text: taskType === 'rewrite'
+          ? t('multiSelect.batchRewriteCopied')
+          : t('multiSelect.batchSummarizeCopied'),
+      });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setBatchAiFeedback({
+        type: 'error',
+        text: t('multiSelect.batchAiFailed', { error: message }),
+      });
+    } finally {
+      setBatchAiRunningTask(null);
+    }
+  }, [batchAiRunningTask, batchAiSourceText, canRunBatchAi, i18n.language, t]);
+
   const handleBatchTagInputKeyDown = useCallback((e) => {
     if (e.nativeEvent?.isComposing || e.isComposing) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -462,13 +597,18 @@ function HistoryStream({ style }) {
   ]);
 
   // reset keyboard focus when list changes
-  useEffect(() => { setFocusedIndex(-1); }, [filteredItems, setFocusedIndex]);
+  useEffect(() => {
+    setFocusedIndex(-1);
+    selectionAnchorIndexRef.current = -1;
+  }, [filteredItems, setFocusedIndex]);
 
   useEffect(() => {
     if (selectedItemIds.length > 0) return;
     setShowBatchTagEditor(false);
     setBatchTagInput('');
     setBatchTagActiveSuggestionIndex(-1);
+    setBatchAiFeedback(null);
+    selectionAnchorIndexRef.current = -1;
   }, [selectedItemIds.length]);
 
   useEffect(() => {
@@ -508,6 +648,14 @@ function HistoryStream({ style }) {
     }, 2500);
     return () => clearTimeout(timer);
   }, [batchTagFeedback]);
+
+  useEffect(() => {
+    if (!batchAiFeedback) return undefined;
+    const timer = setTimeout(() => {
+      setBatchAiFeedback(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [batchAiFeedback]);
 
   useEffect(() => {
     const probe = filterProbeRef.current;
@@ -581,9 +729,29 @@ function HistoryStream({ style }) {
     selectedDateRange,
   ]);
 
-  const handleCardClick = useCallback((item, e) => {
+  const handleCardClick = useCallback((item, index, e) => {
     e.stopPropagation();
+    if (typeof index !== 'number' || index < 0 || index >= filteredItems.length) return;
+
+    if (e.shiftKey) {
+      e.preventDefault();
+      const anchorCandidate = selectionAnchorIndexRef.current >= 0
+        ? selectionAnchorIndexRef.current
+        : (focusedIndex >= 0 ? focusedIndex : index);
+      const anchorIndex = Math.max(0, Math.min(filteredItems.length - 1, anchorCandidate));
+      const start = Math.min(anchorIndex, index);
+      const end = Math.max(anchorIndex, index);
+      const rangeIds = filteredItems.slice(start, end + 1).map(candidate => candidate.id);
+      if (rangeIds.length > 0) {
+        setSelectedItemIds(rangeIds);
+        setFocusedIndex(index);
+        selectionAnchorIndexRef.current = anchorIndex;
+      }
+      return;
+    }
+
     if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
       const shouldIncludePreviewSelection =
         selectedItemIds.length === 0 &&
         panelMode === 'preview' &&
@@ -595,11 +763,14 @@ function HistoryStream({ style }) {
         toggleSelectItem(previewItemId);
       }
       toggleSelectItem(item.id);
+      setFocusedIndex(index);
+      selectionAnchorIndexRef.current = index;
       return;
     }
     if (selectedItemIds.length > 0) {
       clearSelection();
     }
+    selectionAnchorIndexRef.current = index;
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -621,7 +792,22 @@ function HistoryStream({ style }) {
       setPanelMode('preview', item);
       clickTimerRef.current = null;
     }, 250);
-  }, [setPanelMode, toggleSelectItem, clearSelection, selectedItemIds.length, panelMode, previewItemId, filteredItems, shouldUseHoverPreview, setHoverPreview, hoverPreviewItem, clearHoverPreview]);
+  }, [
+    setPanelMode,
+    toggleSelectItem,
+    clearSelection,
+    selectedItemIds.length,
+    panelMode,
+    previewItemId,
+    filteredItems,
+    focusedIndex,
+    setSelectedItemIds,
+    setFocusedIndex,
+    shouldUseHoverPreview,
+    setHoverPreview,
+    hoverPreviewItem,
+    clearHoverPreview,
+  ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
     e.stopPropagation();
@@ -767,6 +953,15 @@ function HistoryStream({ style }) {
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'a') {
+        if (filteredItems.length === 0) return;
+        e.preventDefault();
+        setSelectedItemIds(filteredItems.map(item => item.id));
+        setFocusedIndex(0);
+        selectionAnchorIndexRef.current = 0;
+        return;
+      }
+
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 't') {
         if (!historyTagShortcutEnabled) return;
         e.preventDefault();
@@ -808,6 +1003,7 @@ function HistoryStream({ style }) {
     panelMode,
     focusedIndex,
     filteredItems,
+    setSelectedItemIds,
     toggleSelectItem,
     openBatchTagEditor,
     moveFocusedSelection,
@@ -835,7 +1031,25 @@ function HistoryStream({ style }) {
         className="history-stream-row"
         data-item-id={item.id}
         style={{ paddingBottom: `${rowGap}px` }}
-        onClick={(e) => { e.stopPropagation(); handleCardClick(item, e); }}
+        onMouseDownCapture={(e) => {
+          if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
+          e.stopPropagation();
+          e.preventDefault();
+          handleCardClick(item, index, e);
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            e.preventDefault();
+            return;
+          }
+          handleCardClick(item, index, e);
+        }}
+        onContextMenu={(e) => {
+          if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onDoubleClick={(e) => handleCardDoubleClick(item, e)}
       >
         <CompactCard
@@ -971,21 +1185,75 @@ function HistoryStream({ style }) {
               <span>{t('multiSelect.addTag')}</span>
             </button>
             <button
+              className="multi-select-btn favorite"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBatchFavoriteToggle();
+              }}
+              disabled={batchFlagPending || batchAiRunningTask != null}
+              title={allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}
+            >
+              <Star size={14} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
+              <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
+            </button>
+            <button
+              className="multi-select-btn pin"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBatchPinToggle();
+              }}
+              disabled={batchFlagPending || batchAiRunningTask != null}
+              title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
+            >
+              <Inbox size={14} />
+              <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
+            </button>
+            <button
               className="multi-select-btn copy"
               onClick={(e) => {
                 e.stopPropagation();
                 copySelectedItemsMerged(filteredItems);
               }}
+              title={t('multiSelect.mergeCopy')}
             >
               <Copy size={14} />
               <span>{t('multiSelect.mergeCopy')}</span>
             </button>
+            {canRunBatchAi && (
+              <>
+                <button
+                  className="multi-select-btn ai"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBatchAiAction('summarize');
+                  }}
+                  disabled={batchFlagPending || batchAiRunningTask != null}
+                  title={t('multiSelect.batchSummarize')}
+                >
+                  <Bot size={14} />
+                  <span>{t('multiSelect.batchSummarize')}</span>
+                </button>
+                <button
+                  className="multi-select-btn ai"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBatchAiAction('rewrite');
+                  }}
+                  disabled={batchFlagPending || batchAiRunningTask != null}
+                  title={t('multiSelect.batchRewrite')}
+                >
+                  <Wand2 size={14} />
+                  <span>{t('multiSelect.batchRewrite')}</span>
+                </button>
+              </>
+            )}
             <button
               className="multi-select-btn delete"
               onClick={(e) => {
                 e.stopPropagation();
                 deleteSelectedItems();
               }}
+              title={t('multiSelect.delete')}
             >
               <Trash2 size={14} />
               <span>{t('multiSelect.delete')}</span>
@@ -1046,6 +1314,11 @@ function HistoryStream({ style }) {
           {batchTagFeedback && (
             <div className={`multi-select-feedback ${batchTagFeedback.type}`}>
               {batchTagFeedback.text}
+            </div>
+          )}
+          {batchAiFeedback && (
+            <div className={`multi-select-feedback ${batchAiFeedback.type}`}>
+              {batchAiFeedback.text}
             </div>
           )}
         </div>

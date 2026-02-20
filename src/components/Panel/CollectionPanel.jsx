@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { Package, Bot, Copy, Trash2, Plus, X, Send, PanelRightClose, Clock, Wand2 } from 'lucide-react';
+import { Package, Bot, Check, Copy, Inbox, Plus, Star, Tag, Trash2, X, Send, PanelRightClose, Clock, Wand2 } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import useAppStore from '../../store/useAppStore';
 import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
+import { getTags } from '../../utils/tagHelpers';
 import CollectionCard from './CollectionCard';
 
 // 可排序的卡片包装器
@@ -73,11 +74,17 @@ function CollectionPanel() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
   const [batchAiRunningTask, setBatchAiRunningTask] = useState(null);
+  const [batchFlagPending, setBatchFlagPending] = useState(false);
+  const [batchTagPending, setBatchTagPending] = useState(false);
+  const [showBatchTagEditor, setShowBatchTagEditor] = useState(false);
+  const [batchTagInput, setBatchTagInput] = useState('');
   const [multiSelectFeedback, setMultiSelectFeedback] = useState(null);
   const selectionAnchorIndexRef = useRef(-1);
+  const batchTagEditorRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const aiEnabled = useAppStore(s => s.aiEnabled);
+  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const addQuickNote = useAppStore(s => s.addQuickNote);
   const clearAllPinned = useAppStore(s => s.clearAllPinned);
   const togglePin = useAppStore(s => s.togglePin);
@@ -121,6 +128,10 @@ function CollectionPanel() {
   );
 
   const canRunBatchAi = aiEnabled && allSelectedAreText && batchAiSourceText.trim().length > 0;
+  const allSelectedAreFavorite = selectedPinnedItems.length > 0
+    && selectedPinnedItems.every(item => item.is_favorite);
+  const allSelectedArePinned = selectedPinnedItems.length > 0
+    && selectedPinnedItems.every(item => item.is_pinned);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -148,8 +159,21 @@ function CollectionPanel() {
   useEffect(() => {
     if (selectedPinnedIds.length > 0) return;
     selectionAnchorIndexRef.current = -1;
+    setShowBatchTagEditor(false);
+    setBatchTagInput('');
     setMultiSelectFeedback(null);
   }, [selectedPinnedIds.length]);
+
+  useEffect(() => {
+    if (!showBatchTagEditor) return undefined;
+    const handleOutsidePointerDown = (event) => {
+      if (!batchTagEditorRef.current?.contains(event.target)) {
+        setShowBatchTagEditor(false);
+      }
+    };
+    window.addEventListener('mousedown', handleOutsidePointerDown);
+    return () => window.removeEventListener('mousedown', handleOutsidePointerDown);
+  }, [showBatchTagEditor]);
 
   useEffect(() => {
     if (!multiSelectFeedback) return undefined;
@@ -252,6 +276,141 @@ function CollectionPanel() {
     setSelectedPinnedIds([]);
   }, []);
 
+  const applyBatchTag = useCallback(async () => {
+    const normalizedTag = batchTagInput.trim();
+    if (!normalizedTag || batchTagPending || selectedPinnedItems.length === 0) {
+      if (!normalizedTag) {
+        setMultiSelectFeedback({ type: 'warning', text: t('multiSelect.addTagEmpty') });
+      }
+      return;
+    }
+
+    const normalizedLower = normalizedTag.toLowerCase();
+    if (
+      normalizedLower.startsWith('ai:')
+      || normalizedLower.startsWith('source:')
+      || normalizedLower.startsWith('type:')
+      || normalizedLower.startsWith('\u6765\u6e90:')
+      || normalizedLower.startsWith('\u7c7b\u578b:')
+    ) {
+      setMultiSelectFeedback({ type: 'error', text: t('multiSelect.addTagReservedPrefix') });
+      return;
+    }
+
+    setBatchTagPending(true);
+    try {
+      const updatedAt = Math.floor(Date.now() / 1000);
+      let updatedCount = 0;
+      let unchangedCount = 0;
+      let failedCount = 0;
+
+      const settled = await Promise.allSettled(selectedPinnedItems.map(async (item) => {
+        const existingTags = getTags(item.tags);
+        if (existingTags.includes(normalizedTag)) {
+          unchangedCount += 1;
+          return;
+        }
+        const tags = JSON.stringify([...existingTags, normalizedTag]);
+        await invoke('update_item', {
+          item: {
+            ...item,
+            tags,
+            updated_at: updatedAt,
+          },
+        });
+        updatedCount += 1;
+      }));
+
+      settled.forEach((result) => {
+        if (result.status === 'rejected') {
+          failedCount += 1;
+        }
+      });
+
+      await loadItems();
+
+      if (failedCount > 0 && updatedCount === 0 && unchangedCount === 0) {
+        setMultiSelectFeedback({
+          type: 'error',
+          text: t('multiSelect.addTagAllFailed', { failed: failedCount }),
+        });
+        return;
+      }
+
+      if (failedCount > 0) {
+        setMultiSelectFeedback({
+          type: 'warning',
+          text: t('multiSelect.addTagPartial', { updated: updatedCount, failed: failedCount }),
+        });
+      } else if (updatedCount > 0) {
+        setMultiSelectFeedback({
+          type: 'success',
+          text: t('multiSelect.addTagSuccess', { count: updatedCount, tag: normalizedTag }),
+        });
+      } else {
+        setMultiSelectFeedback({ type: 'warning', text: t('multiSelect.addTagNoChanges') });
+      }
+
+      setBatchTagInput('');
+      setShowBatchTagEditor(false);
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setMultiSelectFeedback({
+        type: 'error',
+        text: t('multiSelect.addTagFailed', { error: message }),
+      });
+    } finally {
+      setBatchTagPending(false);
+    }
+  }, [batchTagInput, batchTagPending, selectedPinnedItems, loadItems, t]);
+
+  const handleBatchFavoriteToggle = useCallback(async () => {
+    if (batchFlagPending || selectedPinnedItems.length === 0) return;
+    const targetFavoriteState = !allSelectedAreFavorite;
+    const targets = selectedPinnedItems.filter(item => Boolean(item.is_favorite) !== targetFavoriteState);
+    if (targets.length === 0) return;
+
+    setBatchFlagPending(true);
+    try {
+      for (const item of targets) {
+        await invoke('toggle_favorite_item', { id: item.id });
+      }
+      await loadItems();
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setMultiSelectFeedback({
+        type: 'error',
+        text: t('multiSelect.batchActionFailed', { error: message }),
+      });
+    } finally {
+      setBatchFlagPending(false);
+    }
+  }, [allSelectedAreFavorite, batchFlagPending, selectedPinnedItems, loadItems, t]);
+
+  const handleBatchPinToggle = useCallback(async () => {
+    if (batchFlagPending || selectedPinnedItems.length === 0) return;
+    const targetPinnedState = !allSelectedArePinned;
+    const targets = selectedPinnedItems.filter(item => Boolean(item.is_pinned) !== targetPinnedState);
+    if (targets.length === 0) return;
+
+    setBatchFlagPending(true);
+    try {
+      const maxPinned = targetPinnedState ? maxPinnedItems : 999;
+      for (const item of targets) {
+        await invoke('toggle_pin_item', { id: item.id, maxPinned });
+      }
+      await loadItems();
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setMultiSelectFeedback({
+        type: 'error',
+        text: t('multiSelect.batchActionFailed', { error: message }),
+      });
+    } finally {
+      setBatchFlagPending(false);
+    }
+  }, [allSelectedArePinned, batchFlagPending, selectedPinnedItems, maxPinnedItems, loadItems, t]);
+
   const handleMergeCopySelected = useCallback(async () => {
     if (selectedPinnedItems.length === 0) return;
     const merged = selectedPinnedItems
@@ -275,26 +434,14 @@ function CollectionPanel() {
     }
   }, [selectedPinnedItems, t]);
 
-  const handleRemoveSelected = useCallback(async () => {
-    if (selectedPinnedItems.length === 0) return;
-    try {
-      for (const item of selectedPinnedItems) {
-        await invoke('toggle_pin_item', { id: item.id, maxPinned: 999 });
-      }
-      await loadItems();
-      clearPinnedSelection();
-      setPanelMode('collection');
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      setMultiSelectFeedback({
-        type: 'error',
-        text: t('multiSelect.batchActionFailed', { error: message }),
-      });
-    }
-  }, [selectedPinnedItems, loadItems, clearPinnedSelection, setPanelMode, t]);
-
   const handleBatchAiAction = useCallback(async (taskType) => {
-    if ((taskType !== 'summarize' && taskType !== 'rewrite') || !canRunBatchAi || batchAiRunningTask) {
+    if (
+      (taskType !== 'summarize' && taskType !== 'rewrite')
+      || !canRunBatchAi
+      || batchAiRunningTask
+      || batchTagPending
+      || batchFlagPending
+    ) {
       return;
     }
 
@@ -333,7 +480,21 @@ function CollectionPanel() {
     } finally {
       setBatchAiRunningTask(null);
     }
-  }, [batchAiRunningTask, batchAiSourceText, canRunBatchAi, i18n.language, t]);
+  }, [batchAiRunningTask, batchAiSourceText, canRunBatchAi, batchTagPending, batchFlagPending, i18n.language, t]);
+
+  const handleBatchTagInputKeyDown = useCallback((event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      applyBatchTag();
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setShowBatchTagEditor(false);
+      setBatchTagInput('');
+    }
+  }, [applyBatchTag]);
 
   const quickNoteSection = (
     <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
@@ -445,7 +606,42 @@ function CollectionPanel() {
             {t('multiSelect.selected', { count: selectedPinnedIds.length })}
           </span>
           <div className="multi-select-actions">
-            <button className="multi-select-btn copy" onClick={handleMergeCopySelected}>
+            <button
+              className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
+              onClick={() => {
+                if (showBatchTagEditor) {
+                  setShowBatchTagEditor(false);
+                  setBatchTagInput('');
+                  return;
+                }
+                setBatchTagInput('');
+                setShowBatchTagEditor(true);
+              }}
+              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
+              title={t('multiSelect.addTag')}
+            >
+              <Tag size={14} />
+              <span>{t('multiSelect.addTag')}</span>
+            </button>
+            <button
+              className="multi-select-btn favorite"
+              onClick={handleBatchFavoriteToggle}
+              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
+              title={allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}
+            >
+              <Star size={14} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
+              <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
+            </button>
+            <button
+              className="multi-select-btn pin"
+              onClick={handleBatchPinToggle}
+              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
+              title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
+            >
+              <Inbox size={14} />
+              <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
+            </button>
+            <button className="multi-select-btn copy" onClick={handleMergeCopySelected} title={t('multiSelect.mergeCopy')}>
               <Copy size={14} />
               <span>{t('multiSelect.mergeCopy')}</span>
             </button>
@@ -454,7 +650,8 @@ function CollectionPanel() {
                 <button
                   className="multi-select-btn ai"
                   onClick={() => handleBatchAiAction('summarize')}
-                  disabled={batchAiRunningTask != null}
+                  disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
+                  title={t('multiSelect.batchSummarize')}
                 >
                   <Bot size={14} />
                   <span>{t('multiSelect.batchSummarize')}</span>
@@ -462,22 +659,54 @@ function CollectionPanel() {
                 <button
                   className="multi-select-btn ai"
                   onClick={() => handleBatchAiAction('rewrite')}
-                  disabled={batchAiRunningTask != null}
+                  disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
+                  title={t('multiSelect.batchRewrite')}
                 >
                   <Wand2 size={14} />
                   <span>{t('multiSelect.batchRewrite')}</span>
                 </button>
               </>
             )}
-            <button className="multi-select-btn delete" onClick={handleRemoveSelected}>
-              <Trash2 size={14} />
-              <span>{t('collection.removeFromCollection')}</span>
-            </button>
-            <button className="multi-select-btn" onClick={clearPinnedSelection}>
+            <button className="multi-select-btn" onClick={clearPinnedSelection} title={t('multiSelect.clearSelection')}>
               <X size={14} />
               <span>{t('multiSelect.clearSelection')}</span>
             </button>
           </div>
+          {showBatchTagEditor && (
+            <div className="multi-select-tag-editor" ref={batchTagEditorRef}>
+              <div className="multi-select-tag-input-row">
+                <input
+                  type="text"
+                  value={batchTagInput}
+                  onChange={(event) => setBatchTagInput(event.target.value)}
+                  onKeyDown={handleBatchTagInputKeyDown}
+                  className="multi-select-tag-input"
+                  placeholder={t('multiSelect.addTagPlaceholder')}
+                  autoFocus
+                />
+                <button
+                  className="multi-select-tag-action confirm"
+                  onClick={applyBatchTag}
+                  disabled={batchTagPending || !batchTagInput.trim()}
+                  title={t('item.confirmTag')}
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  className="multi-select-tag-action cancel"
+                  onClick={() => {
+                    setShowBatchTagEditor(false);
+                    setBatchTagInput('');
+                  }}
+                  disabled={batchTagPending}
+                  title={t('item.cancelTag')}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
+            </div>
+          )}
           {multiSelectFeedback && (
             <div className={`multi-select-feedback ${multiSelectFeedback.type}`}>
               {multiSelectFeedback.text}
