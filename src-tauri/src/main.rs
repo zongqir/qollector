@@ -17,6 +17,7 @@ mod low_memory_mode;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
+use commands::collection_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
@@ -664,6 +665,7 @@ fn main() {
             try_paste_foreground,
             reveal_in_folder,
             save_image_as,
+            export_collection_text,
             search_items,
             get_items_by_date_range,
             generate_timeline_summary,

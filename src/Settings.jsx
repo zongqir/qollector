@@ -1333,8 +1333,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               </label>
             </div>
-            <div className="setting-group-title">{t('settings.tabs.ai')}</div>
-            <div className="setting-item">
+            {aiConfig.enabled && (
+              <>
+                <div className="setting-group-title">{t('settings.tabs.ai')}</div>
+                <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
                 value={getAiProviderValue()}
@@ -1458,10 +1460,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               )}
             </div>
+              </>
+            )}
             </div>
           )}
 
-          {activeTab === 'integrations' && (
+          {activeTab === 'integrations' && ocrConfig.enabled && (
             <div className="settings-content">
             <div className="setting-group-title">{t('settings.tabs.ocr')}</div>
             <div className="setting-group">
@@ -1583,7 +1587,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
 
-          {activeTab === 'integrations' && (
+          {activeTab === 'integrations' && mcpConfig.enabled && (
             <div className="settings-content">
             <div className="setting-group-title">{t('settings.tabs.mcp')}</div>
             <div className="setting-item">
@@ -1657,8 +1661,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           )}
 
           {activeTab === 'dataSecurity' && (
-            <div className="settings-content">
-            <div className="setting-group-title">{t('settings.tabs.data')}</div>
+            <div className="settings-content domain-section">
+            <div className="domain-section-header">{t('settings.tabs.data')}</div>
             <div className="setting-options-group">
               <label className="setting-toggle-row">
                 <span>{t('settings.general.autoCleanup')}</span>
@@ -1837,8 +1841,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           )}
 
           {activeTab === 'dataSecurity' && (
-            <div className="settings-content">
-            <div className="setting-group-title">{t('settings.tabs.security')}</div>
+            <div className="settings-content domain-section">
+            <div className="domain-section-header">{t('settings.tabs.security')}</div>
             <small className="setting-hint-block">
               {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
             </small>

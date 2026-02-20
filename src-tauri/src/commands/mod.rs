@@ -1,5 +1,6 @@
 pub mod ai_commands;
 pub mod clipboard_commands;
+pub mod collection_commands;
 pub mod drag_drop_commands;
 pub mod export_commands;
 pub mod general_commands;
