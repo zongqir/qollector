@@ -3,10 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
-import { getContentPreview, getFileList, getFileName, formatDate, extractOpenableUrls, extractOpenableFilePaths } from '../../utils/formatters';
+import {
+  getContentPreview,
+  getFileList,
+  getFileName,
+  formatDate,
+  extractOpenableUrls,
+  extractOpenableFilePaths,
+  detectTimestampCandidate,
+  formatTimestampCandidate,
+} from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import ItemTags from '../ItemCard/ItemTags';
@@ -21,6 +30,7 @@ function PreviewPanel() {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const toolbarRef = useRef(null);
   const panelRef = useRef(null);
   const contentSelectableRef = useRef(null);
@@ -91,6 +101,14 @@ function PreviewPanel() {
   const shouldShowRevealButton = item.type_ === 'file' || textOpenablePaths.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
+  const timestampCandidate = useMemo(() => {
+    if (item.type_ !== 'text') return null;
+    return detectTimestampCandidate(item.content);
+  }, [item.type_, item.content]);
+  const convertedTimestampText = useMemo(() => (
+    timestampCandidate ? formatTimestampCandidate(timestampCandidate, i18n.language) : ''
+  ), [timestampCandidate, i18n.language]);
+  const shouldShowTimestampConvertButton = Boolean(timestampCandidate && convertedTimestampText);
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
   const selectPreviewContent = useCallback(() => {
     const contentEl = contentSelectableRef.current;
@@ -192,6 +210,10 @@ function PreviewPanel() {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     selection.removeAllRanges();
+  }, [item.id]);
+
+  useEffect(() => {
+    setShowTimestampConverted(false);
   }, [item.id]);
 
   // 收集并切回收集箱
@@ -499,6 +521,11 @@ function PreviewPanel() {
       {/* 元信息 - 底部参考 */}
       {!isEditingContent && (
         <div className="preview-meta">
+          {showTimestampConverted && convertedTimestampText && (
+            <span className="preview-meta-timestamp">
+              {t('item.timestampConverted')}: {convertedTimestampText}
+            </span>
+          )}
           <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
           <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
         </div>
@@ -529,6 +556,16 @@ function PreviewPanel() {
               <button className="preview-tool-btn" onClick={handleFormatJsonCopy}>
                 <Braces size={14} />
                 <span>{t('item.formatJsonCopy')}</span>
+              </button>
+            )}
+            {shouldShowTimestampConvertButton && (
+              <button
+                className={`preview-tool-btn ${showTimestampConverted ? 'active' : ''}`}
+                onClick={() => setShowTimestampConverted((prev) => !prev)}
+                title={t('item.convertTimestamp')}
+              >
+                <Clock3 size={14} />
+                <span>{t('item.convertTimestamp')}</span>
               </button>
             )}
             {shouldShowAIButton && (

@@ -157,3 +157,79 @@ export const getLinkPreviewTitle = (item) => {
     return null;
   }
 };
+
+const TIMESTAMP_SECONDS_RE = /^\d{10}$/;
+const TIMESTAMP_MILLISECONDS_RE = /^\d{13}$/;
+const MIN_REASONABLE_TIMESTAMP_MS = Date.UTC(2000, 0, 1, 0, 0, 0);
+const MAX_REASONABLE_TIMESTAMP_MS = Date.UTC(2100, 0, 1, 0, 0, 0);
+
+const trimTimestampCandidate = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
+
+export const detectTimestampCandidate = (value) => {
+  const candidate = trimTimestampCandidate(value);
+  if (!candidate || /\s/.test(candidate)) {
+    return null;
+  }
+
+  let milliseconds = null;
+  let unit = null;
+
+  if (TIMESTAMP_SECONDS_RE.test(candidate)) {
+    milliseconds = Number(candidate) * 1000;
+    unit = 's';
+  } else if (TIMESTAMP_MILLISECONDS_RE.test(candidate)) {
+    milliseconds = Number(candidate);
+    unit = 'ms';
+  }
+
+  if (milliseconds === null || !Number.isFinite(milliseconds)) {
+    return null;
+  }
+
+  if (milliseconds < MIN_REASONABLE_TIMESTAMP_MS || milliseconds > MAX_REASONABLE_TIMESTAMP_MS) {
+    return null;
+  }
+
+  const date = new Date(milliseconds);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return {
+    raw: candidate,
+    unit,
+    milliseconds,
+  };
+};
+
+export const formatTimestampCandidate = (candidate, language) => {
+  if (!candidate || typeof candidate.milliseconds !== 'number') {
+    return '';
+  }
+
+  const date = new Date(candidate.milliseconds);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleString(language, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+};

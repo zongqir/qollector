@@ -1099,12 +1099,19 @@
 
 .preview-meta {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
   padding: 8px 16px;
   font-size: 11px;
   color: var(--text-tertiary);
   border-top: 1px solid var(--border-light);
   justify-content: flex-end;
+}
+
+.preview-meta-timestamp {
+  margin-right: auto;
+  color: var(--text-secondary);
 }
 
 .preview-content-area {

@@ -111,6 +111,8 @@
     "openFile": "Open File",
     "revealInFolder": "Reveal in Folder",
     "formatJsonCopy": "Format & Copy",
+    "convertTimestamp": "Convert Timestamp",
+    "timestampConverted": "Converted Time",
     "delete": "Delete",
     "autoPasted": "Pasted to foreground app"
   },
