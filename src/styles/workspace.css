@@ -1549,6 +1549,25 @@
   background: var(--btn-hover-bg);
 }
 
+.preview-tool-btn.copied {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.22);
+  animation: previewToolCopiedPop 0.22s ease;
+}
+
+.preview-tool-btn.copied:hover {
+  background: var(--color-success);
+  color: #fff;
+}
+
+@keyframes previewToolCopiedPop {
+  0% { transform: scale(0.94); }
+  70% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
 .preview-tool-btn.active {
   color: var(--accent-color);
   border-color: rgba(0, 122, 255, 0.2);
