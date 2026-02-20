@@ -113,6 +113,9 @@
     "formatJsonCopy": "格式化复制",
     "convertTimestamp": "转换时间戳",
     "timestampConverted": "转换时间",
+    "copyHex": "复制 HEX",
+    "copyRgb": "复制 RGB",
+    "copyHsl": "复制 HSL",
     "delete": "删除",
     "autoPasted": "已粘贴到前台应用",
     "justNow": "刚刚"
@@ -261,6 +264,9 @@
       "toggleWindow": "呼出 / 隐藏主面板",
       "toggleWindowKey": "呼出 / 隐藏按键",
       "ctrlShiftCKey": "复制并收集按键",
+      "tagQuickAdd": "快速添加标签（历史流/预览）",
+      "tagQuickAddKey": "快速加标签按键",
+      "tagQuickAddHint": "开启后按 Ctrl/Cmd + T 可快速进入标签输入。该按键暂不支持自定义。",
       "startRecording": "录制",
       "stopRecording": "停止",
       "recordingHint": "正在等待你按下新的快捷键组合…按 Esc 取消。",
@@ -421,6 +427,16 @@
   },
   "multiSelect": {
     "selected": "已选 {{count}} 项",
+    "addTag": "添加标签",
+    "addTagPlaceholder": "输入标签名...",
+    "addTagHint": "按 Enter 应用标签，按上下方向键选择建议",
+    "addTagSuccess": "已为 {{count}} 条记录添加“{{tag}}”",
+    "addTagPartial": "已为 {{updated}} 条记录添加标签，{{failed}} 条失败",
+    "addTagNoChanges": "所选记录已包含该标签",
+    "addTagReservedPrefix": "该前缀为系统标签保留，无法手动添加",
+    "addTagEmpty": "请输入标签",
+    "addTagAllFailed": "为 {{failed}} 条记录添加标签失败",
+    "addTagFailed": "添加标签失败: {{error}}",
     "mergeCopy": "合并复制",
     "delete": "删除"
   },
@@ -451,6 +467,58 @@
     "aiNotEnabled": "请先在设置中启用 AI 功能",
     "timelineTitle": "时间旅行",
     "backToCollectionFromTimeline": "返回收集箱"
+  },
+  "aiAssistant": {
+    "title": "AI 快捷工具台",
+    "subtitle": "基于当前内容，一步生成可用结果",
+    "open": "AI 快捷工具台",
+    "close": "关闭",
+    "run": "运行",
+    "running": "处理中...",
+    "reset": "重置输入",
+    "result": "结果",
+    "resultPlaceholder": "执行任务后，结果会显示在这里。",
+    "outputLanguage": "输出语言",
+    "tone": "语气",
+    "length": "长度",
+    "copy": "复制结果",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "noInput": "当前没有可处理的内容",
+    "errorUnknown": "请求失败，请稍后重试。",
+    "inputLabel": "源内容（{{source}}）",
+    "inputPlaceholder": "粘贴或编辑你要处理的内容...",
+    "extraInstructionLabel": "额外要求（可选）",
+    "extraInstructionPlaceholder": "例如：保留专有名词、使用要点列表、控制在 120 字以内。",
+    "tasks": {
+      "summarize": "总结",
+      "rewrite": "改写",
+      "extract": "提炼",
+      "translate": "翻译",
+      "reply": "生成回复"
+    },
+    "language": {
+      "auto": "跟随原文",
+      "zh-CN": "中文",
+      "en-US": "英文"
+    },
+    "toneOption": {
+      "neutral": "中性",
+      "professional": "专业",
+      "friendly": "友好",
+      "direct": "直接"
+    },
+    "lengthOption": {
+      "short": "短",
+      "medium": "中",
+      "long": "长"
+    },
+    "sourceType": {
+      "text": "文本",
+      "image": "图片",
+      "file": "文件",
+      "link": "链接"
+    }
   },
   "panel": {
     "preview": "预览详情",

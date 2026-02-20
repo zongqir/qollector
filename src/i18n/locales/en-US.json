@@ -113,6 +113,9 @@
     "formatJsonCopy": "Format & Copy",
     "convertTimestamp": "Convert Timestamp",
     "timestampConverted": "Converted Time",
+    "copyHex": "Copy HEX",
+    "copyRgb": "Copy RGB",
+    "copyHsl": "Copy HSL",
     "delete": "Delete",
     "autoPasted": "Pasted to foreground app",
     "justNow": "Just now"
@@ -261,6 +264,9 @@
       "toggleWindow": "Show / Hide main panel",
       "toggleWindowKey": "Show / Hide key",
       "ctrlShiftCKey": "Copy & Collect key",
+      "tagQuickAdd": "Quick add tag (history/preview)",
+      "tagQuickAddKey": "Quick add tag key",
+      "tagQuickAddHint": "When enabled, press Ctrl/Cmd + T to start adding a tag. This key is fixed and cannot be customized.",
       "startRecording": "Record",
       "stopRecording": "Stop",
       "recordingHint": "Waiting for your new shortcut... Press Esc to cancel.",
@@ -421,6 +427,16 @@
   },
   "multiSelect": {
     "selected": "{{count}} selected",
+    "addTag": "Add Tag",
+    "addTagPlaceholder": "Enter tag name...",
+    "addTagHint": "Press Enter to apply tag. Use Up/Down to choose suggestions.",
+    "addTagSuccess": "Added \"{{tag}}\" to {{count}} item(s)",
+    "addTagPartial": "Added tag to {{updated}} item(s), {{failed}} failed",
+    "addTagNoChanges": "Selected items already contain this tag",
+    "addTagReservedPrefix": "This prefix is reserved for system tags",
+    "addTagEmpty": "Please enter a tag",
+    "addTagAllFailed": "Failed to add tag to {{failed}} item(s)",
+    "addTagFailed": "Add tag failed: {{error}}",
     "mergeCopy": "Merge & Copy",
     "delete": "Delete"
   },
@@ -451,6 +467,58 @@
     "aiNotEnabled": "Please enable AI in settings first",
     "timelineTitle": "Time Travel",
     "backToCollectionFromTimeline": "Back to Collection"
+  },
+  "aiAssistant": {
+    "title": "AI Quick Desk",
+    "subtitle": "Turn current content into a usable AI request in one step",
+    "open": "AI Quick Desk",
+    "close": "Close",
+    "run": "Run",
+    "running": "Running...",
+    "reset": "Reset Input",
+    "result": "Result",
+    "resultPlaceholder": "Run a task and the output will appear here.",
+    "outputLanguage": "Output Language",
+    "tone": "Tone",
+    "length": "Length",
+    "copy": "Copy Result",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "noInput": "No source content available",
+    "errorUnknown": "Request failed. Please try again.",
+    "inputLabel": "Source Content ({{source}})",
+    "inputPlaceholder": "Paste or edit the content you want to process...",
+    "extraInstructionLabel": "Extra Instruction (Optional)",
+    "extraInstructionPlaceholder": "Example: keep legal terms unchanged, use bullet points, and keep under 120 words.",
+    "tasks": {
+      "summarize": "Summarize",
+      "rewrite": "Rewrite",
+      "extract": "Extract",
+      "translate": "Translate",
+      "reply": "Reply"
+    },
+    "language": {
+      "auto": "Same as Source",
+      "zh-CN": "Chinese",
+      "en-US": "English"
+    },
+    "toneOption": {
+      "neutral": "Neutral",
+      "professional": "Professional",
+      "friendly": "Friendly",
+      "direct": "Direct"
+    },
+    "lengthOption": {
+      "short": "Short",
+      "medium": "Medium",
+      "long": "Long"
+    },
+    "sourceType": {
+      "text": "Text",
+      "image": "Image",
+      "file": "File",
+      "link": "Link"
+    }
   },
   "panel": {
     "preview": "Preview Detail",

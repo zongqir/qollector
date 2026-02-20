@@ -264,3 +264,153 @@ export const formatTimestampCandidate = (candidate, language) => {
     hour12: false,
   });
 };
+
+const COLOR_TEXT_MAX_LENGTH = 64;
+
+const trimQuotedCandidate = (value) => {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+};
+
+const clampByte = (value) => Math.max(0, Math.min(255, value | 0));
+
+const toHexByte = (value) => clampByte(value).toString(16).toUpperCase().padStart(2, '0');
+
+const toAlphaText = (alpha) => {
+  const rounded = Number(alpha.toFixed(3));
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+};
+
+const rgbToHsl = (r, g, b) => {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const delta = max - min;
+
+  let h = 0;
+  if (delta !== 0) {
+    if (max === rn) {
+      h = ((gn - bn) / delta) % 6;
+    } else if (max === gn) {
+      h = (bn - rn) / delta + 2;
+    } else {
+      h = (rn - gn) / delta + 4;
+    }
+  }
+
+  h = Math.round((h * 60 + 360) % 360);
+  const l = (max + min) / 2;
+  const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+  return {
+    h,
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  };
+};
+
+let colorProbeContext = null;
+
+const getColorProbeContext = () => {
+  if (colorProbeContext) return colorProbeContext;
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  colorProbeContext = canvas.getContext('2d', { willReadFrequently: true });
+  return colorProbeContext;
+};
+
+const supportsCssColor = (candidate) => {
+  if (!candidate) return false;
+  if (typeof CSS !== 'undefined' && typeof CSS.supports === 'function') {
+    return CSS.supports('color', candidate);
+  }
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  const probe = document.createElement('option');
+  probe.style.color = '';
+  probe.style.color = candidate;
+  return probe.style.color !== '';
+};
+
+const normalizeRawRgbTriplet = (candidate) => {
+  if (!candidate) return null;
+  const hasDelimiter = candidate.includes(',') || /\s/.test(candidate);
+  if (!hasDelimiter) return null;
+
+  const tokens = candidate.split(/[,\s]+/).filter(Boolean);
+  if (tokens.length !== 3) return null;
+  if (!tokens.every((token) => /^\d{1,3}$/.test(token))) return null;
+
+  const [r, g, b] = tokens.map((token) => Number(token));
+  if ([r, g, b].some((value) => !Number.isFinite(value) || value < 0 || value > 255)) {
+    return null;
+  }
+
+  return `rgb(${r}, ${g}, ${b})`;
+};
+
+export const parsePureColorText = (value) => {
+  const candidate = trimQuotedCandidate(value);
+  if (!candidate || candidate.length > COLOR_TEXT_MAX_LENGTH) {
+    return null;
+  }
+  if (/[\r\n]/.test(candidate)) {
+    return null;
+  }
+  const normalizedColor = normalizeRawRgbTriplet(candidate) || candidate;
+  if (!supportsCssColor(normalizedColor)) {
+    return null;
+  }
+
+  const ctx = getColorProbeContext();
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+  ctx.fillStyle = normalizedColor;
+  ctx.fillRect(0, 0, 1, 1);
+  const rgba = ctx.getImageData(0, 0, 1, 1).data;
+  const r = rgba[0];
+  const g = rgba[1];
+  const b = rgba[2];
+  const alpha = rgba[3] / 255;
+  const alphaText = toAlphaText(alpha);
+
+  if (alpha === 0) {
+    return null;
+  }
+
+  const hex = alpha < 1
+    ? `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}${toHexByte(Math.round(alpha * 255))}`
+    : `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`;
+  const rgb = alpha < 1
+    ? `rgba(${r}, ${g}, ${b}, ${alphaText})`
+    : `rgb(${r}, ${g}, ${b})`;
+  const hslInfo = rgbToHsl(r, g, b);
+  const hsl = alpha < 1
+    ? `hsla(${hslInfo.h}, ${hslInfo.s}%, ${hslInfo.l}%, ${alphaText})`
+    : `hsl(${hslInfo.h}, ${hslInfo.s}%, ${hslInfo.l}%)`;
+
+  return {
+    raw: candidate,
+    previewCss: alpha < 1 ? `rgba(${r}, ${g}, ${b}, ${alphaText})` : `rgb(${r}, ${g}, ${b})`,
+    hex,
+    rgb,
+    hsl,
+  };
+};
