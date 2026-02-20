@@ -480,7 +480,19 @@
     "aiSummaryError": "AI 总结失败",
     "aiNotEnabled": "请先在设置中启用 AI 功能",
     "timelineTitle": "时间旅行",
-    "backToCollectionFromTimeline": "返回收集箱"
+    "backToCollectionFromTimeline": "返回收集箱",
+    "quickOutputTaskLabel": "一键产出：{{task}}",
+    "quickOutputRunTitle": "执行一键产出（{{task}}）",
+    "quickOutputSelectTitle": "切换一键产出类型",
+    "quickOutputEmpty": "AI 未返回可用结果",
+    "quickOutputSuccess": "已生成{{task}}并加入收集箱（同时已复制）",
+    "quickOutputFailed": "一键产出失败：{{error}}",
+    "moreActions": "更多操作",
+    "clearAllConfirm": "确定清空收集箱吗？你可以在 5 秒内撤销。",
+    "clearAllDone": "收集箱已清空",
+    "clearAllUndoSuccess": "已恢复刚才清空的内容",
+    "undo": "撤销",
+    "actionFailed": "操作失败：{{error}}"
   },
   "aiAssistant": {
     "title": "AI 助手",

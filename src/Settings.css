@@ -139,12 +139,22 @@
 }
 
 /* ---- 内容区 ---- */
-.settings-content {
-  padding: 16px 12px 16px 4px;
-  overflow-y: auto;
+.settings-panels {
   flex: 1;
   min-width: 0;
+  overflow-y: auto;
 }
+
+.settings-content {
+  padding: 16px 12px 16px 4px;
+  min-width: 0;
+}
+
+.settings-content + .settings-content {
+  border-top: 0.5px solid var(--border-light);
+  padding-top: 14px;
+}
+
 
 /* ---- 分组卡片 (iOS inset grouped style) ---- */
 .setting-group {

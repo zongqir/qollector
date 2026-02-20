@@ -480,7 +480,19 @@
     "aiSummaryError": "AI summary failed",
     "aiNotEnabled": "Please enable AI in settings first",
     "timelineTitle": "Time Travel",
-    "backToCollectionFromTimeline": "Back to Collection"
+    "backToCollectionFromTimeline": "Back to Collection",
+    "quickOutputTaskLabel": "Quick Output: {{task}}",
+    "quickOutputRunTitle": "Run quick output ({{task}})",
+    "quickOutputSelectTitle": "Choose quick output type",
+    "quickOutputEmpty": "AI returned no usable output",
+    "quickOutputSuccess": "{{task}} generated, added to collection, and copied",
+    "quickOutputFailed": "Quick output failed: {{error}}",
+    "moreActions": "More Actions",
+    "clearAllConfirm": "Clear the collection now? You can undo within 5 seconds.",
+    "clearAllDone": "Collection cleared",
+    "clearAllUndoSuccess": "Cleared items restored",
+    "undo": "Undo",
+    "actionFailed": "Action failed: {{error}}"
   },
   "aiAssistant": {
     "title": "AI Assistant",

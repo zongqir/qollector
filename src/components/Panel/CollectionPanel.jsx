@@ -1,7 +1,16 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { Package, Trash2, Clock } from 'lucide-react';
+import {
+  Package,
+  Trash2,
+  Clock,
+  Bot,
+  ChevronDown,
+  Loader2,
+  MoreHorizontal,
+  Undo2
+} from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -23,6 +32,9 @@ import SortableCollectionCard from './SortableCollectionCard';
 import CollectionQuickNoteSection from './CollectionQuickNoteSection';
 import CollectionMultiSelectBar from './CollectionMultiSelectBar';
 
+const QUICK_OUTPUT_TASKS = ['summarize', 'extract', 'reply', 'rewrite'];
+const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
+
 function CollectionPanel() {
   const { t, i18n } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
@@ -35,14 +47,22 @@ function CollectionPanel() {
   const [showBatchTagEditor, setShowBatchTagEditor] = useState(false);
   const [batchTagInput, setBatchTagInput] = useState('');
   const [multiSelectFeedback, setMultiSelectFeedback] = useState(null);
+  const [quickOutputTask, setQuickOutputTask] = useState(DEFAULT_QUICK_OUTPUT_TASK);
+  const [quickOutputRunning, setQuickOutputRunning] = useState(false);
+  const [showQuickOutputMenu, setShowQuickOutputMenu] = useState(false);
+  const [showCollectionMoreMenu, setShowCollectionMoreMenu] = useState(false);
+  const [clearPending, setClearPending] = useState(false);
+  const [collectionActionFeedback, setCollectionActionFeedback] = useState(null);
+  const [lastClearedPinnedIds, setLastClearedPinnedIds] = useState([]);
   const selectionAnchorIndexRef = useRef(-1);
   const batchTagEditorRef = useRef(null);
+  const quickOutputMenuRef = useRef(null);
+  const collectionMoreMenuRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const addQuickNote = useAppStore(s => s.addQuickNote);
-  const clearAllPinned = useAppStore(s => s.clearAllPinned);
   const togglePin = useAppStore(s => s.togglePin);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const loadItems = useAppStore(s => s.loadItems);
@@ -88,6 +108,13 @@ function CollectionPanel() {
     && selectedPinnedItems.every(item => item.is_favorite);
   const allSelectedArePinned = selectedPinnedItems.length > 0
     && selectedPinnedItems.every(item => item.is_pinned);
+  const collectionAiSourceText = useMemo(
+    () => pinnedItems
+      .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+      .filter(Boolean)
+      .join('\n\n'),
+    [pinnedItems],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -138,6 +165,35 @@ function CollectionPanel() {
     }, 2500);
     return () => clearTimeout(timer);
   }, [multiSelectFeedback]);
+
+  useEffect(() => {
+    if (!collectionActionFeedback) return undefined;
+    const timeout = collectionActionFeedback.withUndo ? 5000 : 2600;
+    const timer = setTimeout(() => {
+      setCollectionActionFeedback(null);
+    }, timeout);
+    return () => clearTimeout(timer);
+  }, [collectionActionFeedback]);
+
+  useEffect(() => {
+    if (!showQuickOutputMenu && !showCollectionMoreMenu) return undefined;
+    const handlePointerDown = (event) => {
+      if (showQuickOutputMenu && !quickOutputMenuRef.current?.contains(event.target)) {
+        setShowQuickOutputMenu(false);
+      }
+      if (showCollectionMoreMenu && !collectionMoreMenuRef.current?.contains(event.target)) {
+        setShowCollectionMoreMenu(false);
+      }
+    };
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [showQuickOutputMenu, showCollectionMoreMenu]);
+
+  useEffect(() => {
+    if (selectedPinnedIds.length === 0) return;
+    setShowQuickOutputMenu(false);
+    setShowCollectionMoreMenu(false);
+  }, [selectedPinnedIds.length]);
 
   const handleQuickNoteSubmit = useCallback(async (e) => {
     if (e.key === 'Enter' && !e.shiftKey && quickNote.trim()) {
@@ -479,6 +535,138 @@ function CollectionPanel() {
     setBatchTagInput(value);
   }, []);
 
+  const handleRunQuickOutput = useCallback(async (taskType = quickOutputTask) => {
+    if (quickOutputRunning || clearPending) return;
+
+    setShowQuickOutputMenu(false);
+    setShowCollectionMoreMenu(false);
+
+    if (!aiEnabled) {
+      setCollectionActionFeedback({ type: 'warning', text: t('collection.aiNotEnabled') });
+      return;
+    }
+
+    const sourceText = collectionAiSourceText.trim();
+    if (!sourceText) {
+      setCollectionActionFeedback({ type: 'warning', text: t('aiAssistant.noInput') });
+      return;
+    }
+
+    setQuickOutputRunning(true);
+    setCollectionActionFeedback(null);
+    try {
+      const response = await runPromptAssistantTask({
+        taskType,
+        input: sourceText,
+        uiLanguage: i18n.language,
+        outputLanguage: 'auto',
+        tone: 'neutral',
+        length: 'medium',
+        extraInstruction: null,
+      });
+
+      const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
+      if (!outputText) {
+        setCollectionActionFeedback({ type: 'warning', text: t('collection.quickOutputEmpty') });
+        return;
+      }
+
+      await addQuickNote(outputText);
+      try {
+        await invoke('copy_plain_text', { text: outputText });
+      } catch {
+        // Keep success flow even when clipboard copy fails silently.
+      }
+
+      setQuickOutputTask(taskType);
+      setCollectionActionFeedback({
+        type: 'success',
+        text: t('collection.quickOutputSuccess', { task: t(`aiAssistant.tasks.${taskType}`) }),
+      });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setCollectionActionFeedback({
+        type: 'error',
+        text: t('collection.quickOutputFailed', { error: message }),
+      });
+    } finally {
+      setQuickOutputRunning(false);
+    }
+  }, [
+    quickOutputTask,
+    quickOutputRunning,
+    clearPending,
+    aiEnabled,
+    collectionAiSourceText,
+    i18n.language,
+    addQuickNote,
+    t,
+  ]);
+
+  const handleQuickOutputMenuSelect = useCallback((taskType) => {
+    setQuickOutputTask(taskType);
+    handleRunQuickOutput(taskType);
+  }, [handleRunQuickOutput]);
+
+  const handleClearAllFromMenu = useCallback(async () => {
+    if (clearPending || quickOutputRunning || pinnedItems.length === 0) return;
+    setShowCollectionMoreMenu(false);
+
+    const confirmed = window.confirm(t('collection.clearAllConfirm'));
+    if (!confirmed) return;
+
+    const pinnedIdsSnapshot = pinnedItems.map(item => item.id);
+    setClearPending(true);
+    try {
+      for (const item of pinnedItems) {
+        await invoke('toggle_pin_item', { id: item.id, maxPinned: 999 });
+      }
+      await loadItems();
+      setPanelMode('collection');
+      setLastClearedPinnedIds(pinnedIdsSnapshot);
+      setCollectionActionFeedback({
+        type: 'warning',
+        text: t('collection.clearAllDone'),
+        withUndo: true,
+      });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setCollectionActionFeedback({
+        type: 'error',
+        text: t('collection.actionFailed', { error: message }),
+      });
+    } finally {
+      setClearPending(false);
+    }
+  }, [clearPending, quickOutputRunning, pinnedItems, loadItems, setPanelMode, t]);
+
+  const handleUndoClearAll = useCallback(async () => {
+    if (clearPending || lastClearedPinnedIds.length === 0) return;
+    setClearPending(true);
+    try {
+      const itemMap = new Map(items.map(item => [item.id, item]));
+      for (const id of lastClearedPinnedIds) {
+        const candidate = itemMap.get(id);
+        if (!candidate || candidate.is_pinned) continue;
+        await invoke('toggle_pin_item', { id, maxPinned: 999 });
+      }
+      await loadItems();
+      setLastClearedPinnedIds([]);
+      setCollectionActionFeedback({
+        type: 'success',
+        text: t('collection.clearAllUndoSuccess'),
+      });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setCollectionActionFeedback({
+        type: 'error',
+        text: t('collection.actionFailed', { error: message }),
+      });
+    } finally {
+      setClearPending(false);
+    }
+  }, [clearPending, lastClearedPinnedIds, items, loadItems, t]);
+
   const quickNoteSection = (
     <CollectionQuickNoteSection
       isExpanded={isExpanded}
@@ -556,16 +744,95 @@ function CollectionPanel() {
           multiSelectFeedback={multiSelectFeedback}
         />
       ) : (
-        <div className="collection-bottom-bar">
-          <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
-            <Clock size={14} />
-            <span>{t('collection.timeTravel')}</span>
-          </button>
-          <button className="collection-btn clear-btn" onClick={clearAllPinned} title={t('collection.clearAll')}>
-            <Trash2 size={14} />
-            <span>{t('collection.clearAll')}</span>
-          </button>
-        </div>
+        <>
+          <div className="collection-bottom-bar">
+            <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
+              <Clock size={14} />
+              <span>{t('collection.timeTravel')}</span>
+            </button>
+
+            <div className={`collection-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
+              <button
+                className="collection-btn quick-output-main-btn"
+                onClick={() => handleRunQuickOutput(quickOutputTask)}
+                disabled={quickOutputRunning || clearPending}
+                title={t('collection.quickOutputRunTitle', {
+                  task: t(`aiAssistant.tasks.${quickOutputTask}`),
+                })}
+              >
+                {quickOutputRunning ? <Loader2 size={14} className="collection-btn-spinner" /> : <Bot size={14} />}
+                <span>{t('collection.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
+              </button>
+              <button
+                className="collection-btn quick-output-toggle-btn"
+                onClick={() => {
+                  setShowCollectionMoreMenu(false);
+                  setShowQuickOutputMenu(current => !current);
+                }}
+                disabled={quickOutputRunning || clearPending}
+                title={t('collection.quickOutputSelectTitle')}
+              >
+                <ChevronDown size={14} />
+              </button>
+              {showQuickOutputMenu && (
+                <div className="collection-dropdown-menu">
+                  {QUICK_OUTPUT_TASKS.map((taskType) => (
+                    <button
+                      key={taskType}
+                      className={`collection-dropdown-item ${quickOutputTask === taskType ? 'active' : ''}`}
+                      onClick={() => handleQuickOutputMenuSelect(taskType)}
+                      disabled={quickOutputRunning || clearPending}
+                    >
+                      <span>{t(`aiAssistant.tasks.${taskType}`)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={`collection-more-menu ${showCollectionMoreMenu ? 'open' : ''}`} ref={collectionMoreMenuRef}>
+              <button
+                className="collection-btn collection-more-btn"
+                onClick={() => {
+                  setShowQuickOutputMenu(false);
+                  setShowCollectionMoreMenu(current => !current);
+                }}
+                disabled={quickOutputRunning || clearPending}
+                title={t('collection.moreActions')}
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              {showCollectionMoreMenu && (
+                <div className="collection-dropdown-menu align-right">
+                  <button
+                    className="collection-dropdown-item danger"
+                    onClick={handleClearAllFromMenu}
+                    disabled={quickOutputRunning || clearPending || pinnedItems.length === 0}
+                  >
+                    {clearPending ? <Loader2 size={14} className="collection-btn-spinner" /> : <Trash2 size={14} />}
+                    <span>{t('collection.clearAll')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          {collectionActionFeedback && (
+            <div className={`collection-bottom-feedback ${collectionActionFeedback.type}`}>
+              <span>{collectionActionFeedback.text}</span>
+              {collectionActionFeedback.withUndo && lastClearedPinnedIds.length > 0 && (
+                <button
+                  type="button"
+                  className="collection-bottom-feedback-undo"
+                  onClick={handleUndoClearAll}
+                  disabled={clearPending}
+                >
+                  {clearPending ? <Loader2 size={12} className="collection-feedback-spinner" /> : <Undo2 size={12} />}
+                  <span>{t('collection.undo')}</span>
+                </button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

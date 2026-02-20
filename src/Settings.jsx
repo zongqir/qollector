@@ -66,8 +66,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState(null);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState(null);
+  const [ocrTesting, setOcrTesting] = useState(false);
+  const [ocrTestResult, setOcrTestResult] = useState(null);
   const [availableModels, setAvailableModels] = useState([]);
 
   // 当前 AI 供应商的凭证（用于 UI 显示和编辑）
@@ -115,6 +117,18 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
+  const isIntegrationTab = activeTab === 'integrations';
+  const isDataSecurityTab = activeTab === 'dataSecurity';
+
+  const openIntegrations = () => {
+    if (activeTab === 'integrations') return;
+    setActiveTab('integrations');
+  };
+
+  const openDataSecurity = () => {
+    if (activeTab === 'dataSecurity') return;
+    setActiveTab('dataSecurity');
+  };
 
   const changeLanguage = async (lng) => {
     i18n.changeLanguage(lng);
@@ -553,79 +567,52 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     onClose();
   };
 
-  const handleAiSave = async () => {
-    try {
-      // 保存当前供应商的凭证到 credentials 对象
-      const providerKey = getProviderKey(aiConfig.current_provider);
-      const updatedCredentials = {
-        ...aiConfig.credentials,
-        [providerKey]: {
-          api_key: currentAiApiKey,
-          model: currentAiModel,
-        },
-      };
 
-      const configToSave = {
+  const handleIntegrationsSave = async () => {
+    try {
+      const aiProviderKey = getProviderKey(aiConfig.current_provider);
+      const aiConfigToSave = {
         ...aiConfig,
-        credentials: updatedCredentials,
-      };
-
-      await invoke('update_ai_config', { config: configToSave });
-
-      // 更新前端状态，确保下次打开时显示正确
-      setAiConfig(configToSave);
-
-      handleClose();
-    } catch (error) {
-      console.error('保存 AI 配置失败:', error);
-      alert('保存失败: ' + error);
-    }
-  };
-
-  const handleOcrSave = async () => {
-    try {
-      // 保存当前供应商的凭证到 credentials 对象
-      const providerKey = ocrConfig.current_provider.toLowerCase();
-      const updatedCredentials = {
-        ...ocrConfig.credentials,
-        [providerKey]: {
-          api_key: currentOcrApiKey || null,
-          api_secret: currentOcrApiSecret || null,
+        credentials: {
+          ...aiConfig.credentials,
+          [aiProviderKey]: {
+            api_key: currentAiApiKey,
+            model: currentAiModel,
+          },
         },
       };
 
-      const configToSave = {
+      const ocrProviderKey = ocrConfig.current_provider.toLowerCase();
+      const ocrConfigToSave = {
         ...ocrConfig,
-        credentials: updatedCredentials,
+        credentials: {
+          ...ocrConfig.credentials,
+          [ocrProviderKey]: {
+            api_key: currentOcrApiKey || null,
+            api_secret: currentOcrApiSecret || null,
+          },
+        },
       };
 
-      await invoke('update_ocr_config', { config: configToSave });
+      await Promise.all([
+        invoke('update_ai_config', { config: aiConfigToSave }),
+        invoke('update_ocr_config', { config: ocrConfigToSave }),
+        invoke('update_mcp_config', { config: mcpConfig }),
+        invoke('update_share_config', { config: shareConfig }),
+      ]);
 
-      // 更新前端状态，确保下次打开时显示正确
-      setOcrConfig(configToSave);
-
+      setAiConfig(aiConfigToSave);
+      setOcrConfig(ocrConfigToSave);
       handleClose();
     } catch (error) {
-      console.error('保存 OCR 配置失败:', error);
-      alert('保存失败: ' + error);
+      console.error('save integrations config failed:', error);
+      alert('Save failed: ' + error);
     }
   };
-
-  const handleMcpSave = async () => {
-    try {
-      await invoke('update_mcp_config', { config: mcpConfig });
-      handleClose();
-    } catch (error) {
-      console.error('保存 MCP 配置失败:', error);
-      alert('保存失败: ' + error);
-    }
-  };
-
   const handleAiTest = async () => {
-    setTesting(true);
-    setTestResult(null);
+    setAiTesting(true);
+    setAiTestResult(null);
     try {
-      // 构造测试配置
       const providerKey = getProviderKey(aiConfig.current_provider);
       const testConfig = {
         current_provider: aiConfig.current_provider,
@@ -640,31 +627,29 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       };
 
       await invoke('test_ai_connection', { config: testConfig });
-      setTestResult({ success: true, message: t('settings.ai.testSuccess') });
+      setAiTestResult({ success: true, message: t('settings.ai.testSuccess') });
     } catch (error) {
-      setTestResult({ success: false, message: t('settings.ai.testFailed', { error }) });
+      setAiTestResult({ success: false, message: t('settings.ai.testFailed', { error }) });
     } finally {
-      setTesting(false);
+      setAiTesting(false);
     }
   };
 
   const handleOcrTest = async () => {
-    setTesting(true);
-    setTestResult(null);
+    setOcrTesting(true);
+    setOcrTestResult(null);
 
-    console.log('=== OCR 测试开始 ===');
-    console.log('当前配置:', ocrConfig);
+    console.log('=== OCR test start ===');
+    console.log('current config:', ocrConfig);
 
     try {
-      // 验证配置
       if (ocrConfig.current_provider !== 'Local' && !currentOcrApiKey) {
-        console.error('❌ API Key 为空');
-        setTestResult({ success: false, message: t('settings.ocr.apiKeyRequired') });
-        setTesting(false);
+        console.error('api key is empty');
+        setOcrTestResult({ success: false, message: t('settings.ocr.apiKeyRequired') });
+        setOcrTesting(false);
         return;
       }
 
-      // 构造测试配置
       const providerKey = ocrConfig.current_provider.toLowerCase();
       const testConfig = {
         ...ocrConfig,
@@ -677,31 +662,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         },
       };
 
-      console.log('准备保存的配置:', testConfig);
-
-      // 先保存配置
-      console.log('📤 发送配置到后端...');
+      console.log('prepared config:', testConfig);
       await invoke('update_ocr_config', { config: testConfig });
-      console.log('✅ 配置保存成功');
-
-      // 然后测试可用性
-      console.log('🔍 检查服务可用性...');
       const available = await invoke('check_ocr_available');
-      console.log('可用性结果:', available);
 
       if (available) {
-        console.log('✅ OCR 服务可用');
-        setTestResult({ success: true, message: t('settings.ocr.testSuccess') });
+        setOcrTestResult({ success: true, message: t('settings.ocr.testSuccess') });
       } else {
-        console.error('❌ OCR 服务不可用');
-        setTestResult({ success: false, message: t('settings.ocr.serviceUnavailable') });
+        setOcrTestResult({ success: false, message: t('settings.ocr.serviceUnavailable') });
       }
     } catch (error) {
-      console.error('❌ OCR 测试失败:', error);
-      setTestResult({ success: false, message: t('settings.ocr.testFailed', { error }) });
+      console.error('ocr test failed:', error);
+      setOcrTestResult({ success: false, message: t('settings.ocr.testFailed', { error }) });
     } finally {
-      setTesting(false);
-      console.log('=== OCR 测试结束 ===');
+      setOcrTesting(false);
+      console.log('=== OCR test end ===');
     }
   };
 
@@ -871,46 +846,20 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               {t('settings.tabs.shortcuts')}
             </button>
             <button
-              className={`tab-btn ${activeTab === 'ai' ? 'active' : ''} ${!aiConfig.enabled ? 'disabled' : ''}`}
-              onClick={() => aiConfig.enabled && setActiveTab('ai')}
-              disabled={!aiConfig.enabled}
+              className={`tab-btn ${isIntegrationTab ? 'active' : ''}`}
+              onClick={openIntegrations}
             >
-              {t('settings.tabs.ai')}
+              {t('settings.general.featureModules')}
             </button>
             <button
-              className={`tab-btn ${activeTab === 'ocr' ? 'active' : ''} ${!ocrConfig.enabled ? 'disabled' : ''}`}
-              onClick={() => ocrConfig.enabled && setActiveTab('ocr')}
-              disabled={!ocrConfig.enabled}
+              className={`tab-btn ${isDataSecurityTab ? 'active' : ''}`}
+              onClick={openDataSecurity}
             >
-              {t('settings.tabs.ocr')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'mcp' ? 'active' : ''} ${!mcpConfig.enabled ? 'disabled' : ''}`}
-              onClick={() => mcpConfig.enabled && setActiveTab('mcp')}
-              disabled={!mcpConfig.enabled}
-            >
-              {t('settings.tabs.mcp')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
-              onClick={() => setActiveTab('data')}
-            >
-              {t('settings.tabs.data')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              {t('settings.tabs.security')}
-            </button>
-            <button
-              className={`tab-btn ${activeTab === 'share' ? 'active' : ''}`}
-              onClick={() => setActiveTab('share')}
-            >
-              {t('settings.tabs.share')}
+              {`${t('settings.tabs.data')} / ${t('settings.tabs.security')}`}
             </button>
           </div>
 
+          <div className="settings-panels">
           {activeTab === 'general' && (
             <div className="settings-content">
             {/* 外观设置分组 */}
@@ -1008,75 +957,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </label>
               <label className="setting-toggle-row">
                 <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.general.enableAI')}</span>
-                  <span className="toggle-desc">{t('settings.general.enableAIHint')}</span>
-                </span>
-                <span className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={aiConfig.enabled}
-                    onChange={async (e) => {
-                      const updated = { ...aiConfig, enabled: e.target.checked };
-                      setAiConfig(updated);
-                      if (!e.target.checked && activeTab === 'ai') setActiveTab('general');
-                      try {
-                        await invoke('update_ai_config', { config: updated });
-                      } catch (error) {
-                        console.error('保存 AI 配置失败:', error);
-                      }
-                    }}
-                  />
-                  <span className="toggle-slider" />
-                </span>
-              </label>
-              <label className="setting-toggle-row">
-                <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.general.enableOCR')}</span>
-                  <span className="toggle-desc">{t('settings.general.enableOCRHint')}</span>
-                </span>
-                <span className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={ocrConfig.enabled}
-                    onChange={async (e) => {
-                      const updated = { ...ocrConfig, enabled: e.target.checked };
-                      setOcrConfig(updated);
-                      if (!e.target.checked && activeTab === 'ocr') setActiveTab('general');
-                      try {
-                        await invoke('update_ocr_config', { config: updated });
-                      } catch (error) {
-                        console.error('保存 OCR 配置失败:', error);
-                      }
-                    }}
-                  />
-                  <span className="toggle-slider" />
-                </span>
-              </label>
-              <label className="setting-toggle-row">
-                <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.general.enableMCP')}</span>
-                  <span className="toggle-desc">{t('settings.general.enableMCPHint')}</span>
-                </span>
-                <span className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={mcpConfig.enabled}
-                    onChange={async (e) => {
-                      const updated = { ...mcpConfig, enabled: e.target.checked };
-                      setMcpConfig(updated);
-                      if (!e.target.checked && activeTab === 'mcp') setActiveTab('general');
-                      try {
-                        await invoke('update_mcp_config', { config: updated });
-                      } catch (error) {
-                        console.error('保存 MCP 配置失败:', error);
-                      }
-                    }}
-                  />
-                  <span className="toggle-slider" />
-                </span>
-              </label>
-              <label className="setting-toggle-row">
-                <span className="toggle-label-group">
                   <span className="toggle-label">{t('settings.general.enableWidget')}</span>
                   <span className="toggle-desc">{t('settings.general.enableWidgetHint')}</span>
                 </span>
@@ -1151,7 +1031,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <span className="setting-warning">{t('settings.general.lowMemoryModeNotice')}</span>
               </small>
             )}
-            </div>
+          </div>
           )}
 
           {activeTab === 'shortcuts' && (
@@ -1382,8 +1262,78 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
 
-          {activeTab === 'ai' && (
+          {activeTab === 'integrations' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.general.featureModules')}</div>
+            <div className="setting-group">
+              <label className="sg-row setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableAI')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableAIHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={aiConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...aiConfig, enabled: e.target.checked };
+                      setAiConfig(updated);
+                      try {
+                        await invoke('update_ai_config', { config: updated });
+                      } catch (error) {
+                        console.error('save ai config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="sg-row setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableOCR')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableOCRHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={ocrConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...ocrConfig, enabled: e.target.checked };
+                      setOcrConfig(updated);
+                      try {
+                        await invoke('update_ocr_config', { config: updated });
+                      } catch (error) {
+                        console.error('save ocr config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <label className="sg-row setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.enableMCP')}</span>
+                  <span className="toggle-desc">{t('settings.general.enableMCPHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={mcpConfig.enabled}
+                    onChange={async (e) => {
+                      const updated = { ...mcpConfig, enabled: e.target.checked };
+                      setMcpConfig(updated);
+                      try {
+                        await invoke('update_mcp_config', { config: updated });
+                      } catch (error) {
+                        console.error('save mcp config failed:', error);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+            </div>
+            <div className="setting-group-title">{t('settings.tabs.ai')}</div>
             <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
@@ -1499,20 +1449,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
 
             <div className="setting-actions">
-              <button onClick={handleAiTest} disabled={testing} className="test-btn">
-                {testing ? t('settings.testing') : t('settings.test')}
+              <button onClick={handleAiTest} disabled={aiTesting} className="test-btn">
+                {aiTesting ? t('settings.testing') : t('settings.test')}
               </button>
-              {testResult && (
-                <span className={`test-result ${testResult.success ? 'success' : 'error'}`}>
-                  {testResult.message}
+              {aiTestResult && (
+                <span className={`test-result ${aiTestResult.success ? 'success' : 'error'}`}>
+                  {aiTestResult.message}
                 </span>
               )}
             </div>
             </div>
           )}
 
-          {activeTab === 'ocr' && (
+          {activeTab === 'integrations' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.tabs.ocr')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.ocr.autoOcr')}</span>
@@ -1620,20 +1571,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             )}
 
             <div className="setting-actions">
-              <button onClick={handleOcrTest} disabled={testing} className="test-btn">
-                {testing ? t('settings.testing') : t('settings.test')}
+              <button onClick={handleOcrTest} disabled={ocrTesting} className="test-btn">
+                {ocrTesting ? t('settings.testing') : t('settings.test')}
               </button>
-              {testResult && (
-                <span className={`test-result ${testResult.success ? 'success' : 'error'}`}>
-                  {testResult.message}
+              {ocrTestResult && (
+                <span className={`test-result ${ocrTestResult.success ? 'success' : 'error'}`}>
+                  {ocrTestResult.message}
                 </span>
               )}
             </div>
             </div>
           )}
 
-          {activeTab === 'mcp' && (
+          {activeTab === 'integrations' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.tabs.mcp')}</div>
             <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
@@ -1704,8 +1656,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
 
-          {activeTab === 'data' && (
+          {activeTab === 'dataSecurity' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.tabs.data')}</div>
             <div className="setting-options-group">
               <label className="setting-toggle-row">
                 <span>{t('settings.general.autoCleanup')}</span>
@@ -1804,9 +1757,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     placeholder={t('export.confirmPassword')}
                     className="setting-input"
                   />
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
             <div className="setting-btn-row">
               <button
@@ -1883,8 +1836,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
 
-          {activeTab === 'security' && (
+          {activeTab === 'dataSecurity' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.tabs.security')}</div>
             <small className="setting-hint-block">
               {lockHasPassword ? t('lock.statusEnabled') : t('lock.statusDisabled')}
             </small>
@@ -1979,8 +1933,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
 
-          {activeTab === 'share' && (
+          {activeTab === 'integrations' && (
             <div className="settings-content">
+            <div className="setting-group-title">{t('settings.tabs.share')}</div>
             <label className="setting-label">{t('settings.share.provider')}</label>
             <select
               className="setting-select"
@@ -2127,25 +2082,13 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
           )}
         </div>
+        </div>
 
         <div className="settings-footer">
           <button onClick={handleClose} className="cancel-btn">{t('settings.close')}</button>
-          {(activeTab === 'ai' || activeTab === 'ocr' || activeTab === 'mcp' || activeTab === 'share') && (
+          {activeTab === 'integrations' && (
             <button
-              onClick={
-                activeTab === 'ai' ? handleAiSave :
-                activeTab === 'ocr' ? handleOcrSave :
-                activeTab === 'mcp' ? handleMcpSave :
-                activeTab === 'share' ? async () => {
-                  try {
-                    await invoke('update_share_config', { config: shareConfig });
-                    handleClose();
-                  } catch (err) {
-                    console.error('save share config failed:', err);
-                  }
-                } :
-                handleClose
-              }
+              onClick={handleIntegrationsSave}
               className="save-btn"
             >
               {t('settings.save')}
