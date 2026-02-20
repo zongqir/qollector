@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
+import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { getTags } from '../../../utils/tagHelpers';
 
 function useCollectionBatchActions({
@@ -222,14 +223,15 @@ function useCollectionBatchActions({
     setBatchAiRunningTask(taskType);
     setMultiSelectFeedback(null);
     try {
+      const executionPreset = getActionExecutionPreset(taskType, 'quick-output');
       const response = await runPromptAssistantTask({
         taskType,
         input: batchAiSourceText.trim(),
         uiLanguage,
         outputLanguage: resolveOutputLanguageFromUi(uiLanguage),
-        tone: 'neutral',
-        length: 'medium',
-        extraInstruction: null,
+        tone: executionPreset.tone,
+        length: executionPreset.length,
+        extraInstruction: executionPreset.extraInstruction,
       });
 
       const outputText = typeof response?.output === 'string' ? response.output.trim() : '';

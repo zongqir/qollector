@@ -1,10 +1,6 @@
-export const AI_ASSISTANT_TASKS = [
-  'summarize',
-  'rewrite',
-  'extract',
-  'translate',
-  'reply'
-];
+import { AI_ACTION_TASKS } from './actionProfiles';
+
+export const AI_ASSISTANT_TASKS = AI_ACTION_TASKS;
 
 export const AI_ASSISTANT_TONES = [
   'neutral',

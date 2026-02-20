@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
+import {
+  getActionExecutionPreset,
+  QUICK_OUTPUT_TASKS,
+  resolveQuickOutputTaskFromItems,
+} from '../../../features/ai-assistant/constants/actionProfiles';
 
 const SNAPSHOT_STORAGE_KEY = 'clipbox.collection.snapshot.v1';
-const QUICK_OUTPUT_TASKS = ['summarize', 'extract', 'reply', 'rewrite'];
 const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
 
 const normalizeText = (value) => String(value || '')
@@ -104,7 +108,12 @@ function useCollectionQuickActions({
   setPanelMode,
   t,
 }) {
-  const [quickOutputTask, setQuickOutputTask] = useState(DEFAULT_QUICK_OUTPUT_TASK);
+  const autoQuickOutputTask = useMemo(
+    () => resolveQuickOutputTaskFromItems(pinnedItems, DEFAULT_QUICK_OUTPUT_TASK),
+    [pinnedItems],
+  );
+  const [quickOutputTask, setQuickOutputTask] = useState(autoQuickOutputTask);
+  const [quickOutputTaskOverridden, setQuickOutputTaskOverridden] = useState(false);
   const [quickOutputRunning, setQuickOutputRunning] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
   const [showQuickOutputMenu, setShowQuickOutputMenu] = useState(false);
@@ -122,6 +131,18 @@ function useCollectionQuickActions({
       .join('\n\n'),
     [pinnedItems],
   );
+
+  useEffect(() => {
+    if (quickOutputTaskOverridden) return;
+    if (quickOutputTask === autoQuickOutputTask) return;
+    setQuickOutputTask(autoQuickOutputTask);
+  }, [autoQuickOutputTask, quickOutputTask, quickOutputTaskOverridden]);
+
+  useEffect(() => {
+    if (pinnedItems.length > 0) return;
+    if (!quickOutputTaskOverridden) return;
+    setQuickOutputTaskOverridden(false);
+  }, [pinnedItems.length, quickOutputTaskOverridden]);
 
   const isBusy = quickOutputRunning || activeAction != null;
 
@@ -180,14 +201,15 @@ function useCollectionQuickActions({
     setQuickOutputRunning(true);
     setFeedback(null);
     try {
+      const executionPreset = getActionExecutionPreset(taskType, 'quick-output');
       const response = await runPromptAssistantTask({
         taskType,
         input: sourceText,
         uiLanguage,
         outputLanguage: resolveOutputLanguageFromUi(uiLanguage),
-        tone: 'neutral',
-        length: 'medium',
-        extraInstruction: null,
+        tone: executionPreset.tone,
+        length: executionPreset.length,
+        extraInstruction: executionPreset.extraInstruction,
       });
 
       const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
@@ -227,6 +249,7 @@ function useCollectionQuickActions({
   ]);
 
   const handleQuickOutputMenuSelect = useCallback((taskType) => {
+    setQuickOutputTaskOverridden(true);
     setQuickOutputTask(taskType);
     handleRunQuickOutput(taskType);
   }, [handleRunQuickOutput]);
