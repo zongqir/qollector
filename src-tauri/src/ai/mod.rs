@@ -1,8 +1,8 @@
+use chrono::Timelike;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
-use chrono::Timelike;
 
 // System prompts configuration (embedded in EXE)
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
@@ -432,7 +432,10 @@ impl AIService {
                 .take(MAX_AI_TAGS) // Keep order, but hard-cap to avoid runaway output
                 .collect();
 
-            println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);
+            println!(
+                "Parsed tags: {:?}, code_language: {:?}",
+                tags, code_language
+            );
             Ok((tags, code_language))
         } else {
             Ok((Vec::new(), None))
@@ -522,7 +525,10 @@ impl AIService {
         items: &[crate::core::models::ClipboardItem],
         language: &str,
     ) -> Result<String, AIError> {
-        println!("[Timeline AI] Starting summary generation for {} items", items.len());
+        println!(
+            "[Timeline AI] Starting summary generation for {} items",
+            items.len()
+        );
 
         let api_key = self.config.get_current_api_key();
 
@@ -603,7 +609,10 @@ impl AIService {
         }
 
         let response_text = response.text().await?;
-        println!("[Timeline AI] Response received, length: {} chars", response_text.len());
+        println!(
+            "[Timeline AI] Response received, length: {} chars",
+            response_text.len()
+        );
 
         let chat_response: ChatResponse = serde_json::from_str(&response_text)
             .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;

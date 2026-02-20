@@ -135,7 +135,8 @@ pub mod windows {
                 ));
             }
 
-            self.skip_sequence.store(observed_sequence, Ordering::SeqCst);
+            self.skip_sequence
+                .store(observed_sequence, Ordering::SeqCst);
             if observed_sequence != 0 {
                 println!(
                     "Marked internal clipboard sequence for skip: {}",
@@ -403,9 +404,7 @@ pub mod windows {
 
                 for name in &format_names {
                     let wide: Vec<u16> = OsStr::new(name).encode_wide().chain(Some(0)).collect();
-                    let fmt = RegisterClipboardFormatW(
-                        windows::core::PCWSTR(wide.as_ptr()),
-                    );
+                    let fmt = RegisterClipboardFormatW(windows::core::PCWSTR(wide.as_ptr()));
                     if fmt == 0 {
                         continue;
                     }
@@ -417,10 +416,7 @@ pub mod windows {
                             if !ptr.is_null() {
                                 let size = GlobalSize(hglobal);
                                 if size > 0 {
-                                    let slice = std::slice::from_raw_parts(
-                                        ptr as *const u8,
-                                        size,
-                                    );
+                                    let slice = std::slice::from_raw_parts(ptr as *const u8, size);
                                     println!("[RichFormat] Read '{}': {} bytes", name, size);
                                     results.push((name.to_string(), slice.to_vec()));
                                 }
@@ -806,9 +802,10 @@ pub mod windows {
                             }
                             b'\'' => {
                                 if i + 2 < bytes.len() {
-                                    if let (Some(h1), Some(h2)) =
-                                        (Self::hex_value(bytes[i + 1]), Self::hex_value(bytes[i + 2]))
-                                    {
+                                    if let (Some(h1), Some(h2)) = (
+                                        Self::hex_value(bytes[i + 1]),
+                                        Self::hex_value(bytes[i + 2]),
+                                    ) {
                                         out.push((h1 * 16 + h2) as char);
                                         i += 3;
                                         continue;
@@ -824,7 +821,9 @@ pub mod windows {
                                 let word = std::str::from_utf8(&bytes[word_start..i]).unwrap_or("");
 
                                 // Optional numeric argument.
-                                if i < bytes.len() && (bytes[i] == b'-' || (bytes[i] as char).is_ascii_digit()) {
+                                if i < bytes.len()
+                                    && (bytes[i] == b'-' || (bytes[i] as char).is_ascii_digit())
+                                {
                                     i += 1;
                                     while i < bytes.len() && (bytes[i] as char).is_ascii_digit() {
                                         i += 1;
@@ -906,9 +905,7 @@ pub mod windows {
                 for (name, data) in formats {
                     let wide_name: Vec<u16> =
                         OsStr::new(name).encode_wide().chain(Some(0)).collect();
-                    let fmt = RegisterClipboardFormatW(
-                        windows::core::PCWSTR(wide_name.as_ptr()),
-                    );
+                    let fmt = RegisterClipboardFormatW(windows::core::PCWSTR(wide_name.as_ptr()));
                     if fmt == 0 {
                         continue;
                     }

@@ -4,6 +4,7 @@ mod ai;
 mod commands;
 mod config;
 mod core;
+mod low_memory_mode;
 mod mcp;
 mod ocr;
 mod platform;
@@ -13,7 +14,6 @@ mod shortcuts;
 mod startup_metrics;
 mod tray;
 mod window_lifecycle;
-mod low_memory_mode;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
@@ -28,6 +28,7 @@ use commands::ocr_commands::*;
 use commands::prompt_commands::*;
 use commands::share_commands::*;
 use core::clipboard_manager::ClipboardManager;
+use low_memory_mode::{AppExitState, LowMemoryModeState};
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
 use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
@@ -38,11 +39,9 @@ use std::time::Instant;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
-use low_memory_mode::{AppExitState, LowMemoryModeState};
 use window_lifecycle::{
     cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
-    schedule_main_window_release,
-    MainWindowLifecycleState, MAIN_WINDOW_LABEL,
+    schedule_main_window_release, MainWindowLifecycleState, MAIN_WINDOW_LABEL,
 };
 
 struct StartupMeter {
@@ -157,10 +156,7 @@ fn show_main_window_near_cursor(app: &tauri::AppHandle) {
                     let sz = m.size();
                     let right = pos.x + sz.width as i32;
                     let bottom = pos.y + sz.height as i32;
-                    cursor.x >= pos.x
-                        && cursor.x < right
-                        && cursor.y >= pos.y
-                        && cursor.y < bottom
+                    cursor.x >= pos.x && cursor.x < right && cursor.y >= pos.y && cursor.y < bottom
                 })
             })
             .or_else(|| window.current_monitor().ok().flatten())
@@ -256,7 +252,11 @@ fn log_runtime_diagnostics(stage: &str, snapshot: &RuntimeDiagnosticsSnapshot) {
         );
     }
 
-    for w in snapshot.windows.iter().filter(|w| w.visible || !w.title.is_empty()) {
+    for w in snapshot
+        .windows
+        .iter()
+        .filter(|w| w.visible || !w.title.is_empty())
+    {
         println!(
             "[RuntimeDiag:{}] window handle={} visible={} size={}x{} pos=({}, {}) title={}",
             stage, w.handle, w.visible, w.width, w.height, w.x, w.y, w.title
@@ -721,4 +721,3 @@ fn main() {
         });
 }
 // test
-

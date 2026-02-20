@@ -91,9 +91,11 @@ impl ClipboardRepository {
             .execute(&self.pool)
             .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)",
+        )
+        .execute(&self.pool)
+        .await?;
 
         // Raw clipboard formats table (HTML, RTF, etc.)
         sqlx::query(
@@ -110,9 +112,11 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_raw_formats_item_id ON clipboard_raw_formats(item_id)")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_raw_formats_item_id ON clipboard_raw_formats(item_id)",
+        )
+        .execute(&self.pool)
+        .await?;
 
         // FTS5 virtual table for full-text search
         sqlx::query(
@@ -451,7 +455,11 @@ impl ClipboardRepository {
         Ok(())
     }
 
-    pub async fn update_code_language(&self, id: &str, code_language: &str) -> Result<(), sqlx::Error> {
+    pub async fn update_code_language(
+        &self,
+        id: &str,
+        code_language: &str,
+    ) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             UPDATE clipboard_items SET
@@ -553,12 +561,11 @@ impl ClipboardRepository {
         &self,
         item_id: &str,
     ) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
-        let rows: Vec<(String, Vec<u8>)> = sqlx::query_as(
-            "SELECT mime_type, data FROM clipboard_raw_formats WHERE item_id = ?",
-        )
-        .bind(item_id)
-        .fetch_all(&self.pool)
-        .await?;
+        let rows: Vec<(String, Vec<u8>)> =
+            sqlx::query_as("SELECT mime_type, data FROM clipboard_raw_formats WHERE item_id = ?")
+                .bind(item_id)
+                .fetch_all(&self.pool)
+                .await?;
 
         let mut results = Vec::new();
         for (mime_type, compressed) in rows {
@@ -648,12 +655,10 @@ impl ClipboardRepository {
         }
 
         // Store version
-        sqlx::query(
-            "INSERT OR REPLACE INTO _fts_meta (key, value) VALUES ('fts_version', ?)",
-        )
-        .bind(Self::FTS_VERSION)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("INSERT OR REPLACE INTO _fts_meta (key, value) VALUES ('fts_version', ?)")
+            .bind(Self::FTS_VERSION)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
@@ -678,11 +683,10 @@ impl ClipboardRepository {
     }
 
     async fn delete_fts(&self, id: &str) {
-        if let Err(e) =
-            sqlx::query("DELETE FROM clipboard_fts WHERE item_id = ?")
-                .bind(id)
-                .execute(&self.pool)
-                .await
+        if let Err(e) = sqlx::query("DELETE FROM clipboard_fts WHERE item_id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await
         {
             eprintln!("[FTS] delete failed for {}: {}", id, e);
         }

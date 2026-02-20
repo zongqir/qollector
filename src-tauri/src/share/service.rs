@@ -83,8 +83,8 @@ pub fn prepare_share_data(
             })
         }
         "image" => {
-            let bytes = image_bytes
-                .ok_or_else(|| ShareError::InvalidConfig("No image data".into()))?;
+            let bytes =
+                image_bytes.ok_or_else(|| ShareError::InvalidConfig("No image data".into()))?;
             let ext = image_ext.unwrap_or("png");
             let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
             Ok(ShareResult {
@@ -210,8 +210,8 @@ pub async fn share_via_s3(
             (text.as_bytes().to_vec(), "clipboard.txt".to_string())
         }
         "image" => {
-            let bytes = image_bytes
-                .ok_or_else(|| ShareError::InvalidConfig("No image data".into()))?;
+            let bytes =
+                image_bytes.ok_or_else(|| ShareError::InvalidConfig("No image data".into()))?;
             let ext = image_ext.unwrap_or("png");
             (bytes, format!("clipboard.{}", ext))
         }

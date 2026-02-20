@@ -85,7 +85,13 @@ fn reserved_shortcuts() -> &'static [&'static str] {
 
 #[cfg(target_os = "macos")]
 fn reserved_shortcuts() -> &'static [&'static str] {
-    &["super+q", "super+tab", "super+space", "ctrl+space", "super+h"]
+    &[
+        "super+q",
+        "super+tab",
+        "super+space",
+        "ctrl+space",
+        "super+h",
+    ]
 }
 
 #[cfg(target_os = "linux")]
@@ -129,7 +135,10 @@ fn is_reserved_shortcut(shortcut: &str) -> bool {
 }
 
 #[cfg(desktop)]
-fn parse_shortcut(raw: &str, field_name: &str) -> Result<(String, tauri_plugin_global_shortcut::Shortcut), String> {
+fn parse_shortcut(
+    raw: &str,
+    field_name: &str,
+) -> Result<(String, tauri_plugin_global_shortcut::Shortcut), String> {
     let normalized = raw.trim().to_ascii_lowercase();
     if normalized.is_empty() {
         return Err(format!("{} cannot be empty", field_name));
@@ -167,12 +176,15 @@ pub fn apply_shortcut_config(
     let mut desired_ids: HashMap<u32, ShortcutAction> = HashMap::new();
 
     if config.ctrl_shift_c_shortcut_enabled {
-        let (shortcut_text, parsed) = parse_shortcut(&config.copy_pin_shortcut, "copy_pin_shortcut")?;
+        let (shortcut_text, parsed) =
+            parse_shortcut(&config.copy_pin_shortcut, "copy_pin_shortcut")?;
         let id = parsed.id();
         if let Some(existing) = desired_ids.insert(id, ShortcutAction::CopyPin) {
             return Err(format!(
                 "Shortcut conflict between {:?} and {:?}: {}",
-                existing, ShortcutAction::CopyPin, shortcut_text
+                existing,
+                ShortcutAction::CopyPin,
+                shortcut_text
             ));
         }
         desired.copy_pin_shortcut = Some(shortcut_text.clone());
@@ -187,7 +199,9 @@ pub fn apply_shortcut_config(
         if let Some(existing) = desired_ids.insert(id, ShortcutAction::ToggleWindow) {
             return Err(format!(
                 "Shortcut conflict between {:?} and {:?}: {}",
-                existing, ShortcutAction::ToggleWindow, shortcut_text
+                existing,
+                ShortcutAction::ToggleWindow,
+                shortcut_text
             ));
         }
         desired.toggle_window_shortcut = Some(shortcut_text.clone());

@@ -19,7 +19,6 @@ const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
 
-
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
     last_hash: Option<String>,
@@ -323,7 +322,8 @@ impl ClipboardManager {
                     Some(formats) if !formats.is_empty() => {
                         if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
                             eprintln!("Failed to clear stale raw formats: {}", e);
-                        } else if let Err(e) = repo_lock.insert_raw_formats(&item_id, formats).await {
+                        } else if let Err(e) = repo_lock.insert_raw_formats(&item_id, formats).await
+                        {
                             eprintln!("Failed to refresh raw formats: {}", e);
                         } else {
                             println!(
@@ -335,9 +335,15 @@ impl ClipboardManager {
                     }
                     _ => {
                         if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
-                            eprintln!("Failed to clear raw formats for plain-text duplicate: {}", e);
+                            eprintln!(
+                                "Failed to clear raw formats for plain-text duplicate: {}",
+                                e
+                            );
                         } else {
-                            println!("Cleared raw formats for plain-text duplicate item {}", item_id);
+                            println!(
+                                "Cleared raw formats for plain-text duplicate item {}",
+                                item_id
+                            );
                         }
                     }
                 }
@@ -348,7 +354,11 @@ impl ClipboardManager {
             inserted_new_item = true;
 
             // Save raw clipboard formats (HTML, RTF) if present
-            if let ClipboardContent::Text { raw_formats: Some(formats), .. } = &content {
+            if let ClipboardContent::Text {
+                raw_formats: Some(formats),
+                ..
+            } = &content
+            {
                 if !formats.is_empty() {
                     if let Err(e) = repo_lock.insert_raw_formats(&item.id, formats).await {
                         eprintln!("Failed to save raw formats: {}", e);
@@ -526,7 +536,9 @@ impl ClipboardManager {
 
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
-                            Ok((tags, code_language)) if !tags.is_empty() || code_language.is_some() => {
+                            Ok((tags, code_language))
+                                if !tags.is_empty() || code_language.is_some() =>
+                            {
                                 let ai_tags: Vec<String> =
                                     tags.iter().map(|t| format!("AI:{}", t)).collect();
 
@@ -544,7 +556,10 @@ impl ClipboardManager {
                                     item.tags = Some(serde_json::to_string(&all_tags).unwrap());
                                     item.code_language = code_language.clone();
                                     let _ = repo_lock.update(&item).await;
-                                    println!("[AI] tags added: {:?}, code_language: {:?}", tags, code_language);
+                                    println!(
+                                        "[AI] tags added: {:?}, code_language: {:?}",
+                                        tags, code_language
+                                    );
                                 }
                             }
                             Ok(_) => println!("[AI] empty tag result"),
@@ -566,8 +581,8 @@ impl ClipboardManager {
         metadata_json: Option<&str>,
         url: &str,
     ) {
-        if let Some(existing_title) = metadata_json
-            .and_then(Self::extract_link_preview_title_from_metadata)
+        if let Some(existing_title) =
+            metadata_json.and_then(Self::extract_link_preview_title_from_metadata)
         {
             if !existing_title.is_empty() {
                 return;
@@ -585,8 +600,14 @@ impl ClipboardManager {
         };
 
         let repo_lock = repo.lock().await;
-        if let Err(error) = repo_lock.update_metadata_only(&item_id, &new_metadata).await {
-            eprintln!("[LinkPreview] failed to persist title for {}: {}", item_id, error);
+        if let Err(error) = repo_lock
+            .update_metadata_only(&item_id, &new_metadata)
+            .await
+        {
+            eprintln!(
+                "[LinkPreview] failed to persist title for {}: {}",
+                item_id, error
+            );
             return;
         }
         drop(repo_lock);
@@ -1089,7 +1110,8 @@ impl ClipboardManager {
         let metadata = item.metadata.clone();
 
         tokio::spawn(async move {
-            Self::try_enrich_link_preview(repo, app_handle, item_id, metadata.as_deref(), &url).await;
+            Self::try_enrich_link_preview(repo, app_handle, item_id, metadata.as_deref(), &url)
+                .await;
         });
     }
 
@@ -1368,13 +1390,20 @@ impl ClipboardManager {
     }
 
     /// Get raw clipboard formats for an item (for export).
-    pub async fn get_raw_formats(&self, item_id: &str) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+    pub async fn get_raw_formats(
+        &self,
+        item_id: &str,
+    ) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.get_raw_formats(item_id).await
     }
 
     /// Insert raw clipboard formats for an item (for import).
-    pub async fn insert_raw_formats(&self, item_id: &str, formats: &[(String, Vec<u8>)]) -> Result<(), sqlx::Error> {
+    pub async fn insert_raw_formats(
+        &self,
+        item_id: &str,
+        formats: &[(String, Vec<u8>)],
+    ) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.insert_raw_formats(item_id, formats).await
     }
@@ -1408,9 +1437,9 @@ impl ClipboardManager {
 
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
-            ClipboardContent::Text { plain: ref text, .. } => {
-                blake3::hash(text.as_bytes()).to_hex().to_string()
-            }
+            ClipboardContent::Text {
+                plain: ref text, ..
+            } => blake3::hash(text.as_bytes()).to_hex().to_string(),
             ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
             ClipboardContent::File(paths_str) => {
                 blake3::hash(paths_str.as_bytes()).to_hex().to_string()

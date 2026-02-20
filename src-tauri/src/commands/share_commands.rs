@@ -1,8 +1,8 @@
-use base64::Engine;
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
 use crate::share::config::ShareConfig;
 use crate::share::service::{ShareResult, UploadResponse};
+use base64::Engine;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -17,9 +17,7 @@ impl ShareState {
 }
 
 #[tauri::command]
-pub async fn get_share_config(
-    state: tauri::State<'_, ShareState>,
-) -> Result<ShareConfig, String> {
+pub async fn get_share_config(state: tauri::State<'_, ShareState>) -> Result<ShareConfig, String> {
     let config = state
         .config_repo
         .load_share_config()
@@ -69,15 +67,13 @@ pub async fn get_item_share_data(
 
     let (image_bytes, image_ext) = if item.type_ == "image" {
         if let Some(ref paths_str) = item.image_paths {
-            let paths: serde_json::Value = serde_json::from_str(paths_str)
-                .map_err(|e| e.to_string())?;
+            let paths: serde_json::Value =
+                serde_json::from_str(paths_str).map_err(|e| e.to_string())?;
             let original = paths
                 .get("original")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| "No original in image_paths".to_string())?;
-            let bytes = tokio::fs::read(original)
-                .await
-                .map_err(|e| e.to_string())?;
+            let bytes = tokio::fs::read(original).await.map_err(|e| e.to_string())?;
             let ext = std::path::Path::new(original)
                 .extension()
                 .and_then(|e| e.to_str())
@@ -159,15 +155,13 @@ pub async fn share_via_s3(
 
     let (image_bytes, image_ext) = if item.type_ == "image" {
         if let Some(ref paths_str) = item.image_paths {
-            let paths: serde_json::Value = serde_json::from_str(paths_str)
-                .map_err(|e| e.to_string())?;
+            let paths: serde_json::Value =
+                serde_json::from_str(paths_str).map_err(|e| e.to_string())?;
             let original = paths
                 .get("original")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| "No original in image_paths".to_string())?;
-            let bytes = tokio::fs::read(original)
-                .await
-                .map_err(|e| e.to_string())?;
+            let bytes = tokio::fs::read(original).await.map_err(|e| e.to_string())?;
             let ext = std::path::Path::new(original)
                 .extension()
                 .and_then(|e| e.to_str())

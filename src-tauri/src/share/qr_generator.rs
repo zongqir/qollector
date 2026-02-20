@@ -79,7 +79,8 @@ mod tests {
 
     #[test]
     fn generate_qr_data_url_for_ascii_text() {
-        let encoded = generate_qr_base64("quick-share-text").expect("should generate qr for ascii text");
+        let encoded =
+            generate_qr_base64("quick-share-text").expect("should generate qr for ascii text");
         assert!(encoded.starts_with("data:image/png;base64,"));
     }
 
