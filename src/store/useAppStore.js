@@ -173,7 +173,7 @@ const useAppStore = create((set, get) => ({
   // ========== 配置 ==========
   aiEnabled: false,
   ocrEnabled: false,
-  maxPinnedItems: 3,
+  maxPinnedItems: 10,
   themeMode: 'system',
   isLocked: true,
   hasPassword: false,
@@ -468,7 +468,7 @@ const useAppStore = create((set, get) => ({
       set({
         aiEnabled: aiConfig.enabled || false,
         ocrEnabled: ocrConfig.enabled || false,
-        maxPinnedItems: generalConfig.max_pinned_items || 3,
+        maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
         isLocked: hasLock,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,

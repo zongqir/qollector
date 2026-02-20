@@ -156,19 +156,50 @@
 }
 
 .ai-assistant-control select {
+  appearance: none;
+  -webkit-appearance: none;
   height: 32px;
   border: 1px solid var(--border-input);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.6);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.64) 100%),
+    rgba(255, 255, 255, 0.56);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='10' height='12' viewBox='0 0 10 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4L5 1L8 4' stroke='%23798290' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 8L5 11L8 8' stroke='%23798290' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.08));
+  background-repeat: no-repeat, no-repeat;
+  background-size: 10px 12px, 1px 56%;
+  background-position: right 10px center, right 28px center;
   color: var(--text-primary);
-  padding: 0 8px;
+  padding: 0 32px 0 10px;
   font-size: 12px;
+  font-weight: 560;
+  letter-spacing: 0.01em;
   outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 0.5px 1.3px rgba(0, 0, 0, 0.08);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.ai-assistant-control select:hover {
+  border-color: rgba(14, 116, 144, 0.32);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%),
+    rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .ai-assistant-control select:focus {
   border-color: rgba(14, 116, 144, 0.45);
   box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.14);
+}
+
+.ai-assistant-control select::-ms-expand {
+  display: none;
 }
 
 .ai-assistant-input-group {
@@ -387,6 +418,41 @@
 .dark-mode .ai-assistant-extra,
 .dark-mode .ai-assistant-result-text {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.dark-mode .ai-assistant-control select {
+  color-scheme: dark;
+  color: #eef2f7;
+  border-color: rgba(255, 255, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.06) 100%),
+    rgba(255, 255, 255, 0.06);
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='10' height='12' viewBox='0 0 10 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4L5 1L8 4' stroke='%23B7C1CC' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 8L5 11L8 8' stroke='%23B7C1CC' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
+  background-repeat: no-repeat, no-repeat;
+  background-size: 10px 12px, 1px 56%;
+  background-position: right 10px center, right 28px center;
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
+    0 0.5px 1px rgba(0, 0, 0, 0.28);
+}
+
+.dark-mode .ai-assistant-control select:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%),
+    rgba(255, 255, 255, 0.08);
+  border-color: rgba(14, 116, 144, 0.4);
+}
+
+.dark-mode .ai-assistant-control select:focus {
+  border-color: rgba(14, 116, 144, 0.52);
+  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.2);
+}
+
+.dark-mode .ai-assistant-control select option {
+  color: #eef2f7;
+  background: #21262d;
 }
 
 .dark-mode .ai-assistant-task-btn.active {

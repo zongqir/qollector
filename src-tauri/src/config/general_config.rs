@@ -119,7 +119,7 @@ fn default_low_memory_mode_enabled() -> bool {
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
-            max_pinned_items: 3,
+            max_pinned_items: 10,
             language: "zh-CN".to_string(),
             theme_mode: "system".to_string(),
             lock_password_hash: None,
@@ -145,8 +145,8 @@ impl Default for GeneralConfig {
 impl GeneralConfig {
     /// 验证并修正配置值
     pub fn validate(&mut self) {
-        if self.max_pinned_items > 10 {
-            self.max_pinned_items = 10;
+        if self.max_pinned_items > 100 {
+            self.max_pinned_items = 100;
         }
         if self.max_pinned_items < 1 {
             self.max_pinned_items = 1;

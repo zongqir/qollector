@@ -7,9 +7,9 @@ const resolveMaxPinnedItems = async () => {
   try {
     const config = await invoke('get_general_config');
     const value = Number(config?.max_pinned_items);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 3;
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 10;
   } catch {
-    return 3;
+    return 10;
   }
 };
 

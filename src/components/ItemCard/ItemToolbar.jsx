@@ -40,10 +40,10 @@ function ItemToolbar({
       <button
         onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
         className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-        title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 5 })}
+        title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
       >
         <Inbox size={14} className="toolbar-btn-icon" />
-        <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 5 })}</span>
+        <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 10 })}</span>
       </button>
       <div className="toolbar-divider"></div>
       <button

@@ -47,7 +47,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     mode: 'http',
   });
   const [generalConfig, setGeneralConfig] = useState({
-    max_pinned_items: 3,
+    max_pinned_items: 10,
     language: 'zh-CN',
     theme_mode: themeMode || 'system',
     double_copy_emphasis_enabled: true,
@@ -428,21 +428,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   useEffect(() => {
     if (activeTab !== 'shortcuts' && recordingTarget) {
       setRecordingTarget(null);
-      return;
     }
-    if (recordingTarget === 'toggle_window_shortcut' && !generalConfig.toggle_window_shortcut_enabled) {
-      setRecordingTarget(null);
-      return;
-    }
-    if (recordingTarget === 'copy_pin_shortcut' && !generalConfig.ctrl_shift_c_shortcut_enabled) {
-      setRecordingTarget(null);
-    }
-  }, [
-    activeTab,
-    recordingTarget,
-    generalConfig.toggle_window_shortcut_enabled,
-    generalConfig.ctrl_shift_c_shortcut_enabled,
-  ]);
+  }, [activeTab, recordingTarget]);
 
   // 辅助函数：获取供应商的键名
   const getProviderKey = (provider) => {
@@ -903,9 +890,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   type="number"
                   value={generalConfig.max_pinned_items}
                   onChange={async (e) => {
-                    let value = parseInt(e.target.value) || 3;
+                    let value = parseInt(e.target.value) || 10;
                     if (value < 1) value = 1;
-                    if (value > 10) value = 10;
+                    if (value > 100) value = 100;
                     const updated = { ...generalConfig, max_pinned_items: value };
                     setGeneralConfig(updated);
                     try {
@@ -915,12 +902,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     }
                   }}
                   min="1"
-                  max="10"
-                  className="setting-input-small"
+                  max="100"
+                  className="setting-input-small setting-input-count"
                 />
               </div>
             </div>
-            {generalConfig.max_pinned_items > 5 && (
+            {generalConfig.max_pinned_items > 20 && (
               <small className="setting-hint">
                 <span className="setting-warning">
                   {t('settings.general.maxPinnedItemsWarning')}
@@ -1079,7 +1066,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                     className="shortcut-input"
-                    disabled={!generalConfig.toggle_window_shortcut_enabled || recordingTarget === 'toggle_window_shortcut'}
+                    disabled={recordingTarget === 'toggle_window_shortcut'}
                   />
                   <button
                     type="button"
@@ -1091,7 +1078,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         startShortcutRecording('toggle_window_shortcut');
                       }
                     }}
-                    disabled={!generalConfig.toggle_window_shortcut_enabled}
                   >
                     {recordingTarget === 'toggle_window_shortcut'
                       ? t('settings.shortcuts.stopRecording')
@@ -1140,7 +1126,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       }
                     }}
                     className="shortcut-input"
-                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled || recordingTarget === 'copy_pin_shortcut'}
+                    disabled={recordingTarget === 'copy_pin_shortcut'}
                   />
                   <button
                     type="button"
@@ -1152,7 +1138,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         startShortcutRecording('copy_pin_shortcut');
                       }
                     }}
-                    disabled={!generalConfig.ctrl_shift_c_shortcut_enabled}
                   >
                     {recordingTarget === 'copy_pin_shortcut'
                       ? t('settings.shortcuts.stopRecording')
@@ -1257,7 +1242,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   min="300"
                   max="2500"
                   step="50"
-                  className="setting-input-small"
+                  className="setting-input-small setting-input-interval"
                 />
               </div>
             </div>
