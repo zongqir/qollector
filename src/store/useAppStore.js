@@ -538,18 +538,18 @@ const useAppStore = create((set, get) => ({
         invoke('get_general_config'),
         invoke('has_lock_password')
       ]);
-      set({
+      set((state) => ({
         aiEnabled: aiConfig.enabled || false,
         ocrEnabled: ocrConfig.enabled || false,
         maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
-        isLocked: hasLock,
+        isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
         autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
         widgetEnabled: generalConfig.widget_enabled || false,
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
-      });
+      }));
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
       }
