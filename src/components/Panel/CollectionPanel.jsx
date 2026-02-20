@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { Package, Bot, Check, Copy, Inbox, Plus, Star, Tag, Trash2, X, Send, PanelRightClose, Clock, Wand2 } from 'lucide-react';
+import { Package, Trash2, Clock } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -14,58 +14,14 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
-  useSortable,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import useAppStore from '../../store/useAppStore';
 import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
 import { getTags } from '../../utils/tagHelpers';
-import CollectionCard from './CollectionCard';
-
-// 可排序的卡片包装器
-function SortableCard({
-  item,
-  isCopied,
-  isMultiSelected,
-  isSelectionMode,
-  onUnpin,
-  onPointerDownCapture,
-  onClick,
-  onDoubleClick,
-  onOpenItem,
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id, disabled: isSelectionMode });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 100 : 'auto',
-  };
-
-  return (
-    <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...attributes} {...listeners}>
-      <CollectionCard
-        item={item}
-        isCopied={isCopied}
-        isMultiSelected={isMultiSelected}
-        onUnpin={onUnpin}
-        onPointerDownCapture={onPointerDownCapture}
-        onClick={onClick}
-        onDoubleClick={onDoubleClick}
-        onOpenItem={onOpenItem}
-      />
-    </div>
-  );
-}
+import SortableCollectionCard from './SortableCollectionCard';
+import CollectionQuickNoteSection from './CollectionQuickNoteSection';
+import CollectionMultiSelectBar from './CollectionMultiSelectBar';
 
 function CollectionPanel() {
   const { t, i18n } = useTranslation();
@@ -218,7 +174,7 @@ function CollectionPanel() {
           await togglePin(item);
         }
       } catch (err) {
-        console.error('拖入失败:', err);
+        console.error('Drop pin failed:', err);
       }
     }
   }, [items, togglePin]);
@@ -496,72 +452,45 @@ function CollectionPanel() {
     }
   }, [applyBatchTag]);
 
+  const handleExpandedNoteKeyDown = useCallback((event) => {
+    if (event.key === 'Enter' && event.ctrlKey && quickNote.trim()) {
+      handleExpandedSubmit();
+    }
+    if (event.key === 'Escape') {
+      setIsExpanded(false);
+    }
+  }, [quickNote, handleExpandedSubmit]);
+
+  const closeBatchTagEditor = useCallback(() => {
+    setShowBatchTagEditor(false);
+    setBatchTagInput('');
+  }, []);
+
+  const handleToggleBatchTagEditor = useCallback(() => {
+    if (showBatchTagEditor) {
+      closeBatchTagEditor();
+      return;
+    }
+    setBatchTagInput('');
+    setShowBatchTagEditor(true);
+  }, [showBatchTagEditor, closeBatchTagEditor]);
+
+  const handleBatchTagInputChange = useCallback((value) => {
+    setBatchTagInput(value);
+  }, []);
+
   const quickNoteSection = (
-    <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
-      {isExpanded ? (
-        <div className="quick-note-expanded">
-          <div className="quick-note-expanded-body">
-            <textarea
-              className="quick-note-textarea"
-              placeholder={t('collection.expandedNotePlaceholder')}
-              value={quickNote}
-              onChange={(e) => setQuickNote(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey && quickNote.trim()) {
-                  handleExpandedSubmit();
-                }
-                if (e.key === 'Escape') setIsExpanded(false);
-              }}
-              autoFocus
-            />
-            <button
-              className="quick-note-close-btn"
-              onClick={() => setIsExpanded(false)}
-            >
-              <X size={14} />
-            </button>
-          </div>
-          <div className="quick-note-expanded-footer">
-            <span className="quick-note-hint">Ctrl+Enter</span>
-            <button
-              className="quick-note-submit-btn"
-              onClick={handleExpandedSubmit}
-              disabled={!quickNote.trim()}
-            >
-              <Send size={14} />
-              <span>{t('collection.expandedNoteSubmit')}</span>
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="quick-note-collapsed-row">
-          <div className="quick-note-input-wrapper">
-            <button
-              className="quick-note-expand-btn"
-              onClick={() => setIsExpanded(true)}
-              title={t('collection.expandedNotePlaceholder')}
-            >
-              <Plus size={16} />
-            </button>
-            <input
-              type="text"
-              className="quick-note-input"
-              placeholder={t('collection.quickNotePlaceholder')}
-              value={quickNote}
-              onChange={(e) => setQuickNote(e.target.value)}
-              onKeyDown={handleQuickNoteSubmit}
-            />
-          </div>
-          <button
-            className="collection-close-inline-btn quick-note-panel-close-btn"
-            onClick={toggleCollectionPanel}
-            title={t('collection.hidePanel')}
-          >
-            <PanelRightClose size={14} />
-          </button>
-        </div>
-      )}
-    </div>
+    <CollectionQuickNoteSection
+      isExpanded={isExpanded}
+      quickNote={quickNote}
+      onQuickNoteChange={setQuickNote}
+      onQuickNoteKeyDown={handleQuickNoteSubmit}
+      onExpandedKeyDown={handleExpandedNoteKeyDown}
+      onExpandedSubmit={handleExpandedSubmit}
+      onCollapse={() => setIsExpanded(false)}
+      onExpand={() => setIsExpanded(true)}
+      onToggleCollectionPanel={toggleCollectionPanel}
+    />
   );
 
   if (pinnedItems.length === 0) {
@@ -586,7 +515,7 @@ function CollectionPanel() {
         <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
           <div className="collection-cards">
             {pinnedItems.map((item, index) => (
-              <SortableCard
+              <SortableCollectionCard
                 key={item.id}
                 item={item}
                 isCopied={copiedItemId === item.id && copyFeedbackSource === 'collection'}
@@ -603,118 +532,29 @@ function CollectionPanel() {
         </SortableContext>
       </DndContext>
       {selectedPinnedIds.length > 0 ? (
-        <div className="multi-select-bar collection-multi-select-bar">
-          <span className="multi-select-count">
-            {t('multiSelect.selected', { count: selectedPinnedIds.length })}
-          </span>
-          <div className="multi-select-actions">
-            <button
-              className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
-              onClick={() => {
-                if (showBatchTagEditor) {
-                  setShowBatchTagEditor(false);
-                  setBatchTagInput('');
-                  return;
-                }
-                setBatchTagInput('');
-                setShowBatchTagEditor(true);
-              }}
-              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
-              title={t('multiSelect.addTag')}
-            >
-              <Tag size={14} />
-              <span>{t('multiSelect.addTag')}</span>
-            </button>
-            <button
-              className="multi-select-btn favorite"
-              onClick={handleBatchFavoriteToggle}
-              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
-              title={allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}
-            >
-              <Star size={14} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
-              <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
-            </button>
-            <button
-              className="multi-select-btn pin"
-              onClick={handleBatchPinToggle}
-              disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
-              title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
-            >
-              <Inbox size={14} />
-              <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
-            </button>
-            <button className="multi-select-btn copy" onClick={handleMergeCopySelected} title={t('multiSelect.mergeCopy')}>
-              <Copy size={14} />
-              <span>{t('multiSelect.mergeCopy')}</span>
-            </button>
-            {canRunBatchAi && (
-              <>
-                <button
-                  className="multi-select-btn ai"
-                  onClick={() => handleBatchAiAction('summarize')}
-                  disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
-                  title={t('multiSelect.batchSummarize')}
-                >
-                  <Bot size={14} />
-                  <span>{t('multiSelect.batchSummarize')}</span>
-                </button>
-                <button
-                  className="multi-select-btn ai"
-                  onClick={() => handleBatchAiAction('rewrite')}
-                  disabled={batchTagPending || batchFlagPending || batchAiRunningTask != null}
-                  title={t('multiSelect.batchRewrite')}
-                >
-                  <Wand2 size={14} />
-                  <span>{t('multiSelect.batchRewrite')}</span>
-                </button>
-              </>
-            )}
-            <button className="multi-select-btn" onClick={clearPinnedSelection} title={t('multiSelect.clearSelection')}>
-              <X size={14} />
-              <span>{t('multiSelect.clearSelection')}</span>
-            </button>
-          </div>
-          {showBatchTagEditor && (
-            <div className="multi-select-tag-editor" ref={batchTagEditorRef}>
-              <div className="multi-select-tag-input-row">
-                <input
-                  type="text"
-                  value={batchTagInput}
-                  onChange={(event) => setBatchTagInput(event.target.value)}
-                  onKeyDown={handleBatchTagInputKeyDown}
-                  className="multi-select-tag-input"
-                  placeholder={t('multiSelect.addTagPlaceholder')}
-                  autoFocus
-                />
-                <button
-                  className="multi-select-tag-action confirm"
-                  onClick={applyBatchTag}
-                  disabled={batchTagPending || !batchTagInput.trim()}
-                  title={t('item.confirmTag')}
-                >
-                  <Check size={12} />
-                </button>
-                <button
-                  className="multi-select-tag-action cancel"
-                  onClick={() => {
-                    setShowBatchTagEditor(false);
-                    setBatchTagInput('');
-                  }}
-                  disabled={batchTagPending}
-                  title={t('item.cancelTag')}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-              <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
-            </div>
-          )}
-          {multiSelectFeedback && (
-            <div className={`multi-select-feedback ${multiSelectFeedback.type}`}>
-              {multiSelectFeedback.text}
-            </div>
-          )}
-        </div>
+        <CollectionMultiSelectBar
+          selectedCount={selectedPinnedIds.length}
+          showBatchTagEditor={showBatchTagEditor}
+          onToggleBatchTagEditor={handleToggleBatchTagEditor}
+          batchTagPending={batchTagPending}
+          batchFlagPending={batchFlagPending}
+          batchAiRunningTask={batchAiRunningTask}
+          onBatchFavoriteToggle={handleBatchFavoriteToggle}
+          allSelectedAreFavorite={allSelectedAreFavorite}
+          onBatchPinToggle={handleBatchPinToggle}
+          allSelectedArePinned={allSelectedArePinned}
+          onMergeCopy={handleMergeCopySelected}
+          canRunBatchAi={canRunBatchAi}
+          onBatchAiAction={handleBatchAiAction}
+          onClearSelection={clearPinnedSelection}
+          batchTagEditorRef={batchTagEditorRef}
+          batchTagInput={batchTagInput}
+          onBatchTagInputChange={handleBatchTagInputChange}
+          onBatchTagInputKeyDown={handleBatchTagInputKeyDown}
+          onApplyBatchTag={applyBatchTag}
+          onCloseBatchTagEditor={closeBatchTagEditor}
+          multiSelectFeedback={multiSelectFeedback}
+        />
       ) : (
         <div className="collection-bottom-bar">
           <button className="collection-btn timeline-btn" onClick={() => setPanelMode('timeline')} title={t('collection.timeTravel')}>
@@ -732,3 +572,4 @@ function CollectionPanel() {
 }
 
 export default CollectionPanel;
+

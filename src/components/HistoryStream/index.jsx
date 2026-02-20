@@ -2,10 +2,10 @@ import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'r
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
-import { Bot, Check, Copy, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
+import MultiSelectBar from './MultiSelectBar';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
@@ -1091,6 +1091,10 @@ function HistoryStream({ style }) {
   ]);
 
   const canApplyBatchTag = Boolean(activeBatchTagSuggestion || batchTagInput.trim());
+  const handleBatchTagInputChange = useCallback((value) => {
+    setBatchTagInput(value);
+    setBatchTagActiveSuggestionIndex(-1);
+  }, []);
 
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
@@ -1160,168 +1164,42 @@ function HistoryStream({ style }) {
       )}
 
       {selectedItemIds.length > 0 && (
-        <div
-          className="multi-select-bar"
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <span className="multi-select-count">
-            {t('multiSelect.selected', { count: selectedItemIds.length })}
-          </span>
-          <div className="multi-select-actions">
-            <button
-              className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (showBatchTagEditor) {
-                  closeBatchTagEditor();
-                } else {
-                  openBatchTagEditor();
-                }
-              }}
-              title={t('multiSelect.addTag')}
-            >
-              <Tag size={14} />
-              <span>{t('multiSelect.addTag')}</span>
-            </button>
-            <button
-              className="multi-select-btn favorite"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleBatchFavoriteToggle();
-              }}
-              disabled={batchFlagPending || batchAiRunningTask != null}
-              title={allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}
-            >
-              <Star size={14} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
-              <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
-            </button>
-            <button
-              className="multi-select-btn pin"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleBatchPinToggle();
-              }}
-              disabled={batchFlagPending || batchAiRunningTask != null}
-              title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
-            >
-              <Inbox size={14} />
-              <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
-            </button>
-            <button
-              className="multi-select-btn copy"
-              onClick={(e) => {
-                e.stopPropagation();
-                copySelectedItemsMerged(filteredItems);
-              }}
-              title={t('multiSelect.mergeCopy')}
-            >
-              <Copy size={14} />
-              <span>{t('multiSelect.mergeCopy')}</span>
-            </button>
-            {canRunBatchAi && (
-              <>
-                <button
-                  className="multi-select-btn ai"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBatchAiAction('summarize');
-                  }}
-                  disabled={batchFlagPending || batchAiRunningTask != null}
-                  title={t('multiSelect.batchSummarize')}
-                >
-                  <Bot size={14} />
-                  <span>{t('multiSelect.batchSummarize')}</span>
-                </button>
-                <button
-                  className="multi-select-btn ai"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBatchAiAction('rewrite');
-                  }}
-                  disabled={batchFlagPending || batchAiRunningTask != null}
-                  title={t('multiSelect.batchRewrite')}
-                >
-                  <Wand2 size={14} />
-                  <span>{t('multiSelect.batchRewrite')}</span>
-                </button>
-              </>
-            )}
-            <button
-              className="multi-select-btn delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteSelectedItems();
-              }}
-              title={t('multiSelect.delete')}
-            >
-              <Trash2 size={14} />
-              <span>{t('multiSelect.delete')}</span>
-            </button>
-          </div>
-          {showBatchTagEditor && (
-            <div className="multi-select-tag-editor" ref={batchTagEditorRef}>
-              <div className="multi-select-tag-input-row">
-                <input
-                  type="text"
-                  value={batchTagInput}
-                  onChange={(e) => {
-                    setBatchTagInput(e.target.value);
-                    setBatchTagActiveSuggestionIndex(-1);
-                  }}
-                  onKeyDown={handleBatchTagInputKeyDown}
-                  className="multi-select-tag-input"
-                  placeholder={t('multiSelect.addTagPlaceholder')}
-                  autoFocus
-                />
-                <button
-                  className="multi-select-tag-action confirm"
-                  onClick={() => applyBatchTag(activeBatchTagSuggestion || batchTagInput)}
-                  disabled={!canApplyBatchTag || batchTagPending}
-                  title={t('item.confirmTag')}
-                >
-                  <Check size={12} />
-                </button>
-                <button
-                  className="multi-select-tag-action cancel"
-                  onClick={closeBatchTagEditor}
-                  disabled={batchTagPending}
-                  title={t('item.cancelTag')}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-              {filteredBatchTagSuggestions.length > 0 && (
-                <div className="multi-select-tag-suggestions" ref={batchTagSuggestionsRef}>
-                  {filteredBatchTagSuggestions.map((tag, index) => (
-                    <button
-                      key={tag}
-                      data-suggestion-index={index}
-                      className={`multi-select-tag-suggestion-item ${batchTagActiveSuggestionIndex === index ? 'active' : ''}`}
-                      onClick={() => applyBatchTag(tag)}
-                      onMouseEnter={() => setBatchTagActiveSuggestionIndex(index)}
-                      disabled={batchTagPending}
-                    >
-                      <Tag size={12} />
-                      <span>{tag}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
-            </div>
-          )}
-          {batchTagFeedback && (
-            <div className={`multi-select-feedback ${batchTagFeedback.type}`}>
-              {batchTagFeedback.text}
-            </div>
-          )}
-          {batchAiFeedback && (
-            <div className={`multi-select-feedback ${batchAiFeedback.type}`}>
-              {batchAiFeedback.text}
-            </div>
-          )}
-        </div>
+        <MultiSelectBar
+          selectedCount={selectedItemIds.length}
+          showBatchTagEditor={showBatchTagEditor}
+          onToggleBatchTagEditor={() => {
+            if (showBatchTagEditor) {
+              closeBatchTagEditor();
+              return;
+            }
+            openBatchTagEditor();
+          }}
+          onBatchFavoriteToggle={handleBatchFavoriteToggle}
+          allSelectedAreFavorite={allSelectedAreFavorite}
+          onBatchPinToggle={handleBatchPinToggle}
+          allSelectedArePinned={allSelectedArePinned}
+          onMergeCopy={() => copySelectedItemsMerged(filteredItems)}
+          canRunBatchAi={canRunBatchAi}
+          onBatchAiAction={handleBatchAiAction}
+          batchFlagPending={batchFlagPending}
+          batchAiRunningTask={batchAiRunningTask}
+          onDeleteSelected={deleteSelectedItems}
+          batchTagEditorRef={batchTagEditorRef}
+          batchTagInput={batchTagInput}
+          onBatchTagInputChange={handleBatchTagInputChange}
+          handleBatchTagInputKeyDown={handleBatchTagInputKeyDown}
+          canApplyBatchTag={canApplyBatchTag}
+          applyBatchTag={applyBatchTag}
+          activeBatchTagSuggestion={activeBatchTagSuggestion}
+          batchTagPending={batchTagPending}
+          closeBatchTagEditor={closeBatchTagEditor}
+          filteredBatchTagSuggestions={filteredBatchTagSuggestions}
+          batchTagSuggestionsRef={batchTagSuggestionsRef}
+          batchTagActiveSuggestionIndex={batchTagActiveSuggestionIndex}
+          setBatchTagActiveSuggestionIndex={setBatchTagActiveSuggestionIndex}
+          batchTagFeedback={batchTagFeedback}
+          batchAiFeedback={batchAiFeedback}
+        />
       )}
     </div>
   );
