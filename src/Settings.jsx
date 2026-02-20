@@ -1811,12 +1811,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </small>
             )}
 
-            <div className="setting-group" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <label className="setting-label">{t('export.clearData')}</label>
-              <small className="setting-hint-block" style={{ color: '#ff6b6b' }}>
+            <div className="clear-data-zone">
+              <label className="setting-label clear-data-title">{t('export.clearData')}</label>
+              <small className="setting-hint-block clear-data-warning">
                 {t('export.clearDataWarning')}
               </small>
-              <div className="setting-btn-row">
+              <div className="setting-btn-row clear-data-actions">
                 <button
                   className={`test-btn ${clearDataConfirm ? 'danger' : 'secondary'}`}
                   onClick={handleClearAllData}
@@ -1835,7 +1835,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 )}
               </div>
               {clearDataResult && (
-                <small className={`setting-status ${clearDataResult.success ? 'success' : 'error'}`}>
+                <small className={`setting-status clear-data-status ${clearDataResult.success ? 'success' : 'error'}`}>
                   {clearDataResult.message}
                 </small>
               )}

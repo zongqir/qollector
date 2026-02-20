@@ -737,6 +737,41 @@
   margin-left: 6px;
 }
 
+/* ---- Data Clear Danger Zone ---- */
+.clear-data-zone {
+  margin-top: 14px;
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 59, 48, 0.18);
+  background: rgba(255, 59, 48, 0.04);
+}
+
+.clear-data-title {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: default;
+}
+
+.clear-data-warning {
+  margin-top: 0;
+  margin-bottom: 6px;
+  padding: 0;
+  color: #d83a32;
+  line-height: 1.45;
+}
+
+.clear-data-actions {
+  margin-top: 4px;
+}
+
+.clear-data-status {
+  margin-top: 8px;
+  padding: 0;
+}
+
 /* ---- Pro 徽章 ---- */
 .pro-badge {
   font-size: 9px;
@@ -802,6 +837,48 @@
   background-position: right 10px center, right 28px center;
 }
 
+.dark-mode .setting-input {
+  color-scheme: dark;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
+    0 0.5px 1px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .setting-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.dark-mode .setting-input:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-medium);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .setting-input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 0 3px var(--accent-medium),
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .setting-input:disabled {
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.dark-mode .setting-input::-webkit-outer-spin-button,
+.dark-mode .setting-input::-webkit-inner-spin-button {
+  filter: invert(0.75);
+}
+
 .dark-mode .setting-select:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: var(--accent-medium);
@@ -862,6 +939,15 @@
   box-shadow:
     inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
     0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .clear-data-zone {
+  border-color: rgba(255, 107, 99, 0.28);
+  background: rgba(255, 107, 99, 0.09);
+}
+
+.dark-mode .clear-data-warning {
+  color: #ff9f97;
 }
 
 /* ---- 功能开关组 ---- */
