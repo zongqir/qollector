@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './Settings.css';
 
@@ -929,7 +929,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             )}
 
             {/* 功能模块分组 */}
-            <div className="setting-group-title">{t('settings.general.featureModules')}</div>
+            <div className="setting-group-title section-title">{t('settings.general.featureModules')}</div>
             <div className="feature-toggles">
               <label className="setting-toggle-row">
                 <span className="toggle-label-group">
@@ -1036,7 +1036,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
           {activeTab === 'shortcuts' && (
             <div className="settings-content">
-            <div className="setting-group-title">{t('settings.shortcuts.globalHotkeys')}</div>
+            <div className="setting-group-title section-title">{t('settings.shortcuts.globalHotkeys')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.shortcuts.toggleWindow')}</span>
@@ -1207,11 +1207,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 className="shortcut-reset-btn"
                 onClick={restoreShortcutDefaults}
               >
+                <span className="shortcut-reset-btn-icon" aria-hidden="true">
+                  <RotateCcw size={13} />
+                </span>
                 {t('settings.shortcuts.restoreDefaults')}
               </button>
             </div>
 
-            <div className="setting-group-title">{t('settings.shortcuts.emphasisCopy')}</div>
+            <div className="setting-group-title section-title">{t('settings.shortcuts.emphasisCopy')}</div>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span className="toggle-label-group">

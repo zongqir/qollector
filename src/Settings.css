@@ -53,7 +53,7 @@
 
 .settings-header h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -111,8 +111,8 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-tertiary);
   transition: all 0.15s ease;
   text-align: left;
@@ -187,12 +187,12 @@
 }
 
 .setting-group-title {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  padding: 0 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0.01em;
+  padding: 2px 4px 8px;
   margin-bottom: 0;
 }
 
@@ -242,11 +242,11 @@
 .setting-item > label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 /* ---- 输入框 & 下拉框 ---- */
@@ -418,7 +418,7 @@
   padding: 4px 8px;
   border: none;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   text-align: right;
   transition: all 0.15s ease;
   background: var(--bg-input);
@@ -445,7 +445,7 @@
 .shortcut-record-btn {
   border: none;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   padding: 5px 10px;
   cursor: pointer;
@@ -469,24 +469,71 @@
 }
 
 .shortcut-actions {
-  margin-top: 8px;
+  margin-top: 10px;
   padding: 0 4px;
+  display: flex;
+  align-items: center;
 }
 
 .shortcut-reset-btn {
-  border: none;
-  border-radius: 6px;
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 6px 12px;
+  line-height: 1;
+  padding: 7px 12px;
   cursor: pointer;
-  color: var(--text-primary);
-  background: var(--bg-input);
+  color: var(--text-secondary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 100%),
+    var(--bg-input);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0.5px 1.2px rgba(0, 0, 0, 0.08);
   transition: all 0.15s ease;
 }
 
 .shortcut-reset-btn:hover {
-  background: var(--btn-hover-bg);
+  color: var(--accent-color);
+  border-color: var(--accent-medium);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.62) 100%),
+    var(--bg-input);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.shortcut-reset-btn:active {
+  transform: scale(0.98);
+}
+
+.shortcut-reset-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 0 3px var(--accent-medium),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.shortcut-reset-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.shortcut-reset-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+}
+
+.shortcut-reset-btn-icon svg {
+  display: block;
 }
 
 /* ---- Toggle 开关 ---- */
@@ -657,10 +704,10 @@
 
 /* ---- 提示文本 ---- */
 .setting-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   margin-top: 4px;
-  line-height: 1.4;
+  line-height: 1.5;
   display: block;
   padding: 0 4px;
 }
@@ -671,12 +718,12 @@
 }
 
 .setting-hint-block {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-tertiary);
   margin-top: 2px;
   margin-bottom: 8px;
   display: block;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .setting-warning {
@@ -712,11 +759,11 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0.01em;
   line-height: 14px;
 }
 
@@ -795,6 +842,28 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+.dark-mode .shortcut-reset-btn {
+  color: var(--text-primary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%),
+    var(--bg-input);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
+    0 0.5px 1px rgba(0, 0, 0, 0.32);
+}
+
+.dark-mode .shortcut-reset-btn:hover {
+  color: var(--accent-color);
+  border-color: var(--accent-medium);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%),
+    var(--bg-input);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16),
+    0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
 /* ---- 功能开关组 ---- */
 .feature-toggles {
   display: flex;
@@ -850,8 +919,8 @@
 }
 
 .toggle-desc {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-size: 12px;
+  color: var(--text-secondary);
   font-weight: 400;
   line-height: 1.45;
 }
@@ -921,15 +990,41 @@
   align-items: center;
 }
 
+.setting-inline-row > span {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
 .setting-inline-row .setting-input {
   flex: 1;
+}
+
+.setting-inline-row .setting-input.compact {
+  flex: 0 0 auto;
+  width: 132px;
+  min-width: 112px;
+  max-width: 46%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.setting-options-group .setting-inline-row {
+  margin-top: 0;
+  padding: 10px 14px 6px;
+}
+
+.setting-options-group > .setting-hint {
+  margin-top: 0;
+  padding: 0 14px 10px;
 }
 
 /* ---- 状态提示 ---- */
 .setting-status {
   margin-top: 6px;
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   padding: 0 4px;
 }
 
@@ -1056,6 +1151,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -1068,11 +1166,11 @@
 
 .setting-label.share-field-label {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0.01em;
   margin-bottom: 6px;
   cursor: default;
 }
@@ -1121,7 +1219,7 @@
     padding: 7px 8px;
     border-radius: 6px;
     text-align: left;
-    font-size: 11px;
+    font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
