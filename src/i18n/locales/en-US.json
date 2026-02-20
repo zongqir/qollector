@@ -440,6 +440,14 @@
     "addTagAllFailed": "Failed to add tag to {{failed}} item(s)",
     "addTagFailed": "Add tag failed: {{error}}",
     "mergeCopy": "Merge & Copy",
+    "batchSummarize": "Batch Summarize",
+    "batchRewrite": "Batch Rewrite",
+    "batchSummarizeCopied": "Batch summary copied to clipboard",
+    "batchRewriteCopied": "Batch rewrite copied to clipboard",
+    "batchAiEmpty": "AI returned no text to copy",
+    "batchActionFailed": "Batch action failed: {{error}}",
+    "batchAiFailed": "Batch AI action failed: {{error}}",
+    "clearSelection": "Clear Selection",
     "delete": "Delete"
   },
   "collection": {
