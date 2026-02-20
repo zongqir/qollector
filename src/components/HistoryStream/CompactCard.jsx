@@ -36,6 +36,7 @@ function CompactCard({
   isCopied,
   timeTick,
   onDragStart,
+  supportsNativeExternalDrag,
   onStartExternalDrag,
   onTogglePin,
   onToggleFavorite,
@@ -53,7 +54,7 @@ function CompactCard({
   );
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
-  const canDragOut = item.type_ === 'file' || item.type_ === 'image';
+  const canDragOut = supportsNativeExternalDrag && (item.type_ === 'file' || item.type_ === 'image');
   const canOpen = item.type_ === 'link' || item.type_ === 'file';
 
   const cardClasses = [

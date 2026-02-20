@@ -23,6 +23,20 @@ const normalizeCopyFeedbackSource = (source) => {
   const normalized = source.trim().toLowerCase();
   return COPY_FEEDBACK_SOURCES.has(normalized) ? normalized : 'global';
 };
+const detectClientPlatform = () => {
+  if (typeof navigator === 'undefined') return 'other';
+  const raw = (
+    navigator.userAgentData?.platform
+    || navigator.platform
+    || navigator.userAgent
+    || ''
+  ).toLowerCase();
+  if (raw.includes('win')) return 'windows';
+  if (raw.includes('mac')) return 'macos';
+  if (raw.includes('linux')) return 'linux';
+  return 'other';
+};
+const SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK = detectClientPlatform() === 'windows';
 const RESERVED_TAG_PREFIXES = ['ai:', '来源:', '类型:', 'source:', 'type:', '鏉ユ簮:', '绫诲瀷:'];
 const hasReservedTagPrefix = (tag) => {
   const normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
@@ -546,7 +560,8 @@ const useAppStore = create((set, get) => ({
         isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
-        autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
+        autoPasteOnDoubleClick: SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK
+          && (generalConfig.auto_paste_on_double_click || false),
         widgetEnabled: generalConfig.widget_enabled || false,
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
       }));
@@ -613,7 +628,7 @@ const useAppStore = create((set, get) => ({
         });
       }, 1000);
 
-      if (!get().autoPasteOnDoubleClick) {
+      if (!SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK || !get().autoPasteOnDoubleClick) {
         return;
       }
 

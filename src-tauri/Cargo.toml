@@ -70,6 +70,7 @@ x11rb = { version = "0.13", features = ["allow-unsafe-code"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.25"
 objc = "0.2"
+drag = "2.1.0"
 
 [features]
 default = ["custom-protocol"]
