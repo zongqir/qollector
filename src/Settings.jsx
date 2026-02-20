@@ -144,6 +144,27 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
   const normalizeShortcutText = (value) => (value || '').trim().toLowerCase();
 
+  const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const parseInteger = (rawValue, fallback) => {
+    const parsed = parseInt(rawValue, 10);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const getWheelNextNumber = ({
+    rawValue,
+    fallback,
+    min,
+    max,
+    step = 1,
+    deltaY,
+  }) => {
+    const current = clampNumber(parseInteger(rawValue, fallback), min, max);
+    if (deltaY === 0) return current;
+    const direction = deltaY < 0 ? 1 : -1;
+    return clampNumber(current + (direction * step), min, max);
+  };
+
   const normalizeShortcutToken = (token) => {
     const value = (token || '').trim().toLowerCase();
     if (!value) return '';
@@ -901,6 +922,26 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       console.error('保存置顶数配置失败:', error);
                     }
                   }}
+                  onWheel={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const currentValue = generalConfig.max_pinned_items ?? 10;
+                    const value = getWheelNextNumber({
+                      rawValue: e.currentTarget.value,
+                      fallback: currentValue,
+                      min: 1,
+                      max: 100,
+                      deltaY: e.deltaY,
+                    });
+                    if (value === currentValue) return;
+                    const updated = { ...generalConfig, max_pinned_items: value };
+                    setGeneralConfig(updated);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('Failed to save max pinned items config:', error);
+                    }
+                  }}
                   min="1"
                   max="100"
                   className="setting-input-small setting-input-count"
@@ -1233,6 +1274,25 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     let value = parseInt(e.target.value) || 900;
                     if (value < 300) value = 300;
                     if (value > 2500) value = 2500;
+                    const updated = {
+                      ...generalConfig,
+                      double_copy_window_ms: value,
+                    };
+                    await saveShortcutConfig(updated);
+                  }}
+                  onWheel={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const currentValue = generalConfig.double_copy_window_ms ?? 900;
+                    const value = getWheelNextNumber({
+                      rawValue: e.currentTarget.value,
+                      fallback: currentValue,
+                      min: 300,
+                      max: 2500,
+                      step: 50,
+                      deltaY: e.deltaY,
+                    });
+                    if (value === currentValue) return;
                     const updated = {
                       ...generalConfig,
                       double_copy_window_ms: value,
@@ -1584,6 +1644,20 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 type="number"
                 value={mcpConfig.port || 38470}
                 onChange={(e) => setMcpConfig({ ...mcpConfig, port: parseInt(e.target.value) || 38470 })}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const currentValue = mcpConfig.port || 38470;
+                  const value = getWheelNextNumber({
+                    rawValue: e.currentTarget.value,
+                    fallback: currentValue,
+                    min: 1024,
+                    max: 65535,
+                    deltaY: e.deltaY,
+                  });
+                  if (value === currentValue) return;
+                  setMcpConfig({ ...mcpConfig, port: value });
+                }}
                 placeholder="38470"
                 className="setting-input"
                 min="1024"
@@ -1684,6 +1758,23 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                         setGeneralConfig(updated);
                         invoke('update_general_config', { config: updated });
                       }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentValue = generalConfig.cleanup_max_items ?? 50000;
+                        const value = getWheelNextNumber({
+                          rawValue: e.currentTarget.value,
+                          fallback: currentValue,
+                          min: 100,
+                          max: 999999,
+                          step: 100,
+                          deltaY: e.deltaY,
+                        });
+                        if (value === currentValue) return;
+                        const updated = { ...generalConfig, cleanup_max_items: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
                       className="setting-input compact"
                     />
                   </div>
@@ -1698,6 +1789,22 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       value={generalConfig.cleanup_max_age_days}
                       onChange={(e) => {
                         const value = Math.max(1, Math.min(3650, parseInt(e.target.value) || 90));
+                        const updated = { ...generalConfig, cleanup_max_age_days: value };
+                        setGeneralConfig(updated);
+                        invoke('update_general_config', { config: updated });
+                      }}
+                      onWheel={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const currentValue = generalConfig.cleanup_max_age_days ?? 90;
+                        const value = getWheelNextNumber({
+                          rawValue: e.currentTarget.value,
+                          fallback: currentValue,
+                          min: 1,
+                          max: 3650,
+                          deltaY: e.deltaY,
+                        });
+                        if (value === currentValue) return;
                         const updated = { ...generalConfig, cleanup_max_age_days: value };
                         setGeneralConfig(updated);
                         invoke('update_general_config', { config: updated });

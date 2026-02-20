@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder};
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
 pub const DEFAULT_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 30;
-pub const LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 2;
+pub const LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 12;
 
 #[derive(Default)]
 pub struct MainWindowLifecycleState {

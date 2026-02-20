@@ -17,6 +17,22 @@
   display: flex;
   align-items: center;
   padding-left: 14px;
+  min-width: 0;
+}
+
+.titlebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.titlebar-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .titlebar-title {
@@ -24,6 +40,10 @@
   color: var(--text-secondary);
   font-weight: 500;
   letter-spacing: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .titlebar-buttons {
@@ -143,6 +163,16 @@
 
 .app.mini-mode .titlebar-drag-area {
   padding-left: 8px;
+}
+
+.app.mini-mode .titlebar-brand {
+  gap: 6px;
+}
+
+.app.mini-mode .titlebar-logo {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
 }
 
 .app.mini-mode .titlebar-title {

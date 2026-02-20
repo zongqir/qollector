@@ -43,6 +43,7 @@ function App() {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
   const widgetEnabled = useAppStore(s => s.widgetEnabled);
   const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
@@ -152,6 +153,13 @@ function App() {
     const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
     if (!isWindowsRuntime) return;
 
+    if (!lowMemoryModeEnabled) {
+      resumeFromMinimize().catch((error) => {
+        console.error('[MemorySuspend] resume check failed:', error);
+      });
+      return;
+    }
+
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         suspendForMinimize();
@@ -165,7 +173,7 @@ function App() {
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [suspendForMinimize, resumeFromMinimize]);
+  }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
 
   // Mini 模式
   const MINI_THRESHOLD = 450;

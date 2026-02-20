@@ -12,10 +12,12 @@
   max-width: 600px;
   display: flex;
   flex-direction: column;
+  min-inline-size: 0;
   background: var(--bg-primary);
   backdrop-filter: saturate(180%) blur(40px);
   -webkit-backdrop-filter: saturate(180%) blur(40px);
   flex-shrink: 0;
+  container-type: inline-size;
 }
 
 .history-stream[style*="width: 100%"] {
@@ -163,6 +165,7 @@
   box-sizing: border-box;
   padding-left: 10px;
   padding-right: 10px;
+  min-width: 0;
 }
 
 /* ========== macOS 风格紧凑卡片 ========== */
@@ -172,6 +175,10 @@
   -webkit-backdrop-filter: blur(12px);
   border-radius: 10px;
   padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid transparent;
@@ -522,6 +529,7 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 5px;
+  min-width: 0;
   color: var(--text-tertiary);
   font-size: 11px;
 }
@@ -533,6 +541,7 @@
 
 .compact-card-time {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -544,12 +553,21 @@
   display: flex;
   gap: 2px;
   align-items: center;
+  margin-left: auto;
+  min-width: 0;
+  flex-shrink: 0;
+  max-width: 0;
+  overflow: hidden;
+  pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: max-width 0.15s ease, opacity 0.15s ease;
 }
 
 .compact-card:hover .compact-card-badges,
+.compact-card:focus-within .compact-card-badges,
 .compact-card-badges:has(.active) {
+  max-width: 180px;
+  pointer-events: auto;
   opacity: 1;
 }
 
@@ -584,9 +602,64 @@
   color: var(--accent-color);
 }
 
+@container (max-width: 520px) {
+  .history-stream-row {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .compact-card {
+    padding: 9px 10px;
+  }
+
+  .compact-card-header {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .badge-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+  }
+
+  .badge-btn svg {
+    width: 9px;
+    height: 9px;
+  }
+}
+
+@container (max-width: 420px) {
+  .badge-btn.badge-dragout {
+    display: none;
+  }
+}
+
+@container (max-width: 360px) {
+  .badge-btn.badge-open {
+    display: none;
+  }
+}
+
+@container (max-width: 320px) {
+  .compact-card-header {
+    flex-wrap: wrap;
+    row-gap: 3px;
+  }
+
+  .compact-card-badges {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
+    max-width: none;
+    overflow: visible;
+  }
+}
+
 .compact-card-body {
   position: relative;
   margin-bottom: 6px;
+  min-width: 0;
 }
 
 .compact-card-text {
@@ -610,6 +683,7 @@
   align-items: flex-start;
   gap: 6px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .compact-link-favicon {
@@ -680,6 +754,7 @@
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 4px;
+  min-width: 0;
 }
 
 .compact-tag {
@@ -689,10 +764,51 @@
   background: rgba(0, 122, 255, 0.14);
   color: var(--text-primary);
   border: 1px solid rgba(0, 122, 255, 0.24);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
   letter-spacing: 0.2px;
   -webkit-font-smoothing: antialiased;
+}
+
+@container (max-width: 280px) {
+  .history-stream-row {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .compact-card {
+    padding: 8px 9px;
+    border-radius: 8px;
+  }
+
+  .compact-card-header {
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .compact-card-badges {
+    gap: 1px;
+  }
+
+  .badge-btn {
+    width: 18px;
+    height: 18px;
+  }
+
+  .badge-btn svg {
+    width: 9px;
+    height: 9px;
+  }
+}
+
+@container (max-width: 240px) {
+  .badge-btn.badge-dragout,
+  .badge-btn.badge-open {
+    display: none;
+  }
 }
 
 .compact-tag.more {
