@@ -937,6 +937,12 @@ function HistoryStream({ style }) {
   }, [shouldUseHoverPreview, clearHoverPreview]);
 
   useEffect(() => {
+    if (selectedItemIds.length > 0) {
+      clearHoverPreview();
+    }
+  }, [selectedItemIds.length, clearHoverPreview]);
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
       // skip when focus is inside an input / textarea / editable
       const tag = e.target.tagName;
