@@ -18,14 +18,16 @@ import {
   AI_TRANSLATE_LANGUAGES,
   isTranslateTask
 } from '../constants/options';
+import { getActionExecutionPreset, getAiActionProfile } from '../constants/actionProfiles';
 import { runPromptAssistantTask } from '../services/promptAssistantService';
 import './AIAssistantPanel.css';
 
 const DEFAULT_TASK = 'summarize';
-const DEFAULT_TONE = 'neutral';
-const DEFAULT_LENGTH = 'medium';
 const DEFAULT_OUTPUT_LANGUAGE = 'auto';
 const COMPACT_LAYOUT_THRESHOLD = 560;
+const DEFAULT_PROFILE = getAiActionProfile(DEFAULT_TASK);
+const DEFAULT_TONE = DEFAULT_PROFILE.defaultTone;
+const DEFAULT_LENGTH = DEFAULT_PROFILE.defaultLength;
 
 function AIAssistantPanel({
   open,
@@ -110,7 +112,14 @@ function AIAssistantPanel({
 
   const handleTaskChange = (nextTask) => {
     if (nextTask === taskType) return;
+    const nextPreset = getActionExecutionPreset(nextTask, 'panel');
     setTaskType(nextTask);
+    if (nextPreset.tone) {
+      setTone(nextPreset.tone);
+    }
+    if (nextPreset.length) {
+      setLength(nextPreset.length);
+    }
     setErrorText('');
     setResultText('');
     setHasExecuted(false);
@@ -122,6 +131,8 @@ function AIAssistantPanel({
     setRunning(true);
     setErrorText('');
     setCopied(false);
+    const executionPreset = getActionExecutionPreset(taskType, 'panel');
+    const actionProfile = getAiActionProfile(taskType);
 
     try {
       const response = await runPromptAssistantTask({
@@ -129,8 +140,8 @@ function AIAssistantPanel({
         input: inputText.trim(),
         uiLanguage: i18n.language,
         outputLanguage,
-        tone,
-        length,
+        tone: actionProfile.supportsTone ? (tone || executionPreset.tone) : null,
+        length: actionProfile.supportsLength ? (length || executionPreset.length) : null,
         extraInstruction: extraInstruction.trim() || null
       });
 

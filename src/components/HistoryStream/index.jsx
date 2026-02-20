@@ -10,6 +10,7 @@ import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
 import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
+import { getActionExecutionPreset } from '../../features/ai-assistant/constants/actionProfiles';
 import { resolveOutputLanguageFromUi } from '../../features/ai-assistant/utils/language';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -19,6 +20,22 @@ const VirtuosoScroller = forwardRef(function VirtuosoScroller(props, ref) {
   const { className = '', ...rest } = props;
   return <div ref={ref} className={`history-stream-scroller ${className}`.trim()} {...rest} />;
 });
+
+function detectClientPlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const raw = (
+    navigator.userAgentData?.platform
+    || navigator.platform
+    || navigator.userAgent
+    || ''
+  ).toLowerCase();
+  if (raw.includes('win')) return 'windows';
+  if (raw.includes('mac')) return 'macos';
+  if (raw.includes('linux')) return 'linux';
+  return 'other';
+}
+
+const SUPPORTS_NATIVE_EXTERNAL_DRAG = ['windows', 'macos'].includes(detectClientPlatform());
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -526,14 +543,15 @@ function HistoryStream({ style }) {
     setBatchAiRunningTask(taskType);
     setBatchAiFeedback(null);
     try {
+      const executionPreset = getActionExecutionPreset(taskType, 'quick-output');
       const response = await runPromptAssistantTask({
         taskType,
         input: batchAiSourceText.trim(),
         uiLanguage: i18n.language,
         outputLanguage: resolveOutputLanguageFromUi(i18n.language),
-        tone: 'neutral',
-        length: 'medium',
-        extraInstruction: null,
+        tone: executionPreset.tone,
+        length: executionPreset.length,
+        extraInstruction: executionPreset.extraInstruction,
       });
 
       const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
@@ -828,6 +846,7 @@ function HistoryStream({ style }) {
   }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
+    if (!SUPPORTS_NATIVE_EXTERNAL_DRAG) return;
     const paths = getExternalFilePaths(item);
     if (paths.length === 0) return;
 
@@ -843,7 +862,7 @@ function HistoryStream({ style }) {
 
   const handleDragStart = useCallback((item, e) => {
     const externalPaths = getExternalFilePaths(item);
-    if (externalPaths.length > 0 && !e.shiftKey) {
+    if (SUPPORTS_NATIVE_EXTERNAL_DRAG && externalPaths.length > 0 && !e.shiftKey) {
       e.preventDefault();
       handleStartExternalDrag(item);
       return;
@@ -1067,6 +1086,7 @@ function HistoryStream({ style }) {
           isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
           timeTick={timeTick}
           onDragStart={handleDragStart}
+          supportsNativeExternalDrag={SUPPORTS_NATIVE_EXTERNAL_DRAG}
           onStartExternalDrag={handleStartExternalDrag}
           onTogglePin={togglePin}
           onToggleFavorite={toggleFavorite}

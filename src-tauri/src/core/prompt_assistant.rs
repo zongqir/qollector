@@ -42,6 +42,15 @@ pub struct PromptAssistantResponse {
     pub effective_output_language: String,
 }
 
+struct TaskPromptProfile {
+    objective: &'static str,
+    differentiation_rule: &'static str,
+    output_contract: String,
+    user_focus_rule: Option<&'static str>,
+    supports_tone: bool,
+    supports_length: bool,
+}
+
 pub fn validate_request(request: &PromptAssistantRequest) -> Result<(), String> {
     if request.input.trim().is_empty() {
         return Err("Input content is empty".to_string());
@@ -74,65 +83,47 @@ pub fn build_prompt_assistant_prompts(
 }
 
 fn build_system_prompt(request: &PromptAssistantRequest, output_locale: &str) -> String {
+    let profile = task_profile(&request.task_type, output_locale);
     let output_language = locale_display_name(output_locale);
-    let tone_rule = tone_instruction(request.tone.as_deref());
-    let length_rule = length_instruction(request.length.as_deref());
-    let (task_rule, output_contract) = match request.task_type {
-        PromptTaskType::Summarize => (
-            "Preserve the source's reasoning order and structural skeleton. Remove ornamental wording while keeping all key facts.",
-            "Return one concise paragraph. Hard cap: 300 Chinese characters or 180 English words. Avoid bullet lists unless the source itself is list-like.",
-        ),
-        PromptTaskType::Rewrite => (
-            "Rewrite the source for better clarity and readability without changing factual meaning.",
-            "Return a polished version suitable for direct reuse. Keep meaning equivalent to the source.",
-        ),
-        PromptTaskType::Extract => (
-            "Ignore surface details and identify the underlying mechanism or core contradiction behind the source.",
-            "Return exactly two sections:\n1) Core Logic/Contradiction: one sentence.\n2) Actionable Principle: one sentence starting with an imperative verb.\nDo not restate examples, anecdotes, or minor facts.",
-        ),
-        PromptTaskType::Translate => (
-            "Translate the source faithfully. Keep names, numbers, code, and URLs unchanged unless translation is required.",
-            "Return translation only, with no added explanation.",
-        ),
-        PromptTaskType::Reply => (
-            "Draft a response that can be sent directly. Keep it relevant and actionable.",
-            "Return a message ready to send as-is.",
-        ),
+    let tone_rule = if profile.supports_tone {
+        tone_instruction(request.tone.as_deref())
+    } else {
+        "Not applicable for this task."
+    };
+    let length_rule = if profile.supports_length {
+        length_instruction(request.length.as_deref())
+    } else {
+        "Not applicable for this task."
     };
 
     format!(
         "You are an AI writing assistant embedded in a desktop productivity app.\n\
-Task rule: {task_rule}\n\
-Output contract: {output_contract}\n\
+Task objective: {objective}\n\
+Strict differentiation rule: {differentiation_rule}\n\
+Output contract (must follow exactly):\n{output_contract}\n\
 Output language: {output_language}\n\
 Tone rule: {tone_rule}\n\
 Length rule: {length_rule}\n\
 Hard rules:\n\
 - Keep all factual details that are present in the source.\n\
 - Do not invent missing facts.\n\
-- Keep the output directly usable.\n\
-- Return only the final answer without meta commentary."
+- Keep names, numbers, code snippets, and URLs accurate.\n\
+- Section headings and labels must match the output language.\n\
+- Return only the final answer.\n\
+- Do not output analysis about your own process.",
+        objective = profile.objective,
+        differentiation_rule = profile.differentiation_rule,
+        output_contract = profile.output_contract,
     )
 }
 
 fn build_user_prompt(request: &PromptAssistantRequest, output_locale: &str) -> String {
+    let profile = task_profile(&request.task_type, output_locale);
     let truncated_input = truncate_with_notice(&request.input, MAX_INPUT_CHARS);
     let mut sections = vec![format!("Source content:\n{}", truncated_input)];
 
-    match request.task_type {
-        PromptTaskType::Summarize => {
-            sections.push(
-                "Focus requirement: keep the original logic flow and compress to essential facts only."
-                    .to_string(),
-            );
-        }
-        PromptTaskType::Extract => {
-            sections.push(
-                "Focus requirement: do not summarize details; infer one reusable principle from the underlying logic."
-                    .to_string(),
-            );
-        }
-        _ => {}
+    if let Some(focus_rule) = profile.user_focus_rule {
+        sections.push(format!("Focus requirement: {}", focus_rule));
     }
 
     if let Some(extra) = request.extra_instruction.as_deref().map(str::trim) {
@@ -152,6 +143,96 @@ fn build_user_prompt(request: &PromptAssistantRequest, output_locale: &str) -> S
     }
 
     sections.join("\n\n")
+}
+
+fn task_profile(task_type: &PromptTaskType, output_locale: &str) -> TaskPromptProfile {
+    match task_type {
+        PromptTaskType::Summarize => TaskPromptProfile {
+            objective:
+                "Preserve the source logic flow and compress it into a concise briefing for fast reuse.",
+            differentiation_rule:
+                "Summary must keep chronology and causal links; it is not allowed to infer hidden mechanisms.",
+            output_contract: summarize_output_contract(output_locale),
+            user_focus_rule: Some(
+                "Keep the original reasoning order and remove ornamental wording only.",
+            ),
+            supports_tone: true,
+            supports_length: true,
+        },
+        PromptTaskType::Rewrite => TaskPromptProfile {
+            objective:
+                "Rewrite for clarity and readability while preserving meaning and factual accuracy.",
+            differentiation_rule:
+                "Rewrite must stay semantically equivalent and should not convert into summary or extraction format.",
+            output_contract: "Return rewritten content only.\nConstraints:\n- Keep paragraph granularity close to the original.\n- Do not add headings, labels, or commentary.".to_string(),
+            user_focus_rule: Some(
+                "Polish wording and structure, but keep named entities, numbers, and constraints unchanged.",
+            ),
+            supports_tone: true,
+            supports_length: true,
+        },
+        PromptTaskType::Extract => TaskPromptProfile {
+            objective:
+                "Ignore surface details and derive the underlying mechanism, core contradiction, and executable principle.",
+            differentiation_rule:
+                "Extraction must not look like a summary; it must abstract and produce an action rule.",
+            output_contract: extract_output_contract(output_locale),
+            user_focus_rule: Some(
+                "Do not summarize details; abstract the hidden mechanism and convert it to action.",
+            ),
+            supports_tone: true,
+            supports_length: true,
+        },
+        PromptTaskType::Translate => TaskPromptProfile {
+            objective:
+                "Translate faithfully into the target language while preserving factual and technical integrity.",
+            differentiation_rule:
+                "Translation must not summarize, explain, or rewrite beyond language conversion.",
+            output_contract: "Return translation only.\nConstraints:\n- No headings.\n- No extra explanation.\n- Keep names, numbers, URLs, and code intact unless translation is explicitly required.".to_string(),
+            user_focus_rule: None,
+            supports_tone: false,
+            supports_length: false,
+        },
+        PromptTaskType::Reply => TaskPromptProfile {
+            objective: "Generate directly sendable response candidates for practical communication.",
+            differentiation_rule:
+                "Reply generation must be actionable and conversational; it must not become summary output.",
+            output_contract: reply_output_contract(output_locale),
+            user_focus_rule: Some(
+                "Prioritize direct usability and relevance to the source context.",
+            ),
+            supports_tone: true,
+            supports_length: true,
+        },
+    }
+}
+
+fn is_zh_output_locale(output_locale: &str) -> bool {
+    output_locale.starts_with("zh")
+}
+
+fn summarize_output_contract(output_locale: &str) -> String {
+    if is_zh_output_locale(output_locale) {
+        "Use this exact markdown structure:\n## 核心事实\n- bullet points only\n## 逻辑脉络\n- bullet points only\n## 最终结论\nOne sentence only\nConstraints:\n- 4 to 7 bullets total across the first two sections.\n- No speculative claims.".to_string()
+    } else {
+        "Use this exact markdown structure:\n## Core Facts\n- bullet points only\n## Logic Flow\n- bullet points only\n## Final Takeaway\nOne sentence only\nConstraints:\n- 4 to 7 bullets total across the first two sections.\n- No speculative claims.".to_string()
+    }
+}
+
+fn extract_output_contract(output_locale: &str) -> String {
+    if is_zh_output_locale(output_locale) {
+        "Use this exact markdown structure:\n## 底层机制\nOne sentence\n## 核心矛盾\nOne sentence in the form \"A vs B\"\n## 可执行原则\n1. Imperative sentence\n2. Imperative sentence\nConstraints:\n- Do not recap anecdotes or minor facts.\n- Each sentence should be concise and decision-oriented.".to_string()
+    } else {
+        "Use this exact markdown structure:\n## Underlying Mechanism\nOne sentence\n## Core Contradiction\nOne sentence in the form \"A vs B\"\n## Actionable Principle\n1. Imperative sentence\n2. Imperative sentence\nConstraints:\n- Do not recap anecdotes or minor facts.\n- Each sentence should be concise and decision-oriented.".to_string()
+    }
+}
+
+fn reply_output_contract(output_locale: &str) -> String {
+    if is_zh_output_locale(output_locale) {
+        "Use this exact markdown structure:\n## 回复方案A\nMessage text\n## 回复方案B\nMessage text\n## 推荐方案\n\"A\" or \"B\" + one sentence reason\nConstraints:\n- Each option must be ready to send as-is.\n- Avoid placeholders such as \"[name]\".".to_string()
+    } else {
+        "Use this exact markdown structure:\n## Reply Option A\nMessage text\n## Reply Option B\nMessage text\n## Recommended\n\"A\" or \"B\" + one sentence reason\nConstraints:\n- Each option must be ready to send as-is.\n- Avoid placeholders such as \"[name]\".".to_string()
+    }
 }
 
 fn resolve_ui_locale(requested_locale: Option<&str>, default_ui_locale: &str) -> String {
@@ -222,7 +303,12 @@ fn detect_primary_locale(input: &str) -> String {
 }
 
 fn tone_instruction(tone: Option<&str>) -> &'static str {
-    match tone.unwrap_or("neutral").trim().to_ascii_lowercase().as_str() {
+    match tone
+        .unwrap_or("neutral")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "professional" => "Use a professional and confident tone.",
         "friendly" => "Use a warm and friendly tone.",
         "direct" => "Be direct and concise.",
@@ -231,9 +317,14 @@ fn tone_instruction(tone: Option<&str>) -> &'static str {
 }
 
 fn length_instruction(length: Option<&str>) -> &'static str {
-    match length.unwrap_or("medium").trim().to_ascii_lowercase().as_str() {
-        "short" => "Keep it compact, around 3-6 lines.",
-        "long" => "Provide a fuller version with more context and detail.",
+    match length
+        .unwrap_or("medium")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "short" => "Keep it compact and high-density.",
+        "long" => "Provide fuller context and richer detail.",
         _ => "Use medium length with balanced detail.",
     }
 }
