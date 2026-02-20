@@ -2,7 +2,7 @@ import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'r
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
-import { Copy, Trash2 } from 'lucide-react';
+import { Check, Copy, Tag, Trash2, X } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import CompactCard from './CompactCard';
@@ -53,6 +53,8 @@ function HistoryStream({ style }) {
   const lastFilterProbeLogAtRef = useRef(0);
   const hasTopTrackerInitRef = useRef(false);
   const prevTopItemIdRef = useRef(null);
+  const batchTagEditorRef = useRef(null);
+  const batchTagSuggestionsRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -68,6 +70,7 @@ function HistoryStream({ style }) {
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
+  const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
@@ -100,6 +103,7 @@ function HistoryStream({ style }) {
   const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const clearSelection = useAppStore(s => s.clearSelection);
+  const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
@@ -126,6 +130,11 @@ function HistoryStream({ style }) {
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [timeTick, setTimeTick] = useState(() => Date.now());
+  const [showBatchTagEditor, setShowBatchTagEditor] = useState(false);
+  const [batchTagInput, setBatchTagInput] = useState('');
+  const [batchTagPending, setBatchTagPending] = useState(false);
+  const [batchTagFeedback, setBatchTagFeedback] = useState(null);
+  const [batchTagActiveSuggestionIndex, setBatchTagActiveSuggestionIndex] = useState(-1);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -186,11 +195,60 @@ function HistoryStream({ style }) {
     ];
   }, [items]);
 
+  const rankedUserTags = useMemo(() => {
+    const statsByTag = new Map();
+    items.forEach((item) => {
+      const rankTimestamp = Math.max(item.updated_at || 0, item.created_at || 0);
+      const uniqueUserTags = new Set(
+        getTags(item.tags).filter(tag => !tag.startsWith('AI:')),
+      );
+      uniqueUserTags.forEach((tag) => {
+        const existing = statsByTag.get(tag);
+        if (existing) {
+          existing.count += 1;
+          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
+          return;
+        }
+        statsByTag.set(tag, { tag, count: 1, lastUsedAt: rankTimestamp });
+      });
+    });
+    return Array.from(statsByTag.values())
+      .sort((a, b) => (
+        b.count - a.count
+        || b.lastUsedAt - a.lastUsedAt
+        || a.tag.localeCompare(b.tag)
+      ))
+      .map(stat => stat.tag);
+  }, [items]);
+
   const filteredTagsList = useMemo(() => {
     if (!tagSearchQuery.trim()) return allTags;
     const query = tagSearchQuery.toLowerCase();
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
+
+  const filteredBatchTagSuggestions = useMemo(() => {
+    const normalizedInput = batchTagInput.trim().toLowerCase();
+    if (!normalizedInput) return rankedUserTags.slice(0, 8);
+
+    const prefixMatches = [];
+    const partialMatches = [];
+    rankedUserTags.forEach((tag) => {
+      const normalizedTag = tag.toLowerCase();
+      if (!normalizedTag.includes(normalizedInput) || normalizedTag === normalizedInput) return;
+      if (normalizedTag.startsWith(normalizedInput)) {
+        prefixMatches.push(tag);
+      } else {
+        partialMatches.push(tag);
+      }
+    });
+    return [...prefixMatches, ...partialMatches].slice(0, 8);
+  }, [rankedUserTags, batchTagInput]);
+
+  const activeBatchTagSuggestion =
+    batchTagActiveSuggestionIndex >= 0
+      ? filteredBatchTagSuggestions[batchTagActiveSuggestionIndex] || null
+      : null;
 
   const handleSelectDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
@@ -273,8 +331,183 @@ function HistoryStream({ style }) {
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange]);
 
+  const closeBatchTagEditor = useCallback(() => {
+    if (batchTagPending) return;
+    setShowBatchTagEditor(false);
+    setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
+  }, [batchTagPending]);
+
+  const openBatchTagEditor = useCallback(() => {
+    if (batchTagPending) return;
+    setBatchTagFeedback(null);
+    setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
+    setShowBatchTagEditor(true);
+  }, [batchTagPending]);
+
+  const applyBatchTag = useCallback(async (tagValue = batchTagInput) => {
+    const normalizedTag = tagValue.trim();
+    if (!normalizedTag || batchTagPending) return;
+
+    setBatchTagPending(true);
+    setBatchTagFeedback(null);
+    try {
+      const result = await addTagToSelectedItems(normalizedTag, filteredItems);
+      if (!result?.ok) {
+        if (result?.reason === 'reserved-prefix') {
+          setBatchTagFeedback({ type: 'error', text: t('multiSelect.addTagReservedPrefix') });
+          return;
+        }
+        if (result?.reason === 'empty-tag') {
+          setBatchTagFeedback({ type: 'error', text: t('multiSelect.addTagEmpty') });
+          return;
+        }
+        setBatchTagFeedback({
+          type: 'error',
+          text: t('multiSelect.addTagFailed', { error: result?.error || 'Unknown error' }),
+        });
+        return;
+      }
+
+      if (Array.isArray(result.updates) && result.updates.length > 0) {
+        const updatesById = new Map(result.updates.map(update => [update.id, update]));
+        setBackendSearchResults((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) return prev;
+          return prev.map((item) => {
+            const updated = updatesById.get(item.id);
+            if (!updated) return item;
+            return {
+              ...item,
+              tags: updated.tags,
+              updated_at: updated.updated_at,
+            };
+          });
+        });
+      }
+
+      if (result.failedCount > 0 && result.updatedCount === 0 && result.unchangedCount === 0) {
+        setBatchTagFeedback({
+          type: 'error',
+          text: t('multiSelect.addTagFailed', {
+            error: result.error || t('multiSelect.addTagAllFailed', { failed: result.failedCount }),
+          }),
+        });
+      } else if (result.failedCount > 0) {
+        setBatchTagFeedback({
+          type: 'warning',
+          text: t('multiSelect.addTagPartial', {
+            updated: result.updatedCount,
+            failed: result.failedCount,
+          }),
+        });
+      } else if (result.updatedCount > 0) {
+        setBatchTagFeedback({
+          type: 'success',
+          text: t('multiSelect.addTagSuccess', {
+            count: result.updatedCount,
+            tag: result.tag,
+          }),
+        });
+      } else {
+        setBatchTagFeedback({ type: 'warning', text: t('multiSelect.addTagNoChanges') });
+      }
+      setBatchTagInput('');
+      setShowBatchTagEditor(false);
+    } catch (error) {
+      setBatchTagFeedback({
+        type: 'error',
+        text: t('multiSelect.addTagFailed', { error: String(error) }),
+      });
+    } finally {
+      setBatchTagPending(false);
+    }
+  }, [addTagToSelectedItems, batchTagInput, batchTagPending, filteredItems, t]);
+
+  const handleBatchTagInputKeyDown = useCallback((e) => {
+    if (e.nativeEvent?.isComposing || e.isComposing) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (filteredBatchTagSuggestions.length === 0) return;
+      e.preventDefault();
+      setBatchTagActiveSuggestionIndex((current) => {
+        if (e.key === 'ArrowDown') {
+          if (current < 0) return 0;
+          return Math.min(current + 1, filteredBatchTagSuggestions.length - 1);
+        }
+        if (current < 0) return filteredBatchTagSuggestions.length - 1;
+        return Math.max(current - 1, 0);
+      });
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeBatchTagSuggestion) {
+        applyBatchTag(activeBatchTagSuggestion);
+        return;
+      }
+      if (!batchTagInput.trim()) return;
+      applyBatchTag();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeBatchTagEditor();
+    }
+  }, [
+    activeBatchTagSuggestion,
+    applyBatchTag,
+    batchTagInput,
+    closeBatchTagEditor,
+    filteredBatchTagSuggestions.length,
+  ]);
+
   // reset keyboard focus when list changes
   useEffect(() => { setFocusedIndex(-1); }, [filteredItems, setFocusedIndex]);
+
+  useEffect(() => {
+    if (selectedItemIds.length > 0) return;
+    setShowBatchTagEditor(false);
+    setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
+  }, [selectedItemIds.length]);
+
+  useEffect(() => {
+    if (!showBatchTagEditor || filteredBatchTagSuggestions.length === 0) {
+      setBatchTagActiveSuggestionIndex(-1);
+      return;
+    }
+    setBatchTagActiveSuggestionIndex((current) => (
+      current >= filteredBatchTagSuggestions.length ? filteredBatchTagSuggestions.length - 1 : current
+    ));
+  }, [showBatchTagEditor, filteredBatchTagSuggestions.length]);
+
+  useEffect(() => {
+    if (!showBatchTagEditor || batchTagActiveSuggestionIndex < 0) return;
+    const activeItem = batchTagSuggestionsRef.current
+      ?.querySelector(`[data-suggestion-index="${batchTagActiveSuggestionIndex}"]`);
+    activeItem?.scrollIntoView?.({ block: 'nearest' });
+  }, [showBatchTagEditor, batchTagActiveSuggestionIndex]);
+
+  useEffect(() => {
+    if (!showBatchTagEditor) return undefined;
+
+    const handleOutsidePointerDown = (event) => {
+      if (!batchTagEditorRef.current?.contains(event.target)) {
+        closeBatchTagEditor();
+      }
+    };
+
+    window.addEventListener('mousedown', handleOutsidePointerDown);
+    return () => window.removeEventListener('mousedown', handleOutsidePointerDown);
+  }, [showBatchTagEditor, closeBatchTagEditor]);
+
+  useEffect(() => {
+    if (!batchTagFeedback) return undefined;
+    const timer = setTimeout(() => {
+      setBatchTagFeedback(null);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [batchTagFeedback]);
 
   useEffect(() => {
     const probe = filterProbeRef.current;
@@ -534,6 +767,23 @@ function HistoryStream({ style }) {
         return;
       }
 
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 't') {
+        if (!historyTagShortcutEnabled) return;
+        e.preventDefault();
+        if (panelMode === 'preview' && selectedItemIds.length === 0) {
+          return;
+        }
+        if (selectedItemIds.length === 0) {
+          const focusedItem = focusedIndex >= 0 && focusedIndex < filteredItems.length
+            ? filteredItems[focusedIndex]
+            : null;
+          if (!focusedItem) return;
+          toggleSelectItem(focusedItem.id);
+        }
+        openBatchTagEditor();
+        return;
+      }
+
       if (selectedItemIds.length === 0 && focusedIndex < 0) return;
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
@@ -550,10 +800,16 @@ function HistoryStream({ style }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     selectedItemIds.length,
+    selectedItemIds,
     deleteSelectedItems,
     copySelectedItemsMerged,
     clearSelection,
+    historyTagShortcutEnabled,
+    panelMode,
     focusedIndex,
+    filteredItems,
+    toggleSelectItem,
+    openBatchTagEditor,
     moveFocusedSelection,
     submitFocusedSelection,
     setFocusedIndex,
@@ -619,6 +875,8 @@ function HistoryStream({ style }) {
     handleRevealInFolder,
     handleTagClick,
   ]);
+
+  const canApplyBatchTag = Boolean(activeBatchTagSuggestion || batchTagInput.trim());
 
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
@@ -688,20 +946,108 @@ function HistoryStream({ style }) {
       )}
 
       {selectedItemIds.length > 0 && (
-        <div className="multi-select-bar">
+        <div
+          className="multi-select-bar"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           <span className="multi-select-count">
             {t('multiSelect.selected', { count: selectedItemIds.length })}
           </span>
           <div className="multi-select-actions">
-            <button className="multi-select-btn copy" onClick={() => copySelectedItemsMerged(filteredItems)}>
+            <button
+              className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showBatchTagEditor) {
+                  closeBatchTagEditor();
+                } else {
+                  openBatchTagEditor();
+                }
+              }}
+              title={t('multiSelect.addTag')}
+            >
+              <Tag size={14} />
+              <span>{t('multiSelect.addTag')}</span>
+            </button>
+            <button
+              className="multi-select-btn copy"
+              onClick={(e) => {
+                e.stopPropagation();
+                copySelectedItemsMerged(filteredItems);
+              }}
+            >
               <Copy size={14} />
               <span>{t('multiSelect.mergeCopy')}</span>
             </button>
-            <button className="multi-select-btn delete" onClick={deleteSelectedItems}>
+            <button
+              className="multi-select-btn delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteSelectedItems();
+              }}
+            >
               <Trash2 size={14} />
               <span>{t('multiSelect.delete')}</span>
             </button>
           </div>
+          {showBatchTagEditor && (
+            <div className="multi-select-tag-editor" ref={batchTagEditorRef}>
+              <div className="multi-select-tag-input-row">
+                <input
+                  type="text"
+                  value={batchTagInput}
+                  onChange={(e) => {
+                    setBatchTagInput(e.target.value);
+                    setBatchTagActiveSuggestionIndex(-1);
+                  }}
+                  onKeyDown={handleBatchTagInputKeyDown}
+                  className="multi-select-tag-input"
+                  placeholder={t('multiSelect.addTagPlaceholder')}
+                  autoFocus
+                />
+                <button
+                  className="multi-select-tag-action confirm"
+                  onClick={() => applyBatchTag(activeBatchTagSuggestion || batchTagInput)}
+                  disabled={!canApplyBatchTag || batchTagPending}
+                  title={t('item.confirmTag')}
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  className="multi-select-tag-action cancel"
+                  onClick={closeBatchTagEditor}
+                  disabled={batchTagPending}
+                  title={t('item.cancelTag')}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              {filteredBatchTagSuggestions.length > 0 && (
+                <div className="multi-select-tag-suggestions" ref={batchTagSuggestionsRef}>
+                  {filteredBatchTagSuggestions.map((tag, index) => (
+                    <button
+                      key={tag}
+                      data-suggestion-index={index}
+                      className={`multi-select-tag-suggestion-item ${batchTagActiveSuggestionIndex === index ? 'active' : ''}`}
+                      onClick={() => applyBatchTag(tag)}
+                      onMouseEnter={() => setBatchTagActiveSuggestionIndex(index)}
+                      disabled={batchTagPending}
+                    >
+                      <Tag size={12} />
+                      <span>{tag}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
+            </div>
+          )}
+          {batchTagFeedback && (
+            <div className={`multi-select-feedback ${batchTagFeedback.type}`}>
+              {batchTagFeedback.text}
+            </div>
+          )}
         </div>
       )}
     </div>

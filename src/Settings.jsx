@@ -56,6 +56,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     copy_pin_shortcut: 'ctrl+shift+c',
     toggle_window_shortcut_enabled: true,
     toggle_window_shortcut: 'alt+x',
+    history_tag_shortcut_enabled: true,
     auto_cleanup_enabled: true,
     cleanup_max_items: 50000,
     cleanup_max_age_days: 90,
@@ -179,6 +180,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     }
     if (platform === 'macos') return 'super+alt+x';
     return 'ctrl+alt+x';
+  };
+
+  const getTagShortcutDisplay = () => {
+    const platform = getShortcutPlatform();
+    return platform === 'macos' ? 'super+t' : 'ctrl+t';
   };
 
   const getReservedShortcutKeys = () => {
@@ -350,6 +356,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       copy_pin_shortcut: 'ctrl+shift+c',
       toggle_window_shortcut_enabled: true,
       toggle_window_shortcut: 'alt+x',
+      history_tag_shortcut_enabled: true,
     });
   };
 
@@ -1263,11 +1270,41 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </button>
                 </div>
               </div>
+              <label className="sg-row setting-toggle-row">
+                <span>{t('settings.shortcuts.tagQuickAdd')}</span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(generalConfig.history_tag_shortcut_enabled)}
+                    onChange={async (e) => {
+                      const saved = await saveShortcutConfig({
+                        ...generalConfig,
+                        history_tag_shortcut_enabled: e.target.checked,
+                      });
+                      if (saved && onConfigChange) onConfigChange();
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <div className="sg-row">
+                <span>{t('settings.shortcuts.tagQuickAddKey')}</span>
+                <div className="shortcut-editor">
+                  <input
+                    type="text"
+                    value={getTagShortcutDisplay()}
+                    className="shortcut-input"
+                    disabled
+                    readOnly
+                  />
+                </div>
+              </div>
             </div>
             {recordingTarget && (
               <small className="setting-hint">{t('settings.shortcuts.recordingHint')}</small>
             )}
             <small className="setting-hint">{t('settings.shortcuts.ctrlShiftCHint')}</small>
+            <small className="setting-hint">{t('settings.shortcuts.tagQuickAddHint')}</small>
             <small className="setting-hint">{t('settings.shortcuts.platformNotice')}</small>
             {shortcutError && (
               <small className="setting-hint">

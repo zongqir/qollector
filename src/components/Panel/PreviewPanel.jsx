@@ -32,9 +32,11 @@ function PreviewPanel() {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const toolbarRef = useRef(null);
+  const toolbarCopyTimerRef = useRef(null);
   const panelRef = useRef(null);
   const contentSelectableRef = useRef(null);
 
@@ -61,6 +63,7 @@ function PreviewPanel() {
   const items = useAppStore(s => s.items);
   const openShareModal = useAppStore(s => s.openShareModal);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
+  const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
   // 备注相关
   const editingNoteId = useAppStore(s => s.editingNoteId);
@@ -228,6 +231,18 @@ function PreviewPanel() {
   }, [item.id]);
 
   useEffect(() => {
+    return () => {
+      if (toolbarCopyTimerRef.current) {
+        clearTimeout(toolbarCopyTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    setCopiedToolbarAction(null);
+  }, [item.id]);
+
+  useEffect(() => {
     setShowTimestampConverted(false);
   }, [item.id]);
 
@@ -370,6 +385,7 @@ function PreviewPanel() {
       if (!historyTagShortcutEnabled || isEditingContent) return;
       if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 't') return;
       if (isEditableElement(e.target)) return;
+      if (selectedItemIds.length > 0) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -390,7 +406,7 @@ function PreviewPanel() {
     return () => {
       window.removeEventListener('keydown', handleQuickTagShortcut, true);
     };
-  }, [historyTagShortcutEnabled, isEditingContent, addingTagItemId, item, startAddTag]);
+  }, [historyTagShortcutEnabled, isEditingContent, addingTagItemId, item, startAddTag, selectedItemIds.length]);
 
   const handleOpen = useCallback(() => {
     if (item.type_ === 'link' || item.type_ === 'file') {
@@ -428,6 +444,22 @@ function PreviewPanel() {
       handleCopyPlainText(item.content, 'preview');
     }
   }, [item.content, handleCopyPlainText]);
+
+  const setToolbarCopiedFeedback = useCallback((actionKey) => {
+    setCopiedToolbarAction(actionKey);
+    if (toolbarCopyTimerRef.current) {
+      clearTimeout(toolbarCopyTimerRef.current);
+    }
+    toolbarCopyTimerRef.current = setTimeout(() => {
+      setCopiedToolbarAction((current) => (current === actionKey ? null : current));
+      toolbarCopyTimerRef.current = null;
+    }, 1100);
+  }, []);
+
+  const runToolbarCopyAction = useCallback(async (actionKey, copyAction) => {
+    await copyAction();
+    setToolbarCopiedFeedback(actionKey);
+  }, [setToolbarCopiedFeedback]);
 
   const renderContent = () => {
     if (isEditingContent && item.type_ !== 'image' && item.type_ !== 'file') {
@@ -669,46 +701,52 @@ function PreviewPanel() {
         ) : (
           <>
             {item.has_raw_formats && item.content && (
-              <button className="preview-tool-btn" onClick={() => handleCopyPlainText(item.content, 'preview')}>
-                <FileText size={14} />
-                <span>{t('item.copyPlainText')}</span>
+              <button
+                className={`preview-tool-btn ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('plain-text', () => handleCopyPlainText(item.content, 'preview'))}
+              >
+                {copiedToolbarAction === 'plain-text' ? <Check size={14} /> : <FileText size={14} />}
+                <span>{copiedToolbarAction === 'plain-text' ? t('item.copied') : t('item.copyPlainText')}</span>
               </button>
             )}
             {isJson && (
-              <button className="preview-tool-btn" onClick={handleFormatJsonCopy}>
-                <Braces size={14} />
-                <span>{t('item.formatJsonCopy')}</span>
+              <button
+                className={`preview-tool-btn ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
+              >
+                {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
+                <span>{copiedToolbarAction === 'json' ? t('item.copied') : t('item.formatJsonCopy')}</span>
               </button>
             )}
             {pureColorPreview && (
               <button
-                className="preview-tool-btn color-format"
-                onClick={() => handleCopyPlainText(pureColorPreview.hex, 'preview')}
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('hex', () => handleCopyPlainText(pureColorPreview.hex, 'preview'))}
                 title={t('item.copyHex')}
               >
-                <Palette size={14} />
+                {copiedToolbarAction === 'hex' ? <Check size={14} /> : <Palette size={14} />}
                 <span>{t('item.copyHex')}</span>
                 <span className="compact-label">HEX</span>
               </button>
             )}
             {pureColorPreview && (
               <button
-                className="preview-tool-btn color-format"
-                onClick={() => handleCopyPlainText(pureColorPreview.rgb, 'preview')}
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('rgb', () => handleCopyPlainText(pureColorPreview.rgb, 'preview'))}
                 title={t('item.copyRgb')}
               >
-                <Palette size={14} />
+                {copiedToolbarAction === 'rgb' ? <Check size={14} /> : <Palette size={14} />}
                 <span>{t('item.copyRgb')}</span>
                 <span className="compact-label">RGB</span>
               </button>
             )}
             {pureColorPreview && (
               <button
-                className="preview-tool-btn color-format"
-                onClick={() => handleCopyPlainText(pureColorPreview.hsl, 'preview')}
+                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
+                onClick={() => runToolbarCopyAction('hsl', () => handleCopyPlainText(pureColorPreview.hsl, 'preview'))}
                 title={t('item.copyHsl')}
               >
-                <Palette size={14} />
+                {copiedToolbarAction === 'hsl' ? <Check size={14} /> : <Palette size={14} />}
                 <span>{t('item.copyHsl')}</span>
                 <span className="compact-label">HSL</span>
               </button>
