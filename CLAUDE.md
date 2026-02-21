@@ -180,15 +180,11 @@ t('error.message', { error: errorMsg })  // 带参数
 
 **发布流程：**
 ```powershell
-# 1. 首次：生成签名密钥对（只需一次）
-.\release.ps1 generate-key
-
-# 2. 构建签名安装包 + 生成 latest.json
-.\release.ps1 build
-
-# 3. 上传到 GitHub Release（脚本会提示具体命令）
-gh release create v0.1.0 release-artifacts\* --title "v0.1.0"
+# 一键发布（自动处理密钥生成、构建签名、上传 GitHub Release）
+.\release.ps1
 ```
+
+首次运行会自动生成签名密钥对并写入 `tauri.conf.json`，后续运行直接构建+上传。需要安装 [gh CLI](https://cli.github.com) 并登录。
 
 **注意：** `pubkey` 在 `generate-key` 时自动写入 `tauri.conf.json`，私钥保存在 `~/.tauri/clipbox.key`，不要提交到仓库。
 
