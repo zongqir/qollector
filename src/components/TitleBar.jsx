@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
-import { SquarePen, Minimize2, Maximize2, X, Pin, Shrink, Expand } from 'lucide-react';
+import { SquarePen, Minus, Square, SquareSquare, X, Pin, Shrink, Expand } from 'lucide-react';
 
 const GLASS_STORAGE_KEY = 'clipbox-glass-opacity';
 const GLASS_DEFAULT = 0.55;
@@ -21,10 +21,39 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
     return saved ? parseFloat(saved) : GLASS_DEFAULT;
   });
   const [showIndicator, setShowIndicator] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const hideTimerRef = useRef(null);
 
   useEffect(() => {
     applyGlassOpacity(glassOpacity);
+  }, []);
+
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    let unlistenResize = null;
+
+    const syncMaximizeState = async () => {
+      try {
+        const maximized = await appWindow.isMaximized();
+        setIsMaximized(maximized);
+      } catch {
+      }
+    };
+
+    void syncMaximizeState();
+    appWindow.onResized(() => {
+      void syncMaximizeState();
+    }).then(unlisten => {
+      unlistenResize = unlisten;
+    }).catch(() => {
+      unlistenResize = null;
+    });
+
+    return () => {
+      if (typeof unlistenResize === 'function') {
+        unlistenResize();
+      }
+    };
   }, []);
 
   const handleWheel = useCallback((e) => {
@@ -99,18 +128,24 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
           className="titlebar-btn minimize-btn"
           title={t('titlebar.minimize')}
         >
-          <Minimize2 size={14} />
+          <Minus size={14} />
         </button>
         {!isMiniMode && (
           <button
             onClick={async () => {
               const appWindow = getCurrentWindow();
-              await appWindow.toggleMaximize();
+              const nextMaximized = !isMaximized;
+              setIsMaximized(nextMaximized);
+              try {
+                await appWindow.toggleMaximize();
+              } catch {
+                setIsMaximized(!nextMaximized);
+              }
             }}
             className="titlebar-btn maximize-btn"
-            title={t('titlebar.maximize')}
+            title={isMaximized ? t('titlebar.restore') : t('titlebar.maximize')}
           >
-            <Maximize2 size={14} />
+            {isMaximized ? <SquareSquare size={14} /> : <Square size={14} />}
           </button>
         )}
         <button
