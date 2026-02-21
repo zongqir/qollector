@@ -579,14 +579,14 @@
 .compact-card.pinned.selected::before,
 .compact-card.favorite.selected::before,
 .compact-card.pinned.favorite.selected::before {
-  width: 3px;
+  width: 1px;
 }
 
 .compact-card.multi-selected::before,
 .compact-card.pinned.multi-selected::before,
 .compact-card.favorite.multi-selected::before,
 .compact-card.pinned.favorite.multi-selected::before {
-  width: 4px;
+  width: 1px;
 }
 
 .compact-card-header {
