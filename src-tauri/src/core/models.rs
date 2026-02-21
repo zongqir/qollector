@@ -116,23 +116,27 @@ impl ClipboardItem {
             return false;
         }
 
-        // 使用 url crate 解析
-        if let Ok(parsed_url) = url::Url::parse(trimmed) {
-            // 必须有scheme（协议）
-            let scheme = parsed_url.scheme();
+        let valid_schemes = ["http", "https", "ftp", "ftps", "ws", "wss"];
 
-            // 只接受常见的网络协议
-            let valid_schemes = ["http", "https", "ftp", "ftps", "ws", "wss"];
+        // 使用 url crate 解析
+        let parsed = url::Url::parse(trimmed).or_else(|_| {
+            // bare domain like "userscloud.com" or "tmp.link/abc"
+            url::Url::parse(&format!("https://{}", trimmed))
+        });
+
+        if let Ok(parsed_url) = parsed {
+            let scheme = parsed_url.scheme();
             if !valid_schemes.contains(&scheme) {
                 return false;
             }
 
-            // 必须有host（域名或IP）
-            if parsed_url.host().is_none() {
-                return false;
+            // must have a host
+            if let Some(host) = parsed_url.host_str() {
+                // bare domain must contain a dot (e.g. "userscloud.com")
+                if host.contains('.') {
+                    return true;
+                }
             }
-
-            return true;
         }
 
         false
