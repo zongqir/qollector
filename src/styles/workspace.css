@@ -642,8 +642,8 @@
 }
 
 .compact-card-badges .badge-btn.badge-color {
-  opacity: 0.9;
-  pointer-events: auto;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .compact-card:hover .compact-card-badges .badge-btn,
@@ -651,6 +651,19 @@
 .compact-card-badges:has(.active) .badge-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+.compact-card:hover .compact-card-badges .badge-btn.badge-color,
+.compact-card:focus-within .compact-card-badges .badge-btn.badge-color,
+.compact-card.multi-selected .compact-card-badges .badge-btn.badge-color,
+.compact-card:has(.compact-card-color-picker) .compact-card-badges .badge-btn.badge-color {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.compact-card:not(:hover):not(:focus-within):not(.multi-selected):not(:has(.compact-card-color-picker)) .compact-card-badges .badge-btn.badge-color {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .badge-btn {
