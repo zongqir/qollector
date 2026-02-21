@@ -49,10 +49,28 @@ impl PlatformDragOut for MacosDragOutBackend {
             valid_paths.push(canonical_path);
         }
 
+        let is_link = matches!(request.operation, DragOutOperation::Link);
+        let drag_paths = if is_link {
+            let temp_dir = std::env::temp_dir().join("clipbox_drag_links");
+            std::fs::create_dir_all(&temp_dir)
+                .map_err(|e| DragOutError::Native(format!("create temp dir: {e}")))?;
+            let mut link_paths = Vec::with_capacity(valid_paths.len());
+            for path in &valid_paths {
+                let name = path.file_name().unwrap_or_default();
+                let link_path = temp_dir.join(name);
+                let _ = std::fs::remove_file(&link_path);
+                std::os::unix::fs::symlink(path, &link_path)
+                    .map_err(|e| DragOutError::Native(format!("symlink: {e}")))?;
+                link_paths.push(link_path);
+            }
+            link_paths
+        } else {
+            valid_paths
+        };
+
         let drag_mode = match request.operation {
-            DragOutOperation::Copy => DragMode::Copy,
+            DragOutOperation::Copy | DragOutOperation::Link => DragMode::Copy,
             DragOutOperation::Move => DragMode::Move,
-            DragOutOperation::Link => DragMode::Copy,
         };
 
         let (tx, rx) = mpsc::sync_channel::<Result<(), DragOutError>>(1);
@@ -64,7 +82,7 @@ impl PlatformDragOut for MacosDragOutBackend {
 
             let result = start_drag(
                 &window,
-                DragItem::Files(valid_paths),
+                DragItem::Files(drag_paths),
                 build_drag_preview_image(),
                 |_result, _cursor_position| {},
                 options,

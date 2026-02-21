@@ -850,7 +850,7 @@ function HistoryStream({ style }) {
     try {
       await invoke('start_native_file_drag', {
         paths,
-        operation: 'copy',
+        operation: 'link',
       });
     } catch (error) {
       console.error('native drag out failed:', error);

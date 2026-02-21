@@ -397,8 +397,6 @@
       "fileioDesc": "无需配置，免费使用，文件保留30天~1年",
       "tmpfiles": "tmpfiles.org",
       "tmpfilesDesc": "无需配置，免费使用，文件保留1小时",
-      "catbox": "catbox.moe",
-      "catboxDesc": "无需配置，免费使用，永久保留",
       "litterbox": "litterbox (catbox)",
       "litterboxDesc": "无需配置，免费使用，文件保留72小时，最大1GB",
       "s3": "自定义 S3 存储",

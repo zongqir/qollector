@@ -397,8 +397,6 @@
       "fileioDesc": "No config needed, free, files retained 30 days to 1 year",
       "tmpfiles": "tmpfiles.org",
       "tmpfilesDesc": "No config needed, free, files retained for 1 hour",
-      "catbox": "catbox.moe",
-      "catboxDesc": "No config needed, free, permanent retention",
       "litterbox": "litterbox (catbox)",
       "litterboxDesc": "No config needed, free, 72-hour retention, up to 1GB",
       "s3": "Custom S3 Storage",

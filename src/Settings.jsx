@@ -92,7 +92,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
   // Share config
   const [shareConfig, setShareConfig] = useState({
-    provider: 'ZeroX0',
+    provider: 'Litterbox',
     s3_config: null,
     force_upload_non_ascii_text: false,
   });
@@ -488,9 +488,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         invoke('get_mcp_port').catch(() => 38470),
         invoke('get_general_config'),
         invoke('get_share_config').catch(() => ({
-          provider: 'ZeroX0',
-          s3_config: null,
-          force_upload_non_ascii_text: false,
+          provider: 'Litterbox',
         }))
       ]);
       const hasLock = await invoke('has_lock_password');
@@ -508,9 +506,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
-      // Migrate old FileIo provider name to ZeroX0 and normalize optional fields.
+      // Migrate old provider names and normalize optional fields.
       const normalizedShareConfig = {
-        provider: share.provider === 'FileIo' ? 'ZeroX0' : share.provider,
+        provider: (share.provider === 'FileIo' || share.provider === 'ZeroX0') ? 'Litterbox' : share.provider,
         s3_config: share.s3_config || null,
         force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
       };
