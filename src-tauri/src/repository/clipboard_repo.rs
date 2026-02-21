@@ -524,7 +524,7 @@ impl ClipboardRepository {
             r#"
             UPDATE clipboard_items SET
                 content = CASE WHEN ? THEN ? ELSE content END,
-                tags = ?, user_note = ?, code_language = ?,
+                tags = ?, user_note = ?, code_language = ?, metadata = ?,
                 is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
             WHERE id = ?
             "#,
@@ -534,6 +534,7 @@ impl ClipboardRepository {
         .bind(&item.tags)
         .bind(&item.user_note)
         .bind(&item.code_language)
+        .bind(&item.metadata)
         .bind(item.is_pinned)
         .bind(item.is_favorite)
         .bind(item.pinned_at)
