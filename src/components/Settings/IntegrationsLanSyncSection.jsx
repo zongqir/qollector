@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   cancelLanPairCode,
   getLanDiscoveredDevices,
@@ -30,7 +31,7 @@ const DEFAULT_CONFIG = {
   pair_lockout_secs: 300,
   request_timeout_ms: 4000,
 };
-function IntegrationsLanSyncSection({ t }) {
+function IntegrationsLanSyncSection({ t, collapsed, onToggle }) {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [identity, setIdentity] = useState({ device_id: '', device_name: '' });
   const [running, setRunning] = useState(false);
@@ -320,7 +321,12 @@ function IntegrationsLanSyncSection({ t }) {
 
   return (
     <div className="settings-content">
-      <div className="setting-group-title section-title">{t('settings.lanSync.title')}</div>
+      <div className="setting-group-title section-title collapsible-title" onClick={onToggle}>
+        {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        {t('settings.lanSync.title')}
+      </div>
+      {!collapsed && (
+      <>
       <div className="setting-group">
         <label className="sg-row setting-toggle-row">
           <span className="toggle-label-group">
@@ -493,6 +499,8 @@ function IntegrationsLanSyncSection({ t }) {
       {message && <small className="setting-status success">{message}</small>}
       {error && <small className="setting-status error">{error}</small>}
       {savingConfig && <small className="setting-hint-block">{t('settings.lanSync.saving')}</small>}
+      </>
+      )}
     </div>
   );
 }

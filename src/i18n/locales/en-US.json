@@ -178,8 +178,16 @@
         "SiliconFlow": "SiliconFlow",
         "Volcano": "Volcano Engine",
         "Alibaba": "Alibaba Cloud",
+        "OpenAI": "OpenAI",
+        "Gemini": "Google Gemini",
         "Custom": "Custom"
-      }
+      },
+      "refreshModels": "Refresh model list",
+      "refreshing": "Fetching...",
+      "refreshFailed": "Failed to fetch models, using defaults",
+      "refreshSuccess": "Model list updated",
+      "manualInput": "Type model name manually",
+      "selectFromList": "Select from list"
     },
     "ocr": {
       "enabled": "Enable image text recognition",
@@ -397,8 +405,6 @@
       "fileioDesc": "No config needed, free, files retained 30 days to 1 year",
       "tmpfiles": "tmpfiles.org",
       "tmpfilesDesc": "No config needed, free, files retained for 1 hour",
-      "catbox": "catbox.moe",
-      "catboxDesc": "No config needed, free, permanent retention",
       "litterbox": "litterbox (catbox)",
       "litterboxDesc": "No config needed, free, 72-hour retention, up to 1GB",
       "s3": "Custom S3 Storage",
@@ -727,5 +733,11 @@
     "close": "Close",
     "button": "Share",
     "rateLimited": "Rate limited. Try again later or switch to another provider."
+  },
+  "beta": {
+    "expired": "Beta Version Expired",
+    "expiredMessage": "This build ({{buildDate}}) expired on {{expiryDate}}. Please download the latest version to continue.",
+    "upgradeHint": "Please contact the developer for the latest version",
+    "daysRemaining": "Beta: {{days}} days remaining"
   }
 }

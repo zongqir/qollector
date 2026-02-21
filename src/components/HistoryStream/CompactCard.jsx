@@ -54,9 +54,9 @@ function CompactCard({
   const { t, i18n } = useTranslation();
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
-  const timelineColor = getTimelineColor(item.created_at);
+  const timelineColor = getTimelineColor(item.updated_at);
   const timeLabel = formatHistoryCardTime(
-    item.created_at,
+    item.updated_at,
     i18n.language,
     timeTick,
     t('item.justNow'),
@@ -168,7 +168,7 @@ function CompactCard({
         '--timeline-color': timelineColor,
         ...(hasCustomCardBackground ? { '--compact-card-accent': cardBackground.accent } : {}),
       }}
-      title={`${formatDate(item.created_at, i18n.language)} · ${getSourceApp(item.metadata)}`}
+      title={`${formatDate(item.updated_at, i18n.language)} · ${getSourceApp(item.metadata)}`}
       draggable="true"
       onDragStart={(e) => onDragStart && onDragStart(item, e)}
     >

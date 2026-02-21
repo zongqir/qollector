@@ -171,44 +171,51 @@ function SearchBar({
                   />
                 </div>
                 <div className="tag-dropdown-list">
-                  {filteredTagsList.length > 0 ? (
-                    <>
-                      {filteredTagsList.slice(0, 20).map(tag => {
-                        const parsed = parseSystemTag(tag, {
-                          sourcePrefix: t('tag.source'),
-                          typePrefix: t('tag.type'),
-                        });
-                        const isAITag = parsed.kind === 'ai';
-                        const isSourceTag = parsed.kind === 'source';
-                        const isTypeTag = parsed.kind === 'type';
-                        const isUserTag = !isAITag && !isSourceTag && !isTypeTag;
-                        const displayTag = parsed.displayText;
-                        return (
-                          <div
-                            key={tag}
-                            onClick={() => onToggleTag(tag)}
-                            className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                          >
-                            <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
-                            <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''} ${isTypeTag ? 'type-tag-text' : ''}`}>
-                              {isTypeTag && <span className="type-badge">T</span>}
-                              {isAITag && <span className="ai-badge">AI</span>}
-                              {isUserTag && <span className="user-badge">M</span>}
-                              {isSourceTag && <span className="source-badge">S</span>}
-                              {displayTag}
-                            </span>
+                  {(() => {
+                    const tagsWithoutType = filteredTagsList.filter(tag => {
+                      const parsed = parseSystemTag(tag, {
+                        sourcePrefix: t('tag.source'),
+                        typePrefix: t('tag.type'),
+                      });
+                      return parsed.kind !== 'type';
+                    });
+                    return tagsWithoutType.length > 0 ? (
+                      <>
+                        {tagsWithoutType.slice(0, 20).map(tag => {
+                          const parsed = parseSystemTag(tag, {
+                            sourcePrefix: t('tag.source'),
+                            typePrefix: t('tag.type'),
+                          });
+                          const isAITag = parsed.kind === 'ai';
+                          const isSourceTag = parsed.kind === 'source';
+                          const isUserTag = !isAITag && !isSourceTag;
+                          const displayTag = parsed.displayText;
+                          return (
+                            <div
+                              key={tag}
+                              onClick={() => onToggleTag(tag)}
+                              className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
+                            >
+                              <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
+                              <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''}`}>
+                                {isAITag && <span className="ai-badge">AI</span>}
+                                {isUserTag && <span className="user-badge">M</span>}
+                                {isSourceTag && <span className="source-badge">S</span>}
+                                {displayTag}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {tagsWithoutType.length > 20 && (
+                          <div className="tag-dropdown-more-hint">
+                            {t('toolbar.moreTagsHint', { count: tagsWithoutType.length - 20 })}
                           </div>
-                        );
-                      })}
-                      {filteredTagsList.length > 20 && (
-                        <div className="tag-dropdown-more-hint">
-                          {t('toolbar.moreTagsHint', { count: filteredTagsList.length - 20 })}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
-                  )}
+                        )}
+                      </>
+                    ) : (
+                      <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
+                    );
+                  })()}
                 </div>
                 {selectedTags.length > 0 && (
                   <div className="tag-dropdown-footer">

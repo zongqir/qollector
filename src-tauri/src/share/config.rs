@@ -11,7 +11,7 @@ pub struct ShareConfig {
 impl Default for ShareConfig {
     fn default() -> Self {
         Self {
-            provider: ShareProvider::ZeroX0,
+            provider: ShareProvider::Litterbox,
             s3_config: None,
             force_upload_non_ascii_text: default_force_upload_non_ascii_text(),
         }
@@ -24,11 +24,11 @@ fn default_force_upload_non_ascii_text() -> bool {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ShareProvider {
-    #[serde(alias = "FileIo")]
-    ZeroX0,
-    Tmpfiles,
-    Catbox,
     Litterbox,
+    Tmpfiles,
+    #[serde(alias = "FileIo")]
+    #[serde(alias = "Catbox")]
+    ZeroX0,
     S3,
 }
 

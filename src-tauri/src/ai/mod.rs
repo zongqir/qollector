@@ -65,6 +65,8 @@ pub enum AIProvider {
     SiliconFlow,
     Volcano,
     Alibaba,
+    OpenAI,
+    Gemini,
     Custom { name: String, base_url: String },
 }
 
@@ -74,20 +76,24 @@ impl AIProvider {
             AIProvider::SiliconFlow => "https://api.siliconflow.cn/v1",
             AIProvider::Volcano => "https://ark.cn-beijing.volces.com/api/v3",
             AIProvider::Alibaba => "https://dashscope.aliyuncs.com/api/v1",
+            AIProvider::OpenAI => "https://api.openai.com/v1",
+            AIProvider::Gemini => "https://generativelanguage.googleapis.com/v1beta/openai",
             AIProvider::Custom { base_url, .. } => base_url,
         }
     }
 
     pub fn name(&self) -> &str {
         match self {
-            AIProvider::SiliconFlow => "硅基流动",
-            AIProvider::Volcano => "火山引擎",
-            AIProvider::Alibaba => "阿里云",
+            AIProvider::SiliconFlow => "SiliconFlow",
+            AIProvider::Volcano => "Volcano",
+            AIProvider::Alibaba => "Alibaba",
+            AIProvider::OpenAI => "OpenAI",
+            AIProvider::Gemini => "Gemini",
             AIProvider::Custom { name, .. } => name,
         }
     }
 
-    /// 获取该供应商支持的模型列表
+    /// Get available models for this provider (fallback list)
     pub fn available_models(&self) -> Vec<String> {
         match self {
             AIProvider::SiliconFlow => vec![
@@ -100,13 +106,24 @@ impl AIProvider {
             ],
             AIProvider::Volcano => vec![
                 "doubao-seed-1-8-251228".to_string(),
-                "ep-20250101-xxxxx".to_string(), // 示例格式
+                "ep-20250101-xxxxx".to_string(),
             ],
             AIProvider::Alibaba => vec![
                 "qwen-turbo".to_string(),
                 "qwen-plus".to_string(),
                 "qwen-max".to_string(),
                 "qwen-max-longcontext".to_string(),
+            ],
+            AIProvider::OpenAI => vec![
+                "gpt-4o".to_string(),
+                "gpt-4o-mini".to_string(),
+                "gpt-4-turbo".to_string(),
+                "gpt-3.5-turbo".to_string(),
+            ],
+            AIProvider::Gemini => vec![
+                "gemini-2.0-flash".to_string(),
+                "gemini-1.5-flash".to_string(),
+                "gemini-1.5-pro".to_string(),
             ],
             AIProvider::Custom { .. } => vec![
                 "gpt-3.5-turbo".to_string(),
@@ -116,12 +133,14 @@ impl AIProvider {
         }
     }
 
-    /// 获取默认模型
+    /// Get default model
     pub fn default_model(&self) -> String {
         match self {
             AIProvider::SiliconFlow => "Qwen/Qwen2.5-7B-Instruct".to_string(),
             AIProvider::Volcano => "doubao-seed-1-8-251228".to_string(),
             AIProvider::Alibaba => "qwen-turbo".to_string(),
+            AIProvider::OpenAI => "gpt-4o-mini".to_string(),
+            AIProvider::Gemini => "gemini-2.0-flash".to_string(),
             AIProvider::Custom { .. } => "gpt-3.5-turbo".to_string(),
         }
     }
@@ -183,6 +202,8 @@ impl AIConfig {
             AIProvider::SiliconFlow => "siliconflow".to_string(),
             AIProvider::Volcano => "volcano".to_string(),
             AIProvider::Alibaba => "alibaba".to_string(),
+            AIProvider::OpenAI => "openai".to_string(),
+            AIProvider::Gemini => "gemini".to_string(),
             AIProvider::Custom { name, .. } => format!("custom_{}", name),
         }
     }
@@ -270,6 +291,50 @@ struct ErrorResponse {
     message: String,
     #[serde(default)]
     data: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModelsResponse {
+    data: Vec<ModelEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModelEntry {
+    id: String,
+}
+
+/// Fetch available models from a provider's /models endpoint (OpenAI-compatible).
+pub async fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>, AIError> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let url = format!("{}/models", base_url.trim_end_matches('/'));
+    println!("[AI] Fetching models from: {}", url);
+
+    let response = client
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let error_text = response.text().await?;
+        println!("[AI] Fetch models error: {}", error_text);
+        return Err(AIError::ApiError(error_text));
+    }
+
+    let body = response.text().await?;
+    let models_resp: ModelsResponse = serde_json::from_str(&body)
+        .map_err(|e| AIError::ApiError(format!("Failed to parse models response: {}", e)))?;
+
+    let mut model_ids: Vec<String> = models_resp.data.into_iter().map(|m| m.id).collect();
+    model_ids.sort();
+
+    println!("[AI] Fetched {} models", model_ids.len());
+    Ok(model_ids)
 }
 
 pub struct AIService {

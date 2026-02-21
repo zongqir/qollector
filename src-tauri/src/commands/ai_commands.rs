@@ -98,8 +98,10 @@ pub fn get_ai_models(provider: String) -> Result<Vec<String>, String> {
         "SiliconFlow" => AIProvider::SiliconFlow,
         "Volcano" => AIProvider::Volcano,
         "Alibaba" => AIProvider::Alibaba,
+        "OpenAI" => AIProvider::OpenAI,
+        "Gemini" => AIProvider::Gemini,
         "Custom" => AIProvider::Custom {
-            name: "自定义".to_string(),
+            name: "Custom".to_string(),
             base_url: "".to_string(),
         },
         _ => return Err("Unknown provider".to_string()),
@@ -114,14 +116,23 @@ pub fn get_default_ai_model(provider: String) -> Result<String, String> {
         "SiliconFlow" => AIProvider::SiliconFlow,
         "Volcano" => AIProvider::Volcano,
         "Alibaba" => AIProvider::Alibaba,
+        "OpenAI" => AIProvider::OpenAI,
+        "Gemini" => AIProvider::Gemini,
         "Custom" => AIProvider::Custom {
-            name: "自定义".to_string(),
+            name: "Custom".to_string(),
             base_url: "".to_string(),
         },
         _ => return Err("Unknown provider".to_string()),
     };
 
     Ok(ai_provider.default_model())
+}
+
+#[tauri::command]
+pub async fn fetch_remote_models(base_url: String, api_key: String) -> Result<Vec<String>, String> {
+    crate::ai::fetch_models(&base_url, &api_key)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -1,6 +1,8 @@
 pub mod ai;
+pub mod beta_guard;
 pub mod ocr;
 pub mod core;
+pub mod crash_log;
 pub mod platform;
 pub mod repository;
 pub mod commands;

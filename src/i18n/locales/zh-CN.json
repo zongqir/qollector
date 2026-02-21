@@ -178,8 +178,16 @@
         "SiliconFlow": "硅基流动",
         "Volcano": "火山引擎",
         "Alibaba": "阿里云",
+        "OpenAI": "OpenAI",
+        "Gemini": "Google Gemini",
         "Custom": "自定义"
-      }
+      },
+      "refreshModels": "刷新模型列表",
+      "refreshing": "正在获取...",
+      "refreshFailed": "获取模型列表失败，使用默认列表",
+      "refreshSuccess": "已更新模型列表",
+      "manualInput": "手动输入模型名",
+      "selectFromList": "从列表选择"
     },
     "ocr": {
       "enabled": "启用图片文字识别",
@@ -397,8 +405,6 @@
       "fileioDesc": "无需配置，免费使用，文件保留30天~1年",
       "tmpfiles": "tmpfiles.org",
       "tmpfilesDesc": "无需配置，免费使用，文件保留1小时",
-      "catbox": "catbox.moe",
-      "catboxDesc": "无需配置，免费使用，永久保留",
       "litterbox": "litterbox (catbox)",
       "litterboxDesc": "无需配置，免费使用，文件保留72小时，最大1GB",
       "s3": "自定义 S3 存储",
@@ -727,5 +733,11 @@
     "close": "关闭",
     "button": "分享",
     "rateLimited": "免费分享次数已耗尽，请稍后再试或切换其他服务商"
+  },
+  "beta": {
+    "expired": "Beta 版本已过期",
+    "expiredMessage": "此构建版本 ({{buildDate}}) 已于 {{expiryDate}} 过期，请下载最新版本继续使用。",
+    "upgradeHint": "请联系开发者获取最新版本",
+    "daysRemaining": "Beta 剩余 {{days}} 天"
   }
 }

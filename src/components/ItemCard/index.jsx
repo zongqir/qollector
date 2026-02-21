@@ -30,7 +30,7 @@ function ItemCard({
   const { t } = useTranslation();
   const isExpanded = expandedItemId === item.id;
   const isCopied = copiedItemId === item.id;
-  const timelineColor = getTimelineColor(item.created_at);
+  const timelineColor = getTimelineColor(item.updated_at);
 
   // 根据状态添加不同的 className
   const cardClasses = [
@@ -43,7 +43,7 @@ function ItemCard({
     <div
       className={cardClasses}
       style={{ '--timeline-color': timelineColor }}
-      title={`${formatDate(item.created_at, language)} · ${getSourceApp(item.metadata)}`}
+      title={`${formatDate(item.updated_at, language)} · ${getSourceApp(item.metadata)}`}
       onClick={(e) => onContentClick(item, e)}
       onDoubleClick={(e) => onContentDoubleClick(item, e, item.type_ === 'image')}
     >

@@ -850,7 +850,7 @@ function HistoryStream({ style }) {
     try {
       await invoke('start_native_file_drag', {
         paths,
-        operation: 'copy',
+        operation: 'link',
       });
     } catch (error) {
       console.error('native drag out failed:', error);
@@ -964,6 +964,9 @@ function HistoryStream({ style }) {
       // skip when focus is inside an input / textarea / editable
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+
+      // skip when focus is inside the collection panel
+      if (e.target.closest('.collection-panel') || document.activeElement?.closest?.('.collection-panel')) return;
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();

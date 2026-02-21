@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
 import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
@@ -10,7 +10,7 @@ import GeneralSection from './components/Settings/GeneralSection';
 import ShortcutsSection from './components/Settings/ShortcutsSection';
 import './Settings.css';
 
-const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'Custom'];
+const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
 
 const OCR_PROVIDERS = ['Local', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
 
@@ -89,15 +89,22 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [clearDataConfirm, setClearDataConfirm] = useState(false);
   const [clearDataResult, setClearDataResult] = useState(null);
   const [clearing, setClearing] = useState(false);
+  const [refreshingModels, setRefreshingModels] = useState(false);
+  const [refreshModelsResult, setRefreshModelsResult] = useState(null);
+  const [modelInputMode, setModelInputMode] = useState('select');
 
   // Share config
   const [shareConfig, setShareConfig] = useState({
-    provider: 'ZeroX0',
+    provider: 'Litterbox',
     s3_config: null,
     force_upload_non_ascii_text: false,
   });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({
+    ai: true, ocr: true, mcp: true, lanSync: true, share: true,
+  });
+  const toggleSection = (key) => setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   const isIntegrationTab = activeTab === 'integrations';
   const isDataSecurityTab = activeTab === 'dataSecurity';
 
@@ -437,11 +444,15 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       if (provider === 'SiliconFlow') return 'siliconflow';
       if (provider === 'Volcano') return 'volcano';
       if (provider === 'Alibaba') return 'alibaba';
+      if (provider === 'OpenAI') return 'openai';
+      if (provider === 'Gemini') return 'gemini';
       return provider.toLowerCase();
     }
     if (provider.SiliconFlow !== undefined) return 'siliconflow';
     if (provider.Volcano !== undefined) return 'volcano';
     if (provider.Alibaba !== undefined) return 'alibaba';
+    if (provider.OpenAI !== undefined) return 'openai';
+    if (provider.Gemini !== undefined) return 'gemini';
     if (provider.Custom) return `custom_${provider.Custom.name}`;
     return 'siliconflow';
   };
@@ -488,9 +499,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         invoke('get_mcp_port').catch(() => 38470),
         invoke('get_general_config'),
         invoke('get_share_config').catch(() => ({
-          provider: 'ZeroX0',
-          s3_config: null,
-          force_upload_non_ascii_text: false,
+          provider: 'Litterbox',
         }))
       ]);
       const hasLock = await invoke('has_lock_password');
@@ -508,9 +517,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
-      // Migrate old FileIo provider name to ZeroX0 and normalize optional fields.
+      // Migrate old provider names and normalize optional fields.
       const normalizedShareConfig = {
-        provider: share.provider === 'FileIo' ? 'ZeroX0' : share.provider,
+        provider: (share.provider === 'FileIo' || share.provider === 'ZeroX0') ? 'Litterbox' : share.provider,
         s3_config: share.s3_config || null,
         force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
       };
@@ -640,6 +649,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     if (aiConfig.current_provider.SiliconFlow !== undefined) return 'SiliconFlow';
     if (aiConfig.current_provider.Volcano !== undefined) return 'Volcano';
     if (aiConfig.current_provider.Alibaba !== undefined) return 'Alibaba';
+    if (aiConfig.current_provider.OpenAI !== undefined) return 'OpenAI';
+    if (aiConfig.current_provider.Gemini !== undefined) return 'Gemini';
     if (aiConfig.current_provider.Custom) return 'Custom';
     return 'SiliconFlow';
   };
@@ -679,10 +690,49 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
       setCurrentAiApiKey(newCreds?.api_key || '');
       setCurrentAiModel(newCreds?.model || defaultModel);
-
+      setModelInputMode('select');
     } catch (error) {
       console.error('Settings operation failed:', error);
       alert(t('error.updateFailed', { error: String(error) }));
+    }
+  };
+
+  const getProviderBaseUrl = () => {
+    const provider = getAiProviderValue();
+    const urls = {
+      SiliconFlow: 'https://api.siliconflow.cn/v1',
+      Volcano: 'https://ark.cn-beijing.volces.com/api/v3',
+      Alibaba: 'https://dashscope.aliyuncs.com/api/v1',
+      OpenAI: 'https://api.openai.com/v1',
+      Gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    };
+    if (provider === 'Custom') return customUrl || '';
+    return urls[provider] || '';
+  };
+
+  const handleRefreshModels = async () => {
+    const baseUrl = getProviderBaseUrl();
+    if (!baseUrl || !currentAiApiKey) {
+      setRefreshModelsResult({ success: false, message: t('settings.ai.refreshFailed') });
+      setTimeout(() => setRefreshModelsResult(null), 3000);
+      return;
+    }
+    setRefreshingModels(true);
+    setRefreshModelsResult(null);
+    try {
+      const models = await invoke('fetch_remote_models', { baseUrl, apiKey: currentAiApiKey });
+      if (models && models.length > 0) {
+        setAvailableModels(models);
+        setRefreshModelsResult({ success: true, message: t('settings.ai.refreshSuccess') });
+      } else {
+        setRefreshModelsResult({ success: false, message: t('settings.ai.refreshFailed') });
+      }
+    } catch (error) {
+      console.error('Fetch remote models failed:', error);
+      setRefreshModelsResult({ success: false, message: t('settings.ai.refreshFailed') });
+    } finally {
+      setRefreshingModels(false);
+      setTimeout(() => setRefreshModelsResult(null), 3000);
     }
   };
 
@@ -901,7 +951,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
             {aiConfig.enabled && (
               <>
-                <div className="setting-group-title section-title">{t('settings.tabs.ai')}</div>
+                <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ai')}>
+                  {collapsedSections.ai ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  {t('settings.tabs.ai')}
+                </div>
+                {!collapsedSections.ai && (
+                <>
                 <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
@@ -1002,17 +1057,61 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   </small>
                 </>
               ) : (
-                <select
-                  value={currentAiModel}
-                  onChange={(e) => setCurrentAiModel(e.target.value)}
-                  className="setting-select"
-                >
-                  {availableModels.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {modelInputMode === 'select' ? (
+                      <select
+                        value={availableModels.includes(currentAiModel) ? currentAiModel : ''}
+                        onChange={(e) => setCurrentAiModel(e.target.value)}
+                        className="setting-select"
+                        style={{ flex: 1 }}
+                      >
+                        {!availableModels.includes(currentAiModel) && currentAiModel && (
+                          <option value="" disabled>{currentAiModel}</option>
+                        )}
+                        {availableModels.map((model) => (
+                          <option key={model} value={model}>{model}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={currentAiModel}
+                        onChange={(e) => setCurrentAiModel(e.target.value)}
+                        placeholder={t('settings.ai.modelPlaceholder')}
+                        className="setting-input"
+                        style={{ flex: 1 }}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setModelInputMode(modelInputMode === 'select' ? 'input' : 'select')}
+                      className="test-btn"
+                      title={modelInputMode === 'select' ? t('settings.ai.manualInput') : t('settings.ai.selectFromList')}
+                      style={{ padding: '6px 8px', minWidth: 'auto', flexShrink: 0, fontSize: '12px' }}
+                    >
+                      {modelInputMode === 'select' ? '✏️' : '📋'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRefreshModels}
+                      disabled={refreshingModels}
+                      className="test-btn"
+                      title={t('settings.ai.refreshModels')}
+                      style={{ padding: '6px 8px', minWidth: 'auto', flexShrink: 0 }}
+                    >
+                      <RefreshCw size={14} className={refreshingModels ? 'spin-animation' : ''} />
+                    </button>
+                  </div>
+                  {refreshModelsResult && (
+                    <small className={`setting-hint ${refreshModelsResult.success ? 'success' : 'error'}`}>
+                      {refreshModelsResult.message}
+                    </small>
+                  )}
+                  {refreshingModels && (
+                    <small className="setting-hint">{t('settings.ai.refreshing')}</small>
+                  )}
+                </>
               )}
             </div>
 
@@ -1028,12 +1127,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
               </>
             )}
+              </>
+            )}
             </div>
           )}
 
           {activeTab === 'integrations' && ocrConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title section-title">{t('settings.tabs.ocr')}</div>
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ocr')}>
+              {collapsedSections.ocr ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.tabs.ocr')}
+            </div>
+            {!collapsedSections.ocr && (
+            <>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.ocr.autoOcr')}</span>
@@ -1145,12 +1251,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               )}
             </div>
+            </>
+            )}
             </div>
           )}
 
           {activeTab === 'integrations' && mcpConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title section-title">{t('settings.tabs.mcp')}</div>
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('mcp')}>
+              {collapsedSections.mcp ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.tabs.mcp')}
+            </div>
+            {!collapsedSections.mcp && (
+            <>
             <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
@@ -1232,6 +1345,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </button>
               </div>
             </div>
+            </>
+            )}
             </div>
           )}
 
@@ -1292,6 +1407,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           {activeTab === 'integrations' && (
             <IntegrationsLanSyncSection
               t={t}
+              collapsed={collapsedSections.lanSync}
+              onToggle={() => toggleSection('lanSync')}
             />
           )}
 
@@ -1304,6 +1421,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               setShareTesting={setShareTesting}
               shareTestResult={shareTestResult}
               setShareTestResult={setShareTestResult}
+              collapsed={collapsedSections.share}
+              onToggle={() => toggleSection('share')}
             />
           )}
         </div>

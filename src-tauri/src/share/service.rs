@@ -8,6 +8,39 @@ use crate::share::ShareError;
 
 const LOCAL_QR_TEXT_LIMIT: usize = 400;
 
+/// Resolve a .lnk shortcut to its target path on Windows.
+/// Returns None if not a .lnk or resolution fails.
+#[cfg(target_os = "windows")]
+fn resolve_lnk_target(path: &std::path::Path) -> Option<std::path::PathBuf> {
+    let ext = path.extension().and_then(|e| e.to_str())?;
+    if !ext.eq_ignore_ascii_case("lnk") {
+        return None;
+    }
+    let escaped = path.to_string_lossy().replace('"', "`\"");
+    let script = format!(
+        "$p=\"{}\"; if (Test-Path $p) {{ $s=(New-Object -ComObject WScript.Shell).CreateShortcut($p); if ($s.TargetPath) {{ Write-Output $s.TargetPath }} }}",
+        escaped
+    );
+    let output = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let target = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if target.is_empty() {
+        None
+    } else {
+        Some(std::path::PathBuf::from(target))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn resolve_lnk_target(_path: &std::path::Path) -> Option<std::path::PathBuf> {
+    None
+}
+
 fn should_use_local_qr_for_text(text: &str, force_upload_non_ascii_text: bool) -> bool {
     if text.is_empty() || text.len() > LOCAL_QR_TEXT_LIMIT {
         return false;
@@ -112,8 +145,17 @@ pub fn prepare_share_data(
                     first_path
                 )));
             }
-            let bytes = std::fs::read(path)?;
-            let filename = path
+            // Resolve .lnk shortcuts to their target on Windows
+            let resolved = resolve_lnk_target(path);
+            let actual_path = resolved.as_deref().unwrap_or(path);
+            if !actual_path.exists() {
+                return Err(ShareError::InvalidConfig(format!(
+                    "Shortcut target not found: {}",
+                    actual_path.display()
+                )));
+            }
+            let bytes = std::fs::read(actual_path)?;
+            let filename = actual_path
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("file")
