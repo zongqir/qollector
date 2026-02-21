@@ -625,8 +625,8 @@
   display: flex;
   gap: 2px;
   align-items: center;
-  width: 118px;
-  min-width: 118px;
+  width: 124px;
+  min-width: 124px;
   flex-shrink: 0;
   overflow: hidden;
   pointer-events: auto;
@@ -790,7 +790,7 @@
   }
 }
 
-@container (max-width: 360px) {
+@container (max-width: 260px) {
   .badge-btn.badge-open {
     display: none;
   }
