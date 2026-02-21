@@ -163,6 +163,37 @@ t('error.message', { error: errorMsg })  // 带参数
 
 ---
 
+## 自动更新 (Updater)
+
+**技术栈：** Tauri v2 updater 插件 + GitHub Releases
+
+**工作原理：**
+- 应用启动 3 秒后静默检查 GitHub Releases 的 `latest.json`
+- 发现新版本时在界面底部显示更新提示条
+- Beta 过期遮罩中提供"检查更新"按钮，可直接下载安装并重启
+
+**相关文件：**
+- `src-tauri/tauri.conf.json` — `plugins.updater` 配置（endpoint、pubkey）
+- `src-tauri/src/main.rs` — 注册 `tauri_plugin_updater`
+- `src/App.jsx` — 前端更新检查逻辑、更新提示条、beta 遮罩更新按钮
+- `release.ps1` — 发布脚本（生成密钥、构建签名、生成 latest.json）
+
+**发布流程：**
+```powershell
+# 1. 首次：生成签名密钥对（只需一次）
+.\release.ps1 generate-key
+
+# 2. 构建签名安装包 + 生成 latest.json
+.\release.ps1 build
+
+# 3. 上传到 GitHub Release（脚本会提示具体命令）
+gh release create v0.1.0 release-artifacts\* --title "v0.1.0"
+```
+
+**注意：** `pubkey` 在 `generate-key` 时自动写入 `tauri.conf.json`，私钥保存在 `~/.tauri/clipbox.key`，不要提交到仓库。
+
+---
+
 ## 代码规范
 
 1. **模块化** - 单文件不超过 800 行，优先拆分

@@ -739,5 +739,15 @@
     "expiredMessage": "此构建版本 ({{buildDate}}) 已于 {{expiryDate}} 过期，请下载最新版本继续使用。",
     "upgradeHint": "请联系开发者获取最新版本",
     "daysRemaining": "Beta 剩余 {{days}} 天"
+  },
+  "update": {
+    "available": "发现新版本 {{version}}",
+    "downloading": "正在下载更新...",
+    "progress": "下载进度: {{percent}}%",
+    "ready": "更新已就绪，点击重启",
+    "failed": "更新失败: {{error}}",
+    "checkNow": "检查更新",
+    "upToDate": "已是最新版本",
+    "checking": "正在检查..."
   }
 }

@@ -31,3 +31,6 @@ node_modules
 target-startup-check/
 
 _external/
+
+# Release artifacts
+release-artifacts/

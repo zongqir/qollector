@@ -3,6 +3,8 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { invoke } from '@tauri-apps/api/core';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
@@ -35,6 +37,12 @@ function App() {
   // Beta expiry state
   const [betaExpired, setBetaExpired] = useState(false);
   const [betaStatus, setBetaStatus] = useState(null);
+
+  // Update state
+  const [updateInfo, setUpdateInfo] = useState(null); // { version, update }
+  const [updateProgress, setUpdateProgress] = useState(null); // null | number (0-100) | 'ready'
+  const [updateError, setUpdateError] = useState(null);
+  const [updateChecking, setUpdateChecking] = useState(false);
 
   // Store state
   const isLocked = useAppStore(s => s.isLocked);
@@ -129,6 +137,61 @@ function App() {
       unlistenBetaExpired.then(unlisten => unlisten());
     };
   }, []);
+
+  // Update check logic
+  const checkForUpdate = useCallback(async (silent = false) => {
+    if (!silent) setUpdateChecking(true);
+    setUpdateError(null);
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateInfo({ version: update.version, update });
+      } else if (!silent) {
+        // No update available — briefly show "up to date" then clear
+        setUpdateInfo(null);
+        setUpdateProgress('upToDate');
+        setTimeout(() => setUpdateProgress(null), 3000);
+      }
+    } catch (err) {
+      console.warn('[Updater] check failed:', err);
+      if (!silent) setUpdateError(String(err));
+    } finally {
+      if (!silent) setUpdateChecking(false);
+    }
+  }, []);
+
+  const downloadAndInstall = useCallback(async () => {
+    if (!updateInfo?.update) return;
+    setUpdateProgress(0);
+    setUpdateError(null);
+    try {
+      await updateInfo.update.downloadAndInstall((event) => {
+        if (event.event === 'Started' && event.data?.contentLength) {
+          setUpdateProgress(0);
+        } else if (event.event === 'Progress') {
+          setUpdateProgress((prev) => {
+            const current = typeof prev === 'number' ? prev : 0;
+            const chunk = event.data?.chunkLength || 0;
+            const total = event.data?.contentLength || 1;
+            return Math.min(current + (chunk / total) * 100, 99);
+          });
+        } else if (event.event === 'Finished') {
+          setUpdateProgress('ready');
+        }
+      });
+      setUpdateProgress('ready');
+    } catch (err) {
+      console.error('[Updater] download failed:', err);
+      setUpdateError(String(err));
+      setUpdateProgress(null);
+    }
+  }, [updateInfo]);
+
+  // Auto-check for updates 3s after startup (silent)
+  useEffect(() => {
+    const timer = setTimeout(() => checkForUpdate(true), 3000);
+    return () => clearTimeout(timer);
+  }, [checkForUpdate]);
 
   // Widget window lifecycle driven by config
   useEffect(() => {
@@ -333,7 +396,35 @@ function App() {
         <p style={{ margin: '0 0 8px', fontSize: 14, opacity: 0.8, textAlign: 'center', maxWidth: 360 }}>
           {t('beta.expiredMessage', { buildDate: betaStatus?.build_date, expiryDate: betaStatus?.expiry_date })}
         </p>
-        <p style={{ margin: '16px 0 0', fontSize: 13, opacity: 0.5 }}>{t('beta.upgradeHint')}</p>
+        <button
+          onClick={async () => {
+            await checkForUpdate(false);
+            if (updateInfo?.update) {
+              await downloadAndInstall();
+              await relaunch();
+            }
+          }}
+          disabled={updateChecking || (typeof updateProgress === 'number')}
+          style={{
+            marginTop: 16, padding: '10px 28px', fontSize: 14, fontWeight: 600,
+            border: 'none', borderRadius: 8, cursor: 'pointer',
+            background: '#3b82f6', color: '#fff',
+            opacity: (updateChecking || typeof updateProgress === 'number') ? 0.6 : 1,
+          }}
+        >
+          {updateChecking ? t('update.checking') :
+           typeof updateProgress === 'number' ? t('update.progress', { percent: Math.round(updateProgress) }) :
+           updateProgress === 'ready' ? t('update.ready') :
+           t('update.checkNow')}
+        </button>
+        {updateError && (
+          <p style={{ margin: '12px 0 0', fontSize: 12, color: '#f87171' }}>
+            {t('update.failed', { error: updateError })}
+          </p>
+        )}
+        {updateProgress === 'upToDate' && (
+          <p style={{ margin: '12px 0 0', fontSize: 13, opacity: 0.6 }}>{t('update.upToDate')}</p>
+        )}
       </div>
     );
   }
@@ -407,6 +498,39 @@ function App() {
         )}
       </div>
       {shouldUseHoverPreview && <HoverPreview />}
+
+      {/* Update notification bar */}
+      {updateInfo && updateProgress !== 'upToDate' && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+          padding: '8px 16px', fontSize: 13,
+          background: 'rgba(59,130,246,0.95)', color: '#fff',
+          backdropFilter: 'blur(8px)',
+        }}>
+          {typeof updateProgress === 'number' ? (
+            <span>{t('update.progress', { percent: Math.round(updateProgress) })}</span>
+          ) : updateProgress === 'ready' ? (
+            <button
+              onClick={() => relaunch()}
+              style={{ background: '#fff', color: '#3b82f6', border: 'none', borderRadius: 6, padding: '4px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+            >
+              {t('update.ready')}
+            </button>
+          ) : (
+            <>
+              <span>{t('update.available', { version: updateInfo.version })}</span>
+              <button
+                onClick={downloadAndInstall}
+                style={{ background: '#fff', color: '#3b82f6', border: 'none', borderRadius: 6, padding: '4px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+              >
+                {t('update.downloading').replace('...', '')}
+              </button>
+            </>
+          )}
+          {updateError && <span style={{ color: '#fecaca', fontSize: 12 }}>{updateError}</span>}
+        </div>
+      )}
     </div>
   );
 }

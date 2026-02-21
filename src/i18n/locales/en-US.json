@@ -739,5 +739,15 @@
     "expiredMessage": "This build ({{buildDate}}) expired on {{expiryDate}}. Please download the latest version to continue.",
     "upgradeHint": "Please contact the developer for the latest version",
     "daysRemaining": "Beta: {{days}} days remaining"
+  },
+  "update": {
+    "available": "New version {{version}} available",
+    "downloading": "Downloading update...",
+    "progress": "Download progress: {{percent}}%",
+    "ready": "Update ready, click to restart",
+    "failed": "Update failed: {{error}}",
+    "checkNow": "Check for Updates",
+    "upToDate": "You're up to date",
+    "checking": "Checking..."
   }
 }

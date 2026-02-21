@@ -37,6 +37,14 @@
       }
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/zongqir/clipbox/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
+  },
   "app": {
     "windows": [
       {
@@ -91,7 +99,8 @@
             "core:path:default",
             "core:app:default",
             "core:tray:default",
-            "core:menu:default"
+            "core:menu:default",
+            "updater:default"
           ]
         },
         {
