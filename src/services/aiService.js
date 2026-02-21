@@ -15,7 +15,6 @@ export const generateAITagsForItem = async (item) => {
       ...item,
       tags: JSON.stringify(newTags),
       code_language: codeLanguage || item.code_language || null,
-      updated_at: Math.floor(Date.now() / 1000)
     };
     await invoke('update_item', { item: updatedItem });
     return newTags;
@@ -26,7 +25,6 @@ export const generateAITagsForItem = async (item) => {
     const updatedItem = {
       ...item,
       code_language: codeLanguage,
-      updated_at: Math.floor(Date.now() / 1000)
     };
     await invoke('update_item', { item: updatedItem });
   }

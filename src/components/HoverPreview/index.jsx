@@ -275,7 +275,7 @@ function HoverPreviewInner() {
     >
       <div className="hover-preview-header">
         <div className="hover-preview-meta-top">
-          <span className="hover-preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
+          <span className="hover-preview-meta-time">{formatDate(item.updated_at, i18n.language)}</span>
           {sourceApp !== 'Unknown' && (
             <span className="hover-preview-meta-source" title={sourceApp}>
               {sourceApp}

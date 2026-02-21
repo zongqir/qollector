@@ -692,7 +692,7 @@ function PreviewPanel() {
               {t('item.timestampConverted')}: {convertedTimestampText}
             </span>
           )}
-          <span className="preview-meta-time">{formatDate(item.created_at, i18n.language)}</span>
+          <span className="preview-meta-time">{formatDate(item.updated_at, i18n.language)}</span>
           <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
         </div>
       )}

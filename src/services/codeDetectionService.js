@@ -19,7 +19,6 @@ export async function detectAndUpdateCodeLanguage(items, updateItemInStore) {
         const updatedItem = {
           ...item,
           code_language: language,
-          updated_at: Math.floor(Date.now() / 1000),
         };
         await invoke('update_item', { item: updatedItem });
         updateItemInStore(item.id, language);
