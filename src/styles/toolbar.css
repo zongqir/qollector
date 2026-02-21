@@ -113,6 +113,12 @@
   color: white;
 }
 
+.toolbar-btn.ai-btn.is-loading {
+  background: var(--accent-light);
+  border-color: rgba(0, 122, 255, 0.32);
+  color: var(--accent-color);
+}
+
 /* OCR按钮 */
 .toolbar-btn.ocr-btn {
   background: var(--ocr-btn-bg);

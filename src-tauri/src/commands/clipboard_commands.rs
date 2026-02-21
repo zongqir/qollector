@@ -1,7 +1,7 @@
-﻿use crate::core::clipboard_manager::ClipboardManager;
+use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::ClipboardItem;
-use serde::Serialize;
 use crate::window_lifecycle::hide_main_window_with_release;
+use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::State;
@@ -35,6 +35,14 @@ pub async fn get_more_items(
         .get_recent_paged(limit, offset)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_item_by_id(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<Option<ClipboardItem>, String> {
+    manager.get_item_by_id(&id).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -400,13 +408,11 @@ pub struct FilePreviewData {
     pub directory_items: Option<Vec<DirectoryItem>>,
 }
 
-const IMAGE_EXTS: &[&str] = &[
-    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico",
-];
+const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "ico"];
 const TEXT_EXTS: &[&str] = &[
-    "txt", "md", "json", "csv", "log", "xml", "yaml", "yml", "toml", "ini", "conf",
-    "js", "ts", "jsx", "tsx", "py", "rs", "go", "java", "c", "cpp", "h", "hpp",
-    "sh", "bat", "ps1", "html", "css", "sql",
+    "txt", "md", "json", "csv", "log", "xml", "yaml", "yml", "toml", "ini", "conf", "js", "ts",
+    "jsx", "tsx", "py", "rs", "go", "java", "c", "cpp", "h", "hpp", "sh", "bat", "ps1", "html",
+    "css", "sql",
 ];
 const AUDIO_EXTS: &[&str] = &["mp3", "wav", "ogg", "flac", "aac", "m4a", "wma"];
 const VIDEO_EXTS: &[&str] = &["mp4", "webm", "mkv", "avi", "mov"];
@@ -472,23 +478,19 @@ pub async fn preview_file(file_path: String) -> Result<FilePreviewData, String> 
                     });
                 }
             }
-            items.sort_by(|a, b| {
-                match (a.is_directory, b.is_directory) {
-                    (true, false) => std::cmp::Ordering::Less,
-                    (false, true) => std::cmp::Ordering::Greater,
-                    _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-                }
+            items.sort_by(|a, b| match (a.is_directory, b.is_directory) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
             });
         }
         ("directory".to_string(), None, false, Some(items))
     } else {
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         let preview_type = classify_extension(ext).to_string();
 
-        let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ {
+        let (text_content, text_truncated) = if preview_type == "text" && file_size <= MAX_TEXT_READ
+        {
             match std::fs::read(path) {
                 Ok(bytes) => {
                     let truncated = bytes.len() > TEXT_PREVIEW_BYTES;

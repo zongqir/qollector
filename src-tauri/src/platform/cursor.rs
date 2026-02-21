@@ -19,14 +19,17 @@ mod platform_impl {
     use super::CursorPosition;
 
     pub fn get_cursor_position_impl() -> CursorPosition {
-        use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
         use windows::Win32::Foundation::POINT;
+        use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
 
         let mut point = POINT { x: 0, y: 0 };
         unsafe {
             let _ = GetCursorPos(&mut point);
         }
-        CursorPosition { x: point.x, y: point.y }
+        CursorPosition {
+            x: point.x,
+            y: point.y,
+        }
     }
 }
 
@@ -63,7 +66,7 @@ mod platform_impl {
     pub fn get_cursor_position_impl() -> CursorPosition {
         use cocoa::base::nil;
         use cocoa::foundation::NSRect;
-        use objc::{msg_send, sel, sel_impl, class};
+        use objc::{class, msg_send, sel, sel_impl};
 
         unsafe {
             // [NSEvent mouseLocation] - class method

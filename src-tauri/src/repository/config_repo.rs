@@ -1,5 +1,6 @@
 use crate::ai::AIConfig;
 use crate::config::GeneralConfig;
+use crate::lan_sync::LanSyncConfig;
 use crate::mcp::McpConfig;
 use crate::ocr::OcrConfig;
 use crate::share::ShareConfig;
@@ -244,6 +245,44 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let config: ShareConfig =
+                serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Save LAN sync config
+    pub async fn save_lan_sync_config(&self, config: &LanSyncConfig) -> Result<(), sqlx::Error> {
+        let value = serde_json::to_string(config).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('lan_sync_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#,
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Load LAN sync config
+    pub async fn load_lan_sync_config(&self) -> Result<Option<LanSyncConfig>, sqlx::Error> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM app_config WHERE key = 'lan_sync_config'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some((value,)) = row {
+            let config: LanSyncConfig =
                 serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {

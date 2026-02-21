@@ -1,7 +1,13 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, X, Tag } from 'lucide-react';
-import { getTags, getSourceApp, getSourceDisplay } from '../../utils/tagHelpers';
+import {
+  getTags,
+  getSourceApp,
+  getSourceDisplay,
+  buildSourceTag,
+  buildTypeTag,
+} from '../../utils/tagHelpers';
 
 function ItemTags({
   item, selectedTags, onTagClick,
@@ -11,19 +17,13 @@ function ItemTags({
   singleRow = false,
 }) {
   const { t } = useTranslation();
-  const typeMap = {
-    text: '类型:文本',
-    image: '类型:图片',
-    file: '类型:文件',
-    link: '类型:链接',
-  };
 
   const allTags = getTags(item.tags);
   const userTags = allTags.filter(tag => !tag.startsWith('AI:'));
   const aiTags = allTags.filter(tag => tag.startsWith('AI:'));
   const visibleAiTags = singleRow ? aiTags : aiTags.slice(0, 3);
   const sourceApp = getSourceApp(item.metadata);
-  const sourceTag = sourceApp !== 'Unknown' ? `来源:${sourceApp}` : null;
+  const sourceTag = buildSourceTag(sourceApp, t);
   const sourceDisplay = sourceTag ? getSourceDisplay(item.metadata) : '';
   const isAdding = addingTagItemId === item.id;
   const suggestionsRef = useRef(null);
@@ -54,18 +54,20 @@ function ItemTags({
   const tagNodes = [];
 
   if (!hideTypeTag && item.type_) {
-    const typeTag = typeMap[item.type_];
-    const displayName = t(`search.typeFilter.${item.type_}`);
-    tagNodes.push(
-      <span
-        key={`type-${item.type_}`}
-        className={`tag type-tag ${selectedTags.includes(typeTag) ? 'selected' : ''}`}
-        onClick={(e) => onTagClick(typeTag, e)}
-        title={t('item.clickToFilterType')}
-      >
-        {displayName}
-      </span>,
-    );
+    const typeTag = buildTypeTag(item.type_, t);
+    if (typeTag) {
+      const displayName = t(`search.typeFilter.${item.type_}`);
+      tagNodes.push(
+        <span
+          key={`type-${item.type_}`}
+          className={`tag type-tag ${selectedTags.includes(typeTag) ? 'selected' : ''}`}
+          onClick={(e) => onTagClick(typeTag, e)}
+          title={t('item.clickToFilterType')}
+        >
+          {displayName}
+        </span>,
+      );
+    }
   }
 
   userTags.forEach((tag, idx) => {

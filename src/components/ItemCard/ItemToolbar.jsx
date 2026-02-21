@@ -79,7 +79,7 @@ function ItemToolbar({
           <button
             onClick={(e) => { e.stopPropagation(); onGenerateAITags(item); }}
             disabled={generatingAI === item.id}
-            className="toolbar-btn ai-btn"
+            className={`toolbar-btn ai-btn ${generatingAI === item.id ? 'is-loading' : ''}`}
             title={generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
           >
             <Sparkles size={14} className="toolbar-btn-icon" />

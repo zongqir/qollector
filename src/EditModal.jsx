@@ -110,10 +110,10 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
       await invoke('add_clipboard_item_manual', {
         content: content.trim(),
         contentType: 'text',
-        source: '快速输入',
+        source: t('quickInput.source'),
         autoFavorite: false,
       });
-      // 自动置顶刚创建的条目
+      // Auto-pin the newly created item.
       const newItems = await invoke('get_recent_items', { limit: 1 });
       if (newItems[0]) {
         const maxPinned = useAppStore.getState().maxPinnedItems;
@@ -125,9 +125,9 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
       setTimeout(() => setSavedToast(false), 1500);
       textareaRef.current?.focus();
     } catch (error) {
-      console.error('保存失败:', error);
+      console.error('Save failed:', error);
     }
-  }, [content]);
+  }, [content, t]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {

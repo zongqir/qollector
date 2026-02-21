@@ -1,6 +1,20 @@
 import { invoke } from '@tauri-apps/api/core';
 import useAppStore from '../../store/useAppStore';
 
+function detectClientPlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const raw = (
+    navigator.userAgentData?.platform
+    || navigator.platform
+    || navigator.userAgent
+    || ''
+  ).toLowerCase();
+  if (raw.includes('win')) return 'windows';
+  if (raw.includes('mac')) return 'macos';
+  if (raw.includes('linux')) return 'linux';
+  return 'other';
+}
+
 function GeneralSection({
   t,
   i18nLanguage,
@@ -10,6 +24,8 @@ function GeneralSection({
   onThemeModeChange,
   getWheelNextNumber,
 }) {
+  const supportsAutoPasteOnDoubleClick = detectClientPlatform() === 'windows';
+
   return (
     <div className="settings-content">
       <div className="setting-group">
@@ -107,8 +123,10 @@ function GeneralSection({
           <span className="toggle-switch">
             <input
               type="checkbox"
-              checked={generalConfig.auto_paste_on_double_click || false}
+              checked={supportsAutoPasteOnDoubleClick && (generalConfig.auto_paste_on_double_click || false)}
+              disabled={!supportsAutoPasteOnDoubleClick}
               onChange={async (e) => {
+                if (!supportsAutoPasteOnDoubleClick) return;
                 const checked = e.target.checked;
                 const updated = { ...generalConfig, auto_paste_on_double_click: checked };
                 setGeneralConfig(updated);

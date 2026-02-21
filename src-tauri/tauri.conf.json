@@ -1,5 +1,5 @@
 {
-  "productName": "ClipBox",
+  "productName": "PasteHarbor",
   "version": "0.1.0",
   "identifier": "com.clipbox.app",
   "build": {
@@ -10,7 +10,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/64x64.png",
@@ -19,11 +19,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "ClipBox Team",
-    "copyright": "Copyright (c) 2024-2026 ClipBox Team",
+    "publisher": "PasteHarbor Team",
+    "copyright": "Copyright (c) 2024-2026 PasteHarbor Team",
     "category": "Utility",
     "shortDescription": "Modern cross-platform clipboard manager",
-    "longDescription": "ClipBox is a modern, cross-platform clipboard manager built with Rust and React. Features include clipboard history, AI-powered tagging, OCR support, and MCP integration.",
+    "longDescription": "PasteHarbor is a modern, cross-platform clipboard manager built with Rust and React. Features include clipboard history, AI-powered tagging, OCR support, and MCP integration.",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -41,7 +41,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ClipBox",
+        "title": "PasteHarbor",
         "width": 800,
         "height": 600,
         "resizable": true,
@@ -81,6 +81,7 @@
             "core:window:allow-set-focus",
             "core:window:allow-hide",
             "core:window:allow-is-visible",
+            "core:window:allow-is-maximized",
             "core:window:allow-is-minimized",
             "global-shortcut:allow-register",
             "global-shortcut:allow-unregister",

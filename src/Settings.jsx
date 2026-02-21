@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
+import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
 import IntegrationsShareSection from './components/Settings/IntegrationsShareSection';
 import GeneralSection from './components/Settings/GeneralSection';
 import ShortcutsSection from './components/Settings/ShortcutsSection';
@@ -844,6 +845,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       setAiConfig(updated);
                       try {
                         await invoke('update_ai_config', { config: updated });
+                        if (onConfigChange) onConfigChange();
                       } catch (error) {
                         console.error('save ai config failed:', error);
                       }
@@ -1205,7 +1207,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <pre className="code-block">
 {`{
   "mcpServers": {
-    "clipbox": {
+    "pasteharbor": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }
@@ -1215,7 +1217,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   onClick={() => {
                     const config = `{
   "mcpServers": {
-    "clipbox": {
+    "pasteharbor": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }
@@ -1284,6 +1286,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               lockSuccess={lockSuccess}
               setLockSuccess={setLockSuccess}
               setLockHasPassword={setLockHasPassword}
+            />
+          )}
+
+          {activeTab === 'integrations' && (
+            <IntegrationsLanSyncSection
+              t={t}
             />
           )}
 

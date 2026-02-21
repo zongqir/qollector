@@ -1,8 +1,8 @@
+use chrono::{Local, TimeZone, Timelike};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
-use chrono::Timelike;
 
 // System prompts configuration (embedded in EXE)
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
@@ -293,9 +293,13 @@ impl AIService {
         content: &str,
         language: &str,
     ) -> Result<(Vec<String>, Option<String>), AIError> {
+        if !self.config.enabled {
+            return Ok((Vec::new(), None));
+        }
+
         let api_key = self.config.get_current_api_key();
 
-        // Only try if API key exists, don't check enabled flag
+        // Only try if API key exists.
         if api_key.is_empty() {
             return Ok((Vec::new(), None));
         }
@@ -432,7 +436,10 @@ impl AIService {
                 .take(MAX_AI_TAGS) // Keep order, but hard-cap to avoid runaway output
                 .collect();
 
-            println!("Parsed tags: {:?}, code_language: {:?}", tags, code_language);
+            println!(
+                "Parsed tags: {:?}, code_language: {:?}",
+                tags, code_language
+            );
             Ok((tags, code_language))
         } else {
             Ok((Vec::new(), None))
@@ -446,6 +453,10 @@ impl AIService {
         max_tokens: u32,
         temperature: f32,
     ) -> Result<String, AIError> {
+        if !self.config.enabled {
+            return Err(AIError::ConfigError("AI feature is disabled".to_string()));
+        }
+
         let api_key = self.config.get_current_api_key();
         if api_key.is_empty() {
             return Err(AIError::ConfigError("API key is empty".to_string()));
@@ -522,7 +533,14 @@ impl AIService {
         items: &[crate::core::models::ClipboardItem],
         language: &str,
     ) -> Result<String, AIError> {
-        println!("[Timeline AI] Starting summary generation for {} items", items.len());
+        if !self.config.enabled {
+            return Err(AIError::ConfigError("AI feature is disabled".to_string()));
+        }
+
+        println!(
+            "[Timeline AI] Starting summary generation for {} items",
+            items.len()
+        );
 
         let api_key = self.config.get_current_api_key();
 
@@ -535,7 +553,9 @@ impl AIService {
         let mut timeline_data = String::new();
         for item in items {
             let timestamp = item.updated_at;
-            let hour = chrono::DateTime::from_timestamp(timestamp, 0)
+            let hour = Local
+                .timestamp_opt(timestamp, 0)
+                .single()
                 .map(|dt| dt.hour())
                 .unwrap_or(0);
 
@@ -603,7 +623,10 @@ impl AIService {
         }
 
         let response_text = response.text().await?;
-        println!("[Timeline AI] Response received, length: {} chars", response_text.len());
+        println!(
+            "[Timeline AI] Response received, length: {} chars",
+            response_text.len()
+        );
 
         let chat_response: ChatResponse = serde_json::from_str(&response_text)
             .map_err(|e| AIError::ApiError(format!("Failed to parse response: {}", e)))?;

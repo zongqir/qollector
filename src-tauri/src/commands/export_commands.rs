@@ -106,7 +106,7 @@ fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     use sha2::{Digest, Sha256};
 
     if data.len() < 20 || &data[..8] != MAGIC {
-        return Err("不是有效的 ClipBox 加密文件".to_string());
+        return Err("不是有效的 PasteHarbor 加密文件".to_string());
     }
 
     let mut hasher = Sha256::new();
@@ -137,7 +137,7 @@ pub async fn export_data(
     // 弹出保存对话框
     let default_ext = if password.is_some() { "clipbox" } else { "zip" };
     let filter_name = if password.is_some() {
-        "ClipBox Encrypted"
+        "PasteHarbor Encrypted"
     } else {
         "ZIP Archive"
     };
@@ -274,7 +274,7 @@ pub async fn import_data(
         std::path::PathBuf::from(p)
     } else {
         rfd::FileDialog::new()
-            .add_filter("ClipBox Files", &["zip", "clipbox"])
+            .add_filter("PasteHarbor Files", &["zip", "clipbox"])
             .pick_file()
             .ok_or_else(|| "CANCELLED".to_string())?
     };
@@ -380,6 +380,9 @@ pub async fn import_data(
             created_at: ei.created_at,
             updated_at: ei.updated_at,
             has_raw_formats: false,
+            content_truncated: false,
+            ocr_truncated: false,
+            content_updated: false,
         };
 
         match manager.insert_item_if_not_exists(&item).await {
@@ -417,9 +420,7 @@ pub async fn import_data(
 }
 
 #[tauri::command]
-pub async fn clear_all_data(
-    manager: State<'_, Arc<ClipboardManager>>,
-) -> Result<(), String> {
+pub async fn clear_all_data(manager: State<'_, Arc<ClipboardManager>>) -> Result<(), String> {
     manager
         .clear_all_data()
         .await

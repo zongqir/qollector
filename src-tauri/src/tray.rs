@@ -9,7 +9,8 @@ use tauri::{
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::low_memory_mode::AppExitState;
 use crate::window_lifecycle::{
-    cancel_main_window_release, ensure_main_window, hide_main_window_with_release, MAIN_WINDOW_LABEL,
+    cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
+    MAIN_WINDOW_LABEL,
 };
 
 /// Shared tray language state so menu event handlers always use the latest language.
@@ -66,13 +67,55 @@ fn detect_os_language() -> Option<String> {
 fn t<'a>(key: &'a str, lang: &str) -> &'a str {
     let is_zh = lang.starts_with("zh");
     match key {
-        "toggle" => if is_zh { "显示 / 隐藏" } else { "Show / Hide" },
-        "settings" => if is_zh { "设置" } else { "Settings" },
-        "pause" => if is_zh { "暂停监听" } else { "Pause Monitoring" },
-        "resume" => if is_zh { "恢复监听" } else { "Resume Monitoring" },
-        "quit" => if is_zh { "退出" } else { "Quit" },
-        "tooltip" => if is_zh { "ClipBox" } else { "ClipBox" },
-        "tooltip_paused" => if is_zh { "ClipBox (已暂停)" } else { "ClipBox (Paused)" },
+        "toggle" => {
+            if is_zh {
+                "显示 / 隐藏"
+            } else {
+                "Show / Hide"
+            }
+        }
+        "settings" => {
+            if is_zh {
+                "设置"
+            } else {
+                "Settings"
+            }
+        }
+        "pause" => {
+            if is_zh {
+                "暂停监听"
+            } else {
+                "Pause Monitoring"
+            }
+        }
+        "resume" => {
+            if is_zh {
+                "恢复监听"
+            } else {
+                "Resume Monitoring"
+            }
+        }
+        "quit" => {
+            if is_zh {
+                "退出"
+            } else {
+                "Quit"
+            }
+        }
+        "tooltip" => {
+            if is_zh {
+                "PasteHarbor"
+            } else {
+                "PasteHarbor"
+            }
+        }
+        "tooltip_paused" => {
+            if is_zh {
+                "PasteHarbor (已暂停)"
+            } else {
+                "PasteHarbor (Paused)"
+            }
+        }
         _ => key,
     }
 }
@@ -106,10 +149,18 @@ fn load_tray_icon(app: &AppHandle, is_paused: bool) -> Image<'static> {
 }
 
 /// Build a tray menu for the given language and pause state.
-fn build_tray_menu(app: &AppHandle, lang: &str, is_paused: bool) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+fn build_tray_menu(
+    app: &AppHandle,
+    lang: &str,
+    is_paused: bool,
+) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let show_hide = MenuItemBuilder::with_id("toggle", t("toggle", lang)).build(app)?;
     let settings = MenuItemBuilder::with_id("settings", t("settings", lang)).build(app)?;
-    let pause_text = if is_paused { t("resume", lang) } else { t("pause", lang) };
+    let pause_text = if is_paused {
+        t("resume", lang)
+    } else {
+        t("pause", lang)
+    };
     let pause = MenuItemBuilder::with_id("pause", pause_text).build(app)?;
     let quit = MenuItemBuilder::with_id("quit", t("quit", lang)).build(app)?;
 
@@ -123,7 +174,10 @@ fn build_tray_menu(app: &AppHandle, lang: &str, is_paused: bool) -> tauri::Resul
         .build()
 }
 
-pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_tray(
+    app: &AppHandle,
+    config_language: Option<&str>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let lang = match config_language {
         Some(l) if !l.is_empty() => l.to_string(),
         _ => get_system_language(),
@@ -195,7 +249,11 @@ pub fn setup_tray(app: &AppHandle, config_language: Option<&str>) -> Result<(), 
                             if let Ok(new_menu) = build_tray_menu(app, &current_lang, new_paused) {
                                 let _ = tray.set_menu(Some(new_menu));
                             }
-                            let tooltip = if new_paused { t("tooltip_paused", &current_lang) } else { t("tooltip", &current_lang) };
+                            let tooltip = if new_paused {
+                                t("tooltip_paused", &current_lang)
+                            } else {
+                                t("tooltip", &current_lang)
+                            };
                             let _ = tray.set_tooltip(Some(tooltip));
 
                             let _ = tray.set_icon(Some(load_tray_icon(app, new_paused)));
@@ -239,11 +297,17 @@ pub fn update_tray_language(app: &AppHandle, lang: &str) {
         .unwrap_or(false);
 
     // Rebuild and replace the entire menu
-    let Some(tray) = app.tray_by_id("main") else { return };
+    let Some(tray) = app.tray_by_id("main") else {
+        return;
+    };
     if let Ok(new_menu) = build_tray_menu(app, lang, is_paused) {
         let _ = tray.set_menu(Some(new_menu));
     }
-    let tooltip = if is_paused { t("tooltip_paused", lang) } else { t("tooltip", lang) };
+    let tooltip = if is_paused {
+        t("tooltip_paused", lang)
+    } else {
+        t("tooltip", lang)
+    };
     let _ = tray.set_tooltip(Some(tooltip));
 }
 

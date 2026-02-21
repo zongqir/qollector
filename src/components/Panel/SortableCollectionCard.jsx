@@ -12,6 +12,7 @@ function SortableCollectionCard({
   onClick,
   onDoubleClick,
   onOpenItem,
+  onSetCardBackground,
 }) {
   const {
     attributes,
@@ -40,6 +41,7 @@ function SortableCollectionCard({
         onClick={onClick}
         onDoubleClick={onDoubleClick}
         onOpenItem={onOpenItem}
+        onSetCardBackground={onSetCardBackground}
       />
     </div>
   );

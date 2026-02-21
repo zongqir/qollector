@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
-import { getTags } from '../utils/tagHelpers';
+import { getTags, hasReservedTagPrefix } from '../utils/tagHelpers';
+import {
+  getCardBackgroundIdFromMetadata,
+  normalizeCardBackgroundId,
+  withCardBackgroundInMetadata,
+} from '../utils/cardBackgrounds';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
@@ -9,11 +14,15 @@ import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 30;
 const MAX_ITEMS_IN_MEMORY = 150;
+const LOW_MEMORY_PAGE_SIZE = 20;
+const LOW_MEMORY_MAX_ITEMS_IN_MEMORY = 80;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const HISTORY_SNAPSHOT_KEY = 'clipbox-history-snapshot-v1';
 const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
 const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
 const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
+const MANUAL_ENTRY_SOURCE = 'Quick Input';
+const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -23,11 +32,26 @@ const normalizeCopyFeedbackSource = (source) => {
   const normalized = source.trim().toLowerCase();
   return COPY_FEEDBACK_SOURCES.has(normalized) ? normalized : 'global';
 };
-const RESERVED_TAG_PREFIXES = ['ai:', '来源:', '类型:', 'source:', 'type:', '鏉ユ簮:', '绫诲瀷:'];
-const hasReservedTagPrefix = (tag) => {
-  const normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
-  return RESERVED_TAG_PREFIXES.some(prefix => normalized.startsWith(prefix));
+const detectClientPlatform = () => {
+  if (typeof navigator === 'undefined') return 'other';
+  const raw = (
+    navigator.userAgentData?.platform
+    || navigator.platform
+    || navigator.userAgent
+    || ''
+  ).toLowerCase();
+  if (raw.includes('win')) return 'windows';
+  if (raw.includes('mac')) return 'macos';
+  if (raw.includes('linux')) return 'linux';
+  return 'other';
 };
+const SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK = detectClientPlatform() === 'windows';
+const getItemsMemoryCap = (lowMemoryModeEnabled) => (
+  lowMemoryModeEnabled ? LOW_MEMORY_MAX_ITEMS_IN_MEMORY : MAX_ITEMS_IN_MEMORY
+);
+const getItemsPageSize = (lowMemoryModeEnabled) => (
+  lowMemoryModeEnabled ? LOW_MEMORY_PAGE_SIZE : PAGE_SIZE
+);
 
 const summarizeItemsForMemory = (items) => {
   let totalContentChars = 0;
@@ -98,12 +122,19 @@ const truncateText = (value, limit) => {
 
 const toHistorySnapshotItem = (item) => {
   if (!item || !item.id) return null;
+  const contentTruncatedInSnapshot = typeof item.content === 'string'
+    && item.content.length > HISTORY_SNAPSHOT_MAX_CONTENT_CHARS;
+  const ocrTruncatedInSnapshot = typeof item.ocr_text === 'string'
+    && item.ocr_text.length > HISTORY_SNAPSHOT_MAX_OCR_CHARS;
   return {
     ...item,
     original_content: '',
     embedding: null,
     content: truncateText(item.content, HISTORY_SNAPSHOT_MAX_CONTENT_CHARS),
     ocr_text: truncateText(item.ocr_text, HISTORY_SNAPSHOT_MAX_OCR_CHARS),
+    content_truncated: Boolean(item.content_truncated || contentTruncatedInSnapshot),
+    ocr_truncated: Boolean(item.ocr_truncated || ocrTruncatedInSnapshot),
+    content_updated: false,
   };
 };
 
@@ -144,6 +175,44 @@ const clearHistorySnapshot = () => {
   } catch (error) {
     console.warn('[HistorySnapshot] clear failed:', error);
   }
+};
+
+const itemNeedsHydration = (item) => (
+  Boolean(item?.content_truncated || item?.ocr_truncated)
+);
+
+const fetchItemByIdSafe = async (id) => {
+  if (!id) return null;
+  try {
+    return await invoke('get_item_by_id', { id });
+  } catch (error) {
+    console.warn('[ItemHydration] fetch failed:', error);
+    return null;
+  }
+};
+
+const hydrateItemIfNeeded = async (item) => {
+  if (!item || !item.id || !itemNeedsHydration(item)) return item;
+  const full = await fetchItemByIdSafe(item.id);
+  return full || item;
+};
+
+const hydrateItemsIfNeeded = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) return [];
+  const uniqueById = new Map();
+  items.forEach((item) => {
+    if (!item?.id || uniqueById.has(item.id)) return;
+    uniqueById.set(item.id, item);
+  });
+
+  const hydratedById = new Map();
+  await Promise.all(Array.from(uniqueById.values()).map(async (item) => {
+    if (!itemNeedsHydration(item)) return;
+    const full = await fetchItemByIdSafe(item.id);
+    if (full?.id) hydratedById.set(full.id, full);
+  }));
+
+  return items.map(item => hydratedById.get(item.id) || item);
 };
 
 const initialHistorySnapshot = readHistorySnapshot();
@@ -272,6 +341,20 @@ const useAppStore = create((set, get) => ({
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
       set({ panelMode: 'preview', previewItem: item, timelineItems: [], timelineSummary: null });
+      if (itemNeedsHydration(item)) {
+        const targetId = item.id;
+        hydrateItemIfNeeded(item)
+          .then((fullItem) => {
+            if (!fullItem?.id || fullItem.id !== targetId) return;
+            set((state) => {
+              if (state.panelMode !== 'preview' || state.previewItem?.id !== targetId) return {};
+              return { previewItem: fullItem };
+            });
+          })
+          .catch((error) => {
+            console.warn('[ItemHydration] preview hydration failed:', error);
+          });
+      }
     } else if (mode === 'timeline') {
       set({ panelMode: 'timeline', previewItem: null });
       // Auto-load timeline data when entering timeline mode
@@ -394,8 +477,9 @@ const useAppStore = create((set, get) => ({
     const requestSeq = ++loadItemsRequestSeq;
     console.log('[Perf:Store] loadItems START at', performance.now().toFixed(1), 'ms');
     try {
+      const pageSize = getItemsPageSize(get().lowMemoryModeEnabled);
       console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
-      const result = await getRecentItemsLight(PAGE_SIZE);
+      const result = await getRecentItemsLight(pageSize);
       console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
       if (requestSeq !== loadItemsRequestSeq) {
         console.log('[Perf:Store] drop stale loadItems result before merge', { requestSeq, latest: loadItemsRequestSeq });
@@ -408,14 +492,14 @@ const useAppStore = create((set, get) => ({
       console.log('[Perf:Store] Setting items state at', performance.now().toFixed(1), 'ms');
       set((state) => ({
         items: mergedItems,
-        hasMore: result.length >= PAGE_SIZE,
+        hasMore: result.length >= pageSize,
         itemsRevision: state.itemsRevision + 1,
       }));
       persistHistorySnapshot(mergedItems);
 
       logItemsMemoryProbe('loadItems', mergedItems, {
         fetched: result.length,
-        pageSize: PAGE_SIZE,
+        pageSize,
       });
 
       console.log('[Perf:Store] Calling detectAndUpdateCodeLanguage at', performance.now().toFixed(1), 'ms');
@@ -428,7 +512,7 @@ const useAppStore = create((set, get) => ({
         }));
       });
 
-      if (!loading) {
+      if (!loading && get().aiEnabled) {
         if (requestSeq !== loadItemsRequestSeq) return;
         console.log('[Perf:Store] Calling autoGenerateAITagsSvc at', performance.now().toFixed(1), 'ms');
         autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
@@ -453,24 +537,26 @@ const useAppStore = create((set, get) => ({
   },
 
   loadMore: async () => {
-    const { hasMore, loadingMore, items, itemsRevision } = get();
+    const { hasMore, loadingMore, items, itemsRevision, lowMemoryModeEnabled } = get();
     if (!hasMore || loadingMore) return;
     set({ loadingMore: true });
     const requestOffset = items.length;
     const requestRevision = itemsRevision;
+    const pageSize = getItemsPageSize(lowMemoryModeEnabled);
+    const memoryCap = getItemsMemoryCap(lowMemoryModeEnabled);
     try {
-      const more = await getMoreItems(PAGE_SIZE, requestOffset);
+      const more = await getMoreItems(pageSize, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
       let mergedItemsSnapshot = null;
       set((state) => {
         let merged = mergeUniqueById(state.items, more);
-        if (merged.length > MAX_ITEMS_IN_MEMORY) {
-          merged = merged.slice(0, MAX_ITEMS_IN_MEMORY);
+        if (merged.length > memoryCap) {
+          merged = merged.slice(0, memoryCap);
         }
         mergedItemsSnapshot = merged;
         return {
           items: merged,
-          hasMore: more.length >= PAGE_SIZE && merged.length < MAX_ITEMS_IN_MEMORY,
+          hasMore: more.length >= pageSize && merged.length < memoryCap,
         };
       });
       if (mergedItemsSnapshot) {
@@ -478,8 +564,9 @@ const useAppStore = create((set, get) => ({
         logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
           fetched: more.length,
           offset: requestOffset,
-          pageSize: PAGE_SIZE,
-          hasMoreAfter: more.length >= PAGE_SIZE,
+          pageSize,
+          hasMoreAfter: more.length >= pageSize,
+          memoryCap,
         });
       }
       detectAndUpdateCodeLanguage(more, (id, lang) => {
@@ -546,7 +633,8 @@ const useAppStore = create((set, get) => ({
         isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
         collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
         lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
-        autoPasteOnDoubleClick: generalConfig.auto_paste_on_double_click || false,
+        autoPasteOnDoubleClick: SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK
+          && (generalConfig.auto_paste_on_double_click || false),
         widgetEnabled: generalConfig.widget_enabled || false,
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
       }));
@@ -562,12 +650,13 @@ const useAppStore = create((set, get) => ({
   handleCopy: async (item, source = 'global') => {
     const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
-      await copyItemToClipboard(item);
+      const itemForCopy = await hydrateItemIfNeeded(item);
+      await copyItemToClipboard(itemForCopy);
       let feedbackToken = null;
       set((state) => {
         feedbackToken = state.copyFeedbackToken + 1;
         return {
-          copiedItemId: item.id,
+          copiedItemId: itemForCopy.id,
           copyFeedbackSource: feedbackSource,
           copyFeedbackToken: feedbackToken,
           lastCopyWasAutoPaste: false,
@@ -591,12 +680,13 @@ const useAppStore = create((set, get) => ({
   handleCopyAndAutoPaste: async (item, source = 'global') => {
     const feedbackSource = normalizeCopyFeedbackSource(source);
     try {
-      await copyItemToClipboard(item);
+      const itemForCopy = await hydrateItemIfNeeded(item);
+      await copyItemToClipboard(itemForCopy);
       let copiedToken = null;
       set((state) => {
         copiedToken = state.copyFeedbackToken + 1;
         return {
-          copiedItemId: item.id,
+          copiedItemId: itemForCopy.id,
           copyFeedbackSource: feedbackSource,
           copyFeedbackToken: copiedToken,
           lastCopyWasAutoPaste: false,
@@ -613,12 +703,12 @@ const useAppStore = create((set, get) => ({
         });
       }, 1000);
 
-      if (!get().autoPasteOnDoubleClick) {
+      if (!SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK || !get().autoPasteOnDoubleClick) {
         return;
       }
 
       // Only auto-paste for text/html/link types, skip image/file
-      if (item.type_ === 'image' || item.type_ === 'file') {
+      if (itemForCopy.type_ === 'image' || itemForCopy.type_ === 'file') {
         return;
       }
 
@@ -629,7 +719,7 @@ const useAppStore = create((set, get) => ({
           set((state) => {
             pastedToken = state.copyFeedbackToken + 1;
             return {
-              copiedItemId: item.id,
+              copiedItemId: itemForCopy.id,
               copyFeedbackSource: feedbackSource,
               copyFeedbackToken: pastedToken,
               lastCopyWasAutoPaste: true,
@@ -770,10 +860,11 @@ const useAppStore = create((set, get) => ({
   },
 
   generateAITags: async (item) => {
-    if (!item.content) return;
-    set({ generatingAI: item.id });
+    const itemForAI = await hydrateItemIfNeeded(item);
+    if (!itemForAI?.content) return;
+    set({ generatingAI: itemForAI.id });
     try {
-      await generateAITagsForItem(item);
+      await generateAITagsForItem(itemForAI);
       await get().loadItems();
     } catch (error) {
       console.error('AI 标签生成失败:', error);
@@ -830,6 +921,49 @@ const useAppStore = create((set, get) => ({
       if (message !== 'CANCELLED') {
         console.error('save image as failed:', error);
       }
+    }
+  },
+
+  setCardBackground: async (item, backgroundId) => {
+    if (!item?.id) return;
+    const nextBackgroundId = normalizeCardBackgroundId(backgroundId);
+    const currentBackgroundId = getCardBackgroundIdFromMetadata(item.metadata);
+    if (nextBackgroundId === currentBackgroundId) return;
+
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const nextMetadata = withCardBackgroundInMetadata(item.metadata, nextBackgroundId);
+    const updatedItem = {
+      ...item,
+      metadata: nextMetadata,
+      updated_at: updatedAt,
+    };
+
+    try {
+      await invoke('update_item', { item: updatedItem });
+      set((state) => {
+        const nextItems = state.items.map((it) => {
+          if (it.id !== item.id) return it;
+          return {
+            ...it,
+            metadata: nextMetadata,
+            updated_at: updatedAt,
+          };
+        });
+        const nextPreviewItem = state.previewItem?.id === item.id
+          ? {
+            ...state.previewItem,
+            metadata: nextMetadata,
+            updated_at: updatedAt,
+          }
+          : state.previewItem;
+        return {
+          items: nextItems,
+          previewItem: nextPreviewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
+    } catch (error) {
+      console.error('set card background failed:', error);
     }
   },
 
@@ -1058,7 +1192,8 @@ const useAppStore = create((set, get) => ({
       const selectedItems = selectedItemIds
         .map(id => preferredById.get(id) || fallbackById.get(id))
         .filter(Boolean);
-      const merged = selectedItems
+      const hydratedSelectedItems = await hydrateItemsIfNeeded(selectedItems);
+      const merged = hydratedSelectedItems
         .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
         .filter(Boolean)
         .join('\n');
@@ -1122,6 +1257,20 @@ const useAppStore = create((set, get) => ({
   openEditModal: (item = null) => {
     if (item) {
       set({ editModalMode: 'edit', editingItem: item, showEditModal: true });
+      if (itemNeedsHydration(item)) {
+        const editingId = item.id;
+        hydrateItemIfNeeded(item)
+          .then((fullItem) => {
+            if (!fullItem?.id || fullItem.id !== editingId) return;
+            set((state) => {
+              if (!state.showEditModal || state.editModalMode !== 'edit' || state.editingItem?.id !== editingId) return {};
+              return { editingItem: fullItem };
+            });
+          })
+          .catch((error) => {
+            console.warn('[ItemHydration] edit hydration failed:', error);
+          });
+      }
     } else {
       set({ editModalMode: 'new', editingItem: null, showEditModal: true });
     }
@@ -1134,7 +1283,7 @@ const useAppStore = create((set, get) => ({
         await invoke('add_clipboard_item_manual', {
           content: data.content,
           contentType: 'text',
-          source: '快速输入',
+          source: MANUAL_ENTRY_SOURCE,
           autoFavorite: false
         });
         if (data.tags.length > 0 || data.note) {
@@ -1152,9 +1301,12 @@ const useAppStore = create((set, get) => ({
           }
         }
       } else {
+        const nextContent = data.content ?? editingItem.content;
+        const contentUpdated = nextContent !== editingItem.content;
         const updatedItem = {
           ...editingItem,
-          content: data.content || editingItem.content,
+          content: nextContent,
+          content_updated: contentUpdated,
           user_note: data.note,
           tags: JSON.stringify(data.tags),
           updated_at: Math.floor(Date.now() / 1000)
@@ -1343,7 +1495,7 @@ const useAppStore = create((set, get) => ({
       await invoke('add_clipboard_item_manual', {
         content: content.trim(),
         contentType: 'text',
-        source: '快速笔记',
+        source: QUICK_NOTE_SOURCE,
         autoFavorite: false
       });
       // 获取刚创建的条目并 pin 它
@@ -1362,7 +1514,8 @@ const useAppStore = create((set, get) => ({
     try {
       const { items } = get();
       const pinnedItems = items.filter(i => i.is_pinned);
-      const merged = pinnedItems
+      const hydratedPinnedItems = await hydrateItemsIfNeeded(pinnedItems);
+      const merged = hydratedPinnedItems
         .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
         .filter(Boolean)
         .join('\n\n');

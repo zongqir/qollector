@@ -93,13 +93,23 @@ fn update_autostart_state(app: &AppHandle, enabled: bool) -> Result<(), String> 
     let autostart_manager = app.autolaunch();
 
     if enabled {
-        if !autostart_manager.is_enabled().map_err(|e: tauri_plugin_autostart::Error| e.to_string())? {
-            autostart_manager.enable().map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
+        if !autostart_manager
+            .is_enabled()
+            .map_err(|e: tauri_plugin_autostart::Error| e.to_string())?
+        {
+            autostart_manager
+                .enable()
+                .map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
             println!("[Autostart] Enabled");
         }
     } else {
-        if autostart_manager.is_enabled().map_err(|e: tauri_plugin_autostart::Error| e.to_string())? {
-            autostart_manager.disable().map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
+        if autostart_manager
+            .is_enabled()
+            .map_err(|e: tauri_plugin_autostart::Error| e.to_string())?
+        {
+            autostart_manager
+                .disable()
+                .map_err(|e: tauri_plugin_autostart::Error| e.to_string())?;
             println!("[Autostart] Disabled");
         }
     }
@@ -222,12 +232,7 @@ fn infer_webview2_roles_heuristically(
 
     if let Some(idx) = browser_host_idx {
         if webview2_processes[idx].process_role == "unknown" {
-            set_heuristic_role(
-                &mut webview2_processes[idx],
-                "browser_host",
-                None,
-                "high",
-            );
+            set_heuristic_role(&mut webview2_processes[idx], "browser_host", None, "high");
         }
     }
 
@@ -280,12 +285,7 @@ fn infer_webview2_roles_heuristically(
                 "low",
             );
         } else {
-            set_heuristic_role(
-                &mut webview2_processes[idx],
-                "utility_light",
-                None,
-                "low",
-            );
+            set_heuristic_role(&mut webview2_processes[idx], "utility_light", None, "low");
         }
     }
 
@@ -305,7 +305,9 @@ fn infer_webview2_roles_heuristically(
     Some(host_pid)
 }
 
-fn summarize_webview2_roles(webview2_processes: &[WebviewProcessSnapshot]) -> Vec<WebviewRoleSummary> {
+fn summarize_webview2_roles(
+    webview2_processes: &[WebviewProcessSnapshot],
+) -> Vec<WebviewRoleSummary> {
     let mut grouped: HashMap<String, (usize, u64, u64)> = HashMap::new();
 
     for process in webview2_processes {
@@ -448,26 +450,22 @@ pub fn collect_runtime_diagnostics_snapshot() -> RuntimeDiagnosticsSnapshot {
                     .iter()
                     .map(|arg| arg.to_string_lossy().into_owned())
                     .collect();
-                let (
-                    process_role,
-                    utility_sub_type,
-                    role_source,
-                    role_confidence,
-                ) = if let Some((role, utility_sub_type)) = detect_webview2_role(&cmd_args) {
-                    (
-                        role,
-                        utility_sub_type,
-                        "cmdline".to_string(),
-                        "high".to_string(),
-                    )
-                } else {
-                    (
-                        "unknown".to_string(),
-                        None,
-                        "unknown".to_string(),
-                        "unknown".to_string(),
-                    )
-                };
+                let (process_role, utility_sub_type, role_source, role_confidence) =
+                    if let Some((role, utility_sub_type)) = detect_webview2_role(&cmd_args) {
+                        (
+                            role,
+                            utility_sub_type,
+                            "cmdline".to_string(),
+                            "high".to_string(),
+                        )
+                    } else {
+                        (
+                            "unknown".to_string(),
+                            None,
+                            "unknown".to_string(),
+                            "unknown".to_string(),
+                        )
+                    };
                 webview2_processes.push(WebviewProcessSnapshot {
                     pid: pid.as_u32(),
                     parent_pid: process.parent().map(|p| p.as_u32()),
@@ -501,12 +499,12 @@ pub fn collect_runtime_diagnostics_snapshot() -> RuntimeDiagnosticsSnapshot {
         .map(|p| p.virtual_memory_bytes)
         .sum::<u64>();
 
-    let (app_memory_bytes, app_virtual_memory_bytes) = if let Some(process) = system.process(app_pid)
-    {
-        (process.memory(), process.virtual_memory())
-    } else {
-        (0, 0)
-    };
+    let (app_memory_bytes, app_virtual_memory_bytes) =
+        if let Some(process) = system.process(app_pid) {
+            (process.memory(), process.virtual_memory())
+        } else {
+            (0, 0)
+        };
 
     RuntimeDiagnosticsSnapshot {
         captured_at_unix_ms: chrono::Utc::now().timestamp_millis(),

@@ -1,9 +1,13 @@
 use crate::ai::{AIConfig, AIService};
-use crate::core::models::{ClipboardContent, ClipboardItem, WindowMetadata};
+use crate::core::models::{
+    ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
+    WindowMetadata,
+};
 use crate::ocr::OcrService;
 use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
+use crate::lan_sync::PairedSyncDevice;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -13,12 +17,11 @@ use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use url::Host;
 
-const APP_NAME: &str = "ClipBox";
+const APP_NAME: &str = "PasteHarbor";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
-
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -64,7 +67,7 @@ impl ClipboardManager {
             image_dir,
             ai_config,
             ocr_config,
-            ai_semaphore: Arc::new(Semaphore::new(1)), // 鍙厑璁?涓狝I璇锋眰鍚屾椂鎵ц
+            ai_semaphore: Arc::new(Semaphore::new(1)), // Allow only one AI request at a time.
             double_copy_state: Arc::new(Mutex::new(DoubleCopyEmphasisState::default())),
             app_handle,
             paused: Arc::new(AtomicBool::new(false)),
@@ -173,12 +176,12 @@ impl ClipboardManager {
 
         let item = match &content {
             ClipboardContent::Text { plain: text, .. } => {
-                // 妫€鏌ユ槸鍚︿负绌虹櫧鍐呭
+                // Handle whitespace-only text carefully.
                 if text.trim().is_empty() {
-                    // 缁熻鎹㈣绗︽暟閲?
+                    // Count newline characters.
                     let newline_count = text.matches('\n').count();
 
-                    // 濡傛灉鎹㈣绗﹀皯浜?涓紝璁や负鏄棤鎰忎箟鐨勭煭绌虹櫧锛岃烦杩?
+                    // Skip short blank snippets that are likely accidental copies.
                     if newline_count < 3 {
                         println!(
                             "Clipboard text is empty or too short (newlines: {}), skipping",
@@ -187,7 +190,7 @@ impl ClipboardManager {
                         return Ok(());
                     }
 
-                    // 瓒呰繃3琛岀殑绌虹櫧鍙兘鏈夋剰涔夛紝淇濈暀
+                    // Keep multi-line blanks because they may preserve formatting intent.
                     println!(
                         "Clipboard text is blank but has {} newlines, keeping",
                         newline_count
@@ -199,7 +202,7 @@ impl ClipboardManager {
             ClipboardContent::Image(data) => {
                 println!("Image clipboard content detected, saving...");
 
-                // 璁＄畻鍥剧墖鍐呭鐨凪D5鍝堝笇
+                // Build a stable hash from image bytes for deduplication.
                 let image_hash = blake3::hash(&data).to_hex().to_string();
 
                 // Generate unique filename
@@ -240,7 +243,7 @@ impl ClipboardManager {
                     type_: "image".to_string(),
                     content: Some(format!("[Image: {}]", filename)),
                     original_content: None,
-                    content_hash: image_hash, // 浣跨敤鍥剧墖鍐呭鐨凪D5
+                    content_hash: image_hash, // Use image content hash for deduplication.
                     image_paths: Some(image_paths_json),
                     ocr_text: None,
                     code_language: None,
@@ -255,6 +258,9 @@ impl ClipboardManager {
                     created_at: now,
                     updated_at: now,
                     has_raw_formats: false,
+                    content_truncated: false,
+                    ocr_truncated: false,
+                    content_updated: false,
                 }
             }
             ClipboardContent::File(paths_str) => {
@@ -276,9 +282,9 @@ impl ClipboardManager {
                     .collect();
 
                 let summary = if file_count == 1 {
-                    format!("鏂囦欢: {}", file_names[0])
+                    format!("File: {}", file_names[0])
                 } else {
-                    format!("{} 涓枃浠? {}", file_count, file_names.join(", "))
+                    format!("{} files: {}", file_count, file_names.join(", "))
                 };
 
                 println!("Files: {}", summary);
@@ -323,7 +329,8 @@ impl ClipboardManager {
                     Some(formats) if !formats.is_empty() => {
                         if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
                             eprintln!("Failed to clear stale raw formats: {}", e);
-                        } else if let Err(e) = repo_lock.insert_raw_formats(&item_id, formats).await {
+                        } else if let Err(e) = repo_lock.insert_raw_formats(&item_id, formats).await
+                        {
                             eprintln!("Failed to refresh raw formats: {}", e);
                         } else {
                             println!(
@@ -335,9 +342,15 @@ impl ClipboardManager {
                     }
                     _ => {
                         if let Err(e) = repo_lock.delete_raw_formats(&item_id).await {
-                            eprintln!("Failed to clear raw formats for plain-text duplicate: {}", e);
+                            eprintln!(
+                                "Failed to clear raw formats for plain-text duplicate: {}",
+                                e
+                            );
                         } else {
-                            println!("Cleared raw formats for plain-text duplicate item {}", item_id);
+                            println!(
+                                "Cleared raw formats for plain-text duplicate item {}",
+                                item_id
+                            );
                         }
                     }
                 }
@@ -348,7 +361,11 @@ impl ClipboardManager {
             inserted_new_item = true;
 
             // Save raw clipboard formats (HTML, RTF) if present
-            if let ClipboardContent::Text { raw_formats: Some(formats), .. } = &content {
+            if let ClipboardContent::Text {
+                raw_formats: Some(formats),
+                ..
+            } = &content
+            {
                 if !formats.is_empty() {
                     if let Err(e) = repo_lock.insert_raw_formats(&item.id, formats).await {
                         eprintln!("Failed to save raw formats: {}", e);
@@ -456,7 +473,7 @@ impl ClipboardManager {
 
                         if !ocr_text.is_empty() {
                             let ai_config = ai_config_clone.lock().unwrap().clone();
-                            if !ai_config.get_current_api_key().is_empty() {
+                            if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                                 let _permit = ai_semaphore_clone.acquire().await.unwrap();
                                 println!(
                                     "[AI] lock acquired for OCR text tags: item_id={}",
@@ -502,6 +519,12 @@ impl ClipboardManager {
                                     }
                                 }
                                 println!("[AI] lock released");
+                            } else {
+                                println!(
+                                    "[AI] skipped OCR text tags: enabled={}, has_api_key={}",
+                                    ai_config.enabled,
+                                    !ai_config.get_current_api_key().is_empty()
+                                );
                             }
                         } else {
                             println!("Image has no OCR text, skipping AI tags");
@@ -509,7 +532,7 @@ impl ClipboardManager {
                     }
                 } else if let Some(content) = item_content.as_ref() {
                     let ai_config = ai_config_clone.lock().unwrap().clone();
-                    if !ai_config.get_current_api_key().is_empty() {
+                    if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!(
                             "[AI] lock acquired for content tags: item_id={}, type={}",
@@ -526,7 +549,9 @@ impl ClipboardManager {
 
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
-                            Ok((tags, code_language)) if !tags.is_empty() || code_language.is_some() => {
+                            Ok((tags, code_language))
+                                if !tags.is_empty() || code_language.is_some() =>
+                            {
                                 let ai_tags: Vec<String> =
                                     tags.iter().map(|t| format!("AI:{}", t)).collect();
 
@@ -544,13 +569,22 @@ impl ClipboardManager {
                                     item.tags = Some(serde_json::to_string(&all_tags).unwrap());
                                     item.code_language = code_language.clone();
                                     let _ = repo_lock.update(&item).await;
-                                    println!("[AI] tags added: {:?}, code_language: {:?}", tags, code_language);
+                                    println!(
+                                        "[AI] tags added: {:?}, code_language: {:?}",
+                                        tags, code_language
+                                    );
                                 }
                             }
                             Ok(_) => println!("[AI] empty tag result"),
                             Err(e) => eprintln!("[AI] tag generation failed: {}", e),
                         }
                         println!("[AI] lock released");
+                    } else {
+                        println!(
+                            "[AI] skipped content tags: enabled={}, has_api_key={}",
+                            ai_config.enabled,
+                            !ai_config.get_current_api_key().is_empty()
+                        );
                     }
                 }
             });
@@ -566,8 +600,8 @@ impl ClipboardManager {
         metadata_json: Option<&str>,
         url: &str,
     ) {
-        if let Some(existing_title) = metadata_json
-            .and_then(Self::extract_link_preview_title_from_metadata)
+        if let Some(existing_title) =
+            metadata_json.and_then(Self::extract_link_preview_title_from_metadata)
         {
             if !existing_title.is_empty() {
                 return;
@@ -585,8 +619,14 @@ impl ClipboardManager {
         };
 
         let repo_lock = repo.lock().await;
-        if let Err(error) = repo_lock.update_metadata_only(&item_id, &new_metadata).await {
-            eprintln!("[LinkPreview] failed to persist title for {}: {}", item_id, error);
+        if let Err(error) = repo_lock
+            .update_metadata_only(&item_id, &new_metadata)
+            .await
+        {
+            eprintln!(
+                "[LinkPreview] failed to persist title for {}: {}",
+                item_id, error
+            );
             return;
         }
         drop(repo_lock);
@@ -644,7 +684,7 @@ impl ClipboardManager {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(LINK_PREVIEW_TIMEOUT_SECS))
             .redirect(reqwest::redirect::Policy::limited(5))
-            .user_agent("ClipBox/1.0")
+            .user_agent("PasteHarbor/1.0")
             .build()
             .ok()?;
 
@@ -1014,7 +1054,7 @@ impl ClipboardManager {
             return Err(ClipboardError::UnsupportedType);
         };
 
-        // 濡傛灉鏄疆椤堕」,鏇存柊鍏舵椂闂存埑浠ヤ繚鎸佹椿璺?
+        // Refresh pinned timestamps so ordering remains stable.
         if item.is_pinned {
             let repo = self.repository.lock().await;
             let _ = repo.touch(&item.id).await;
@@ -1074,6 +1114,158 @@ impl ClipboardManager {
         Ok(item.id.clone())
     }
 
+    pub async fn get_sync_latest_slot(&self) -> Result<Option<SyncLatestSlot>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_sync_latest_slot().await
+    }
+
+    pub async fn get_next_sync_source_seq_hint(
+        &self,
+        source_device_id: &str,
+    ) -> Result<i64, String> {
+        let source_device_id = source_device_id.trim();
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+        let repo = self.repository.lock().await;
+        repo.get_next_sync_source_seq_hint(source_device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn publish_sync_slot_from_item(
+        &self,
+        item_id: &str,
+        source_device_id: &str,
+    ) -> Result<SyncLatestSlot, String> {
+        let source_device_id = source_device_id.trim();
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        let item = repo
+            .find_by_id(item_id)
+            .await
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Item not found: {}", item_id))?;
+
+        if item.is_deleted {
+            return Err("Cannot publish a deleted item".to_string());
+        }
+
+        let payload_json = serde_json::to_string(&item)
+            .map_err(|e| format!("Failed to encode sync payload: {}", e))?;
+
+        repo.publish_sync_slot_local(
+            &payload_json,
+            &item.type_,
+            source_device_id,
+            &item.content_hash,
+            Some(chrono::Utc::now().timestamp_millis()),
+        )
+        .await
+        .map_err(|e| e.to_string())
+    }
+
+    pub async fn publish_sync_slot_payload(
+        &self,
+        payload_json: &str,
+        payload_type: &str,
+        source_device_id: &str,
+        content_hash: &str,
+        logical_ts_ms: Option<i64>,
+    ) -> Result<SyncLatestSlot, String> {
+        let payload_json_trimmed = payload_json.trim();
+        let payload_type = payload_type.trim();
+        let source_device_id = source_device_id.trim();
+        let content_hash = content_hash.trim();
+
+        if payload_json_trimmed.is_empty() {
+            return Err("payload_json is required".to_string());
+        }
+        if payload_type.is_empty() {
+            return Err("payload_type is required".to_string());
+        }
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+        if content_hash.is_empty() {
+            return Err("content_hash is required".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        repo.publish_sync_slot_local(
+            payload_json,
+            payload_type,
+            source_device_id,
+            content_hash,
+            logical_ts_ms,
+        )
+        .await
+        .map_err(|e| e.to_string())
+    }
+
+    pub async fn apply_remote_sync_slot(
+        &self,
+        incoming: SyncIncomingSlot,
+    ) -> Result<SyncApplyResult, String> {
+        let repo = self.repository.lock().await;
+        repo.apply_remote_sync_slot(&incoming)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn list_paired_sync_devices(&self) -> Result<Vec<PairedSyncDevice>, String> {
+        let repo = self.repository.lock().await;
+        repo.list_paired_sync_devices()
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn get_paired_sync_device(
+        &self,
+        device_id: &str,
+    ) -> Result<Option<PairedSyncDevice>, String> {
+        let repo = self.repository.lock().await;
+        repo.get_paired_sync_device(device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn upsert_paired_sync_device(
+        &self,
+        device_id: &str,
+        device_name: &str,
+        pair_token: &str,
+        last_host: Option<&str>,
+        last_port: Option<u16>,
+    ) -> Result<PairedSyncDevice, String> {
+        let repo = self.repository.lock().await;
+        repo.upsert_paired_sync_device(device_id, device_name, pair_token, last_host, last_port)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn touch_paired_sync_device(
+        &self,
+        device_id: &str,
+        last_host: Option<&str>,
+        last_port: Option<u16>,
+    ) -> Result<(), String> {
+        let repo = self.repository.lock().await;
+        repo.touch_paired_sync_device(device_id, last_host, last_port)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn remove_paired_sync_device(&self, device_id: &str) -> Result<(), String> {
+        let repo = self.repository.lock().await;
+        repo.remove_paired_sync_device(device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
     fn schedule_link_preview_enrichment(&self, item: &ClipboardItem) {
         if item.type_ != "link" {
             return;
@@ -1089,7 +1281,8 @@ impl ClipboardManager {
         let metadata = item.metadata.clone();
 
         tokio::spawn(async move {
-            Self::try_enrich_link_preview(repo, app_handle, item_id, metadata.as_deref(), &url).await;
+            Self::try_enrich_link_preview(repo, app_handle, item_id, metadata.as_deref(), &url)
+                .await;
         });
     }
 
@@ -1162,9 +1355,9 @@ impl ClipboardManager {
     pub async fn toggle_favorite(&self, id: &str) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
-        // 鑾峰彇褰撳墠椤圭洰
+        // Load the current item first.
         if let Some(mut item) = repo.find_by_id(id).await? {
-            // 鍒囨崲鏀惰棌鐘舵€?
+            // Toggle favorite state.
             item.is_favorite = !item.is_favorite;
 
             repo.update(&item).await?;
@@ -1184,9 +1377,9 @@ impl ClipboardManager {
         *ocr_service = service;
     }
 
-    // ========== MCP 鐩稿叧鏂规硶 ==========
+    // ========== MCP Methods ==========
 
-    /// 鎼滅储鍓创鏉挎潯鐩?
+    /// Search clipboard items.
     pub async fn search_items(
         &self,
         query: &str,
@@ -1197,19 +1390,19 @@ impl ClipboardManager {
         repo.search(query, &filters, limit as i32).await
     }
 
-    /// 鑾峰彇鏈€杩戠殑鏉＄洰
+    /// Get recent items.
     pub async fn get_recent_items(&self, limit: usize) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.get_recent(limit as i32).await
     }
 
-    /// 鏍规嵁 ID 鑾峰彇鏉＄洰
+    /// Get one item by ID.
     pub async fn get_item_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.find_by_id(id).await
     }
 
-    /// 娣诲姞鏂囨湰鏉＄洰
+    /// Add a text item.
     pub async fn add_text_item(
         &self,
         content: &str,
@@ -1239,17 +1432,17 @@ impl ClipboardManager {
         Ok(item)
     }
 
-    /// 鑾峰彇缁熻淇℃伅
+    /// Get aggregate statistics.
     pub async fn get_statistics(&self) -> Result<serde_json::Value, sqlx::Error> {
         let repo = self.repository.lock().await;
 
-        // 鑾峰彇鎬绘暟
+        // Total active items.
         let total: i64 =
             sqlx::query_scalar("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
                 .fetch_one(repo.pool())
                 .await?;
 
-        // 鎸夌被鍨嬬粺璁?
+        // Count by item type.
         let text_count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM clipboard_items WHERE type = 'text' AND is_deleted = 0",
         )
@@ -1292,7 +1485,7 @@ impl ClipboardManager {
         }))
     }
 
-    /// 娓呯┖鎵€鏈夊壀璐存澘鏁版嵁
+    /// Clear all clipboard data.
     pub async fn clear_all_items(&self) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         // Fetch all image items and delete their files before clearing DB
@@ -1309,10 +1502,12 @@ impl ClipboardManager {
             .execute(repo.pool())
             .await?;
         let _ = repo.delete_all_raw_formats().await;
+        let _ = repo.clear_sync_latest_slot().await;
+        let _ = repo.clear_paired_sync_devices().await;
         Ok(())
     }
 
-    /// 鑾峰彇鎵€鏈夋湭鍒犻櫎鐨勬潯鐩紙瀵煎嚭鐢級
+    /// Get all non-deleted items (for export).
     pub async fn get_all_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         let items = sqlx::query_as::<_, ClipboardItem>(
@@ -1323,7 +1518,7 @@ impl ClipboardManager {
         Ok(items)
     }
 
-    /// 鎸?content_hash 鍘婚噸鎻掑叆锛堝鍏ョ敤锛夛紝杩斿洖鏄惁瀹為檯鎻掑叆
+    /// Insert by content hash if not exists (used by import).
     pub async fn insert_item_if_not_exists(
         &self,
         item: &ClipboardItem,
@@ -1337,7 +1532,7 @@ impl ClipboardManager {
         Ok(true)
     }
 
-    /// 鑾峰彇鍥剧墖瀛樺偍鐩綍
+    /// Resolve image storage paths.
     /// Delete image files (original + thumbnail) using type and stored path payload.
     fn cleanup_image_files(item_type: &str, image_paths: Option<&str>) {
         if item_type != "image" {
@@ -1368,13 +1563,20 @@ impl ClipboardManager {
     }
 
     /// Get raw clipboard formats for an item (for export).
-    pub async fn get_raw_formats(&self, item_id: &str) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
+    pub async fn get_raw_formats(
+        &self,
+        item_id: &str,
+    ) -> Result<Vec<(String, Vec<u8>)>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.get_raw_formats(item_id).await
     }
 
     /// Insert raw clipboard formats for an item (for import).
-    pub async fn insert_raw_formats(&self, item_id: &str, formats: &[(String, Vec<u8>)]) -> Result<(), sqlx::Error> {
+    pub async fn insert_raw_formats(
+        &self,
+        item_id: &str,
+        formats: &[(String, Vec<u8>)],
+    ) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.insert_raw_formats(item_id, formats).await
     }
@@ -1395,6 +1597,16 @@ impl ClipboardManager {
             .await
             .map_err(|e| format!("Failed to delete raw formats: {}", e))?;
 
+        sqlx::query("DELETE FROM sync_latest_slot")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete sync latest slot: {}", e))?;
+
+        sqlx::query("DELETE FROM sync_paired_devices")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete paired sync devices: {}", e))?;
+
         // Delete all image files
         if self.image_dir.exists() {
             std::fs::remove_dir_all(&self.image_dir)
@@ -1408,9 +1620,9 @@ impl ClipboardManager {
 
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
-            ClipboardContent::Text { plain: ref text, .. } => {
-                blake3::hash(text.as_bytes()).to_hex().to_string()
-            }
+            ClipboardContent::Text {
+                plain: ref text, ..
+            } => blake3::hash(text.as_bytes()).to_hex().to_string(),
             ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
             ClipboardContent::File(paths_str) => {
                 blake3::hash(paths_str.as_bytes()).to_hex().to_string()

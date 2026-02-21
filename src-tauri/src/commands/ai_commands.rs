@@ -47,7 +47,7 @@ pub async fn generate_ai_tags(
 ) -> Result<(Vec<String>, Option<String>), String> {
     let config = state.config.lock().unwrap().clone();
 
-    if config.get_current_api_key().is_empty() {
+    if !config.enabled || config.get_current_api_key().is_empty() {
         return Ok((Vec::new(), None));
     }
 
@@ -130,6 +130,10 @@ pub async fn generate_timeline_summary(
     items: Vec<crate::core::models::ClipboardItem>,
 ) -> Result<String, String> {
     let config = state.config.lock().unwrap().clone();
+
+    if !config.enabled {
+        return Err("AI feature is disabled".to_string());
+    }
 
     if config.get_current_api_key().is_empty() {
         return Err("AI not configured".to_string());

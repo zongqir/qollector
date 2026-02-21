@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo ClipBox Startup Diagnostics
+echo PasteHarbor Startup Diagnostics
 echo ========================================
 echo.
 
