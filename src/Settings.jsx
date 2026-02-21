@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
 import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
@@ -98,6 +98,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState({
+    ai: true, ocr: true, mcp: true, lanSync: true, share: true,
+  });
+  const toggleSection = (key) => setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   const isIntegrationTab = activeTab === 'integrations';
   const isDataSecurityTab = activeTab === 'dataSecurity';
 
@@ -899,7 +903,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
             {aiConfig.enabled && (
               <>
-                <div className="setting-group-title section-title">{t('settings.tabs.ai')}</div>
+                <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ai')}>
+                  {collapsedSections.ai ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                  {t('settings.tabs.ai')}
+                </div>
+                {!collapsedSections.ai && (
+                <>
                 <div className="setting-item">
               <label>{t('settings.ai.provider')}</label>
               <select
@@ -1026,12 +1035,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             </div>
               </>
             )}
+              </>
+            )}
             </div>
           )}
 
           {activeTab === 'integrations' && ocrConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title section-title">{t('settings.tabs.ocr')}</div>
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ocr')}>
+              {collapsedSections.ocr ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.tabs.ocr')}
+            </div>
+            {!collapsedSections.ocr && (
+            <>
             <div className="setting-group">
               <label className="sg-row setting-toggle-row">
                 <span>{t('settings.ocr.autoOcr')}</span>
@@ -1143,12 +1159,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </span>
               )}
             </div>
+            </>
+            )}
             </div>
           )}
 
           {activeTab === 'integrations' && mcpConfig.enabled && (
             <div className="settings-content">
-            <div className="setting-group-title section-title">{t('settings.tabs.mcp')}</div>
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('mcp')}>
+              {collapsedSections.mcp ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.tabs.mcp')}
+            </div>
+            {!collapsedSections.mcp && (
+            <>
             <div className="setting-item">
               <label>{t('settings.mcp.port')}</label>
               <input
@@ -1230,6 +1253,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 </button>
               </div>
             </div>
+            </>
+            )}
             </div>
           )}
 
@@ -1290,6 +1315,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           {activeTab === 'integrations' && (
             <IntegrationsLanSyncSection
               t={t}
+              collapsed={collapsedSections.lanSync}
+              onToggle={() => toggleSection('lanSync')}
             />
           )}
 
@@ -1302,6 +1329,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               setShareTesting={setShareTesting}
               shareTestResult={shareTestResult}
               setShareTestResult={setShareTestResult}
+              collapsed={collapsedSections.share}
+              onToggle={() => toggleSection('share')}
             />
           )}
         </div>

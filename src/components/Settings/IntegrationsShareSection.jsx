@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 function IntegrationsShareSection({
   t,
@@ -8,10 +9,17 @@ function IntegrationsShareSection({
   setShareTesting,
   shareTestResult,
   setShareTestResult,
+  collapsed,
+  onToggle,
 }) {
   return (
     <div className="settings-content">
-      <div className="setting-group-title section-title">{t('settings.tabs.share')}</div>
+      <div className="setting-group-title section-title collapsible-title" onClick={onToggle}>
+        {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+        {t('settings.tabs.share')}
+      </div>
+      {!collapsed && (
+      <>
       <label className="setting-label share-field-label">{t('settings.share.provider')}</label>
       <select
         className="setting-select"
@@ -34,10 +42,9 @@ function IntegrationsShareSection({
         }}
       >
         {[
-          { key: 'ZeroX0', label: 'fileio' },
-          { key: 'Tmpfiles', label: 'tmpfiles' },
-          { key: 'Catbox', label: 'catbox' },
           { key: 'Litterbox', label: 'litterbox' },
+          { key: 'Tmpfiles', label: 'tmpfiles' },
+          { key: 'ZeroX0', label: 'fileio' },
           { key: 'S3', label: 's3' },
         ].map(({ key, label }) => (
           <option key={key} value={key}>{t(`settings.share.${label}`)}</option>
@@ -45,7 +52,7 @@ function IntegrationsShareSection({
       </select>
       <small className="setting-hint-block">
         {t(`settings.share.${
-          { ZeroX0: 'fileioDesc', Tmpfiles: 'tmpfilesDesc', Catbox: 'catboxDesc', Litterbox: 'litterboxDesc', S3: 's3Desc' }[shareConfig.provider]
+          { Litterbox: 'litterboxDesc', Tmpfiles: 'tmpfilesDesc', ZeroX0: 'fileioDesc', S3: 's3Desc' }[shareConfig.provider]
         }`)}
       </small>
       <label className="setting-label share-option-label">
@@ -158,6 +165,8 @@ function IntegrationsShareSection({
           )}
           <small className="setting-hint-block">{t('settings.share.networkHint')}</small>
         </div>
+      )}
+      </>
       )}
     </div>
   );
