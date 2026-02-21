@@ -1079,6 +1079,7 @@
   overflow: hidden;
   container-type: inline-size;
   container-name: collection-panel;
+  outline: none;
 }
 
 .collection-filter-row {

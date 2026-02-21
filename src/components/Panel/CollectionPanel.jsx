@@ -316,6 +316,7 @@ function CollectionPanel() {
     if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
     event.stopPropagation();
     event.preventDefault();
+    collectionPanelRef.current?.focus();
 
     if (event.shiftKey) {
       const anchorCandidate = selectionAnchorIndexRef.current >= 0
@@ -340,6 +341,7 @@ function CollectionPanel() {
 
   const handleCardClick = useCallback((item, index, event) => {
     event.stopPropagation();
+    collectionPanelRef.current?.focus();
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       event.preventDefault();
       return;
@@ -364,6 +366,28 @@ function CollectionPanel() {
   const clearPinnedSelection = useCallback(() => {
     setSelectedPinnedIds([]);
   }, []);
+
+  const collectionPanelRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+      const panel = collectionPanelRef.current;
+      if (!panel) return;
+      const active = document.activeElement;
+      if (!panel.contains(e.target) && !panel.contains(active) && active !== panel) return;
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'a') {
+        if (pinnedItems.length === 0) return;
+        e.preventDefault();
+        setSelectedPinnedIds(pinnedItems.map(item => item.id));
+        selectionAnchorIndexRef.current = 0;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pinnedItems]);
 
   const handleExpandedNoteKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && event.ctrlKey && quickNote.trim()) {
@@ -415,7 +439,7 @@ function CollectionPanel() {
 
   if (allPinnedItems.length === 0) {
     return (
-      <div className="collection-panel" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+      <div className="collection-panel" ref={collectionPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
         {quickNoteSection}
         <div className="collection-empty">
           <div className="collection-empty-icon">
@@ -429,7 +453,7 @@ function CollectionPanel() {
   }
 
   return (
-    <div className="collection-panel" onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+    <div className="collection-panel" ref={collectionPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
       {quickNoteSection}
       <div className="collection-filter-row">
         <div className="collection-search-box">

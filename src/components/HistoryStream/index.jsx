@@ -965,6 +965,9 @@ function HistoryStream({ style }) {
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
 
+      // skip when focus is inside the collection panel
+      if (e.target.closest('.collection-panel') || document.activeElement?.closest?.('.collection-panel')) return;
+
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
