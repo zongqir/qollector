@@ -47,6 +47,10 @@
     "showPinned": "显示收集",
     "showAll": "显示全部",
     "filterType": "类型筛选",
+    "typeFilteringBy": "类型筛选中 ({{count}}): {{types}}",
+    "clearTypeFilter": "清空类型筛选",
+    "typeReset": "重置",
+    "typeApply": "应用",
     "dateFilter": "日期筛选",
     "dateFilterActive": "日期筛选中",
     "clearDateFilter": "清除日期",
@@ -562,6 +566,7 @@
   "collection": {
     "emptyTitle": "收集箱是空的",
     "emptyHint": "点击左侧的收集按钮，或直接把卡片拖到这里",
+    "noFilteredItems": "当前筛选条件下没有匹配的收集项",
     "quickNotePlaceholder": "输入笔记，回车添加到收集箱...",
     "expandedNotePlaceholder": "在这里写下你的想法...",
     "expandedNoteSubmit": "添加到收集箱",

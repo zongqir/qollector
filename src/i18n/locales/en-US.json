@@ -47,6 +47,10 @@
     "showPinned": "Show Collected",
     "showAll": "Show All",
     "filterType": "Type Filter",
+    "typeFilteringBy": "Type filtering ({{count}}): {{types}}",
+    "clearTypeFilter": "Clear type filter",
+    "typeReset": "Reset",
+    "typeApply": "Apply",
     "dateFilter": "Date Filter",
     "dateFilterActive": "Date filtering",
     "clearDateFilter": "Clear Date",
@@ -562,6 +566,7 @@
   "collection": {
     "emptyTitle": "Your collection is empty",
     "emptyHint": "Click the collect button on any item, or drag cards here",
+    "noFilteredItems": "No collected items match current filters",
     "quickNotePlaceholder": "Type a note, press Enter to add to collection...",
     "expandedNotePlaceholder": "Write down your thoughts here...",
     "expandedNoteSubmit": "Add to Collection",
