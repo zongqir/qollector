@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ai;
+mod beta_guard;
 mod commands;
 mod config;
 mod core;
+mod crash_log;
 mod low_memory_mode;
 mod lan_sync;
 mod mcp;
@@ -40,6 +42,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
 use tauri::Manager;
+use tauri::Emitter;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
 use window_lifecycle::{
@@ -268,6 +271,8 @@ fn log_runtime_diagnostics(stage: &str, snapshot: &RuntimeDiagnosticsSnapshot) {
 }
 
 fn main() {
+    crash_log::install_panic_hook();
+
     let startup_metrics = Arc::new(StartupMetricsState::new());
     let startup_metrics_for_setup = startup_metrics.clone();
 
@@ -354,6 +359,14 @@ fn main() {
                 println!("[Window] main window is ready");
             } else {
                 eprintln!("[Window] warning: failed to get main window in setup");
+            }
+
+            // Beta expiry check — emit event to frontend if expired
+            let beta_status = beta_guard::check_beta_expiry();
+            if beta_status.expired {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("beta-expired", beta_status.clone());
+                }
             }
 
             // Restore database file header during startup.
@@ -752,6 +765,9 @@ fn main() {
             preview_file,
             open_file_path,
             reveal_file_path,
+            beta_guard::get_beta_status,
+            crash_log::get_crash_log,
+            crash_log::clear_crash_log,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

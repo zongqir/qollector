@@ -32,6 +32,10 @@ function App() {
 
   const { t } = useTranslation();
 
+  // Beta expiry state
+  const [betaExpired, setBetaExpired] = useState(false);
+  const [betaStatus, setBetaStatus] = useState(null);
+
   // Store state
   const isLocked = useAppStore(s => s.isLocked);
   const hasPassword = useAppStore(s => s.hasPassword);
@@ -106,6 +110,23 @@ function App() {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
+    };
+  }, []);
+
+  // Beta expiry check
+  useEffect(() => {
+    invoke('get_beta_status').then(status => {
+      setBetaStatus(status);
+      if (status.expired) setBetaExpired(true);
+    }).catch(err => console.warn('[BetaGuard] failed to get status:', err));
+
+    const unlistenBetaExpired = listen('beta-expired', (event) => {
+      setBetaStatus(event.payload);
+      setBetaExpired(true);
+    });
+
+    return () => {
+      unlistenBetaExpired.then(unlisten => unlisten());
     };
   }, []);
 
@@ -299,6 +320,23 @@ function App() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  if (betaExpired) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.85)', color: '#fff', fontFamily: 'system-ui, sans-serif',
+      }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏰</div>
+        <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 600 }}>{t('beta.expired')}</h2>
+        <p style={{ margin: '0 0 8px', fontSize: 14, opacity: 0.8, textAlign: 'center', maxWidth: 360 }}>
+          {t('beta.expiredMessage', { buildDate: betaStatus?.build_date, expiryDate: betaStatus?.expiry_date })}
+        </p>
+        <p style={{ margin: '16px 0 0', fontSize: 13, opacity: 0.5 }}>{t('beta.upgradeHint')}</p>
+      </div>
+    );
+  }
 
   if (isLocked && hasPassword) {
     return (

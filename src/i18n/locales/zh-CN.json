@@ -733,5 +733,11 @@
     "close": "关闭",
     "button": "分享",
     "rateLimited": "免费分享次数已耗尽，请稍后再试或切换其他服务商"
+  },
+  "beta": {
+    "expired": "Beta 版本已过期",
+    "expiredMessage": "此构建版本 ({{buildDate}}) 已于 {{expiryDate}} 过期，请下载最新版本继续使用。",
+    "upgradeHint": "请联系开发者获取最新版本",
+    "daysRemaining": "Beta 剩余 {{days}} 天"
   }
 }
