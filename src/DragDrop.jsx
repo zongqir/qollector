@@ -116,7 +116,7 @@ async function extractDroppedText(dataTransfer) {
   return '';
 }
 
-function DragDrop({ onItemAdded, onTypeAdded }) {
+function DragDrop({ onItemAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
@@ -124,8 +124,6 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
 
   const onItemAddedRef = useRef(onItemAdded);
   onItemAddedRef.current = onItemAdded;
-  const onTypeAddedRef = useRef(onTypeAdded);
-  onTypeAddedRef.current = onTypeAdded;
 
   const maxPinnedItemsRef = useRef(maxPinnedItems);
   maxPinnedItemsRef.current = maxPinnedItems;
@@ -190,7 +188,6 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
             });
             await pinDroppedItem(itemId);
             onItemAddedRef.current?.();
-            onTypeAddedRef.current?.('image');
             insertedCount += 1;
           } catch (error) {
             console.error('failed to add dropped image file:', error);
@@ -206,7 +203,6 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
           });
           await pinDroppedItem(itemId);
           onItemAddedRef.current?.();
-          onTypeAddedRef.current?.('file');
           insertedCount += 1;
         } catch (error) {
           console.error('failed to add dropped file path:', error);
@@ -230,7 +226,6 @@ function DragDrop({ onItemAdded, onTypeAdded }) {
 
       await pinDroppedItem(itemId);
       onItemAddedRef.current?.();
-      onTypeAddedRef.current?.('text');
       return true;
     };
 

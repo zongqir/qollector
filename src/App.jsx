@@ -264,11 +264,6 @@ function App() {
     }
   };
 
-  // 拖入文件后切换类型
-  const handleTypeAdded = (type) => {
-    setSelectedType(type);
-  };
-
   // ========== 分割线拖拽 ==========
   const [leftWidth, setLeftWidth] = useState(340);
   const isDraggingRef = useRef(false);
@@ -325,7 +320,7 @@ function App() {
           />
         </Suspense>
       )}
-      <DragDrop onItemAdded={loadItems} onTypeAdded={handleTypeAdded} />
+      <DragDrop onItemAdded={loadItems} />
 
       {showEditModal && (
         <Suspense fallback={null}>
