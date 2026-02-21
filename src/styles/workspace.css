@@ -1633,12 +1633,14 @@
   gap: 6px;
   width: 100%;
   min-width: 0;
+  min-height: 34px;
   padding: 7px 12px;
   border: 1px solid var(--border-btn);
   border-radius: 8px;
   background: var(--btn-bg);
   color: var(--text-secondary);
   font-size: 13px;
+  line-height: 1.25;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -1693,6 +1695,9 @@
 }
 
 .collection-more-btn span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
