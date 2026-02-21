@@ -178,8 +178,16 @@
         "SiliconFlow": "SiliconFlow",
         "Volcano": "Volcano Engine",
         "Alibaba": "Alibaba Cloud",
+        "OpenAI": "OpenAI",
+        "Gemini": "Google Gemini",
         "Custom": "Custom"
-      }
+      },
+      "refreshModels": "Refresh model list",
+      "refreshing": "Fetching...",
+      "refreshFailed": "Failed to fetch models, using defaults",
+      "refreshSuccess": "Model list updated",
+      "manualInput": "Type model name manually",
+      "selectFromList": "Select from list"
     },
     "ocr": {
       "enabled": "Enable image text recognition",

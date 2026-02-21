@@ -935,6 +935,15 @@
     0 0.5px 1px rgba(0, 0, 0, 0.3);
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
 .dark-mode .sg-row .setting-input-small:hover,
 .dark-mode .shortcut-input:hover {
   background: rgba(255, 255, 255, 0.11);
