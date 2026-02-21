@@ -236,15 +236,15 @@
 }
 
 .compact-card.selected {
-  background: var(--compact-card-bg, var(--bg-card));
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--selection-bg-strong) 84%, var(--compact-card-bg, var(--bg-card)) 16%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent);
 }
 
 .compact-card.multi-selected {
-  background: var(--compact-card-bg, var(--bg-card));
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--selection-bg-strong) 84%, var(--compact-card-bg, var(--bg-card)) 16%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent);
 }
 
 .compact-card.keyboard-focused {
@@ -573,26 +573,26 @@
   background: var(--compact-card-pinned-fav-bg, var(--card-pinned-fav-bg));
 }
 
-/* Keep pinned/favorite surface semantics while selection uses the left marker only. */
+/* Pinned/favorite selected: blend selection tint with their base color */
 .compact-card.pinned.selected,
 .compact-card.pinned.multi-selected {
-  background: var(--compact-card-pinned-bg, var(--card-pinned-bg));
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--selection-bg-strong) 70%, var(--compact-card-pinned-bg, var(--card-pinned-bg)) 30%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent);
 }
 
 .compact-card.favorite.selected,
 .compact-card.favorite.multi-selected {
-  background: var(--compact-card-favorite-bg, var(--card-favorite-bg));
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--selection-bg-strong) 70%, var(--compact-card-favorite-bg, var(--card-favorite-bg)) 30%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent);
 }
 
 .compact-card.pinned.favorite.selected,
 .compact-card.pinned.favorite.multi-selected {
-  background: var(--compact-card-pinned-fav-bg, var(--card-pinned-fav-bg));
-  border-color: transparent;
-  box-shadow: none;
+  background: color-mix(in srgb, var(--selection-bg-strong) 70%, var(--compact-card-pinned-fav-bg, var(--card-pinned-fav-bg)) 30%);
+  border-color: var(--selection-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent);
 }
 
 .compact-card.custom-bg {
@@ -609,14 +609,14 @@
 .compact-card.pinned.selected::before,
 .compact-card.favorite.selected::before,
 .compact-card.pinned.favorite.selected::before {
-  width: 1px;
+  width: 0;
 }
 
 .compact-card.multi-selected::before,
 .compact-card.pinned.multi-selected::before,
 .compact-card.favorite.multi-selected::before,
 .compact-card.pinned.favorite.multi-selected::before {
-  width: 1px;
+  width: 0;
 }
 
 .compact-card-header {
