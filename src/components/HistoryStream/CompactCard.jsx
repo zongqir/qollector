@@ -1,6 +1,6 @@
-import { memo, lazy, Suspense } from 'react';
+import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen } from 'lucide-react';
+import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -13,6 +13,12 @@ import {
 } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
+import {
+  CARD_BACKGROUND_DEFAULT_ID,
+  CARD_BACKGROUND_PRESETS,
+  getCardBackgroundIdFromMetadata,
+  getCardBackgroundPreset,
+} from '../../utils/cardBackgrounds';
 import useAppStore from '../../store/useAppStore';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
@@ -42,9 +48,12 @@ function CompactCard({
   onToggleFavorite,
   onOpenItem,
   onRevealInFolder,
+  onSetCardBackground,
   onTagClick,
 }) {
   const { t, i18n } = useTranslation();
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorPickerRef = useRef(null);
   const timelineColor = getTimelineColor(item.created_at);
   const timeLabel = formatHistoryCardTime(
     item.created_at,
@@ -56,9 +65,32 @@ function CompactCard({
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
   const canDragOut = supportsNativeExternalDrag && (item.type_ === 'file' || item.type_ === 'image');
   const canOpen = item.type_ === 'link' || item.type_ === 'file';
+  const cardBackground = useMemo(
+    () => getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata)),
+    [item.metadata],
+  );
+  const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
+
+  useEffect(() => {
+    if (!showColorPicker) return undefined;
+    const handlePointerDown = (event) => {
+      if (colorPickerRef.current?.contains(event.target)) return;
+      setShowColorPicker(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [showColorPicker]);
+
+  const handleBackgroundSelect = useCallback((backgroundId) => {
+    onSetCardBackground?.(item, backgroundId);
+    setShowColorPicker(false);
+  }, [item, onSetCardBackground]);
 
   const cardClasses = [
     'compact-card',
+    hasCustomCardBackground && 'custom-bg',
     item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
@@ -132,7 +164,10 @@ function CompactCard({
   return (
     <div
       className={cardClasses}
-      style={{ '--timeline-color': timelineColor }}
+      style={{
+        '--timeline-color': timelineColor,
+        ...(hasCustomCardBackground ? { '--compact-card-accent': cardBackground.accent } : {}),
+      }}
       title={`${formatDate(item.created_at, i18n.language)} · ${getSourceApp(item.metadata)}`}
       draggable="true"
       onDragStart={(e) => onDragStart && onDragStart(item, e)}
@@ -142,56 +177,103 @@ function CompactCard({
         <span className="compact-card-time">
           {timeLabel}
         </span>
-        <div className="compact-card-badges">
-          {canDragOut && (
+        <div className="compact-card-badges-wrap" ref={colorPickerRef}>
+          <div className="compact-card-badges">
+            {canDragOut && (
+              <button
+                className="badge-btn badge-dragout"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onStartExternalDrag?.(item);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                title={t('toolbar.dragToApp')}
+              >
+                <GripVertical size={10} />
+              </button>
+            )}
+            {canOpen && (
+              <button
+                className="badge-btn badge-open"
+                onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
+                title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+              >
+                <ExternalLink size={10} />
+              </button>
+            )}
+            {item.type_ === 'file' && (
+              <button
+                className="badge-btn badge-open"
+                onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
+                title={t('item.revealInFolder')}
+              >
+                <FolderOpen size={10} />
+              </button>
+            )}
             <button
-              className="badge-btn badge-dragout"
+              className={`badge-btn badge-color ${hasCustomCardBackground ? 'tinted' : ''}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                onStartExternalDrag?.(item);
               }}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                setShowColorPicker(prev => !prev);
               }}
-              title={t('toolbar.dragToApp')}
+              title={t('item.cardBackground.button')}
             >
-              <GripVertical size={10} />
+              <Palette size={10} />
             </button>
-          )}
-          {canOpen && (
             <button
-              className="badge-btn badge-open"
-              onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
-              title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
+              className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
+              title={t('preview.pin')}
             >
-              <ExternalLink size={10} />
+              <Inbox size={10} />
             </button>
-          )}
-          {item.type_ === 'file' && (
             <button
-              className="badge-btn badge-open"
-              onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
-              title={t('item.revealInFolder')}
+              className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
+              title={t('preview.favorite')}
             >
-              <FolderOpen size={10} />
+              <Star size={10} fill={item.is_favorite ? 'currentColor' : 'none'} />
             </button>
+          </div>
+          {showColorPicker && (
+            <div
+              className="compact-card-color-picker"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {CARD_BACKGROUND_PRESETS.map((preset) => {
+                const isActive = preset.id === cardBackground.id;
+                const isDefault = preset.id === CARD_BACKGROUND_DEFAULT_ID;
+                return (
+                  <button
+                    key={preset.id}
+                    className={`compact-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
+                    style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
+                    title={t(preset.labelKey)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleBackgroundSelect(preset.id);
+                    }}
+                  >
+                    {isDefault && <span className="compact-card-color-dot-reset"></span>}
+                  </button>
+                );
+              })}
+            </div>
           )}
-          <button
-            className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
-            title={t('preview.pin')}
-          >
-            <Inbox size={10} />
-          </button>
-          <button
-            className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
-            title={t('preview.favorite')}
-          >
-            <Star size={10} fill={item.is_favorite ? 'currentColor' : 'none'} />
-          </button>
         </div>
       </div>
       <div className="compact-card-body">

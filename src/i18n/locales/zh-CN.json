@@ -118,7 +118,16 @@
     "copyHsl": "复制 HSL",
     "delete": "删除",
     "autoPasted": "已粘贴到前台应用",
-    "justNow": "刚刚"
+    "justNow": "刚刚",
+    "cardBackground": {
+      "button": "调整卡片底色",
+      "default": "默认",
+      "sand": "暖沙",
+      "mint": "薄荷",
+      "sky": "天青",
+      "rose": "蔷薇",
+      "violet": "柔紫"
+    }
   },
   "edit": {
     "content": "内容:",

@@ -1,6 +1,6 @@
-import { memo, lazy, Suspense } from 'react';
+import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, Folder, ExternalLink, FileText } from 'lucide-react';
+import { X, Check, Folder, ExternalLink, FileText, Palette } from 'lucide-react';
 import {
   getContentPreview,
   getFileList,
@@ -10,6 +10,12 @@ import {
 } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags } from '../../utils/tagHelpers';
+import {
+  CARD_BACKGROUND_DEFAULT_ID,
+  CARD_BACKGROUND_PRESETS,
+  getCardBackgroundIdFromMetadata,
+  getCardBackgroundPreset,
+} from '../../utils/cardBackgrounds';
 
 // Lazy load FileIcon to reduce initial bundle size
 const FileIconLazy = lazy(() =>
@@ -41,9 +47,34 @@ function CollectionCard({
   onClick,
   onDoubleClick,
   onOpenItem,
+  onSetCardBackground,
 }) {
   const { t } = useTranslation();
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorPickerRef = useRef(null);
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
+  const cardBackground = useMemo(
+    () => getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata)),
+    [item.metadata],
+  );
+  const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
+
+  useEffect(() => {
+    if (!showColorPicker) return undefined;
+    const handlePointerDown = (event) => {
+      if (colorPickerRef.current?.contains(event.target)) return;
+      setShowColorPicker(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [showColorPicker]);
+
+  const handleBackgroundSelect = useCallback((backgroundId) => {
+    onSetCardBackground?.(item, backgroundId);
+    setShowColorPicker(false);
+  }, [item, onSetCardBackground]);
 
   const renderContent = () => {
     if (item.type_ === 'image' && item.image_paths) {
@@ -131,7 +162,8 @@ function CollectionCard({
 
   return (
     <div
-      className={`collection-card ${isCopied ? 'copied' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+      className={`collection-card ${hasCustomCardBackground ? 'custom-bg' : ''} ${isCopied ? 'copied' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+      style={hasCustomCardBackground ? { '--collection-card-accent': cardBackground.accent } : undefined}
       onPointerDownCapture={onPointerDownCapture}
       onClick={onClick}
       onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(e); }}
@@ -141,13 +173,64 @@ function CollectionCard({
           <Check size={16} /> {t('item.copied')}
         </div>
       )}
-      <button
-        className="collection-card-remove"
-        onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-        title={t('collection.removeFromCollection')}
-      >
-        <X size={14} />
-      </button>
+      <div className="collection-card-tools" ref={colorPickerRef}>
+        <button
+          className={`collection-card-color ${hasCustomCardBackground ? 'tinted' : ''}`}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowColorPicker(prev => !prev);
+          }}
+          title={t('item.cardBackground.button')}
+        >
+          <Palette size={13} />
+        </button>
+        <button
+          className="collection-card-remove"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title={t('collection.removeFromCollection')}
+        >
+          <X size={14} />
+        </button>
+        {showColorPicker && (
+          <div
+            className="collection-card-color-picker"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {CARD_BACKGROUND_PRESETS.map((preset) => {
+              const isActive = preset.id === cardBackground.id;
+              const isDefault = preset.id === CARD_BACKGROUND_DEFAULT_ID;
+              return (
+                <button
+                  key={preset.id}
+                  className={`collection-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
+                  style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
+                  title={t(preset.labelKey)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleBackgroundSelect(preset.id);
+                  }}
+                >
+                  {isDefault && <span className="collection-card-color-dot-reset"></span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
       <div className="collection-card-content">
         {renderContent()}
       </div>

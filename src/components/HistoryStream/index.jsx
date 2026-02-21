@@ -124,6 +124,7 @@ function HistoryStream({ style }) {
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
+  const setCardBackground = useAppStore(s => s.setCardBackground);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const setSelectedItemIds = useAppStore(s => s.setSelectedItemIds);
   const clearSelection = useAppStore(s => s.clearSelection);
@@ -1088,6 +1089,7 @@ function HistoryStream({ style }) {
           onToggleFavorite={toggleFavorite}
           onOpenItem={handleOpenItem}
           onRevealInFolder={handleRevealInFolder}
+          onSetCardBackground={setCardBackground}
           onTagClick={handleTagClick}
         />
       </div>
@@ -1110,6 +1112,7 @@ function HistoryStream({ style }) {
     toggleFavorite,
     handleOpenItem,
     handleRevealInFolder,
+    setCardBackground,
     handleTagClick,
   ]);
 

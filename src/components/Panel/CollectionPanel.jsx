@@ -44,6 +44,7 @@ function CollectionPanel() {
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const setCardBackground = useAppStore(s => s.setCardBackground);
   const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
 
   const pinnedItems = useMemo(() => {
@@ -284,6 +285,7 @@ function CollectionPanel() {
                 onClick={(event) => handleCardClick(item, index, event)}
                 onDoubleClick={(event) => handleCardDoubleClick(item, event)}
                 onOpenItem={handleOpenItem}
+                onSetCardBackground={setCardBackground}
               />
             ))}
           </div>

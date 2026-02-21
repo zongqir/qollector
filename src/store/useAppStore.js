@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import { getTags, hasReservedTagPrefix } from '../utils/tagHelpers';
+import {
+  getCardBackgroundIdFromMetadata,
+  normalizeCardBackgroundId,
+  withCardBackgroundInMetadata,
+} from '../utils/cardBackgrounds';
 import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
@@ -916,6 +921,49 @@ const useAppStore = create((set, get) => ({
       if (message !== 'CANCELLED') {
         console.error('save image as failed:', error);
       }
+    }
+  },
+
+  setCardBackground: async (item, backgroundId) => {
+    if (!item?.id) return;
+    const nextBackgroundId = normalizeCardBackgroundId(backgroundId);
+    const currentBackgroundId = getCardBackgroundIdFromMetadata(item.metadata);
+    if (nextBackgroundId === currentBackgroundId) return;
+
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const nextMetadata = withCardBackgroundInMetadata(item.metadata, nextBackgroundId);
+    const updatedItem = {
+      ...item,
+      metadata: nextMetadata,
+      updated_at: updatedAt,
+    };
+
+    try {
+      await invoke('update_item', { item: updatedItem });
+      set((state) => {
+        const nextItems = state.items.map((it) => {
+          if (it.id !== item.id) return it;
+          return {
+            ...it,
+            metadata: nextMetadata,
+            updated_at: updatedAt,
+          };
+        });
+        const nextPreviewItem = state.previewItem?.id === item.id
+          ? {
+            ...state.previewItem,
+            metadata: nextMetadata,
+            updated_at: updatedAt,
+          }
+          : state.previewItem;
+        return {
+          items: nextItems,
+          previewItem: nextPreviewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
+    } catch (error) {
+      console.error('set card background failed:', error);
     }
   },
 

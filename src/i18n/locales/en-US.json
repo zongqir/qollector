@@ -118,7 +118,16 @@
     "copyHsl": "Copy HSL",
     "delete": "Delete",
     "autoPasted": "Pasted to foreground app",
-    "justNow": "Just now"
+    "justNow": "Just now",
+    "cardBackground": {
+      "button": "Adjust card background",
+      "default": "Default",
+      "sand": "Sand",
+      "mint": "Mint",
+      "sky": "Sky",
+      "rose": "Rose",
+      "violet": "Violet"
+    }
   },
   "edit": {
     "content": "Content:",
