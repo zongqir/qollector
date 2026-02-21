@@ -5,6 +5,7 @@ mod commands;
 mod config;
 mod core;
 mod low_memory_mode;
+mod lan_sync;
 mod mcp;
 mod ocr;
 mod platform;
@@ -21,12 +22,14 @@ use commands::collection_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
+use commands::lan_sync_commands::*;
 use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
 use commands::ocr_commands::*;
 use commands::prompt_commands::*;
 use commands::share_commands::*;
+use commands::sync_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use low_memory_mode::{AppExitState, LowMemoryModeState};
 use repository::clipboard_repo::ClipboardRepository;
@@ -383,12 +386,19 @@ fn main() {
                 init_meter.mark("create_platform");
 
                 // Load startup AI/OCR/MCP/general configs.
-                let (ai_config_opt, ocr_config_opt, mcp_config_opt, general_config_opt) =
+                let (
+                    ai_config_opt,
+                    ocr_config_opt,
+                    mcp_config_opt,
+                    general_config_opt,
+                    lan_sync_config_opt,
+                ) =
                     tokio::try_join!(
                         config_repo.load_ai_config(),
                         config_repo.load_ocr_config(),
                         config_repo.load_mcp_config(),
-                        config_repo.load_general_config()
+                        config_repo.load_general_config(),
+                        config_repo.load_lan_sync_config()
                     )
                     .expect("Failed to load startup configs");
                 init_meter.mark("load_startup_configs");
@@ -502,6 +512,31 @@ fn main() {
 
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
+
+                let initial_lan_sync_config = lan_sync_config_opt.unwrap_or_default();
+                let lan_sync_service = Arc::new(lan_sync::LanSyncService::new(
+                    manager.clone(),
+                    initial_lan_sync_config,
+                ));
+                let lan_sync_config = lan_sync_service.get_config().await;
+                if let Err(error) = config_repo.save_lan_sync_config(&lan_sync_config).await {
+                    eprintln!("[LAN Sync] failed to persist runtime config: {}", error);
+                }
+                if lan_sync_config.enabled {
+                    if let Err(error) = lan_sync_service.start().await {
+                        eprintln!("[LAN Sync] startup failed: {}", error);
+                    } else {
+                        println!(
+                            "[LAN Sync] service started on port {}",
+                            lan_sync_config.service_port
+                        );
+                    }
+                }
+                let lan_sync_state = LanSyncState {
+                    config_repo: config_repo.clone(),
+                    service: lan_sync_service,
+                };
+                app.manage(lan_sync_state);
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
 
@@ -695,6 +730,24 @@ fn main() {
             generate_qr,
             share_via_s3,
             test_share_s3_connection,
+            get_sync_latest_slot,
+            get_next_sync_source_seq_hint,
+            publish_sync_slot_from_item,
+            publish_sync_slot_payload,
+            apply_remote_sync_slot,
+            get_lan_sync_config,
+            update_lan_sync_config,
+            get_lan_sync_identity,
+            get_lan_sync_running,
+            get_lan_discovered_devices,
+            start_lan_pair_code,
+            get_lan_pair_code_session,
+            cancel_lan_pair_code,
+            pair_lan_device,
+            get_lan_paired_devices,
+            unpair_lan_device,
+            push_latest_slot_to_lan_device,
+            pull_latest_slot_from_lan_device,
             preview_file,
             open_file_path,
             reveal_file_path,
@@ -714,6 +767,12 @@ fn main() {
                     }
                 }
                 tauri::RunEvent::Exit => {
+                    if let Some(lan_state) = app.try_state::<LanSyncState>() {
+                        let service = lan_state.service.clone();
+                        tauri::async_runtime::spawn(async move {
+                            service.stop().await;
+                        });
+                    }
                     println!("[Shutdown] Application exiting");
                     tray::perform_shutdown(app);
                 }
@@ -721,4 +780,3 @@ fn main() {
             }
         });
 }
-// test

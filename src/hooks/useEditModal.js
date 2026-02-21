@@ -42,9 +42,12 @@ export function useEditModal(loadItems, t) {
           }
         }
       } else {
+        const nextContent = data.content ?? editingItem.content;
+        const contentUpdated = nextContent !== editingItem.content;
         const updatedItem = {
           ...editingItem,
-          content: data.content || editingItem.content,
+          content: nextContent,
+          content_updated: contentUpdated,
           user_note: data.note,
           tags: JSON.stringify(data.tags),
           updated_at: Math.floor(Date.now() / 1000)

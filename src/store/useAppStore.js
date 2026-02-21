@@ -9,6 +9,8 @@ import { FREE_PROVIDERS } from '../share/providers';
 
 const PAGE_SIZE = 30;
 const MAX_ITEMS_IN_MEMORY = 150;
+const LOW_MEMORY_PAGE_SIZE = 20;
+const LOW_MEMORY_MAX_ITEMS_IN_MEMORY = 80;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const HISTORY_SNAPSHOT_KEY = 'clipbox-history-snapshot-v1';
 const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
@@ -39,6 +41,12 @@ const detectClientPlatform = () => {
   return 'other';
 };
 const SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK = detectClientPlatform() === 'windows';
+const getItemsMemoryCap = (lowMemoryModeEnabled) => (
+  lowMemoryModeEnabled ? LOW_MEMORY_MAX_ITEMS_IN_MEMORY : MAX_ITEMS_IN_MEMORY
+);
+const getItemsPageSize = (lowMemoryModeEnabled) => (
+  lowMemoryModeEnabled ? LOW_MEMORY_PAGE_SIZE : PAGE_SIZE
+);
 
 const summarizeItemsForMemory = (items) => {
   let totalContentChars = 0;
@@ -464,8 +472,9 @@ const useAppStore = create((set, get) => ({
     const requestSeq = ++loadItemsRequestSeq;
     console.log('[Perf:Store] loadItems START at', performance.now().toFixed(1), 'ms');
     try {
+      const pageSize = getItemsPageSize(get().lowMemoryModeEnabled);
       console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
-      const result = await getRecentItemsLight(PAGE_SIZE);
+      const result = await getRecentItemsLight(pageSize);
       console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
       if (requestSeq !== loadItemsRequestSeq) {
         console.log('[Perf:Store] drop stale loadItems result before merge', { requestSeq, latest: loadItemsRequestSeq });
@@ -478,14 +487,14 @@ const useAppStore = create((set, get) => ({
       console.log('[Perf:Store] Setting items state at', performance.now().toFixed(1), 'ms');
       set((state) => ({
         items: mergedItems,
-        hasMore: result.length >= PAGE_SIZE,
+        hasMore: result.length >= pageSize,
         itemsRevision: state.itemsRevision + 1,
       }));
       persistHistorySnapshot(mergedItems);
 
       logItemsMemoryProbe('loadItems', mergedItems, {
         fetched: result.length,
-        pageSize: PAGE_SIZE,
+        pageSize,
       });
 
       console.log('[Perf:Store] Calling detectAndUpdateCodeLanguage at', performance.now().toFixed(1), 'ms');
@@ -523,24 +532,26 @@ const useAppStore = create((set, get) => ({
   },
 
   loadMore: async () => {
-    const { hasMore, loadingMore, items, itemsRevision } = get();
+    const { hasMore, loadingMore, items, itemsRevision, lowMemoryModeEnabled } = get();
     if (!hasMore || loadingMore) return;
     set({ loadingMore: true });
     const requestOffset = items.length;
     const requestRevision = itemsRevision;
+    const pageSize = getItemsPageSize(lowMemoryModeEnabled);
+    const memoryCap = getItemsMemoryCap(lowMemoryModeEnabled);
     try {
-      const more = await getMoreItems(PAGE_SIZE, requestOffset);
+      const more = await getMoreItems(pageSize, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
       let mergedItemsSnapshot = null;
       set((state) => {
         let merged = mergeUniqueById(state.items, more);
-        if (merged.length > MAX_ITEMS_IN_MEMORY) {
-          merged = merged.slice(0, MAX_ITEMS_IN_MEMORY);
+        if (merged.length > memoryCap) {
+          merged = merged.slice(0, memoryCap);
         }
         mergedItemsSnapshot = merged;
         return {
           items: merged,
-          hasMore: more.length >= PAGE_SIZE && merged.length < MAX_ITEMS_IN_MEMORY,
+          hasMore: more.length >= pageSize && merged.length < memoryCap,
         };
       });
       if (mergedItemsSnapshot) {
@@ -548,8 +559,9 @@ const useAppStore = create((set, get) => ({
         logItemsMemoryProbe('loadMore', mergedItemsSnapshot, {
           fetched: more.length,
           offset: requestOffset,
-          pageSize: PAGE_SIZE,
-          hasMoreAfter: more.length >= PAGE_SIZE,
+          pageSize,
+          hasMoreAfter: more.length >= pageSize,
+          memoryCap,
         });
       }
       detectAndUpdateCodeLanguage(more, (id, lang) => {

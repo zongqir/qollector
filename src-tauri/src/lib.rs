@@ -10,6 +10,7 @@ pub mod shortcuts;
 pub mod startup_metrics;
 pub mod tray;
 pub mod share;
+pub mod lan_sync;
 pub mod window_lifecycle;
 pub mod low_memory_mode;
 

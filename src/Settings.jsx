@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
+import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
 import IntegrationsShareSection from './components/Settings/IntegrationsShareSection';
 import GeneralSection from './components/Settings/GeneralSection';
 import ShortcutsSection from './components/Settings/ShortcutsSection';
@@ -1285,6 +1286,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               lockSuccess={lockSuccess}
               setLockSuccess={setLockSuccess}
               setLockHasPassword={setLockHasPassword}
+            />
+          )}
+
+          {activeTab === 'integrations' && (
+            <IntegrationsLanSyncSection
+              t={t}
             />
           )}
 

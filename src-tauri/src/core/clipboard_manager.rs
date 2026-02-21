@@ -1,9 +1,13 @@
 use crate::ai::{AIConfig, AIService};
-use crate::core::models::{ClipboardContent, ClipboardItem, WindowMetadata};
+use crate::core::models::{
+    ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
+    WindowMetadata,
+};
 use crate::ocr::OcrService;
 use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
+use crate::lan_sync::PairedSyncDevice;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -1110,6 +1114,158 @@ impl ClipboardManager {
         Ok(item.id.clone())
     }
 
+    pub async fn get_sync_latest_slot(&self) -> Result<Option<SyncLatestSlot>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_sync_latest_slot().await
+    }
+
+    pub async fn get_next_sync_source_seq_hint(
+        &self,
+        source_device_id: &str,
+    ) -> Result<i64, String> {
+        let source_device_id = source_device_id.trim();
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+        let repo = self.repository.lock().await;
+        repo.get_next_sync_source_seq_hint(source_device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn publish_sync_slot_from_item(
+        &self,
+        item_id: &str,
+        source_device_id: &str,
+    ) -> Result<SyncLatestSlot, String> {
+        let source_device_id = source_device_id.trim();
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        let item = repo
+            .find_by_id(item_id)
+            .await
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("Item not found: {}", item_id))?;
+
+        if item.is_deleted {
+            return Err("Cannot publish a deleted item".to_string());
+        }
+
+        let payload_json = serde_json::to_string(&item)
+            .map_err(|e| format!("Failed to encode sync payload: {}", e))?;
+
+        repo.publish_sync_slot_local(
+            &payload_json,
+            &item.type_,
+            source_device_id,
+            &item.content_hash,
+            Some(chrono::Utc::now().timestamp_millis()),
+        )
+        .await
+        .map_err(|e| e.to_string())
+    }
+
+    pub async fn publish_sync_slot_payload(
+        &self,
+        payload_json: &str,
+        payload_type: &str,
+        source_device_id: &str,
+        content_hash: &str,
+        logical_ts_ms: Option<i64>,
+    ) -> Result<SyncLatestSlot, String> {
+        let payload_json_trimmed = payload_json.trim();
+        let payload_type = payload_type.trim();
+        let source_device_id = source_device_id.trim();
+        let content_hash = content_hash.trim();
+
+        if payload_json_trimmed.is_empty() {
+            return Err("payload_json is required".to_string());
+        }
+        if payload_type.is_empty() {
+            return Err("payload_type is required".to_string());
+        }
+        if source_device_id.is_empty() {
+            return Err("source_device_id is required".to_string());
+        }
+        if content_hash.is_empty() {
+            return Err("content_hash is required".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        repo.publish_sync_slot_local(
+            payload_json,
+            payload_type,
+            source_device_id,
+            content_hash,
+            logical_ts_ms,
+        )
+        .await
+        .map_err(|e| e.to_string())
+    }
+
+    pub async fn apply_remote_sync_slot(
+        &self,
+        incoming: SyncIncomingSlot,
+    ) -> Result<SyncApplyResult, String> {
+        let repo = self.repository.lock().await;
+        repo.apply_remote_sync_slot(&incoming)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn list_paired_sync_devices(&self) -> Result<Vec<PairedSyncDevice>, String> {
+        let repo = self.repository.lock().await;
+        repo.list_paired_sync_devices()
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn get_paired_sync_device(
+        &self,
+        device_id: &str,
+    ) -> Result<Option<PairedSyncDevice>, String> {
+        let repo = self.repository.lock().await;
+        repo.get_paired_sync_device(device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn upsert_paired_sync_device(
+        &self,
+        device_id: &str,
+        device_name: &str,
+        pair_token: &str,
+        last_host: Option<&str>,
+        last_port: Option<u16>,
+    ) -> Result<PairedSyncDevice, String> {
+        let repo = self.repository.lock().await;
+        repo.upsert_paired_sync_device(device_id, device_name, pair_token, last_host, last_port)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn touch_paired_sync_device(
+        &self,
+        device_id: &str,
+        last_host: Option<&str>,
+        last_port: Option<u16>,
+    ) -> Result<(), String> {
+        let repo = self.repository.lock().await;
+        repo.touch_paired_sync_device(device_id, last_host, last_port)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn remove_paired_sync_device(&self, device_id: &str) -> Result<(), String> {
+        let repo = self.repository.lock().await;
+        repo.remove_paired_sync_device(device_id)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
     fn schedule_link_preview_enrichment(&self, item: &ClipboardItem) {
         if item.type_ != "link" {
             return;
@@ -1346,6 +1502,8 @@ impl ClipboardManager {
             .execute(repo.pool())
             .await?;
         let _ = repo.delete_all_raw_formats().await;
+        let _ = repo.clear_sync_latest_slot().await;
+        let _ = repo.clear_paired_sync_devices().await;
         Ok(())
     }
 
@@ -1438,6 +1596,16 @@ impl ClipboardManager {
             .execute(repo.pool())
             .await
             .map_err(|e| format!("Failed to delete raw formats: {}", e))?;
+
+        sqlx::query("DELETE FROM sync_latest_slot")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete sync latest slot: {}", e))?;
+
+        sqlx::query("DELETE FROM sync_paired_devices")
+            .execute(repo.pool())
+            .await
+            .map_err(|e| format!("Failed to delete paired sync devices: {}", e))?;
 
         // Delete all image files
         if self.image_dir.exists() {
