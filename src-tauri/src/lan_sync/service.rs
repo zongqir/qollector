@@ -225,10 +225,7 @@ impl LanSyncService {
             code: code.trim().to_string(),
         };
 
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_millis(config.request_timeout_ms))
-            .build()
-            .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+        let client = crate::http_client::client();
         let url = format!("http://{}:{}/lan-sync/pair/request", host, target_port);
         let response = client
             .post(url)
@@ -321,10 +318,7 @@ impl LanSyncService {
             },
         };
 
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_millis(config.request_timeout_ms))
-            .build()
-            .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+        let client = crate::http_client::client();
         let url = format!("http://{}:{}/lan-sync/sync/push", host, port);
         let response = client
             .post(url)
@@ -367,10 +361,7 @@ impl LanSyncService {
             .append_pair("device_id", &identity.device_id)
             .append_pair("pair_token", &paired.pair_token);
 
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_millis(config.request_timeout_ms))
-            .build()
-            .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+        let client = crate::http_client::client();
         let response = client
             .get(url)
             .send()

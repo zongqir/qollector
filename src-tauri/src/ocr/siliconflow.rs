@@ -70,11 +70,7 @@ struct ResponseMessage {
 
 impl SiliconFlowOcr {
     pub fn new(api_key: String, base_url: Option<String>) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+        let client = crate::http_client::client().clone();
 
         Self {
             api_key,

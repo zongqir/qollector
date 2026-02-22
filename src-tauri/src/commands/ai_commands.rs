@@ -1,7 +1,8 @@
 use crate::ai::{AIConfig, AIProvider, AIService};
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tauri::State;
 
 pub struct AIState {
@@ -11,7 +12,7 @@ pub struct AIState {
 
 #[tauri::command]
 pub async fn get_ai_config(state: State<'_, AIState>) -> Result<AIConfig, String> {
-    let config = state.config.lock().unwrap();
+    let config = state.config.lock();
     Ok(config.clone())
 }
 
@@ -23,7 +24,7 @@ pub async fn update_ai_config(
 ) -> Result<(), String> {
     // 更新内存中的配置
     {
-        let mut current_config = state.config.lock().unwrap();
+        let mut current_config = state.config.lock();
         *current_config = config.clone();
     }
 
@@ -45,7 +46,7 @@ pub async fn generate_ai_tags(
     state: State<'_, AIState>,
     content: String,
 ) -> Result<(Vec<String>, Option<String>), String> {
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
 
     if !config.enabled || config.get_current_api_key().is_empty() {
         return Ok((Vec::new(), None));
@@ -140,7 +141,7 @@ pub async fn generate_timeline_summary(
     state: State<'_, AIState>,
     items: Vec<crate::core::models::ClipboardItem>,
 ) -> Result<String, String> {
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
 
     if !config.enabled {
         return Err("AI feature is disabled".to_string());

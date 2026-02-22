@@ -177,7 +177,7 @@ pub async fn add_clipboard_item_manual(
             std::fs::write(&image_path, &image_data).map_err(|e| format!("保存图片失败: {}", e))?;
 
             if let Ok(img) = image::load_from_memory(&image_data) {
-                let thumbnail = img.thumbnail(300, 300);
+                let thumbnail = crate::core::thumbnail::generate_thumbnail(&img, 300);
                 thumbnail
                     .save(&thumb_path)
                     .map_err(|e| format!("保存缩略图失败: {}", e))?;

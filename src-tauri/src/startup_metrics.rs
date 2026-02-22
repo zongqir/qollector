@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Serialize)]
@@ -40,23 +40,23 @@ impl StartupMetricsState {
     }
 
     pub fn mark_core_init_complete(&self) {
-        *self.core_init_since_start_ms.lock().unwrap() = Some(self.elapsed_since_start_ms());
+        *self.core_init_since_start_ms.lock() = Some(self.elapsed_since_start_ms());
     }
 
     pub fn mark_monitor_spawn_complete(&self) {
-        *self.monitor_spawn_since_start_ms.lock().unwrap() = Some(self.elapsed_since_start_ms());
+        *self.monitor_spawn_since_start_ms.lock() = Some(self.elapsed_since_start_ms());
     }
 
     pub fn mark_setup_complete(&self) {
-        *self.setup_complete_since_start_ms.lock().unwrap() = Some(self.elapsed_since_start_ms());
+        *self.setup_complete_since_start_ms.lock() = Some(self.elapsed_since_start_ms());
     }
 
     pub fn snapshot(&self) -> StartupMetricsSnapshot {
         StartupMetricsSnapshot {
             process_started_at_unix_ms: self.process_started_at_unix_ms,
-            setup_complete_since_start_ms: *self.setup_complete_since_start_ms.lock().unwrap(),
-            core_init_since_start_ms: *self.core_init_since_start_ms.lock().unwrap(),
-            monitor_spawn_since_start_ms: *self.monitor_spawn_since_start_ms.lock().unwrap(),
+            setup_complete_since_start_ms: *self.setup_complete_since_start_ms.lock(),
+            core_init_since_start_ms: *self.core_init_since_start_ms.lock(),
+            monitor_spawn_since_start_ms: *self.monitor_spawn_since_start_ms.lock(),
         }
     }
 }

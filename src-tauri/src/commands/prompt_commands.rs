@@ -13,7 +13,7 @@ pub async fn run_prompt_assistant_task(
 ) -> Result<PromptAssistantResponse, String> {
     validate_request(&request)?;
 
-    let config = state.config.lock().unwrap().clone();
+    let config = state.config.lock().clone();
     if config.get_current_api_key().is_empty() {
         return Err("AI is not configured".to_string());
     }

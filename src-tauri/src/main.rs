@@ -6,6 +6,7 @@ mod commands;
 mod config;
 mod core;
 mod crash_log;
+mod http_client;
 mod low_memory_mode;
 mod lan_sync;
 mod mcp;
@@ -39,7 +40,7 @@ use repository::config_repo::ConfigRepository;
 use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
 use std::sync::Arc;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use std::time::Instant;
 use tauri::Manager;
 use tauri::Emitter;
@@ -502,7 +503,7 @@ fn main() {
                         match ocr::OcrService::new(ocr_config_for_prewarm) {
                             Ok(service) => {
                                 let provider = service.provider_name().to_string();
-                                *ocr_service_slot.lock().unwrap() = Some(service.clone());
+                                *ocr_service_slot.lock() = Some(service.clone());
                                 manager_for_prewarm.update_ocr_service(Some(service));
                                 println!(
                                     "[Startup:ocr_prewarm] ready in {} ms (provider={})",

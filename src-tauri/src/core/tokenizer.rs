@@ -1,7 +1,7 @@
 use jieba_rs::Jieba;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
-static JIEBA: Lazy<Jieba> = Lazy::new(Jieba::new);
+static JIEBA: LazyLock<Jieba> = LazyLock::new(Jieba::new);
 
 /// Tokenize text for FTS5 indexing: segment with jieba, join with spaces.
 /// For CJK tokens longer than 1 char, also emit individual characters

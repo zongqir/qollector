@@ -197,12 +197,7 @@ pub async fn upload_to_free_host(
     }
     form = form.part(file_field.to_string(), part);
 
-    let client = reqwest::Client::builder()
-        .user_agent("PasteHarbor/1.0")
-        .build()
-        .map_err(|e| ShareError::Upload(e.to_string()))?;
-
-    let resp = client
+    let resp = crate::http_client::client()
         .post(url)
         .multipart(form)
         .send()
@@ -210,8 +205,7 @@ pub async fn upload_to_free_host(
         .map_err(|e| ShareError::Upload(e.to_string()))?;
 
     let status_code = resp.status().as_u16();
-    let body = resp
-        .text()
+    let body = resp.text()
         .await
         .map_err(|e| ShareError::Upload(format!("Failed to read response: {}", e)))?;
 

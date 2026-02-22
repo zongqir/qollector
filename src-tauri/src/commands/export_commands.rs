@@ -74,15 +74,11 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     use aes_gcm::aead::rand_core::RngCore;
     use aes_gcm::aead::OsRng;
     use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
-    use sha2::{Digest, Sha256};
 
-    // 从密码派生 256-bit 密钥
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    let key_bytes = hasher.finalize();
+    let key_bytes = blake3::hash(password.as_bytes());
 
     let cipher =
-        Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("加密初始化失败: {}", e))?;
+        Aes256Gcm::new_from_slice(key_bytes.as_bytes()).map_err(|e| format!("encrypt init failed: {}", e))?;
 
     // 生成随机 96-bit nonce
     let mut nonce_bytes = [0u8; 12];
@@ -103,18 +99,15 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
 
 fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
-    use sha2::{Digest, Sha256};
 
     if data.len() < 20 || &data[..8] != MAGIC {
-        return Err("不是有效的 PasteHarbor 加密文件".to_string());
+        return Err("not a valid PasteHarbor encrypted file".to_string());
     }
 
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    let key_bytes = hasher.finalize();
+    let key_bytes = blake3::hash(password.as_bytes());
 
     let cipher =
-        Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| format!("解密初始化失败: {}", e))?;
+        Aes256Gcm::new_from_slice(key_bytes.as_bytes()).map_err(|e| format!("decrypt init failed: {}", e))?;
 
     let nonce = aes_gcm::Nonce::from_slice(&data[8..20]);
     let ciphertext = &data[20..];

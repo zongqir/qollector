@@ -38,6 +38,13 @@ impl ClipboardRepository {
             .connect(&db_url)
             .await?;
 
+        // Performance & stability PRAGMAs
+        sqlx::query("PRAGMA journal_mode=WAL").execute(&pool).await?;
+        sqlx::query("PRAGMA busy_timeout=5000").execute(&pool).await?;
+        sqlx::query("PRAGMA synchronous=NORMAL").execute(&pool).await?;
+        sqlx::query("PRAGMA cache_size=-8000").execute(&pool).await?;
+        sqlx::query("PRAGMA foreign_keys=ON").execute(&pool).await?;
+
         let repo = Self { pool };
         repo.init_database().await?;
         Ok(repo)

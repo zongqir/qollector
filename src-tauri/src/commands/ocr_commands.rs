@@ -1,7 +1,8 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::ocr::{OcrConfig, OcrService};
 use crate::repository::config_repo::ConfigRepository;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tauri::State;
 
 pub struct OcrState {
@@ -28,7 +29,7 @@ pub async fn init_ocr_service(
         .map_err(|e| format!("Failed to initialize OCR service: {}", e))?;
 
     let provider_name = service.provider_name().to_string();
-    *state.service.lock().unwrap() = Some(service.clone());
+    *state.service.lock() = Some(service.clone());
 
     // 同步更新 ClipboardManager 中的配置
     manager.update_ocr_service(Some(service));
@@ -50,7 +51,7 @@ pub async fn init_ocr_service(
 pub async fn get_ocr_config(state: State<'_, OcrState>) -> Result<OcrConfig, String> {
     println!("获取 OCR 配置");
     let in_memory_config = {
-        let service_guard = state.service.lock().unwrap();
+        let service_guard = state.service.lock();
         service_guard
             .as_ref()
             .map(|service| service.get_config().clone())
@@ -98,7 +99,7 @@ pub async fn update_ocr_config(
     println!("  auto_ocr: {}", config.auto_ocr);
 
     let service_opt = {
-        let mut service_guard = state.service.lock().unwrap();
+        let mut service_guard = state.service.lock();
         service_guard.take()
     };
 
@@ -106,7 +107,7 @@ pub async fn update_ocr_config(
         service
             .update_config(config.clone())
             .map_err(|e| format!("Failed to update OCR config: {}", e))?;
-        *state.service.lock().unwrap() = Some(service.clone());
+        *state.service.lock() = Some(service.clone());
 
         // 同步更新 ClipboardManager 中的配置
         manager.update_ocr_service(Some(service));
@@ -133,7 +134,7 @@ pub async fn recognize_image(
     state: State<'_, OcrState>,
 ) -> Result<String, String> {
     let service_opt = {
-        let service_guard = state.service.lock().unwrap();
+        let service_guard = state.service.lock();
         service_guard.clone()
     };
 
@@ -157,7 +158,7 @@ pub async fn recognize_and_update(
 ) -> Result<String, String> {
     // 执行 OCR 识别
     let service_opt = {
-        let service_guard = state.service.lock().unwrap();
+        let service_guard = state.service.lock();
         service_guard.clone()
     };
 
@@ -185,7 +186,7 @@ pub async fn check_ocr_available(state: State<'_, OcrState>) -> Result<bool, Str
     println!("检查 OCR 服务可用性");
 
     let service_opt = {
-        let service_guard = state.service.lock().unwrap();
+        let service_guard = state.service.lock();
         service_guard.clone()
     };
 
