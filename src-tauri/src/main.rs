@@ -281,10 +281,14 @@ fn main() {
     // PasteHarbor does not rely on most browser capabilities.
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
         // === Process and memory ===
-        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 heap cap + lite mode
+        "--js-flags=--max-old-space-size=64 --lite-mode --optimize-for-size", // V8 heap cap + lite mode + smaller code
         "--renderer-process-limit=1",            // Limit renderer process count
+        "--process-per-site",                    // Share renderer across same-origin pages
+        // === Memory pressure ===
+        "--enable-aggressive-domstorage-flushing", // Flush DOM storage sooner
+        "--memory-pressure-thresholds-mb=128:256", // Trigger GC earlier (moderate:critical)
         // === Disable unneeded Chromium features ===
-        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP",
+        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP,BackForwardCache,IdleDetection,WebUSB,WebBluetooth",
         "--disable-background-networking",       // Background networking
         "--disable-component-update",            // Component updater
         "--disable-domain-reliability",          // Domain reliability
@@ -298,14 +302,16 @@ fn main() {
         "--disable-client-side-phishing-detection", // Phishing detection
         "--disable-sync",                        // Account sync
         "--disable-translate",                   // Translation
-        "--disable-default-apps",                // Default apps
+        "--disable-default-apps",               // Default apps
         "--disable-extensions",                  // Extension system
         "--disable-hang-monitor",                // Hang monitor
         "--disable-popup-blocking",              // Popup blocker
         "--disable-prompt-on-repost",            // Repost prompts
-        // === GPU cache ===
+        // === GPU memory ===
         "--disable-gpu-shader-disk-cache",       // Shader disk cache
         "--gpu-disk-cache-size-kb=1",            // Minimal GPU disk cache
+        "--force-gpu-mem-available-mb=64",       // Limit GPU memory budget
+        "--disable-gpu-compositing",             // CPU compositing (saves GPU memory, OK for simple UI)
     ].join(" "));
 
     tauri::Builder::default()
