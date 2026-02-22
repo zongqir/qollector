@@ -13,8 +13,11 @@ jobs:
       matrix:
         include:
           - platform: windows-latest
+            args: ""
           - platform: macos-latest
+            args: --target universal-apple-darwin
           - platform: ubuntu-22.04
+            args: ""
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -42,6 +45,12 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Add macOS universal target
+        if: matrix.platform == 'macos-latest'
+        run: |
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
@@ -56,8 +65,9 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "PasteHarbor ${{ github.ref_name }}"
-          releaseBody: "See the assets to download and install this version."
+          releaseBody: "See the assets to download and install this version.\n\n> **Note:** Linux build is experimental — clipboard functionality is not yet implemented."
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           updaterJsonKeepUniversal: true
+          args: ${{ matrix.args }}
