@@ -12,7 +12,6 @@
   opacity: 0;
   overflow: hidden;
   transition: opacity 0.15s ease, height 0.15s ease, padding 0.15s ease, margin 0.15s ease;
-  will-change: opacity, height;
 }
 
 .item-card:hover .item-toolbar {
