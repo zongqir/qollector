@@ -44,6 +44,10 @@ zstd = "0.13"
 jieba-rs = { version = "0.8", default-features = false, features = ["default-dict"] }
 qrcode = { version = "0.14", default-features = false }
 rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+hostname = "0.4"
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-global-shortcut = "2"
@@ -63,6 +67,7 @@ windows = { version = "0.58", features = [
     "Win32_Storage_FileSystem",
 ] }
 drag = "2.1.0"
+winreg = "0.55"
 
 # Linux specific
 [target.'cfg(target_os = "linux")'.dependencies]

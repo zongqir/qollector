@@ -9,6 +9,7 @@ mod crash_log;
 mod http_client;
 mod low_memory_mode;
 mod lan_sync;
+mod license;
 mod mcp;
 mod ocr;
 mod platform;
@@ -26,6 +27,7 @@ use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
 use commands::lan_sync_commands::*;
+use commands::license_commands::*;
 use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
@@ -534,6 +536,20 @@ fn main() {
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
 
+                // License state
+                let license_config = config_repo
+                    .load_license_config()
+                    .await
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default();
+                println!("License config loaded: status={:?}", license_config.status);
+                let license_state = LicenseState {
+                    config: Arc::new(Mutex::new(license_config)),
+                    config_repo: config_repo.clone(),
+                };
+                app.manage(license_state);
+
                 let initial_lan_sync_config = lan_sync_config_opt.unwrap_or_default();
                 let lan_sync_service = Arc::new(lan_sync::LanSyncService::new(
                     manager.clone(),
@@ -776,6 +792,10 @@ fn main() {
             beta_guard::get_beta_status,
             crash_log::get_crash_log,
             crash_log::clear_crash_log,
+            get_license_info,
+            activate_license,
+            deactivate_license,
+            check_license_valid,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

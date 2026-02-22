@@ -754,5 +754,32 @@
     "checkNow": "检查更新",
     "upToDate": "已是最新版本",
     "checking": "正在检查..."
+  },
+  "license": {
+    "title": "许可证",
+    "tab": "许可证",
+    "status": "当前状态",
+    "free": "免费版",
+    "pro": "专业版",
+    "devices": "已激活设备",
+    "devicesCount": "{{current}} / {{max}}",
+    "enterKey": "输入许可证密钥",
+    "keyPlaceholder": "PH-XXXX-XXXX-XXXX-XXXX",
+    "activate": "激活",
+    "activating": "激活中...",
+    "deactivate": "解除绑定",
+    "deactivating": "解绑中...",
+    "activateSuccess": "激活成功",
+    "deactivateSuccess": "已解除绑定",
+    "invalidKey": "无效的许可证密钥",
+    "maxDevices": "已达到最大设备数限制",
+    "expired": "许可证已过期",
+    "revoked": "许可证已被吊销",
+    "proFeature": "此功能需要专业版许可证",
+    "upgrade": "升级到专业版",
+    "paidFeatures": "专业版功能",
+    "paidFeatureList": "AI 智能标签、OCR 文字识别、MCP 集成",
+    "maskedKey": "{{prefix}}****{{suffix}}",
+    "currentKey": "当前密钥"
   }
 }

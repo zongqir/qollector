@@ -754,5 +754,32 @@
     "checkNow": "Check for Updates",
     "upToDate": "You're up to date",
     "checking": "Checking..."
+  },
+  "license": {
+    "title": "License",
+    "tab": "License",
+    "status": "Status",
+    "free": "Free",
+    "pro": "Pro",
+    "devices": "Activated Devices",
+    "devicesCount": "{{current}} / {{max}}",
+    "enterKey": "Enter license key",
+    "keyPlaceholder": "PH-XXXX-XXXX-XXXX-XXXX",
+    "activate": "Activate",
+    "activating": "Activating...",
+    "deactivate": "Deactivate",
+    "deactivating": "Deactivating...",
+    "activateSuccess": "Activated successfully",
+    "deactivateSuccess": "Deactivated successfully",
+    "invalidKey": "Invalid license key",
+    "maxDevices": "Maximum device limit reached",
+    "expired": "License expired",
+    "revoked": "License revoked",
+    "proFeature": "This feature requires a Pro license",
+    "upgrade": "Upgrade to Pro",
+    "paidFeatures": "Pro Features",
+    "paidFeatureList": "AI Smart Tags, OCR Text Recognition, MCP Integration",
+    "maskedKey": "{{prefix}}****{{suffix}}",
+    "currentKey": "Current Key"
   }
 }

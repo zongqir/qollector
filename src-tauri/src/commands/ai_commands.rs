@@ -1,5 +1,7 @@
 use crate::ai::{AIConfig, AIProvider, AIService};
+use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
+use crate::license::config::LicenseStatus;
 use crate::repository::config_repo::ConfigRepository;
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -44,8 +46,17 @@ pub async fn update_ai_config(
 #[tauri::command]
 pub async fn generate_ai_tags(
     state: State<'_, AIState>,
+    license_state: State<'_, LicenseState>,
     content: String,
 ) -> Result<(Vec<String>, Option<String>), String> {
+    // License gate
+    {
+        let license = license_state.config.lock();
+        if license.status != LicenseStatus::Active {
+            return Err("PRO_REQUIRED".to_string());
+        }
+    }
+
     let config = state.config.lock().clone();
 
     if !config.enabled || config.get_current_api_key().is_empty() {
@@ -139,8 +150,17 @@ pub async fn fetch_remote_models(base_url: String, api_key: String) -> Result<Ve
 #[tauri::command]
 pub async fn generate_timeline_summary(
     state: State<'_, AIState>,
+    license_state: State<'_, LicenseState>,
     items: Vec<crate::core::models::ClipboardItem>,
 ) -> Result<String, String> {
+    // License gate
+    {
+        let license = license_state.config.lock();
+        if license.status != LicenseStatus::Active {
+            return Err("PRO_REQUIRED".to_string());
+        }
+    }
+
     let config = state.config.lock().clone();
 
     if !config.enabled {

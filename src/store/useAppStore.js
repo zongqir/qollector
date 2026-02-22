@@ -304,6 +304,8 @@ const useAppStore = create((set, get) => ({
   // ========== 配置 ==========
   aiEnabled: false,
   ocrEnabled: false,
+  licenseStatus: 'Free',
+  isProUser: false,
   maxPinnedItems: 10,
   themeMode: 'system',
   isLocked: true,
@@ -623,15 +625,19 @@ const useAppStore = create((set, get) => ({
 
   loadConfigs: async () => {
     try {
-      const [aiConfig, ocrConfig, generalConfig, hasLock] = await Promise.all([
+      const [aiConfig, ocrConfig, generalConfig, hasLock, licenseInfo] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
         invoke('get_general_config'),
-        invoke('has_lock_password')
+        invoke('has_lock_password'),
+        invoke('get_license_info'),
       ]);
+      const licenseStatus = licenseInfo?.status || 'Free';
       set((state) => ({
         aiEnabled: aiConfig.enabled || false,
         ocrEnabled: ocrConfig.enabled || false,
+        licenseStatus,
+        isProUser: licenseStatus === 'Active',
         maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
         isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
