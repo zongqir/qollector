@@ -50,7 +50,72 @@ impl ClipboardRepository {
         Ok(repo)
     }
 
+    /// Current schema version. Bump this when adding new migrations.
+    const CURRENT_SCHEMA_VERSION: i64 = 3;
+
     async fn init_database(&self) -> Result<(), sqlx::Error> {
+        // Schema version table (always created first)
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER NOT NULL,
+                applied_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        let db_version = self.get_schema_version().await?;
+        println!("[Schema] current version: {}, code version: {}", db_version, Self::CURRENT_SCHEMA_VERSION);
+
+        if db_version > Self::CURRENT_SCHEMA_VERSION {
+            println!(
+                "[Schema] WARNING: database version ({}) is newer than code version ({}). Possible downgrade install. Skipping migrations.",
+                db_version, Self::CURRENT_SCHEMA_VERSION
+            );
+            return Ok(());
+        }
+
+        if db_version < 1 {
+            self.migrate_v0_to_v1().await?;
+            self.set_schema_version(1).await?;
+            println!("[Schema] migrated to version 1");
+        }
+        if db_version < 2 {
+            self.migrate_v1_to_v2().await?;
+            self.set_schema_version(2).await?;
+            println!("[Schema] migrated to version 2");
+        }
+        if db_version < 3 {
+            self.migrate_v2_to_v3().await?;
+            self.set_schema_version(3).await?;
+            println!("[Schema] migrated to version 3");
+        }
+
+        Ok(())
+    }
+
+    async fn get_schema_version(&self) -> Result<i64, sqlx::Error> {
+        let row: Option<(i64,)> =
+            sqlx::query_as("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")
+                .fetch_optional(&self.pool)
+                .await?;
+        Ok(row.map(|(v,)| v).unwrap_or(0))
+    }
+
+    async fn set_schema_version(&self, version: i64) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query("INSERT INTO schema_version (version, applied_at) VALUES (?, ?)")
+            .bind(version)
+            .bind(now)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    /// V0 -> V1: Initial tables, indexes, raw formats, sync tables
+    async fn migrate_v0_to_v1(&self) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS clipboard_items (
@@ -77,42 +142,19 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
-        // migration: add pinned_at column
-        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pinned_at INTEGER")
-            .execute(&self.pool)
-            .await;
-
-        // migration: add code_language column
-        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN code_language TEXT")
-            .execute(&self.pool)
-            .await;
-
-        // 优化索引：添加复合索引提升查询性能
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_content_hash ON clipboard_items(content_hash)")
             .execute(&self.pool)
             .await?;
-
-        // 复合索引：is_deleted + updated_at（覆盖最常用的查询）
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_recent_query ON clipboard_items(is_deleted, updated_at DESC)")
             .execute(&self.pool)
             .await?;
-
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_type ON clipboard_items(type)")
             .execute(&self.pool)
             .await?;
-
-        // 添加 is_pinned 索引用于快速过滤
         sqlx::query("CREATE INDEX IF NOT EXISTS idx_is_pinned ON clipboard_items(is_pinned)")
             .execute(&self.pool)
             .await?;
 
-        sqlx::query(
-            "CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)",
-        )
-        .execute(&self.pool)
-        .await?;
-
-        // Raw clipboard formats table (HTML, RTF, etc.)
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS clipboard_raw_formats (
@@ -126,7 +168,6 @@ impl ClipboardRepository {
         )
         .execute(&self.pool)
         .await?;
-
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_raw_formats_item_id ON clipboard_raw_formats(item_id)",
         )
@@ -148,14 +189,12 @@ impl ClipboardRepository {
         )
         .execute(&self.pool)
         .await?;
-
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_sync_paired_last_seen ON sync_paired_devices(last_seen_ms DESC)",
         )
         .execute(&self.pool)
         .await?;
 
-        // Single-slot sync table for latest transferable payload.
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS sync_latest_slot (
@@ -173,7 +212,27 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
-        // FTS5 virtual table for full-text search
+        Ok(())
+    }
+
+    /// V1 -> V2: Add pinned_at and code_language columns
+    async fn migrate_v1_to_v2(&self) -> Result<(), sqlx::Error> {
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pinned_at INTEGER")
+            .execute(&self.pool)
+            .await;
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN code_language TEXT")
+            .execute(&self.pool)
+            .await;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_code_language ON clipboard_items(code_language)",
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// V2 -> V3: FTS5 virtual table + data migration
+    async fn migrate_v2_to_v3(&self) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
             CREATE VIRTUAL TABLE IF NOT EXISTS clipboard_fts USING fts5(
@@ -186,10 +245,7 @@ impl ClipboardRepository {
         )
         .execute(&self.pool)
         .await?;
-
-        // Migrate existing data into FTS table if empty
         self.migrate_fts_data().await?;
-
         Ok(())
     }
 

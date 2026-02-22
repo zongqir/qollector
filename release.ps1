@@ -52,13 +52,15 @@ Write-Ok "Version: $version"
 
 # ===== Step 3: Load signing key =====
 Write-Step "Loading signing key"
-$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content $PRIVATE_KEY_PATH -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content $PRIVATE_KEY_PATH -Raw).Trim()
 if (!$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-    $secPwd = Read-Host "Signing key password (Enter if none)" -AsSecureString
-    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secPwd)
-    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    $pwd = Read-Host "Signing key password (Enter if none)"
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $pwd
 }
 Write-Ok "Signing key loaded"
+
+# Verify signing env vars are set
+if (!$env:TAURI_SIGNING_PRIVATE_KEY) { throw "TAURI_SIGNING_PRIVATE_KEY is empty" }
 
 # ===== Step 4: Build =====
 Write-Step "Building Tauri application (this may take a while)"
