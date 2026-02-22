@@ -6,7 +6,6 @@
   object-fit: contain;
   transition: max-height 0.3s ease-out, box-shadow 0.2s;
   cursor: pointer;
-  will-change: max-height;
 }
 
 /* 展开状态下的图片 */

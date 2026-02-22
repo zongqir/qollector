@@ -1,4 +1,5 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tauri::{
     image::Image,
     menu::{MenuBuilder, MenuItemBuilder},
@@ -184,7 +185,7 @@ pub fn setup_tray(
     };
 
     if let Some(lang_state) = app.try_state::<TrayLanguage>() {
-        *lang_state.0.lock().unwrap() = lang.clone();
+        *lang_state.0.lock() = lang.clone();
     } else {
         app.manage(TrayLanguage(Mutex::new(lang.clone())));
     }
@@ -207,7 +208,7 @@ pub fn setup_tray(
         .on_menu_event(move |app, event| {
             let current_lang = app
                 .try_state::<TrayLanguage>()
-                .map(|s| s.0.lock().unwrap().clone())
+                .map(|s| s.0.lock().clone())
                 .unwrap_or_else(|| "en-US".to_string());
 
             match event.id().as_ref() {
@@ -288,7 +289,7 @@ pub fn setup_tray(
 pub fn update_tray_language(app: &AppHandle, lang: &str) {
     // Update shared language state
     if let Some(lang_state) = app.try_state::<TrayLanguage>() {
-        *lang_state.0.lock().unwrap() = lang.to_string();
+        *lang_state.0.lock() = lang.to_string();
     }
 
     let is_paused = app

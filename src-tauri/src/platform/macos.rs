@@ -9,7 +9,8 @@ use std::ffi::CStr;
 use std::io::Cursor;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use std::time::{Duration, Instant};
 
 const CLIPBOARD_POLL_INTERVAL_MS: u64 = 120;
@@ -269,15 +270,14 @@ impl PlatformClipboard for MacosClipboard {
                         }
                         last_fingerprint = Some(fingerprint.clone());
 
-                        let should_skip = if let Ok(mut guard) = suppressed_fingerprint.lock() {
+                        let should_skip = {
+                            let mut guard = suppressed_fingerprint.lock();
                             if guard.as_deref() == Some(fingerprint.as_str()) {
                                 *guard = None;
                                 true
                             } else {
                                 false
                             }
-                        } else {
-                            false
                         };
 
                         if should_skip {
@@ -315,7 +315,8 @@ impl PlatformClipboard for MacosClipboard {
         let fingerprint = Self::fingerprint(&content);
         Self::set_content_sync(content)?;
 
-        if let Ok(mut guard) = self.suppressed_fingerprint.lock() {
+        {
+            let mut guard = self.suppressed_fingerprint.lock();
             *guard = Some(fingerprint);
         }
 

@@ -6,7 +6,6 @@
   right: 0;
   bottom: 0;
   background: var(--shadow-overlay);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,7 +30,6 @@
   max-width: 600px;
   overflow: hidden;
   animation: modalSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform, opacity;
   backface-visibility: hidden;
   transform: translateZ(0);
 }
@@ -98,7 +96,6 @@
   min-height: 200px;
   color: var(--text-primary);
   background: var(--quick-input-bg);
-  will-change: contents;
 }
 
 .quick-input-textarea:focus {

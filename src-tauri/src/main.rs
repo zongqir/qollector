@@ -6,8 +6,10 @@ mod commands;
 mod config;
 mod core;
 mod crash_log;
+mod http_client;
 mod low_memory_mode;
 mod lan_sync;
+mod license;
 mod mcp;
 mod ocr;
 mod platform;
@@ -25,6 +27,7 @@ use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
 use commands::lan_sync_commands::*;
+use commands::license_commands::*;
 use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
@@ -39,7 +42,7 @@ use repository::config_repo::ConfigRepository;
 use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
 use std::sync::Arc;
-use std::sync::Mutex;
+use parking_lot::Mutex;
 use std::time::Instant;
 use tauri::Manager;
 use tauri::Emitter;
@@ -280,10 +283,14 @@ fn main() {
     // PasteHarbor does not rely on most browser capabilities.
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
         // === Process and memory ===
-        "--js-flags=--max-old-space-size=128 --lite-mode", // V8 heap cap + lite mode
+        "--js-flags=--max-old-space-size=64 --lite-mode --optimize-for-size", // V8 heap cap + lite mode + smaller code
         "--renderer-process-limit=1",            // Limit renderer process count
+        "--process-per-site",                    // Share renderer across same-origin pages
+        // === Memory pressure ===
+        "--enable-aggressive-domstorage-flushing", // Flush DOM storage sooner
+        "--memory-pressure-thresholds-mb=128:256", // Trigger GC earlier (moderate:critical)
         // === Disable unneeded Chromium features ===
-        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP",
+        "--disable-features=RendererCodeIntegrity,MediaRouter,WebRtcHideLocalIpsWithMdns,SpareRendererForSitePerProcess,AutofillServerCommunication,InterestFeedContentSuggestions,Translate,OptimizationHints,ServiceWorkerPaymentApps,WebPayments,WebOTP,BackForwardCache,IdleDetection,WebUSB,WebBluetooth",
         "--disable-background-networking",       // Background networking
         "--disable-component-update",            // Component updater
         "--disable-domain-reliability",          // Domain reliability
@@ -297,14 +304,16 @@ fn main() {
         "--disable-client-side-phishing-detection", // Phishing detection
         "--disable-sync",                        // Account sync
         "--disable-translate",                   // Translation
-        "--disable-default-apps",                // Default apps
+        "--disable-default-apps",               // Default apps
         "--disable-extensions",                  // Extension system
         "--disable-hang-monitor",                // Hang monitor
         "--disable-popup-blocking",              // Popup blocker
         "--disable-prompt-on-repost",            // Repost prompts
-        // === GPU cache ===
+        // === GPU memory ===
         "--disable-gpu-shader-disk-cache",       // Shader disk cache
         "--gpu-disk-cache-size-kb=1",            // Minimal GPU disk cache
+        "--force-gpu-mem-available-mb=64",       // Limit GPU memory budget
+        "--disable-gpu-compositing",             // CPU compositing (saves GPU memory, OK for simple UI)
     ].join(" "));
 
     tauri::Builder::default()
@@ -312,6 +321,7 @@ fn main() {
         .manage(LowMemoryModeState::default())
         .manage(AppExitState::default())
         .manage(startup_metrics)
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
@@ -501,7 +511,7 @@ fn main() {
                         match ocr::OcrService::new(ocr_config_for_prewarm) {
                             Ok(service) => {
                                 let provider = service.provider_name().to_string();
-                                *ocr_service_slot.lock().unwrap() = Some(service.clone());
+                                *ocr_service_slot.lock() = Some(service.clone());
                                 manager_for_prewarm.update_ocr_service(Some(service));
                                 println!(
                                     "[Startup:ocr_prewarm] ready in {} ms (provider={})",
@@ -525,6 +535,20 @@ fn main() {
 
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
+
+                // License state
+                let license_config = config_repo
+                    .load_license_config()
+                    .await
+                    .ok()
+                    .flatten()
+                    .unwrap_or_default();
+                println!("License config loaded: status={:?}", license_config.status);
+                let license_state = LicenseState {
+                    config: Arc::new(Mutex::new(license_config)),
+                    config_repo: config_repo.clone(),
+                };
+                app.manage(license_state);
 
                 let initial_lan_sync_config = lan_sync_config_opt.unwrap_or_default();
                 let lan_sync_service = Arc::new(lan_sync::LanSyncService::new(
@@ -768,6 +792,10 @@ fn main() {
             beta_guard::get_beta_status,
             crash_log::get_crash_log,
             crash_log::clear_crash_log,
+            get_license_info,
+            activate_license,
+            deactivate_license,
+            check_license_valid,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

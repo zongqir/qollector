@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import react from '@vitejs/plugin-react-swc';
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -14,6 +14,14 @@ export default defineConfig({
       },
     },
   ],
+  resolve: {
+    alias: {
+      'react': 'preact/compat',
+      'react-dom': 'preact/compat',
+      'react/jsx-runtime': 'preact/jsx-runtime',
+      'react-dom/test-utils': 'preact/test-utils',
+    },
+  },
   clearScreen: false,
   server: {
     port: 5173,
@@ -27,8 +35,8 @@ export default defineConfig({
   // Optimize dependency pre-bundling
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
+      'preact/compat',
+      'preact/jsx-runtime',
       'react-i18next',
       'i18next',
       'zustand',

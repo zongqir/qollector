@@ -1,15 +1,13 @@
 use crate::commands::ai_commands::AIState;
 use crate::core::clipboard_manager::ClipboardManager;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use tauri::State;
 
 const SALT: &str = "clipbox_lock_salt_2024";
 
 fn hash_password(password: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(format!("{}{}", SALT, password));
-    format!("{:x}", hasher.finalize())
+    let input = format!("{}{}", SALT, password);
+    blake3::hash(input.as_bytes()).to_hex().to_string()
 }
 
 #[tauri::command]

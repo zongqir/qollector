@@ -13,7 +13,6 @@
   position: relative;
   transition: max-height 0.2s ease-out;
   border: none;
-  will-change: max-height;
 }
 
 .item-content.clickable {

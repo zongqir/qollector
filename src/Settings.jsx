@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { getVersion } from '@tauri-apps/api/app';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
@@ -92,6 +95,67 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [refreshingModels, setRefreshingModels] = useState(false);
   const [refreshModelsResult, setRefreshModelsResult] = useState(null);
   const [modelInputMode, setModelInputMode] = useState('select');
+
+  // About / Update
+  const [appVersion, setAppVersion] = useState('');
+
+  // License
+  const [licenseConfig, setLicenseConfig] = useState(null);
+  const [licenseKeyInput, setLicenseKeyInput] = useState('');
+  const [licenseActivating, setLicenseActivating] = useState(false);
+  const [licenseDeactivating, setLicenseDeactivating] = useState(false);
+  const [licenseError, setLicenseError] = useState('');
+  const [licenseSuccess, setLicenseSuccess] = useState('');
+  const [aboutUpdateStatus, setAboutUpdateStatus] = useState(null); // null | 'checking' | 'downloading' | 'ready' | 'upToDate' | 'error'
+  const [aboutUpdateError, setAboutUpdateError] = useState('');
+  const [aboutUpdateVersion, setAboutUpdateVersion] = useState('');
+  const [aboutUpdateRef, setAboutUpdateRef] = useState(null);
+  const [aboutDownloadPercent, setAboutDownloadPercent] = useState(0);
+
+  useEffect(() => {
+    getVersion().then(v => setAppVersion(v)).catch(() => {});
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    setAboutUpdateStatus('checking');
+    setAboutUpdateError('');
+    try {
+      const update = await check();
+      if (update) {
+        setAboutUpdateVersion(update.version);
+        setAboutUpdateRef(update);
+        setAboutUpdateStatus(null);
+      } else {
+        setAboutUpdateStatus('upToDate');
+      }
+    } catch (err) {
+      setAboutUpdateStatus('error');
+      setAboutUpdateError(String(err));
+    }
+  };
+
+  const handleDownloadAndRestart = async () => {
+    if (!aboutUpdateRef) return;
+    setAboutUpdateStatus('downloading');
+    try {
+      await aboutUpdateRef.downloadAndInstall((event) => {
+        if (event.event === 'Progress') {
+          setAboutDownloadPercent((prev) => {
+            const chunk = event.data?.chunkLength || 0;
+            const total = event.data?.contentLength || 1;
+            return Math.min(prev + (chunk / total) * 100, 99);
+          });
+        } else if (event.event === 'Finished') {
+          setAboutDownloadPercent(100);
+        }
+      });
+      setAboutUpdateStatus('ready');
+      await relaunch();
+    } catch (err) {
+      setAboutUpdateStatus('error');
+      setAboutUpdateError(String(err));
+    }
+  };
 
   // Share config
   const [shareConfig, setShareConfig] = useState({
@@ -524,6 +588,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
       };
       setShareConfig(normalizedShareConfig);
+
+      // Load license config
+      try {
+        const license = await invoke('get_license_info');
+        setLicenseConfig(license);
+      } catch (e) {
+        console.error('Failed to load license config:', e);
+      }
     } catch (error) {
       console.error('Settings operation failed:', error);
     }
@@ -532,6 +604,53 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const handleClose = () => {
     if (onConfigChange) onConfigChange();
     onClose();
+  };
+
+  const handleActivateLicense = async () => {
+    if (!licenseKeyInput.trim()) return;
+    setLicenseActivating(true);
+    setLicenseError('');
+    setLicenseSuccess('');
+    try {
+      const result = await invoke('activate_license', { key: licenseKeyInput.trim() });
+      setLicenseConfig(result);
+      setLicenseKeyInput('');
+      setLicenseSuccess(t('license.activateSuccess'));
+      if (onConfigChange) onConfigChange();
+    } catch (err) {
+      const msg = String(err);
+      if (msg.includes('max_devices') || msg.includes('Maximum')) {
+        setLicenseError(t('license.maxDevices'));
+      } else if (msg.includes('invalid') || msg.includes('Invalid')) {
+        setLicenseError(t('license.invalidKey'));
+      } else {
+        setLicenseError(msg);
+      }
+    } finally {
+      setLicenseActivating(false);
+    }
+  };
+
+  const handleDeactivateLicense = async () => {
+    setLicenseDeactivating(true);
+    setLicenseError('');
+    setLicenseSuccess('');
+    try {
+      await invoke('deactivate_license');
+      const updated = await invoke('get_license_info');
+      setLicenseConfig(updated);
+      setLicenseSuccess(t('license.deactivateSuccess'));
+      if (onConfigChange) onConfigChange();
+    } catch (err) {
+      setLicenseError(String(err));
+    } finally {
+      setLicenseDeactivating(false);
+    }
+  };
+
+  const maskLicenseKey = (key) => {
+    if (!key || key.length < 10) return key || '';
+    return key.substring(0, 7) + '****' + key.substring(key.length - 4);
   };
 
 
@@ -843,6 +962,18 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               onClick={openDataSecurity}
             >
               {`${t('settings.tabs.data')} / ${t('settings.tabs.security')}`}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'license' ? 'active' : ''}`}
+              onClick={() => setActiveTab('license')}
+            >
+              {t('license.tab')}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === 'about' ? 'active' : ''}`}
+              onClick={() => setActiveTab('about')}
+            >
+              {t('settings.tabs.about')}
             </button>
           </div>
 
@@ -1424,6 +1555,138 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               collapsed={collapsedSections.share}
               onToggle={() => toggleSection('share')}
             />
+          )}
+
+          {activeTab === 'license' && (
+            <div className="settings-section">
+              <div className="setting-group-title">{t('license.title')}</div>
+              <div className="setting-group" style={{ gap: 16 }}>
+                <div className="sg-row" style={{ justifyContent: 'space-between' }}>
+                  <span className="toggle-label">{t('license.status')}</span>
+                  <span style={{
+                    fontWeight: 600,
+                    color: licenseConfig?.status === 'Active' ? '#22c55e' : 'var(--text-secondary)',
+                  }}>
+                    {licenseConfig?.status === 'Active' ? t('license.pro') : t('license.free')}
+                  </span>
+                </div>
+
+                {licenseConfig?.status === 'Active' && (
+                  <>
+                    <div className="sg-row" style={{ justifyContent: 'space-between' }}>
+                      <span className="toggle-label">{t('license.devices')}</span>
+                      <span>{t('license.devicesCount', {
+                        current: licenseConfig.activated_devices || 0,
+                        max: licenseConfig.max_devices || 3,
+                      })}</span>
+                    </div>
+                    <div className="sg-row" style={{ justifyContent: 'space-between' }}>
+                      <span className="toggle-label">{t('license.currentKey')}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 12, opacity: 0.7 }}>
+                        {maskLicenseKey(licenseConfig.license_key)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleDeactivateLicense}
+                      disabled={licenseDeactivating}
+                      className="cancel-btn"
+                      style={{ alignSelf: 'flex-start' }}
+                    >
+                      {licenseDeactivating ? t('license.deactivating') : t('license.deactivate')}
+                    </button>
+                  </>
+                )}
+
+                {licenseConfig?.status !== 'Active' && (
+                  <>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={licenseKeyInput}
+                        onChange={(e) => setLicenseKeyInput(e.target.value)}
+                        placeholder={t('license.keyPlaceholder')}
+                        className="setting-input"
+                        style={{ flex: 1, fontFamily: 'monospace' }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleActivateLicense()}
+                      />
+                      <button
+                        onClick={handleActivateLicense}
+                        disabled={licenseActivating || !licenseKeyInput.trim()}
+                        className="save-btn"
+                      >
+                        {licenseActivating ? t('license.activating') : t('license.activate')}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {licenseError && (
+                  <div style={{ color: '#f87171', fontSize: 12 }}>{licenseError}</div>
+                )}
+                {licenseSuccess && (
+                  <div style={{ color: '#22c55e', fontSize: 12 }}>{licenseSuccess}</div>
+                )}
+
+                <div style={{ marginTop: 8, padding: '12px 16px', borderRadius: 8, background: 'var(--bg-tertiary)', fontSize: 13 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('license.paidFeatures')}</div>
+                  <div style={{ opacity: 0.7 }}>{t('license.paidFeatureList')}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'about' && (
+            <div className="settings-section">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
+                <div style={{ fontSize: 40 }}>📋</div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>PasteHarbor</div>
+                <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
+
+                {aboutUpdateVersion && !aboutUpdateStatus && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, color: '#3b82f6' }}>
+                      {t('update.available', { version: aboutUpdateVersion })}
+                    </span>
+                    <button
+                      onClick={handleDownloadAndRestart}
+                      className="save-btn"
+                      style={{ fontSize: 13 }}
+                    >
+                      {t('update.downloading').replace('...', '')}
+                    </button>
+                  </div>
+                )}
+
+                {!aboutUpdateVersion && !aboutUpdateStatus && (
+                  <button onClick={handleCheckUpdate} className="save-btn" style={{ fontSize: 13 }}>
+                    {t('update.checkNow')}
+                  </button>
+                )}
+
+                {aboutUpdateStatus === 'checking' && (
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>{t('update.checking')}</span>
+                )}
+                {aboutUpdateStatus === 'downloading' && (
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>
+                    {t('update.progress', { percent: Math.round(aboutDownloadPercent) })}
+                  </span>
+                )}
+                {aboutUpdateStatus === 'ready' && (
+                  <span style={{ fontSize: 13, color: '#22c55e' }}>{t('update.ready')}</span>
+                )}
+                {aboutUpdateStatus === 'upToDate' && (
+                  <span style={{ fontSize: 13, color: '#22c55e' }}>{t('update.upToDate')}</span>
+                )}
+                {aboutUpdateStatus === 'error' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 12, color: '#f87171' }}>{t('update.failed', { error: aboutUpdateError })}</span>
+                    <button onClick={handleCheckUpdate} className="save-btn" style={{ fontSize: 12 }}>
+                      {t('update.checkNow')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
         </div>

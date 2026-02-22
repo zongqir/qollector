@@ -1,6 +1,7 @@
 use crate::ai::AIConfig;
 use crate::config::GeneralConfig;
 use crate::lan_sync::LanSyncConfig;
+use crate::license::config::LicenseConfig;
 use crate::mcp::McpConfig;
 use crate::ocr::OcrConfig;
 use crate::share::ShareConfig;
@@ -283,6 +284,44 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let config: LanSyncConfig =
+                serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Save license config
+    pub async fn save_license_config(&self, config: &LicenseConfig) -> Result<(), sqlx::Error> {
+        let value = serde_json::to_string(config).map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('license_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#,
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Load license config
+    pub async fn load_license_config(&self) -> Result<Option<LicenseConfig>, sqlx::Error> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM app_config WHERE key = 'license_config'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some((value,)) = row {
+            let config: LicenseConfig =
                 serde_json::from_str(&value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {

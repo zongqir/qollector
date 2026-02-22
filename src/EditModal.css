@@ -6,7 +6,6 @@
   right: 0;
   bottom: 0;
   background: var(--shadow-overlay);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,8 +25,6 @@
 /* 编辑弹窗主体 */
 .edit-modal {
   background: var(--edit-modal-bg);
-  backdrop-filter: saturate(200%) blur(40px);
-  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border-radius: 14px;
   box-shadow: 0 12px 40px var(--shadow-xl), 0 0 0 1px var(--border-light);
   width: 90%;

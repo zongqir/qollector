@@ -1,7 +1,7 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use serde::Serialize;
 
-static BUILD_TIMESTAMP: Lazy<u64> = Lazy::new(|| {
+static BUILD_TIMESTAMP: LazyLock<u64> = LazyLock::new(|| {
     env!("BUILD_TIMESTAMP").parse::<u64>().unwrap_or(0)
 });
 

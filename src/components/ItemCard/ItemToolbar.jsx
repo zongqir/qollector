@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Inbox, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2 } from 'lucide-react';
+import { GripVertical, Inbox, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2, Lock } from 'lucide-react';
 
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
@@ -8,7 +8,7 @@ function ItemToolbar({
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
   maxPinnedItems, onOpenItem, onRevealInFolder,
-  onShare,
+  onShare, isProUser, onProFeatureClick,
 }) {
   const { t } = useTranslation();
 
@@ -23,13 +23,15 @@ function ItemToolbar({
     }
   };
 
-  // 判断是否显示 AI 标签按钮
-  // AI 功能开启 + 文本类型 + 有内容 + 没有 AI 标签
+  // Show AI button: enabled + text + has content + no AI tags
+  // If not pro, show locked version
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags();
+  const aiLocked = shouldShowAIButton && !isProUser;
 
-  // 判断是否显示 OCR 按钮
-  // OCR 功能开启 + 图片类型 + 没有 OCR 文本
+  // Show OCR button: enabled + image + no OCR text
+  // If not pro, show locked version
   const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
+  const ocrLocked = shouldShowOCRButton && !isProUser;
 
   // 判断是否显示打开按钮
   // 链接或文件类型
@@ -77,12 +79,12 @@ function ItemToolbar({
         <>
           <div className="toolbar-divider"></div>
           <button
-            onClick={(e) => { e.stopPropagation(); onGenerateAITags(item); }}
-            disabled={generatingAI === item.id}
-            className={`toolbar-btn ai-btn ${generatingAI === item.id ? 'is-loading' : ''}`}
-            title={generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
+            onClick={(e) => { e.stopPropagation(); aiLocked ? onProFeatureClick?.() : onGenerateAITags(item); }}
+            disabled={!aiLocked && generatingAI === item.id}
+            className={`toolbar-btn ai-btn ${generatingAI === item.id ? 'is-loading' : ''} ${aiLocked ? 'locked' : ''}`}
+            title={aiLocked ? t('license.proFeature') : generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
           >
-            <Sparkles size={14} className="toolbar-btn-icon" />
+            {aiLocked ? <Lock size={14} className="toolbar-btn-icon" /> : <Sparkles size={14} className="toolbar-btn-icon" />}
             <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
           </button>
         </>
@@ -91,12 +93,12 @@ function ItemToolbar({
         <>
           <div className="toolbar-divider"></div>
           <button
-            onClick={(e) => { e.stopPropagation(); onHandleOCR(item); }}
-            disabled={ocrProcessing === item.id}
-            className="toolbar-btn ocr-btn"
-            title={ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
+            onClick={(e) => { e.stopPropagation(); ocrLocked ? onProFeatureClick?.() : onHandleOCR(item); }}
+            disabled={!ocrLocked && ocrProcessing === item.id}
+            className={`toolbar-btn ocr-btn ${ocrLocked ? 'locked' : ''}`}
+            title={ocrLocked ? t('license.proFeature') : ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
           >
-            <Search size={14} className="toolbar-btn-icon" />
+            {ocrLocked ? <Lock size={14} className="toolbar-btn-icon" /> : <Search size={14} className="toolbar-btn-icon" />}
             <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
           </button>
         </>

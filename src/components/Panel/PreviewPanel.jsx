@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import {
@@ -59,6 +59,7 @@ function PreviewPanel() {
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const ocrProcessing = useAppStore(s => s.ocrProcessing);
   const ocrEnabled = useAppStore(s => s.ocrEnabled);
+  const isProUser = useAppStore(s => s.isProUser);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const items = useAppStore(s => s.items);
   const openShareModal = useAppStore(s => s.openShareModal);
@@ -107,7 +108,9 @@ function PreviewPanel() {
   const tags = getTags(item.tags);
   const hasAITags = tags.some(tag => tag.startsWith('AI:'));
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags;
+  const aiLocked = shouldShowAIButton && !isProUser;
   const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
+  const ocrLocked = shouldShowOCRButton && !isProUser;
   const textOpenableUrls = useMemo(() => {
     if (item.type_ !== 'text') return [];
     return extractOpenableUrls(item.content);
@@ -775,11 +778,12 @@ function PreviewPanel() {
             )}
             {shouldShowAIButton && (
               <button
-                className="preview-tool-btn"
-                onClick={() => generateAITags(item)}
-                disabled={generatingAI === item.id}
+                className={`preview-tool-btn ${aiLocked ? 'locked' : ''}`}
+                onClick={() => aiLocked ? useAppStore.getState().setShowSettings(true) : generateAITags(item)}
+                disabled={!aiLocked && generatingAI === item.id}
+                title={aiLocked ? t('license.proFeature') : undefined}
               >
-                <Sparkles size={14} />
+                {aiLocked ? <Lock size={14} /> : <Sparkles size={14} />}
                 <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
               </button>
             )}
@@ -794,11 +798,12 @@ function PreviewPanel() {
             </button>
             {shouldShowOCRButton && (
               <button
-                className="preview-tool-btn"
-                onClick={() => handleOCR(item)}
-                disabled={ocrProcessing === item.id}
+                className={`preview-tool-btn ${ocrLocked ? 'locked' : ''}`}
+                onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true) : handleOCR(item)}
+                disabled={!ocrLocked && ocrProcessing === item.id}
+                title={ocrLocked ? t('license.proFeature') : undefined}
               >
-                <Search size={14} />
+                {ocrLocked ? <Lock size={14} /> : <Search size={14} />}
                 <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
               </button>
             )}

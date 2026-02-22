@@ -3,6 +3,7 @@ pub mod beta_guard;
 pub mod ocr;
 pub mod core;
 pub mod crash_log;
+pub mod http_client;
 pub mod platform;
 pub mod repository;
 pub mod commands;
@@ -13,6 +14,7 @@ pub mod startup_metrics;
 pub mod tray;
 pub mod share;
 pub mod lan_sync;
+pub mod license;
 pub mod window_lifecycle;
 pub mod low_memory_mode;
 

@@ -13,8 +13,6 @@
   left: 50%;
   transform: translateX(-50%);
   background: var(--tag-dropdown-bg);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-radius: 12px;
   box-shadow: 0 8px 32px var(--shadow-lg), 0 0 0 1px var(--border-light);
   min-width: 220px;

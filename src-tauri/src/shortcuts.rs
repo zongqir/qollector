@@ -1,7 +1,8 @@
 use crate::config::GeneralConfig;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,7 +27,7 @@ pub struct ShortcutBindingState {
 
 impl ShortcutBindingState {
     pub fn action_for_shortcut_id(&self, shortcut_id: u32) -> ShortcutAction {
-        let snapshot = self.inner.lock().unwrap();
+        let snapshot = self.inner.lock();
         if snapshot.copy_pin_id == Some(shortcut_id) {
             return ShortcutAction::CopyPin;
         }
@@ -37,11 +38,11 @@ impl ShortcutBindingState {
     }
 
     fn snapshot(&self) -> ShortcutBindingsSnapshot {
-        self.inner.lock().unwrap().clone()
+        self.inner.lock().clone()
     }
 
     fn replace(&self, snapshot: ShortcutBindingsSnapshot) {
-        *self.inner.lock().unwrap() = snapshot;
+        *self.inner.lock() = snapshot;
     }
 }
 

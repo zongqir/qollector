@@ -5,8 +5,6 @@
   position: fixed;
   inset: 0;
   background: var(--shadow-overlay);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,8 +20,6 @@
 /* 模态框主体 */
 .settings-modal {
   background: var(--modal-bg);
-  backdrop-filter: saturate(200%) blur(40px);
-  -webkit-backdrop-filter: saturate(200%) blur(40px);
   border-radius: 12px;
   width: min(92vw, 980px);
   max-width: 980px;

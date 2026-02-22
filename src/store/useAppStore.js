@@ -304,6 +304,8 @@ const useAppStore = create((set, get) => ({
   // ========== 配置 ==========
   aiEnabled: false,
   ocrEnabled: false,
+  licenseStatus: 'Free',
+  isProUser: false,
   maxPinnedItems: 10,
   themeMode: 'system',
   isLocked: true,
@@ -337,6 +339,10 @@ const useAppStore = create((set, get) => ({
   shareResult: null,
   shareLoading: false,
   shareError: null,
+  sharePendingConfirm: false,
+  sharePendingData: null,
+  sharePendingProvider: null,
+  shareConfig: null,
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
@@ -619,15 +625,19 @@ const useAppStore = create((set, get) => ({
 
   loadConfigs: async () => {
     try {
-      const [aiConfig, ocrConfig, generalConfig, hasLock] = await Promise.all([
+      const [aiConfig, ocrConfig, generalConfig, hasLock, licenseInfo] = await Promise.all([
         invoke('get_ai_config'),
         invoke('get_ocr_config'),
         invoke('get_general_config'),
-        invoke('has_lock_password')
+        invoke('has_lock_password'),
+        invoke('get_license_info'),
       ]);
+      const licenseStatus = licenseInfo?.status || 'Free';
       set((state) => ({
         aiEnabled: aiConfig.enabled || false,
         ocrEnabled: ocrConfig.enabled || false,
+        licenseStatus,
+        isProUser: licenseStatus === 'Active',
         maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
         isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
@@ -1326,12 +1336,12 @@ const useAppStore = create((set, get) => ({
 
   // ========== share Actions ==========
   openShareModal: async (item) => {
-    set({ shareModalItem: item, shareResult: null, shareLoading: true, shareError: null });
+    set({ shareModalItem: item, shareResult: null, shareLoading: true, shareError: null, sharePendingConfirm: false, sharePendingData: null, sharePendingProvider: null, shareConfig: null });
     try {
       const config = await invoke('get_share_config');
 
       if (config.provider === 'S3') {
-        // S3: check cache first
+        // S3: user's own storage, upload directly
         const cached = getShareCache(item, 'S3');
         if (cached) {
           const qrCode = await invoke('generate_qr', { text: cached.url });
@@ -1351,10 +1361,11 @@ const useAppStore = create((set, get) => ({
         return;
       }
 
-      // Check cache for free providers
+      // NeedUpload: pause and show confirmation
       const provider = FREE_PROVIDERS[config.provider];
       if (!provider) throw new Error(`Unknown provider: ${config.provider}`);
 
+      // Check cache first
       const cached = getShareCache(item, config.provider);
       if (cached) {
         const qrCode = await invoke('generate_qr', { text: cached.url });
@@ -1362,7 +1373,32 @@ const useAppStore = create((set, get) => ({
         return;
       }
 
-      // Step 2: upload via generic proxy
+      // Show confirmation step
+      set({
+        shareLoading: false,
+        sharePendingConfirm: true,
+        sharePendingData: itemData,
+        sharePendingProvider: config.provider,
+        shareConfig: config,
+      });
+    } catch (error) {
+      set({ shareError: String(error), shareLoading: false });
+    }
+  },
+
+  confirmShareUpload: async (providerName) => {
+    const { shareModalItem: item, sharePendingData: itemData } = get();
+    if (!item || !itemData) return;
+
+    const provider = FREE_PROVIDERS[providerName];
+    if (!provider) {
+      set({ shareError: `Unknown provider: ${providerName}`, sharePendingConfirm: false });
+      return;
+    }
+
+    set({ sharePendingConfirm: false, shareLoading: true, shareError: null, sharePendingProvider: providerName });
+
+    try {
       const resp = await invoke('upload_to_free_host', {
         url: provider.url,
         fileField: provider.fileField,
@@ -1371,32 +1407,43 @@ const useAppStore = create((set, get) => ({
         extraFields: provider.extraFields,
       });
 
-      // Step 3: frontend parses response
       const downloadUrl = provider.parseResponse(resp.status_code, resp.body);
-
-      // Step 4: generate QR
       const qrCode = await invoke('generate_qr', { text: downloadUrl });
-
-      // Step 5: cache the result
-      await saveShareCache(item, config.provider, downloadUrl, provider.ttlSeconds);
+      await saveShareCache(item, providerName, downloadUrl, provider.ttlSeconds);
 
       set({
         shareResult: { method: 'CloudUpload', qr_code: qrCode, url: downloadUrl },
         shareLoading: false,
       });
     } catch (error) {
-      set({ shareError: String(error), shareLoading: false });
+      // Upload failed: go back to confirmation so user can switch provider
+      set({
+        shareError: String(error),
+        shareLoading: false,
+        sharePendingConfirm: true,
+      });
     }
   },
 
+  switchShareProvider: (providerName) => {
+    set({ sharePendingProvider: providerName, shareError: null });
+  },
+
   closeShareModal: () => {
-    set({ shareModalItem: null, shareResult: null, shareLoading: false, shareError: null });
+    set({ shareModalItem: null, shareResult: null, shareLoading: false, shareError: null, sharePendingConfirm: false, sharePendingData: null, sharePendingProvider: null, shareConfig: null });
   },
 
   retryShare: async () => {
-    const item = get().shareModalItem;
+    const { shareModalItem: item, sharePendingProvider: providerName, sharePendingData } = get();
     if (!item) return;
-    // Retry always forces re-upload (skip cache)
+
+    // If we have pending data and a provider, go back to confirmation
+    if (sharePendingData) {
+      set({ shareResult: null, shareError: null, sharePendingConfirm: true, shareLoading: false });
+      return;
+    }
+
+    // Otherwise full retry
     set({ shareResult: null, shareLoading: true, shareError: null });
     try {
       const config = await invoke('get_share_config');
@@ -1417,22 +1464,19 @@ const useAppStore = create((set, get) => ({
       const provider = FREE_PROVIDERS[config.provider];
       if (!provider) throw new Error(`Unknown provider: ${config.provider}`);
 
-      const resp = await invoke('upload_to_free_host', {
-        url: provider.url,
-        fileField: provider.fileField,
-        fileDataBase64: itemData.data_base64,
-        filename: itemData.filename,
-        extraFields: provider.extraFields,
-      });
-
-      const downloadUrl = provider.parseResponse(resp.status_code, resp.body);
-      const qrCode = await invoke('generate_qr', { text: downloadUrl });
-
-      await saveShareCache(item, config.provider, downloadUrl, provider.ttlSeconds);
+      const cached = getShareCache(item, config.provider);
+      if (cached) {
+        const qrCode = await invoke('generate_qr', { text: cached.url });
+        set({ shareResult: { method: 'CloudUpload', qr_code: qrCode, url: cached.url }, shareLoading: false });
+        return;
+      }
 
       set({
-        shareResult: { method: 'CloudUpload', qr_code: qrCode, url: downloadUrl },
         shareLoading: false,
+        sharePendingConfirm: true,
+        sharePendingData: itemData,
+        sharePendingProvider: config.provider,
+        shareConfig: config,
       });
     } catch (error) {
       set({ shareError: String(error), shareLoading: false });

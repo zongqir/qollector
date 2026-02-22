@@ -6,19 +6,29 @@ pub struct ClipboardItem {
     pub id: String,
     #[sqlx(rename = "type")]
     pub type_: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub original_content: Option<String>,
     pub content_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub image_paths: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ocr_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub code_language: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub embedding: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_note: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<String>,
     pub is_pinned: bool,
     pub is_favorite: bool,
     pub is_deleted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pinned_at: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,

@@ -3,19 +3,20 @@ pub mod windows {
     use crate::core::models::{ClipboardContent, WindowMetadata};
     use crate::platform::clipboard_trait::*;
     use async_trait::async_trait;
-    use once_cell::sync::Lazy;
+    use std::sync::LazyLock;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::mpsc;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
+    use parking_lot::Mutex;
     use windows::core::w;
     use windows::Win32::Foundation::*;
     use windows::Win32::System::DataExchange::*;
     use windows::Win32::UI::WindowsAndMessaging::*;
 
     /// 友好应用名缓存：key = exe 路径, value = 友好名称
-    static APP_NAME_CACHE: Lazy<Mutex<HashMap<String, String>>> =
-        Lazy::new(|| Mutex::new(HashMap::new()));
+    static APP_NAME_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
     const CLIPBOARD_POLL_INTERVAL_MS: u64 = 80;
     const CLIPBOARD_READ_RETRIES: usize = 6;
     const CLIPBOARD_READ_RETRY_DELAY_MS: u64 = 25;
@@ -176,7 +177,7 @@ pub mod windows {
 
                     unsafe {
                         let sequence = GetClipboardSequenceNumber();
-                        let mut last = last_sequence.lock().unwrap();
+                        let mut last = last_sequence.lock();
 
                         if *last == 0 {
                             *last = sequence;
@@ -211,7 +212,7 @@ pub mod windows {
                             CLIPBOARD_READ_RETRY_DELAY_MS,
                         ) {
                             Ok(content) => {
-                                let mut last = last_sequence.lock().unwrap();
+                                let mut last = last_sequence.lock();
                                 *last = sequence;
                                 drop(last);
 
@@ -224,7 +225,7 @@ pub mod windows {
                                 });
                             }
                             Err(ClipboardError::UnsupportedType) => {
-                                let mut last = last_sequence.lock().unwrap();
+                                let mut last = last_sequence.lock();
                                 *last = sequence;
                                 println!(
                                     "Ignoring unsupported clipboard content (sequence: {})",
@@ -232,7 +233,7 @@ pub mod windows {
                                 );
                             }
                             Err(error) => {
-                                let mut last = last_sequence.lock().unwrap();
+                                let mut last = last_sequence.lock();
                                 *last = sequence;
                                 eprintln!(
                                     "Failed to get clipboard content (sequence={}): {}",
@@ -1141,45 +1142,40 @@ pub mod windows {
                 return "Unknown".to_string();
             }
 
-            // 检查缓存
-            if let Ok(cache) = APP_NAME_CACHE.lock() {
+            // check cache
+            {
+                let cache = APP_NAME_CACHE.lock();
                 if let Some(name) = cache.get(exe_path) {
                     return name.clone();
                 }
             }
 
-            // 优先级1：从 exe 版本信息读取 ProductName
+            // priority 1: ProductName from exe version info
             if let Some(product_name) = Self::get_product_name_from_exe(exe_path) {
                 if !product_name.is_empty() {
-                    if let Ok(mut cache) = APP_NAME_CACHE.lock() {
-                        cache.insert(exe_path.to_string(), product_name.clone());
-                    }
+                    APP_NAME_CACHE.lock().insert(exe_path.to_string(), product_name.clone());
                     return product_name;
                 }
             }
 
-            // 优先级2：从窗口标题提取应用名（取最后一个 " - " 后的部分）
+            // priority 2: extract app name from window title (after last " - ")
             if let Some(pos) = window_title.rfind(" - ") {
                 let candidate = window_title[pos + 3..].trim();
                 if !candidate.is_empty() && candidate.len() < 50 {
                     let name = candidate.to_string();
-                    if let Ok(mut cache) = APP_NAME_CACHE.lock() {
-                        cache.insert(exe_path.to_string(), name.clone());
-                    }
+                    APP_NAME_CACHE.lock().insert(exe_path.to_string(), name.clone());
                     return name;
                 }
             }
 
-            // 优先级3：进程文件名兜底
+            // priority 3: fallback to process filename
             let file_name = std::path::Path::new(exe_path)
                 .file_stem()
                 .and_then(|n| n.to_str())
                 .unwrap_or("Unknown")
                 .to_string();
 
-            if let Ok(mut cache) = APP_NAME_CACHE.lock() {
-                cache.insert(exe_path.to_string(), file_name.clone());
-            }
+            APP_NAME_CACHE.lock().insert(exe_path.to_string(), file_name.clone());
             file_name
         }
 

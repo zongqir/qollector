@@ -10,8 +10,8 @@ use crate::repository::config_repo::ConfigRepository;
 use crate::lan_sync::PairedSyncDevice;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::Arc;
+use parking_lot::Mutex;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
@@ -21,7 +21,6 @@ const APP_NAME: &str = "PasteHarbor";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
-const LINK_PREVIEW_TIMEOUT_SECS: u64 = 4;
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -221,8 +220,7 @@ impl ClipboardManager {
 
                 // Generate and save thumbnail
                 if let Ok(img) = image::load_from_memory(&data) {
-                    // Create thumbnail (max 300x300)
-                    let thumbnail = img.thumbnail(300, 300);
+                    let thumbnail = crate::core::thumbnail::generate_thumbnail(&img, 300);
                     thumbnail.save(&thumb_path)?;
                     println!("Thumbnail saved to: {:?}", thumb_path);
                 } else {
@@ -435,7 +433,7 @@ impl ClipboardManager {
 
                 if item_type == "image" {
                     if let Some(image_paths_str) = item_image_paths {
-                        let ocr_service_opt = ocr_config_clone.lock().unwrap().clone();
+                        let ocr_service_opt = ocr_config_clone.lock().clone();
                         let mut ocr_text = String::new();
 
                         if let Some(service) = ocr_service_opt {
@@ -472,7 +470,7 @@ impl ClipboardManager {
                         }
 
                         if !ocr_text.is_empty() {
-                            let ai_config = ai_config_clone.lock().unwrap().clone();
+                            let ai_config = ai_config_clone.lock().clone();
                             if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                                 let _permit = ai_semaphore_clone.acquire().await.unwrap();
                                 println!(
@@ -531,7 +529,7 @@ impl ClipboardManager {
                         }
                     }
                 } else if let Some(content) = item_content.as_ref() {
-                    let ai_config = ai_config_clone.lock().unwrap().clone();
+                    let ai_config = ai_config_clone.lock().clone();
                     if ai_config.enabled && !ai_config.get_current_api_key().is_empty() {
                         let _permit = ai_semaphore_clone.acquire().await.unwrap();
                         println!(
@@ -681,12 +679,7 @@ impl ClipboardManager {
             return None;
         }
 
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(LINK_PREVIEW_TIMEOUT_SECS))
-            .redirect(reqwest::redirect::Policy::limited(5))
-            .user_agent("PasteHarbor/1.0")
-            .build()
-            .ok()?;
+        let client = crate::http_client::client();
 
         let mut response = client
             .get(parsed)
@@ -873,7 +866,7 @@ impl ClipboardManager {
             .unwrap_or(0);
         let window_ms = window_ms.clamp(300, 2500) as u128;
 
-        let mut state = state.lock().unwrap();
+        let mut state = state.lock();
         let same_hash = state.last_hash.as_deref() == Some(content_hash);
         let source_app_valid = !source_app.is_empty() && source_app != "Unknown";
         let last_source_app_valid = state
@@ -1368,12 +1361,12 @@ impl ClipboardManager {
     }
 
     pub fn update_ai_config(&self, config: AIConfig) {
-        let mut ai_config = self.ai_config.lock().unwrap();
+        let mut ai_config = self.ai_config.lock();
         *ai_config = config;
     }
 
     pub fn update_ocr_service(&self, service: Option<OcrService>) {
-        let mut ocr_service = self.ocr_config.lock().unwrap();
+        let mut ocr_service = self.ocr_config.lock();
         *ocr_service = service;
     }
 

@@ -1,5 +1,5 @@
 use chrono::{Local, TimeZone, Timelike};
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
@@ -24,11 +24,11 @@ struct PromptConfig {
 }
 
 // Lazy load system prompts
-static SYSTEM_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
+static SYSTEM_PROMPTS: LazyLock<SystemPrompts> = LazyLock::new(|| {
     serde_json::from_str(SYSTEM_PROMPTS_JSON).expect("Failed to parse system prompts JSON")
 });
 
-static TIMELINE_PROMPTS: Lazy<SystemPrompts> = Lazy::new(|| {
+static TIMELINE_PROMPTS: LazyLock<SystemPrompts> = LazyLock::new(|| {
     serde_json::from_str(TIMELINE_PROMPTS_JSON).expect("Failed to parse timeline prompts JSON")
 });
 
@@ -305,11 +305,7 @@ struct ModelEntry {
 
 /// Fetch available models from a provider's /models endpoint (OpenAI-compatible).
 pub async fn fetch_models(base_url: &str, api_key: &str) -> Result<Vec<String>, AIError> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .connect_timeout(std::time::Duration::from_secs(10))
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
+    let client = crate::http_client::client();
 
     let url = format!("{}/models", base_url.trim_end_matches('/'));
     println!("[AI] Fetching models from: {}", url);
@@ -344,11 +340,7 @@ pub struct AIService {
 
 impl AIService {
     pub fn new(config: AIConfig) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::Client::new());
+        let client = crate::http_client::client().clone();
 
         Self { config, client }
     }
