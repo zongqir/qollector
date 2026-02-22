@@ -2,7 +2,6 @@
   position: fixed;
   inset: 0;
   background: var(--shadow-overlay, rgba(0, 0, 0, 0.5));
-  backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -11,7 +10,6 @@
 
 .share-modal {
   background: var(--edit-modal-bg, rgba(30, 30, 30, 0.95));
-  backdrop-filter: saturate(200%) blur(40px);
   border-radius: 14px;
   box-shadow: 0 12px 40px var(--shadow-xl, rgba(0, 0, 0, 0.4));
   border: 1px solid var(--border-light, rgba(255, 255, 255, 0.1));
