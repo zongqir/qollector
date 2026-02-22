@@ -5,6 +5,7 @@ import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import useAppStore from './store/useAppStore';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
 import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
@@ -19,7 +20,14 @@ const OCR_PROVIDERS = ['Local', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 
 
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
-  const [activeTab, setActiveTab] = useState('general');
+  const settingsInitialTab = useAppStore(s => s.settingsInitialTab);
+  const [activeTab, setActiveTab] = useState(settingsInitialTab || 'general');
+
+  useEffect(() => {
+    if (settingsInitialTab) {
+      setActiveTab(settingsInitialTab);
+    }
+  }, [settingsInitialTab]);
   const [aiConfig, setAiConfig] = useState({
     current_provider: { SiliconFlow: null },
     credentials: {},  // { "siliconflow": { api_key: "xxx", model: "xxx" }, ... }

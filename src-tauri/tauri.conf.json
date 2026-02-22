@@ -99,6 +99,8 @@
             "core:window:allow-is-visible",
             "core:window:allow-is-maximized",
             "core:window:allow-is-minimized",
+            "core:window:allow-cursor-position",
+            "core:window:allow-available-monitors",
             "global-shortcut:allow-register",
             "global-shortcut:allow-unregister",
             "global-shortcut:allow-is-registered",
