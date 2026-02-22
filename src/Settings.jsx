@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { getVersion } from '@tauri-apps/api/app';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import { X, Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
@@ -92,6 +95,59 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [refreshingModels, setRefreshingModels] = useState(false);
   const [refreshModelsResult, setRefreshModelsResult] = useState(null);
   const [modelInputMode, setModelInputMode] = useState('select');
+
+  // About / Update
+  const [appVersion, setAppVersion] = useState('');
+  const [aboutUpdateStatus, setAboutUpdateStatus] = useState(null); // null | 'checking' | 'downloading' | 'ready' | 'upToDate' | 'error'
+  const [aboutUpdateError, setAboutUpdateError] = useState('');
+  const [aboutUpdateVersion, setAboutUpdateVersion] = useState('');
+  const [aboutUpdateRef, setAboutUpdateRef] = useState(null);
+  const [aboutDownloadPercent, setAboutDownloadPercent] = useState(0);
+
+  useEffect(() => {
+    getVersion().then(v => setAppVersion(v)).catch(() => {});
+  }, []);
+
+  const handleCheckUpdate = async () => {
+    setAboutUpdateStatus('checking');
+    setAboutUpdateError('');
+    try {
+      const update = await check();
+      if (update) {
+        setAboutUpdateVersion(update.version);
+        setAboutUpdateRef(update);
+        setAboutUpdateStatus(null);
+      } else {
+        setAboutUpdateStatus('upToDate');
+      }
+    } catch (err) {
+      setAboutUpdateStatus('error');
+      setAboutUpdateError(String(err));
+    }
+  };
+
+  const handleDownloadAndRestart = async () => {
+    if (!aboutUpdateRef) return;
+    setAboutUpdateStatus('downloading');
+    try {
+      await aboutUpdateRef.downloadAndInstall((event) => {
+        if (event.event === 'Progress') {
+          setAboutDownloadPercent((prev) => {
+            const chunk = event.data?.chunkLength || 0;
+            const total = event.data?.contentLength || 1;
+            return Math.min(prev + (chunk / total) * 100, 99);
+          });
+        } else if (event.event === 'Finished') {
+          setAboutDownloadPercent(100);
+        }
+      });
+      setAboutUpdateStatus('ready');
+      await relaunch();
+    } catch (err) {
+      setAboutUpdateStatus('error');
+      setAboutUpdateError(String(err));
+    }
+  };
 
   // Share config
   const [shareConfig, setShareConfig] = useState({
@@ -844,6 +900,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             >
               {`${t('settings.tabs.data')} / ${t('settings.tabs.security')}`}
             </button>
+            <button
+              className={`tab-btn ${activeTab === 'about' ? 'active' : ''}`}
+              onClick={() => setActiveTab('about')}
+            >
+              {t('settings.tabs.about')}
+            </button>
           </div>
 
           <div className="settings-panels">
@@ -1424,6 +1486,60 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               collapsed={collapsedSections.share}
               onToggle={() => toggleSection('share')}
             />
+          )}
+
+          {activeTab === 'about' && (
+            <div className="settings-section">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
+                <div style={{ fontSize: 40 }}>📋</div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>PasteHarbor</div>
+                <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
+
+                {aboutUpdateVersion && !aboutUpdateStatus && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, color: '#3b82f6' }}>
+                      {t('update.available', { version: aboutUpdateVersion })}
+                    </span>
+                    <button
+                      onClick={handleDownloadAndRestart}
+                      className="save-btn"
+                      style={{ fontSize: 13 }}
+                    >
+                      {t('update.downloading').replace('...', '')}
+                    </button>
+                  </div>
+                )}
+
+                {!aboutUpdateVersion && !aboutUpdateStatus && (
+                  <button onClick={handleCheckUpdate} className="save-btn" style={{ fontSize: 13 }}>
+                    {t('update.checkNow')}
+                  </button>
+                )}
+
+                {aboutUpdateStatus === 'checking' && (
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>{t('update.checking')}</span>
+                )}
+                {aboutUpdateStatus === 'downloading' && (
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>
+                    {t('update.progress', { percent: Math.round(aboutDownloadPercent) })}
+                  </span>
+                )}
+                {aboutUpdateStatus === 'ready' && (
+                  <span style={{ fontSize: 13, color: '#22c55e' }}>{t('update.ready')}</span>
+                )}
+                {aboutUpdateStatus === 'upToDate' && (
+                  <span style={{ fontSize: 13, color: '#22c55e' }}>{t('update.upToDate')}</span>
+                )}
+                {aboutUpdateStatus === 'error' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 12, color: '#f87171' }}>{t('update.failed', { error: aboutUpdateError })}</span>
+                    <button onClick={handleCheckUpdate} className="save-btn" style={{ fontSize: 12 }}>
+                      {t('update.checkNow')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
         </div>

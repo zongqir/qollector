@@ -158,7 +158,8 @@
       "data": "数据",
       "security": "安全",
       "shortcuts": "快捷键",
-      "share": "分享"
+      "share": "分享",
+      "about": "关于"
     },
     "ai": {
       "provider": "AI 服务商",
@@ -732,7 +733,11 @@
     "copied": "已复制",
     "close": "关闭",
     "button": "分享",
-    "rateLimited": "免费分享次数已耗尽，请稍后再试或切换其他服务商"
+    "rateLimited": "免费分享次数已耗尽，请稍后再试或切换其他服务商",
+    "privacyWarning": "内容将上传至公共临时站点",
+    "privacyDetail": "任何拥有链接的人均可访问上传内容，请勿分享敏感信息。链接有效期取决于所选服务。",
+    "uploadTo": "上传至",
+    "confirmUpload": "确认上传"
   },
   "beta": {
     "expired": "Beta 版本已过期",

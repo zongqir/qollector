@@ -1,11 +1,23 @@
 import { useTranslation } from 'react-i18next';
-import { Share2, Copy, Check, RefreshCw, X } from 'lucide-react';
+import { Share2, Copy, Check, RefreshCw, X, AlertTriangle, Upload, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { FREE_PROVIDERS } from '../../share/providers';
 import './ShareModal.css';
 
-function ShareModal({ item, shareResult, shareLoading, shareError, onClose, onRetry }) {
+const PROVIDER_TTL_LABELS = {
+  Litterbox: '~72h',
+  Tmpfiles: '~1h',
+  ZeroX0: '~30d',
+};
+
+function ShareModal({
+  item, shareResult, shareLoading, shareError,
+  pendingConfirm, pendingProvider,
+  onClose, onRetry, onConfirmUpload, onSwitchProvider,
+}) {
   const { t } = useTranslation();
   const [linkCopied, setLinkCopied] = useState(false);
+  const [providerOpen, setProviderOpen] = useState(false);
 
   const handleCopyLink = async () => {
     if (!shareResult?.url) return;
@@ -17,6 +29,8 @@ function ShareModal({ item, shareResult, shareLoading, shareError, onClose, onRe
       console.error('copy link failed:', err);
     }
   };
+
+  const providerNames = Object.keys(FREE_PROVIDERS);
 
   return (
     <div className="share-modal-overlay" onClick={onClose}>
@@ -37,7 +51,51 @@ function ShareModal({ item, shareResult, shareLoading, shareError, onClose, onRe
             </div>
           )}
 
-          {shareError && (
+          {pendingConfirm && !shareLoading && (
+            <div className="share-confirm">
+              <div className="share-confirm-warning">
+                <AlertTriangle size={18} className="share-warning-icon" />
+                <span>{t('share.privacyWarning')}</span>
+              </div>
+              <p className="share-confirm-detail">{t('share.privacyDetail')}</p>
+
+              {shareError && (
+                <div className="share-error share-error-inline">
+                  <span>{t('share.failed')}: {shareError}</span>
+                </div>
+              )}
+
+              <div className="share-provider-section">
+                <span className="share-provider-label">{t('share.uploadTo')}</span>
+                <div className="share-provider-select" onClick={() => setProviderOpen(!providerOpen)}>
+                  <span>{pendingProvider}</span>
+                  <span className="share-provider-ttl">{PROVIDER_TTL_LABELS[pendingProvider] || ''}</span>
+                  <ChevronDown size={14} className={`share-chevron ${providerOpen ? 'open' : ''}`} />
+                </div>
+                {providerOpen && (
+                  <div className="share-provider-dropdown">
+                    {providerNames.map((name) => (
+                      <div
+                        key={name}
+                        className={`share-provider-option ${name === pendingProvider ? 'active' : ''}`}
+                        onClick={() => { onSwitchProvider(name); setProviderOpen(false); }}
+                      >
+                        <span>{name}</span>
+                        <span className="share-provider-ttl">{PROVIDER_TTL_LABELS[name] || ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button className="share-confirm-btn" onClick={() => onConfirmUpload(pendingProvider)}>
+                <Upload size={14} />
+                {t('share.confirmUpload')}
+              </button>
+            </div>
+          )}
+
+          {shareError && !pendingConfirm && !shareLoading && (
             <div className="share-error">
               <span>{t('share.failed')}: {shareError}</span>
               <button className="share-retry-btn" onClick={onRetry}>

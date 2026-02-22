@@ -158,7 +158,8 @@
       "data": "Data",
       "security": "Security",
       "shortcuts": "Shortcuts",
-      "share": "Share"
+      "share": "Share",
+      "about": "About"
     },
     "ai": {
       "provider": "AI Provider",
@@ -732,7 +733,11 @@
     "copied": "Copied",
     "close": "Close",
     "button": "Share",
-    "rateLimited": "Rate limited. Try again later or switch to another provider."
+    "rateLimited": "Rate limited. Try again later or switch to another provider.",
+    "privacyWarning": "Content will be uploaded to a public temporary site",
+    "privacyDetail": "Anyone with the link can access the uploaded content. Do not share sensitive information. Link validity depends on the selected service.",
+    "uploadTo": "Upload to",
+    "confirmUpload": "Confirm Upload"
   },
   "beta": {
     "expired": "Beta Version Expired",

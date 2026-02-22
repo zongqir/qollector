@@ -81,8 +81,12 @@ function App() {
   const shareResult = useAppStore(s => s.shareResult);
   const shareLoading = useAppStore(s => s.shareLoading);
   const shareError = useAppStore(s => s.shareError);
+  const sharePendingConfirm = useAppStore(s => s.sharePendingConfirm);
+  const sharePendingProvider = useAppStore(s => s.sharePendingProvider);
   const closeShareModal = useAppStore(s => s.closeShareModal);
   const retryShare = useAppStore(s => s.retryShare);
+  const confirmShareUpload = useAppStore(s => s.confirmShareUpload);
+  const switchShareProvider = useAppStore(s => s.switchShareProvider);
   const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
 
   // Theme
@@ -470,8 +474,12 @@ function App() {
             shareResult={shareResult}
             shareLoading={shareLoading}
             shareError={shareError}
+            pendingConfirm={sharePendingConfirm}
+            pendingProvider={sharePendingProvider}
             onClose={closeShareModal}
             onRetry={retryShare}
+            onConfirmUpload={confirmShareUpload}
+            onSwitchProvider={switchShareProvider}
           />
         </Suspense>
       )}
