@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    branches: ['**']
 
 jobs:
   release:
@@ -42,6 +42,17 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Sanitize signing key
+        shell: bash
+        run: |
+          CLEAN_KEY=$(echo "$TAURI_SIGNING_PRIVATE_KEY_RAW" | tr -d '[:space:]')
+          echo "::add-mask::$CLEAN_KEY"
+          echo "TAURI_SIGNING_PRIVATE_KEY=$CLEAN_KEY" >> "$GITHUB_ENV"
+          echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_RAW" >> "$GITHUB_ENV"
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_RAW: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD_RAW: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
       - name: Verify signing key
         shell: bash
         run: |
@@ -57,9 +68,6 @@ jobs:
             exit 1
           fi
           rm -f "$RUNNER_TEMP/sign_test.txt" "$RUNNER_TEMP/sign_test.txt.sig"
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -75,15 +83,20 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | head -1 | cut -d'"' -f4)
+          echo "version=v$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "PasteHarbor ${{ github.ref_name }}"
+          tagName: ${{ steps.version.outputs.version }}
+          releaseName: "PasteHarbor ${{ steps.version.outputs.version }}"
           releaseBody: "See the assets to download and install this version.\n\n> **Note:** Linux build is experimental — clipboard functionality is not yet implemented."
           releaseDraft: false
           prerelease: false
