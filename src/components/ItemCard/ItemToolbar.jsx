@@ -2,13 +2,15 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GripVertical, Inbox, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2, Lock } from 'lucide-react';
 
+import useAppStore from '../../store/useAppStore';
+
 function ItemToolbar({
   item, onDragStart, onTogglePin, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
   maxPinnedItems, onOpenItem, onRevealInFolder,
-  onShare, isProUser, onProFeatureClick,
+  onShare, isProUser,
 }) {
   const { t } = useTranslation();
 
@@ -79,7 +81,7 @@ function ItemToolbar({
         <>
           <div className="toolbar-divider"></div>
           <button
-            onClick={(e) => { e.stopPropagation(); aiLocked ? onProFeatureClick?.() : onGenerateAITags(item); }}
+            onClick={(e) => { e.stopPropagation(); aiLocked ? useAppStore.getState().setShowSettings(true, 'license') : onGenerateAITags(item); }}
             disabled={!aiLocked && generatingAI === item.id}
             className={`toolbar-btn ai-btn ${generatingAI === item.id ? 'is-loading' : ''} ${aiLocked ? 'locked' : ''}`}
             title={aiLocked ? t('license.proFeature') : generatingAI === item.id ? t('item.aiGenerating') : t('item.generateAITags')}
@@ -93,7 +95,7 @@ function ItemToolbar({
         <>
           <div className="toolbar-divider"></div>
           <button
-            onClick={(e) => { e.stopPropagation(); ocrLocked ? onProFeatureClick?.() : onHandleOCR(item); }}
+            onClick={(e) => { e.stopPropagation(); ocrLocked ? useAppStore.getState().setShowSettings(true, 'license') : onHandleOCR(item); }}
             disabled={!ocrLocked && ocrProcessing === item.id}
             className={`toolbar-btn ocr-btn ${ocrLocked ? 'locked' : ''}`}
             title={ocrLocked ? t('license.proFeature') : ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}

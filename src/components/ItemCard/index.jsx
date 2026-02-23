@@ -21,7 +21,7 @@ function ItemCard({
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onToggleExpand, onOpenItem, onRevealInFolder,
-  onShare, isProUser, onProFeatureClick,
+  onShare, isProUser,
   // content actions
   onContentClick, onContentDoubleClick,
   language,
@@ -66,7 +66,6 @@ function ItemCard({
         onRevealInFolder={onRevealInFolder}
         onShare={onShare}
         isProUser={isProUser}
-        onProFeatureClick={onProFeatureClick}
       />
       <ItemContent
         item={item}

@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git add src-tauri/tauri.conf.json)",
-      "Bash(git commit -m \"feat: add language selector for NSIS installer\n\n- Enable English and Simplified Chinese languages\n- Show language selector during installation\n- User can choose preferred language for installer UI\")"
-    ]
-  }
-}

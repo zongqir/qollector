@@ -380,7 +380,7 @@ impl ClipboardManager {
         let item_metadata = item.metadata.clone();
         drop(repo_lock);
         let _ = app_handle.emit("clipboard-changed", ());
-        println!("Clipboard item saved successfully!");
+        println!("[Clipboard] item saved");
 
         if is_double_copy {
             let repo_lock = repo.lock().await;

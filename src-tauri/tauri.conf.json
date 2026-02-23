@@ -46,7 +46,7 @@
       "endpoints": [
         "https://github.com/zongqir/clipbox/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYxRTI3OTJDQzhFQzczMEYKUldRUGMreklMSG5pWWNBYjdHRnk1eGQxNXdmY051Qm9XdDY0elJKNzJpTkxzdWRaSytkMEdBOFEK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3MTQwMUQ0OTFCQzE1OUUKUldTZUZieVIxQUVVbHd4Z2JhKzlTNHJkRjZNb1hldDZ1ZzcwTkdPUTZiWWZORTdGajd5cG9tTDUK"
     }
   },
   "app": {
@@ -99,6 +99,8 @@
             "core:window:allow-is-visible",
             "core:window:allow-is-maximized",
             "core:window:allow-is-minimized",
+            "core:window:allow-cursor-position",
+            "core:window:allow-available-monitors",
             "global-shortcut:allow-register",
             "global-shortcut:allow-unregister",
             "global-shortcut:allow-is-registered",

@@ -779,7 +779,7 @@ function PreviewPanel() {
             {shouldShowAIButton && (
               <button
                 className={`preview-tool-btn ${aiLocked ? 'locked' : ''}`}
-                onClick={() => aiLocked ? useAppStore.getState().setShowSettings(true) : generateAITags(item)}
+                onClick={() => aiLocked ? useAppStore.getState().setShowSettings(true, 'license') : generateAITags(item)}
                 disabled={!aiLocked && generatingAI === item.id}
                 title={aiLocked ? t('license.proFeature') : undefined}
               >
@@ -799,7 +799,7 @@ function PreviewPanel() {
             {shouldShowOCRButton && (
               <button
                 className={`preview-tool-btn ${ocrLocked ? 'locked' : ''}`}
-                onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true) : handleOCR(item)}
+                onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true, 'license') : handleOCR(item)}
                 disabled={!ocrLocked && ocrProcessing === item.id}
                 title={ocrLocked ? t('license.proFeature') : undefined}
               >

@@ -149,7 +149,7 @@ async function generateIcons() {
     console.log(`Generated: icon-disconnected-${size}.png`);
   }
 
-  console.log('\nAll icons generated successfully!');
+  console.log('\nAll icons generated.');
 }
 
 generateIcons().catch(console.error);

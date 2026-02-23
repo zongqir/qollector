@@ -159,7 +159,7 @@ pub mod windows {
                 })?;
             }
 
-            println!("Clipboard listener registered successfully");
+            println!("[Clipboard] listener registered");
 
             let last_sequence = self.last_sequence.clone();
             let skip_sequence = self.skip_sequence.clone();

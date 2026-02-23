@@ -2,6 +2,7 @@
 node_modules/
 dist/
 *.log
+.env
 
 # Rust
 src-tauri/target/
@@ -34,3 +35,12 @@ _external/
 
 # Release artifacts
 release-artifacts/
+
+# AI tool configs
+CLAUDE.md
+AGENTS.md
+.claude/
+.cursorrules
+.aider*
+.continue/
+temp_secret_key.txt

@@ -394,7 +394,7 @@ fn main() {
                     .expect("Failed to initialize database");
                 init_meter.mark("open_repository");
 
-                println!("Database initialized successfully");
+                println!("[DB] initialized");
 
                 // Initialize config repository.
                 let config_repo = Arc::new(ConfigRepository::new(repository.pool().clone()));

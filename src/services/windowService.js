@@ -1,5 +1,5 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { getCurrentWindow, currentMonitor } from '@tauri-apps/api/window';
+import { getCurrentWindow, cursorPosition, availableMonitors } from '@tauri-apps/api/window';
 
 const isDevServer = () => window.location.hostname === 'localhost';
 
@@ -8,6 +8,41 @@ const resolveSubWindowUrl = (devPath, prodPath = devPath) => (
 );
 
 const isWindowsRuntime = () => navigator.userAgent.toLowerCase().includes('windows');
+
+const getMonitorAtCursor = async () => {
+  const cursor = await cursorPosition();
+  const monitors = await availableMonitors();
+  return monitors.find((m) => {
+    const mx = m.position.x;
+    const my = m.position.y;
+    return (
+      cursor.x >= mx &&
+      cursor.x < mx + m.size.width &&
+      cursor.y >= my &&
+      cursor.y < my + m.size.height
+    );
+  }) || monitors[0] || null;
+};
+
+const centerOnCursorMonitor = async (winW, winH) => {
+  try {
+    const target = await getMonitorAtCursor();
+    if (target) {
+      const scale = target.scaleFactor || 1;
+      const logicalW = target.size.width / scale;
+      const logicalH = target.size.height / scale;
+      const offsetX = target.position.x / scale;
+      const offsetY = target.position.y / scale;
+      return {
+        x: Math.round(offsetX + (logicalW - winW) / 2),
+        y: Math.round(offsetY + (logicalH - winH) / 2),
+      };
+    }
+  } catch {
+    // fallback
+  }
+  return null;
+};
 
 const focusWindowSafely = async (win) => {
   if (!win) return;
@@ -51,12 +86,16 @@ export const openImagePreview = async (imagePath, t) => {
       }
     }
 
+    const PREVIEW_W = 800;
+    const PREVIEW_H = 600;
+    const pos = await centerOnCursorMonitor(PREVIEW_W, PREVIEW_H);
+
     const webview = new WebviewWindow(windowLabel, {
       url: `${resolveSubWindowUrl('public/preview.html', 'preview.html')}?path=${encodeURIComponent(originalPath)}`,
       title: t('preview.title'),
-      width: 800,
-      height: 600,
-      center: true,
+      width: PREVIEW_W,
+      height: PREVIEW_H,
+      ...(pos || { center: true }),
       resizable: true,
       alwaysOnTop: true,
       decorations: false,
@@ -87,14 +126,18 @@ export const openQuickInputWindow = async (t) => {
 
   const useTransparentFrame = isWindowsRuntime();
 
+  const WIN_W = 460;
+  const WIN_H = 360;
+  const pos = await centerOnCursorMonitor(WIN_W, WIN_H);
+
   const webview = new WebviewWindow(QUICK_INPUT_WINDOW_LABEL, {
     url: resolveSubWindowUrl('quick-input.html'),
     title: t('quickInput.title'),
-    width: 460,
-    height: 360,
+    width: WIN_W,
+    height: WIN_H,
     minWidth: 360,
     minHeight: 260,
-    center: true,
+    ...(pos || { center: true }),
     resizable: true,
     alwaysOnTop: true,
     decorations: false,
@@ -135,13 +178,13 @@ export const openWidgetWindow = async () => {
   let y = 500;
 
   try {
-    const monitor = await currentMonitor();
-    if (monitor) {
-      const scale = monitor.scaleFactor || 1;
-      const logicalW = monitor.size.width / scale;
-      const logicalH = monitor.size.height / scale;
-      const offsetX = (monitor.position?.x || 0) / scale;
-      const offsetY = (monitor.position?.y || 0) / scale;
+    const target = await getMonitorAtCursor();
+    if (target) {
+      const scale = target.scaleFactor || 1;
+      const logicalW = target.size.width / scale;
+      const logicalH = target.size.height / scale;
+      const offsetX = target.position.x / scale;
+      const offsetY = target.position.y / scale;
       x = offsetX + logicalW - WIDGET_SIZE - MARGIN;
       y = offsetY + logicalH - WIDGET_SIZE - MARGIN - 48;
     }

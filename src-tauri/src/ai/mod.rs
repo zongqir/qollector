@@ -690,7 +690,7 @@ impl AIService {
 
         if let Some(choice) = chat_response.choices.first() {
             let summary = choice.message.content.trim().to_string();
-            println!("[Timeline AI] Summary generated successfully");
+            println!("[Timeline AI] summary done");
             Ok(summary)
         } else {
             println!("[Timeline AI] No choices in response");

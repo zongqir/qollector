@@ -296,6 +296,7 @@ const useAppStore = create((set, get) => ({
   generatingAI: null,
   ocrProcessing: null,
   showSettings: false,
+  settingsInitialTab: null,
   isAlwaysOnTop: false,
   isMiniMode: false,
   pinBeforeMini: false,
@@ -863,9 +864,17 @@ const useAppStore = create((set, get) => ({
   toggleFavorite: async (item) => {
     try {
       await invoke('toggle_favorite_item', { id: item.id });
-      await get().loadItems();
+      const newFavorite = !item.is_favorite;
+      set((state) => ({
+        items: state.items.map((it) =>
+          it.id === item.id ? { ...it, is_favorite: newFavorite } : it
+        ),
+        previewItem: state.previewItem?.id === item.id
+          ? { ...state.previewItem, is_favorite: newFavorite }
+          : state.previewItem,
+      }));
     } catch (error) {
-      console.error('切换收藏失败:', error);
+      console.error('Failed to toggle favorite:', error);
     }
   },
 
@@ -1484,7 +1493,7 @@ const useAppStore = create((set, get) => ({
   },
 
   // ========== UI Actions ==========
-  setShowSettings: (v) => set({ showSettings: v }),
+  setShowSettings: (v, tab = null) => set({ showSettings: v, settingsInitialTab: v ? tab : null }),
   setIsAlwaysOnTop: (v) => set({ isAlwaysOnTop: v }),
   setIsMiniMode: (v) => set({ isMiniMode: v }),
   setPinBeforeMini: (v) => set({ pinBeforeMini: v }),
