@@ -46,7 +46,7 @@
       "endpoints": [
         "https://github.com/zongqir/clipbox/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY2RkVDQkYwRTREMzIxQzEKUldUQklkUGs4TXYrWmtUbVVzcTNKREExUlR6aW1mazNmZ1BWVmZUYk0wa2plc1p0WTBKSU1DK1oK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDlBMzdBQkFFRUVCRUNBNDAKUldSQXlyN3VycXMzbWtNNDMxS3VpVTY1bW85dUFVQkJRSzVZL1paQThESGhBM1FrYytmR01YdTAK"
     }
   },
   "app": {
