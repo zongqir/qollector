@@ -17,7 +17,7 @@ pub mod windows {
     /// 友好应用名缓存：key = exe 路径, value = 友好名称
     static APP_NAME_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
-    const CLIPBOARD_POLL_INTERVAL_MS: u64 = 80;
+    const CLIPBOARD_POLL_INTERVAL_MS: u64 = 30;
     const CLIPBOARD_READ_RETRIES: usize = 6;
     const CLIPBOARD_READ_RETRY_DELAY_MS: u64 = 25;
     const INTERNAL_SEQUENCE_CAPTURE_RETRIES: usize = 20;

@@ -14,7 +14,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use std::time::{Duration, Instant};
 
-const CLIPBOARD_POLL_INTERVAL_MS: u64 = 120;
+const CLIPBOARD_POLL_INTERVAL_MS: u64 = 50;
 const ERROR_LOG_INTERVAL_SECS: u64 = 5;
 
 pub struct MacosClipboard {
