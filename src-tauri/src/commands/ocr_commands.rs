@@ -136,13 +136,13 @@ pub async fn recognize_image(
     state: State<'_, OcrState>,
     license_state: State<'_, LicenseState>,
 ) -> Result<String, String> {
-    // License gate
-    {
-        let license = license_state.config.lock();
-        if license.status != LicenseStatus::Active {
-            return Err("PRO_REQUIRED".to_string());
-        }
-    }
+    // License gate - temporarily disabled for beta
+    // {
+    //     let license = license_state.config.lock();
+    //     if license.status != LicenseStatus::Active {
+    //         return Err("PRO_REQUIRED".to_string());
+    //     }
+    // }
 
     let service_opt = {
         let service_guard = state.service.lock();
@@ -168,13 +168,13 @@ pub async fn recognize_and_update(
     license_state: State<'_, LicenseState>,
     manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
-    // License gate
-    {
-        let license = license_state.config.lock();
-        if license.status != LicenseStatus::Active {
-            return Err("PRO_REQUIRED".to_string());
-        }
-    }
+    // License gate - temporarily disabled for beta
+    // {
+    //     let license = license_state.config.lock();
+    //     if license.status != LicenseStatus::Active {
+    //         return Err("PRO_REQUIRED".to_string());
+    //     }
+    // }
 
     // OCR recognition
     let service_opt = {

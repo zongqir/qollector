@@ -49,13 +49,13 @@ pub async fn generate_ai_tags(
     license_state: State<'_, LicenseState>,
     content: String,
 ) -> Result<(Vec<String>, Option<String>), String> {
-    // License gate
-    {
-        let license = license_state.config.lock();
-        if license.status != LicenseStatus::Active {
-            return Err("PRO_REQUIRED".to_string());
-        }
-    }
+    // License gate - temporarily disabled for beta
+    // {
+    //     let license = license_state.config.lock();
+    //     if license.status != LicenseStatus::Active {
+    //         return Err("PRO_REQUIRED".to_string());
+    //     }
+    // }
 
     let config = state.config.lock().clone();
 
@@ -153,13 +153,13 @@ pub async fn generate_timeline_summary(
     license_state: State<'_, LicenseState>,
     items: Vec<crate::core::models::ClipboardItem>,
 ) -> Result<String, String> {
-    // License gate
-    {
-        let license = license_state.config.lock();
-        if license.status != LicenseStatus::Active {
-            return Err("PRO_REQUIRED".to_string());
-        }
-    }
+    // License gate - temporarily disabled for beta
+    // {
+    //     let license = license_state.config.lock();
+    //     if license.status != LicenseStatus::Active {
+    //         return Err("PRO_REQUIRED".to_string());
+    //     }
+    // }
 
     let config = state.config.lock().clone();
 

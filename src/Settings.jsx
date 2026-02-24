@@ -971,12 +971,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             >
               {`${t('settings.tabs.data')} / ${t('settings.tabs.security')}`}
             </button>
+            {/* License tab - temporarily hidden for beta
             <button
               className={`tab-btn ${activeTab === 'license' ? 'active' : ''}`}
               onClick={() => setActiveTab('license')}
             >
               {t('license.tab')}
             </button>
+            */}
             <button
               className={`tab-btn ${activeTab === 'about' ? 'active' : ''}`}
               onClick={() => setActiveTab('about')}
@@ -1565,6 +1567,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             />
           )}
 
+          {/* License panel - temporarily hidden for beta
           {activeTab === 'license' && (
             <div className="settings-section">
               <div className="setting-group-title">{t('license.title')}</div>
@@ -1642,6 +1645,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </div>
             </div>
           )}
+          */}
 
           {activeTab === 'about' && (
             <div className="settings-section">

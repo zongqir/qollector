@@ -400,50 +400,7 @@ function App() {
     };
   }, []);
 
-  if (betaExpired) {
-    return (
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 99999,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(0,0,0,0.85)', color: '#fff', fontFamily: 'system-ui, sans-serif',
-      }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⏰</div>
-        <h2 style={{ margin: '0 0 12px', fontSize: 22, fontWeight: 600 }}>{t('beta.expired')}</h2>
-        <p style={{ margin: '0 0 8px', fontSize: 14, opacity: 0.8, textAlign: 'center', maxWidth: 360 }}>
-          {t('beta.expiredMessage', { buildDate: betaStatus?.build_date, expiryDate: betaStatus?.expiry_date })}
-        </p>
-        <button
-          onClick={async () => {
-            await checkForUpdate(false);
-            if (updateInfo?.update) {
-              await downloadAndInstall();
-              await relaunch();
-            }
-          }}
-          disabled={updateChecking || (typeof updateProgress === 'number')}
-          style={{
-            marginTop: 16, padding: '10px 28px', fontSize: 14, fontWeight: 600,
-            border: 'none', borderRadius: 8, cursor: 'pointer',
-            background: '#3b82f6', color: '#fff',
-            opacity: (updateChecking || typeof updateProgress === 'number') ? 0.6 : 1,
-          }}
-        >
-          {updateChecking ? t('update.checking') :
-           typeof updateProgress === 'number' ? t('update.progress', { percent: Math.round(updateProgress) }) :
-           updateProgress === 'ready' ? t('update.ready') :
-           t('update.checkNow')}
-        </button>
-        {updateError && (
-          <p style={{ margin: '12px 0 0', fontSize: 12, color: '#f87171' }}>
-            {t('update.failed', { error: updateError })}
-          </p>
-        )}
-        {updateProgress === 'upToDate' && (
-          <p style={{ margin: '12px 0 0', fontSize: 13, opacity: 0.6 }}>{t('update.upToDate')}</p>
-        )}
-      </div>
-    );
-  }
+  // Beta expired overlay removed - soft banner is shown at the bottom instead
 
   if (isLocked && hasPassword) {
     return (
@@ -520,6 +477,34 @@ function App() {
       {shouldUseHoverPreview && <HoverPreview />}
 
       {tourActive && <GuidedTour />}
+
+      {/* Beta expired soft banner */}
+      {betaExpired && !updateInfo && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9998,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+          padding: '8px 16px', fontSize: 13,
+          background: 'rgba(217,119,6,0.95)', color: '#fff',
+          backdropFilter: 'blur(8px)',
+        }}>
+          <span>{t('beta.expiredBanner')}</span>
+          <button
+            onClick={async () => {
+              await checkForUpdate(false);
+              if (updateInfo?.update) {
+                await downloadAndInstall();
+              }
+            }}
+            disabled={updateChecking || (typeof updateProgress === 'number')}
+            style={{ background: '#fff', color: '#b45309', border: 'none', borderRadius: 6, padding: '4px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
+          >
+            {updateChecking ? t('update.checking') :
+             typeof updateProgress === 'number' ? t('update.progress', { percent: Math.round(updateProgress) }) :
+             t('update.checkNow')}
+          </button>
+          {updateError && <span style={{ color: '#fecaca', fontSize: 12 }}>{updateError}</span>}
+        </div>
+      )}
 
       {/* Update notification bar */}
       {updateInfo && updateProgress !== 'upToDate' && (
