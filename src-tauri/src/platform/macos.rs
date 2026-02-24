@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use cocoa::appkit::{NSFilenamesPboardType, NSPasteboard};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::{NSArray, NSAutoreleasePool, NSString, NSURL};
+use objc::{class, msg_send, sel, sel_impl};
 use std::borrow::Cow;
 use std::ffi::CStr;
 use std::io::Cursor;
@@ -54,9 +55,15 @@ impl MacosClipboard {
             .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
 
         if let Ok(text) = clipboard.get_text() {
+            let raw_formats = Self::read_rich_formats();
+            let raw_formats = if raw_formats.is_empty() {
+                None
+            } else {
+                Some(raw_formats)
+            };
             return Ok(ClipboardContent::Text {
                 plain: text,
-                raw_formats: None,
+                raw_formats,
             });
         }
 
@@ -155,6 +162,90 @@ impl MacosClipboard {
         }
     }
 
+    fn set_multi_format_text(
+        plain: &str,
+        formats: &[(String, Vec<u8>)],
+    ) -> Result<(), ClipboardError> {
+        unsafe {
+            let autorelease_pool = NSAutoreleasePool::new(nil);
+            let pasteboard = NSPasteboard::generalPasteboard(nil);
+            if pasteboard == nil {
+                autorelease_pool.drain();
+                return Err(ClipboardError::AccessError(
+                    "Failed to access general pasteboard".to_string(),
+                ));
+            }
+
+            pasteboard.clearContents();
+
+            // Write plain text
+            let ns_plain_type = NSString::alloc(nil).init_str("public.utf8-plain-text");
+            let ns_plain_data: id = msg_send![
+                class!(NSData),
+                dataWithBytes: plain.as_ptr()
+                length: plain.len()
+            ];
+            let _: bool = msg_send![pasteboard, setData: ns_plain_data forType: ns_plain_type];
+
+            // Write rich formats
+            let format_map = [
+                ("HTML Format", "public.html"),
+                ("Rich Text Format", "public.rtf"),
+            ];
+            for (label, data) in formats {
+                if let Some((_, uti)) = format_map.iter().find(|(l, _)| *l == label.as_str()) {
+                    let ns_type = NSString::alloc(nil).init_str(uti);
+                    let ns_data: id = msg_send![
+                        class!(NSData),
+                        dataWithBytes: data.as_ptr()
+                        length: data.len()
+                    ];
+                    let _: bool = msg_send![pasteboard, setData: ns_data forType: ns_type];
+                    println!("[RichFormat:macOS] Wrote '{}': {} bytes", label, data.len());
+                }
+            }
+
+            autorelease_pool.drain();
+        }
+
+        Ok(())
+    }
+
+    fn read_rich_formats() -> Vec<(String, Vec<u8>)> {
+        let format_types = [
+            ("public.html", "HTML Format"),
+            ("public.rtf", "Rich Text Format"),
+        ];
+        let mut results = Vec::new();
+
+        unsafe {
+            let autorelease_pool = NSAutoreleasePool::new(nil);
+            let pasteboard = NSPasteboard::generalPasteboard(nil);
+            if pasteboard == nil {
+                autorelease_pool.drain();
+                return results;
+            }
+
+            for (uti, label) in &format_types {
+                let ns_type = NSString::alloc(nil).init_str(uti);
+                let data: id = msg_send![pasteboard, dataForType: ns_type];
+                if data != nil {
+                    let length: usize = msg_send![data, length];
+                    if length > 0 {
+                        let bytes_ptr: *const u8 = msg_send![data, bytes];
+                        let slice = std::slice::from_raw_parts(bytes_ptr, length);
+                        println!("[RichFormat:macOS] Read '{}': {} bytes", label, length);
+                        results.push((label.to_string(), slice.to_vec()));
+                    }
+                }
+            }
+
+            autorelease_pool.drain();
+        }
+
+        results
+    }
+
     fn nsstring_to_string(value: id) -> Option<String> {
         if value == nil {
             return None;
@@ -192,7 +283,13 @@ impl MacosClipboard {
 
     fn set_content_sync(content: ClipboardContent) -> Result<(), ClipboardError> {
         match content {
-            ClipboardContent::Text { plain, .. } => {
+            ClipboardContent::Text { plain, raw_formats } => {
+                if let Some(ref formats) = raw_formats {
+                    if !formats.is_empty() {
+                        Self::set_multi_format_text(&plain, formats)?;
+                        return Ok(());
+                    }
+                }
                 let mut clipboard = arboard::Clipboard::new().map_err(|e| {
                     ClipboardError::AccessError(format!("Failed to open clipboard: {}", e))
                 })?;

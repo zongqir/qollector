@@ -500,6 +500,11 @@ pub mod windows {
                 "<figure",
                 "<picture",
                 "<hr",
+                // Rich text formatting (Word, Google Docs, etc.)
+                "font-family:",
+                "font-size:",
+                "font-weight:",
+                "class=\"mso",
             ];
             if semantic_markers.iter().any(|m| lower.contains(m)) {
                 return true;
@@ -764,6 +769,9 @@ pub mod windows {
                 "\\annotation",
                 "\\xe ",
                 "\\tc ",
+                // Rich text formatting (Word, etc.)
+                "\\fonttbl",
+                "\\colortbl",
             ];
             if semantic_markers.iter().any(|m| lower.contains(m)) {
                 return true;
