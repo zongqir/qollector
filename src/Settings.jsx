@@ -1653,6 +1653,29 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <div style={{ fontSize: 40 }}>📋</div>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>PasteHarbor</div>
                 <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
+                <div style={{
+                  display: 'inline-block',
+                  padding: '2px 10px',
+                  borderRadius: 12,
+                  background: 'rgba(255, 149, 0, 0.12)',
+                  color: '#ff9500',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}>Beta</div>
+                <div style={{
+                  marginTop: 4,
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  background: 'var(--bg-input)',
+                  fontSize: 12,
+                  lineHeight: 1.7,
+                  color: 'var(--text-secondary)',
+                  maxWidth: 320,
+                  textAlign: 'center',
+                }}>
+                  {t('settings.about.betaNotice')}
+                </div>
 
                 {aboutUpdateVersion && !aboutUpdateStatus && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
