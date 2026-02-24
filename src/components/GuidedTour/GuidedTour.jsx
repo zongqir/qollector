@@ -7,7 +7,10 @@ const TOUR_STEPS = [
   { selector: '.polymorphic-panel', placement: 'left', titleKey: 'tour.step1Title', descKey: 'tour.step1Desc' },
   { selector: '.titlebar-btn.mini-btn', placement: 'bottom', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc' },
   { selector: '.quick-note-panel-close-btn', placement: 'left', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc' },
-  { selector: null, placement: 'center', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc' },
+  { selector: '.titlebar', placement: 'bottom', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc' },
+  { selector: '.titlebar-btn.pin-btn', placement: 'bottom', titleKey: 'tour.step5Title', descKey: 'tour.step5Desc' },
+  { selector: '.titlebar-btn.quick-add-btn', placement: 'bottom', titleKey: 'tour.step6Title', descKey: 'tour.step6Desc' },
+  { selector: null, placement: 'center', titleKey: 'tour.step7Title', descKey: 'tour.step7Desc' },
 ];
 
 const SPOTLIGHT_PAD = 8;
