@@ -2,8 +2,6 @@ use std::sync::Arc;
 use tauri::State;
 use tokio::sync::Mutex;
 
-use crate::commands::license_commands::LicenseState;
-use crate::license::config::LicenseStatus;
 use crate::mcp::{McpConfig, McpServer};
 use crate::repository::config_repo::ConfigRepository;
 
@@ -33,16 +31,7 @@ pub async fn get_mcp_port(state: State<'_, McpState>) -> Result<u16, String> {
 pub async fn update_mcp_config(
     config: McpConfig,
     state: State<'_, McpState>,
-    license_state: State<'_, LicenseState>,
 ) -> Result<(), String> {
-    // License gate: only allow enabling MCP with active license
-    if config.enabled {
-        let license = license_state.config.lock();
-        if license.status != LicenseStatus::Active {
-            return Err("PRO_REQUIRED".to_string());
-        }
-    }
-
     let mut current_config = state.config.lock().await;
     *current_config = config.clone();
     drop(current_config);

@@ -537,12 +537,19 @@ fn main() {
                 app.manage(share_state);
 
                 // License state
-                let license_config = config_repo
+                let mut license_config = config_repo
                     .load_license_config()
                     .await
                     .ok()
                     .flatten()
                     .unwrap_or_default();
+
+                // Dev mode: bypass license check
+                #[cfg(debug_assertions)]
+                {
+                    license_config.status = crate::license::config::LicenseStatus::Active;
+                }
+
                 println!("License config loaded: status={:?}", license_config.status);
                 let license_state = LicenseState {
                     config: Arc::new(Mutex::new(license_config)),

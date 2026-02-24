@@ -11,6 +11,7 @@ const TOUR_STEPS = [
   { selector: '.titlebar-btn.pin-btn', placement: 'bottom', titleKey: 'tour.step5Title', descKey: 'tour.step5Desc' },
   { selector: '.titlebar-btn.quick-add-btn', placement: 'bottom', titleKey: 'tour.step6Title', descKey: 'tour.step6Desc' },
   { selector: null, placement: 'center', titleKey: 'tour.step7Title', descKey: 'tour.step7Desc' },
+  { selector: null, placement: 'center', titleKey: 'tour.step8Title', descKey: 'tour.step8Desc' },
 ];
 
 const SPOTLIGHT_PAD = 8;
