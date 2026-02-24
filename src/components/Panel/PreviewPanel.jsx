@@ -23,6 +23,7 @@ import AIAssistantPanel from '../../features/ai-assistant/components/AIAssistant
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
 import FilePreviewItem from './FilePreview';
+import ImageLightbox from '../ImageLightbox/ImageLightbox';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -33,6 +34,7 @@ function PreviewPanel() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
   const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
+  const [lightboxSrc, setLightboxSrc] = useState(null);
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
@@ -522,10 +524,10 @@ function PreviewPanel() {
         <div
           ref={contentSelectableRef}
           className="preview-image-content"
-          onDoubleClick={handleContentDoubleClick}
+          onDoubleClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
           onKeyDown={handleContentKeyDown}
           tabIndex={0}
-          title={t('item.doubleClickToCopy')}
+          title={t('item.doubleClickToPreview')}
         >
           <img src={getImageOriginal(item.image_paths)} alt="" />
           {item.ocr_text && (
@@ -570,7 +572,7 @@ function PreviewPanel() {
 
   return (
     <div className="preview-panel" ref={panelRef}>
-      {/* 顶部导航 */}
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
         <button className="preview-back-btn" onClick={switchToCollection}>
           <ArrowLeft size={16} />
