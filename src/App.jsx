@@ -100,20 +100,6 @@ function App() {
     applyTheme(themeMode);
   }, [themeMode, applyTheme]);
 
-  // Force normal window size when tour starts
-  useEffect(() => {
-    if (!tourActive || !isMiniMode) return;
-    (async () => {
-      try {
-        const appWindow = getCurrentWindow();
-        await appWindow.setSize(new LogicalSize(NORMAL_SIZE.width, NORMAL_SIZE.height));
-        localStorage.setItem(WINDOW_MODE_STORAGE_KEY, WINDOW_MODE_NORMAL);
-      } catch (error) {
-        console.error('failed to resize window for tour:', error);
-      }
-    })();
-  }, [tourActive]);
-
   // 初始化
   useEffect(() => {
     console.log('[Perf:App] Init useEffect START at', performance.now().toFixed(1), 'ms');
@@ -340,6 +326,9 @@ function App() {
     if (!initialWindowModeReady) return undefined;
 
     const handleResize = () => {
+      // Skip auto mode switching during guided tour
+      if (useAppStore.getState().tourActive) return;
+
       const width = window.innerWidth;
 
       // Handle panel auto-close/restore

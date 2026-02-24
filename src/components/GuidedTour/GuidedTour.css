@@ -3,15 +3,21 @@
   position: fixed;
   inset: 0;
   z-index: 10001;
+  pointer-events: none;
+}
+
+/* ========== Mask panels (four rectangles around the spotlight hole) ========== */
+.tour-mask-panel {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.65);
   pointer-events: auto;
 }
 
-/* ========== Spotlight (box-shadow hole) ========== */
+/* ========== Spotlight border (visual only) ========== */
 .tour-spotlight {
   position: absolute;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
   border-radius: 8px;
-  transition: top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease, border-radius 0.4s ease;
+  transition: top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease;
   pointer-events: none;
 }
 

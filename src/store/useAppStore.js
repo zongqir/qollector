@@ -1511,17 +1511,7 @@ const useAppStore = create((set, get) => ({
   setNewTagInput: (v) => set({ newTagInput: v }),
 
   // ========== Guided Tour Actions ==========
-  startTour: () => {
-    const state = get();
-    const updates = { tourActive: true, tourStep: 0, showSettings: false };
-    if (state.isMiniMode) {
-      updates.isMiniMode = false;
-    }
-    if (!state.collectionPanelEnabled) {
-      updates.collectionPanelEnabled = true;
-    }
-    set(updates);
-  },
+  startTour: () => set({ tourActive: true, tourStep: 0, showSettings: false }),
   nextTourStep: () => set((s) => ({ tourStep: s.tourStep + 1 })),
   prevTourStep: () => set((s) => ({ tourStep: Math.max(0, s.tourStep - 1) })),
   completeTour: () => {

@@ -1,17 +1,23 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { LogicalSize } from '@tauri-apps/api/dpi';
 import useAppStore from '../../store/useAppStore';
 import './GuidedTour.css';
 
+const NORMAL_SIZE = { width: 800, height: 600 };
+
 const TOUR_STEPS = [
+  { selector: '.titlebar-btn.mini-btn', placement: 'bottom', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc', action: 'exitMini' },
+  { selector: null, placement: 'center', titleKey: 'tour.stepShowPanelTitle', descKey: 'tour.stepShowPanelDesc', action: 'showPanel' },
   { selector: '.polymorphic-panel', placement: 'left', titleKey: 'tour.step1Title', descKey: 'tour.step1Desc' },
-  { selector: '.titlebar-btn.mini-btn', placement: 'bottom', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc' },
   { selector: '.quick-note-panel-close-btn', placement: 'left', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc' },
   { selector: '.titlebar', placement: 'bottom', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc' },
   { selector: '.titlebar-btn.pin-btn', placement: 'bottom', titleKey: 'tour.step5Title', descKey: 'tour.step5Desc' },
   { selector: '.titlebar-btn.quick-add-btn', placement: 'bottom', titleKey: 'tour.step6Title', descKey: 'tour.step6Desc' },
   { selector: null, placement: 'center', titleKey: 'tour.step7Title', descKey: 'tour.step7Desc' },
   { selector: null, placement: 'center', titleKey: 'tour.step8Title', descKey: 'tour.step8Desc' },
+  { selector: null, placement: 'center', titleKey: 'tour.step9Title', descKey: 'tour.step9Desc' },
 ];
 
 const SPOTLIGHT_PAD = 8;
@@ -71,7 +77,36 @@ function GuidedTour() {
   const completeTour = useAppStore((s) => s.completeTour);
   const setShowSettings = useAppStore((s) => s.setShowSettings);
 
-  const [spotlightStyle, setSpotlightStyle] = useState({});
+  const isMiniMode = useAppStore((s) => s.isMiniMode);
+
+  const executeStepAction = useCallback(async (stepDef) => {
+    if (stepDef?.action === 'exitMini') {
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.setSize(new LogicalSize(NORMAL_SIZE.width, NORMAL_SIZE.height));
+        localStorage.setItem('clipbox-window-mode', 'normal');
+        useAppStore.setState({ isMiniMode: false, collectionPanelEnabled: true });
+      } catch (error) {
+        console.error('failed to exit mini mode during tour:', error);
+      }
+    } else if (stepDef?.action === 'showPanel') {
+      useAppStore.setState({ collectionPanelEnabled: true });
+    }
+  }, []);
+
+  const handleNext = useCallback(() => {
+    const currentStep = TOUR_STEPS[useAppStore.getState().tourStep];
+    if (currentStep?.action) {
+      executeStepAction(currentStep);
+    }
+    if (tourStep === TOUR_STEPS.length - 1) {
+      completeTour();
+    } else {
+      nextTourStep();
+    }
+  }, [tourStep, executeStepAction, completeTour, nextTourStep]);
+
+  const [spotlightRect, setSpotlightRect] = useState(null);
   const tooltipRef = useRef(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const [tooltipReady, setTooltipReady] = useState(false);
@@ -83,23 +118,23 @@ function GuidedTour() {
   const updatePositions = useCallback(() => {
     if (!step) return;
     if (isCenterStep) {
-      setSpotlightStyle({ display: 'none' });
+      setSpotlightRect(null);
       setTooltipReady(true);
       return;
     }
     const rect = getTargetRect(step.selector);
     if (!rect) {
-      setSpotlightStyle({ display: 'none' });
+      setSpotlightRect(null);
       setTooltipReady(true);
       return;
     }
-    setSpotlightStyle({
+    const sr = {
       top: rect.top - SPOTLIGHT_PAD,
       left: rect.left - SPOTLIGHT_PAD,
       width: rect.width + SPOTLIGHT_PAD * 2,
       height: rect.height + SPOTLIGHT_PAD * 2,
-      display: 'block',
-    });
+    };
+    setSpotlightRect(sr);
     if (tooltipRef.current) {
       const pos = calcTooltipPos(rect, step.placement, tooltipRef.current);
       setTooltipPos(clampPos(pos));
@@ -109,6 +144,16 @@ function GuidedTour() {
 
   // Recalculate on step change and resize
   useEffect(() => {
+    // Skip exitMini step if already in normal mode
+    if (step?.action === 'exitMini' && !useAppStore.getState().isMiniMode) {
+      nextTourStep();
+      return;
+    }
+    // Skip showPanel step if panel is already open
+    if (step?.action === 'showPanel' && useAppStore.getState().collectionPanelEnabled) {
+      nextTourStep();
+      return;
+    }
     setTooltipReady(false);
     // Small delay to let DOM settle (e.g. panel might be opening)
     const timer = setTimeout(updatePositions, 80);
@@ -127,14 +172,24 @@ function GuidedTour() {
     }
   }, [tourStep, isCenterStep, updatePositions]);
 
+  // Auto-advance when user clicks mini button to exit mini mode during the exitMini step
+  const prevMiniModeRef = useRef(isMiniMode);
+  useEffect(() => {
+    const wasMini = prevMiniModeRef.current;
+    prevMiniModeRef.current = isMiniMode;
+    // Only advance if user actually toggled from mini to normal during this step
+    if (step?.action === 'exitMini' && wasMini && !isMiniMode) {
+      nextTourStep();
+    }
+  }, [isMiniMode, step, nextTourStep]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') {
         completeTour();
       } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
-        if (isLastStep) completeTour();
-        else nextTourStep();
+        handleNext();
       } else if (e.key === 'ArrowLeft') {
         prevTourStep();
       }
@@ -168,7 +223,7 @@ function GuidedTour() {
         )}
         <button
           className="tour-nav-btn primary"
-          onClick={isLastStep ? completeTour : nextTourStep}
+          onClick={handleNext}
         >
           {isLastStep ? t('tour.done') : t('tour.next')}
         </button>
@@ -176,11 +231,27 @@ function GuidedTour() {
     </div>
   );
 
+  // Build four mask panels around the spotlight hole
+  const maskPanels = spotlightRect ? (
+    <>
+      {/* Top */}
+      <div className="tour-mask-panel" style={{ top: 0, left: 0, right: 0, height: Math.max(0, spotlightRect.top) }} />
+      {/* Bottom */}
+      <div className="tour-mask-panel" style={{ top: spotlightRect.top + spotlightRect.height, left: 0, right: 0, bottom: 0 }} />
+      {/* Left */}
+      <div className="tour-mask-panel" style={{ top: spotlightRect.top, left: 0, width: Math.max(0, spotlightRect.left), height: spotlightRect.height }} />
+      {/* Right */}
+      <div className="tour-mask-panel" style={{ top: spotlightRect.top, left: spotlightRect.left + spotlightRect.width, right: 0, height: spotlightRect.height }} />
+    </>
+  ) : (
+    <div className="tour-mask-panel" style={{ inset: 0 }} />
+  );
+
   // Center card for the last step
   if (isCenterStep) {
     return (
-      <div className="tour-overlay" onClick={completeTour}>
-        <div className="tour-spotlight" style={{ display: 'none' }} />
+      <div className="tour-overlay">
+        <div className="tour-mask-panel" style={{ inset: 0 }} />
         <div className="tour-tooltip-center" onClick={(e) => e.stopPropagation()}>
           <div className="tour-tooltip-title">{t(step.titleKey)}</div>
           <div className="tour-tooltip-desc">{t(step.descKey)}</div>
@@ -195,8 +266,8 @@ function GuidedTour() {
 
   // Normal spotlight + tooltip step
   return (
-    <div className="tour-overlay" onClick={completeTour}>
-      <div className="tour-spotlight" style={spotlightStyle} />
+    <div className="tour-overlay">
+      {maskPanels}
       <div
         ref={tooltipRef}
         className="tour-tooltip"

@@ -679,6 +679,7 @@
 .compact-card-badges:has(.active) .badge-btn {
   opacity: 1;
   pointer-events: auto;
+  color: var(--text-secondary);
 }
 
 .compact-card:hover .compact-card-badges .badge-btn.badge-color,
@@ -712,6 +713,7 @@
 
 .badge-btn:hover {
   background: var(--btn-hover-bg);
+  color: var(--text-primary);
 }
 
 .badge-btn.badge-pin.active {
