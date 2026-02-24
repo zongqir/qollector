@@ -205,6 +205,7 @@
       "apiKeyRequired": "Please enter your API Key before testing",
       "serviceUnavailable": "Cannot reach the recognition service — please check your API Key",
       "providers": {
+        "Native": "Built-in OCR — free, no install needed",
         "Local": "Local (Tesseract) — free, requires install",
         "SiliconFlow": "SiliconFlow — cloud-based",
         "DeepSeek": "DeepSeek — cloud-based",
@@ -217,7 +218,8 @@
         "windows": "Windows: choco install tesseract",
         "macos": "macOS: brew install tesseract",
         "linux": "Linux: sudo apt install tesseract-ocr tesseract-ocr-chi-sim"
-      }
+      },
+      "nativeInfo": "Uses your system's built-in OCR engine — no extra software needed. Accuracy depends on installed language packs. If results aren't great, try switching to another provider."
     },
     "general": {
       "language": "Interface Language",

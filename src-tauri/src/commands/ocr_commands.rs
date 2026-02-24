@@ -224,6 +224,7 @@ pub async fn check_ocr_available(state: State<'_, OcrState>) -> Result<bool, Str
 #[tauri::command]
 pub async fn get_ocr_providers() -> Result<Vec<String>, String> {
     Ok(vec![
+        "Native OCR".to_string(),
         "本地 Tesseract".to_string(),
         "硅基流动 OCR".to_string(),
         "DeepSeek OCR".to_string(),

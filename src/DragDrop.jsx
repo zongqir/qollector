@@ -31,6 +31,7 @@ function canHandleExternalDrop(event, internalDragActive) {
   const dataTransfer = event.dataTransfer;
   if (!dataTransfer) return false;
   if (internalDragActive) return false;
+  if (document.documentElement.hasAttribute('data-internal-drag')) return false;
   if (isEditableTarget(event.target)) return false;
 
   const types = getTransferTypes(dataTransfer);
@@ -233,6 +234,11 @@ function DragDrop({ onItemAdded }) {
       const appWindow = getCurrentWindow();
 
       const unlistenTauriDrop = await appWindow.onDragDropEvent(async (event) => {
+        // Skip Tauri native drag events during internal drag
+        if (internalDragActiveRef.current || document.documentElement.hasAttribute('data-internal-drag')) {
+          return;
+        }
+
         if (event.payload.type === 'over') {
           nativeDropDragActiveRef.current = true;
           updateDraggingState();
@@ -266,10 +272,20 @@ function DragDrop({ onItemAdded }) {
 
       const handleNativeDragStart = () => {
         internalDragActiveRef.current = true;
+        document.documentElement.setAttribute('data-internal-drag', 'true');
       };
 
       const handleNativeDragOver = (event) => {
-        if (!canHandleExternalDrop(event, internalDragActiveRef.current)) {
+        // Internal drag: always allow drop, never show overlay
+        if (internalDragActiveRef.current || document.documentElement.hasAttribute('data-internal-drag')) {
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'copy';
+          }
+          return;
+        }
+
+        if (!canHandleExternalDrop(event, false)) {
           return;
         }
 
@@ -284,6 +300,7 @@ function DragDrop({ onItemAdded }) {
         clearDomDragTimer();
         setDomDragActive(false);
         internalDragActiveRef.current = false;
+        document.documentElement.removeAttribute('data-internal-drag');
 
         if (!canHandleExternalDrop(event, false)) {
           return;
@@ -301,6 +318,7 @@ function DragDrop({ onItemAdded }) {
 
       const handleNativeDragEnd = () => {
         internalDragActiveRef.current = false;
+        document.documentElement.removeAttribute('data-internal-drag');
         clearDomDragTimer();
         setDomDragActive(false);
       };
@@ -341,6 +359,7 @@ function DragDrop({ onItemAdded }) {
       disposed = true;
       nativeDropDragActiveRef.current = false;
       internalDragActiveRef.current = false;
+      document.documentElement.removeAttribute('data-internal-drag');
       clearDomDragTimer();
       domDragActiveRef.current = false;
       setIsDragging(false);

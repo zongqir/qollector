@@ -4,6 +4,7 @@ use thiserror::Error;
 
 pub mod deepseek;
 pub mod local;
+pub mod native;
 pub mod provider;
 pub mod service;
 pub mod siliconflow;
@@ -28,6 +29,7 @@ pub enum OcrError {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OcrProviderType {
+    Native,
     Local,
     SiliconFlow,
     DeepSeek,
@@ -40,6 +42,7 @@ pub enum OcrProviderType {
 impl OcrProviderType {
     pub fn name(&self) -> &str {
         match self {
+            OcrProviderType::Native => "Native OCR",
             OcrProviderType::Local => "本地 Tesseract",
             OcrProviderType::SiliconFlow => "硅基流动 OCR",
             OcrProviderType::DeepSeek => "DeepSeek OCR",
@@ -52,6 +55,7 @@ impl OcrProviderType {
 
     pub fn base_url(&self) -> Option<&str> {
         match self {
+            OcrProviderType::Native => None,
             OcrProviderType::Local => None,
             OcrProviderType::SiliconFlow => Some("https://api.siliconflow.cn/v1"),
             OcrProviderType::DeepSeek => Some("https://api.deepseek.com/v1"),
@@ -117,6 +121,7 @@ impl OcrConfig {
     /// 生成供应商的唯一键
     fn provider_key(&self, provider: &OcrProviderType) -> String {
         match provider {
+            OcrProviderType::Native => "native".to_string(),
             OcrProviderType::Local => "local".to_string(),
             OcrProviderType::SiliconFlow => "siliconflow".to_string(),
             OcrProviderType::DeepSeek => "deepseek".to_string(),
@@ -132,7 +137,7 @@ impl Default for OcrConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            current_provider: OcrProviderType::SiliconFlow,
+            current_provider: OcrProviderType::Native,
             credentials: HashMap::new(),
             language: "chi_sim+eng".to_string(), // 中英文
             auto_ocr: true,

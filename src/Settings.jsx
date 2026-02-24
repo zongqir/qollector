@@ -16,7 +16,7 @@ import './Settings.css';
 
 const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
 
-const OCR_PROVIDERS = ['Local', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
+const OCR_PROVIDERS = ['Native', 'Local', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
 
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
@@ -35,7 +35,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   });
   const [ocrConfig, setOcrConfig] = useState({
     enabled: true,
-    current_provider: 'SiliconFlow',
+    current_provider: 'Native',
     credentials: {},  // { "siliconflow": { api_key: "xxx", api_secret: null }, ... }
     language: 'chi_sim+eng',
     auto_ocr: true,
@@ -734,7 +734,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setOcrTestResult(null);
 
     try {
-      if (ocrConfig.current_provider !== 'Local' && !currentOcrApiKey) {
+      if (ocrConfig.current_provider !== 'Local' && ocrConfig.current_provider !== 'Native' && !currentOcrApiKey) {
         console.error('api key is empty');
         setOcrTestResult({ success: false, message: t('settings.ocr.apiKeyRequired') });
         setOcrTesting(false);
@@ -1345,7 +1345,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </div>
             )}
 
-            {ocrConfig.current_provider !== 'Local' && (
+            {ocrConfig.current_provider !== 'Local' && ocrConfig.current_provider !== 'Native' && (
               <div className="setting-item">
                 <label>{t('settings.ocr.apiKey')}</label>
                 <div className="password-input-wrapper">
@@ -1378,6 +1378,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                     <li>{t('settings.ocr.localInfo.macos')}</li>
                     <li>{t('settings.ocr.localInfo.linux')}</li>
                   </ul>
+                </div>
+              </div>
+            )}
+
+            {ocrConfig.current_provider === 'Native' && (
+              <div className="setting-item">
+                <div className="info-box">
+                  <span>{t('settings.ocr.nativeInfo')}</span>
                 </div>
               </div>
             )}

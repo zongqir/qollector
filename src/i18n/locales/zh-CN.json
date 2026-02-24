@@ -205,6 +205,7 @@
       "apiKeyRequired": "请先填写 API Key 再测试",
       "serviceUnavailable": "无法连接识别服务，请检查 API Key 是否正确",
       "providers": {
+        "Native": "系统内置 OCR — 免费，无需安装",
         "Local": "本地识别（Tesseract）— 免费，需安装",
         "SiliconFlow": "硅基流动 — 云端识别",
         "DeepSeek": "DeepSeek — 云端识别",
@@ -217,7 +218,8 @@
         "windows": "Windows: choco install tesseract",
         "macos": "macOS: brew install tesseract",
         "linux": "Linux: sudo apt install tesseract-ocr tesseract-ocr-chi-sim"
-      }
+      },
+      "nativeInfo": "使用系统内置 OCR 引擎，无需安装任何软件。识别准确度取决于系统语言包，如果效果不理想，可以切换到其他识别服务。"
     },
     "general": {
       "language": "界面语言",

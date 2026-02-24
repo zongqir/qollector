@@ -1,5 +1,6 @@
 use super::deepseek::DeepSeekOcr;
 use super::local::LocalOcr;
+use super::native::NativeOcr;
 use super::siliconflow::SiliconFlowOcr;
 use super::{provider::OcrProvider, OcrConfig, OcrError, OcrProviderType, OcrResult};
 use std::sync::Arc;
@@ -23,6 +24,7 @@ impl OcrService {
     /// 根据配置创建对应的 OCR 提供者
     fn create_provider(config: &OcrConfig) -> Result<Arc<dyn OcrProvider>, OcrError> {
         match &config.current_provider {
+            OcrProviderType::Native => Ok(Arc::new(NativeOcr::new())),
             OcrProviderType::Local => Ok(Arc::new(LocalOcr::new(config.language.clone()))),
             OcrProviderType::SiliconFlow => {
                 let api_key = config.get_current_api_key().ok_or_else(|| {
