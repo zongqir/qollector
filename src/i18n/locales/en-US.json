@@ -110,6 +110,7 @@
     "unfavorite": "Unfavorite",
     "favorited": "Favorited",
     "open": "Open",
+    "opened": "Opened",
     "saveAs": "Save As",
     "saveImageAs": "Save Image As",
     "openLink": "Open Link",
@@ -151,7 +152,7 @@
     "test": "Test Connection",
     "testing": "Testing...",
     "tabs": {
-      "ai": "AI Tags",
+      "ai": "AI",
       "ocr": "Text Recognition",
       "general": "General",
       "mcp": "AI Assistant Link",
@@ -230,8 +231,8 @@
       "themeDark": "Dark",
       "themeHint": "\"System\" automatically matches your OS light/dark setting",
       "featureModules": "Optional Features",
-      "enableAI": "AI Auto-Tags",
-      "enableAIHint": "Let AI categorize your copied content",
+      "enableAI": "AI Features",
+      "enableAIHint": "Enable AI auto-tagging, smart summaries, and more",
       "enableOCR": "Image Text Recognition",
       "enableOCRHint": "Extract text from copied images automatically",
       "enableMCP": "MCP Service",
@@ -247,6 +248,8 @@
       "lowMemoryMode": "Low Memory Mode",
       "lowMemoryModeHint": "Release hidden window webview aggressively to reduce idle RAM. UI wake-up may be slightly slower.",
       "lowMemoryModeNotice": "Low memory mode is enabled. Hidden windows are released quickly and rebuilt on next show.",
+      "startTour": "Guided Tour",
+      "startTourHint": "Replay the feature walkthrough",
       "autoCleanup": "Auto-clean old data",
       "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and collected items are never removed.",
       "enableWidget": "Floating Widget",
@@ -573,6 +576,7 @@
   "collection": {
     "emptyTitle": "Your collection is empty",
     "emptyHint": "Click the collect button on any item, or drag cards here",
+    "workspaceGuide": "This is your workspace. Collect important items here to organize, merge, and export them \u2014 turn your clipboard into a personal library.",
     "noFilteredItems": "No collected items match current filters",
     "quickNotePlaceholder": "Type a note, press Enter to add to collection...",
     "expandedNotePlaceholder": "Write down your thoughts here...",
@@ -781,5 +785,21 @@
     "paidFeatureList": "AI Smart Tags, OCR Text Recognition, MCP Integration",
     "maskedKey": "{{prefix}}****{{suffix}}",
     "currentKey": "Current Key"
+  },
+  "tour": {
+    "step1Title": "Your Workspace",
+    "step1Desc": "Collect important content here for quick access. Supports drag & drop, notes, and merge export.",
+    "step2Title": "Mini Mode",
+    "step2Desc": "Click here to enter compact mode — keeps only the history stream, saving screen space.",
+    "step3Title": "Hide Workspace",
+    "step3Desc": "Don't need the workspace? Click here to close it and focus on browsing history.",
+    "step4Title": "Unlock AI Features",
+    "step4Desc": "Configure an AI provider and API Key in Settings to enable smart tags, summaries, and more.",
+    "step4GoSettings": "Go to Settings",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip",
+    "done": "Done",
+    "stepOf": "{{current}} / {{total}}"
   }
 }

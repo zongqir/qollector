@@ -32,6 +32,7 @@ function PreviewPanel() {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
@@ -425,6 +426,9 @@ function PreviewPanel() {
   }, [historyTagShortcutEnabled, isEditingContent, addingTagItemId, item, startAddTag, selectedItemIds.length]);
 
   const handleOpen = useCallback(() => {
+    if (openFeedback === 'open') return;
+    setOpenFeedback('open');
+    setTimeout(() => setOpenFeedback(null), 1500);
     if (item.type_ === 'link' || item.type_ === 'file') {
       handleOpenItem(item);
       return;
@@ -438,9 +442,12 @@ function PreviewPanel() {
     if (textOpenableUrls.length > 0) {
       handleOpenUrl(textOpenableUrls[0]);
     }
-  }, [handleOpenItem, handleOpenUrl, item, textOpenablePaths, textOpenableUrls]);
+  }, [handleOpenItem, handleOpenUrl, item, textOpenablePaths, textOpenableUrls, openFeedback]);
 
   const handleReveal = useCallback(() => {
+    if (openFeedback === 'reveal') return;
+    setOpenFeedback('reveal');
+    setTimeout(() => setOpenFeedback(null), 1500);
     if (item.type_ === 'file') {
       handleRevealInFolder(item);
       return;
@@ -450,7 +457,7 @@ function PreviewPanel() {
         console.error('reveal file path failed:', error);
       });
     }
-  }, [handleRevealInFolder, item, textOpenablePaths]);
+  }, [handleRevealInFolder, item, textOpenablePaths, openFeedback]);
 
   const handleFormatJsonCopy = useCallback(() => {
     try {
@@ -808,15 +815,15 @@ function PreviewPanel() {
               </button>
             )}
             {shouldShowOpenButton && (
-              <button className="preview-tool-btn" onClick={handleOpen} title={openButtonTitle}>
-                <ExternalLink size={14} />
-                <span>{t('item.open')}</span>
+              <button className={`preview-tool-btn ${openFeedback === 'open' ? 'clicked-feedback' : ''}`} onClick={handleOpen} title={openButtonTitle}>
+                {openFeedback === 'open' ? <Check size={14} /> : <ExternalLink size={14} />}
+                <span>{openFeedback === 'open' ? t('item.opened') : t('item.open')}</span>
               </button>
             )}
             {shouldShowRevealButton && (
-              <button className="preview-tool-btn" onClick={handleReveal} title={t('item.revealInFolder')}>
-                <FolderOpen size={14} />
-                <span>{t('item.revealInFolder')}</span>
+              <button className={`preview-tool-btn ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
+                {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
+                <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
               </button>
             )}
             {shouldShowSaveImageButton && (

@@ -15,6 +15,7 @@ import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
 import HoverPreview from './components/HoverPreview';
+import GuidedTour from './components/GuidedTour/GuidedTour';
 
 console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
 
@@ -76,6 +77,10 @@ function App() {
   const suspendForMinimize = useAppStore(s => s.suspendForMinimize);
   const resumeFromMinimize = useAppStore(s => s.resumeFromMinimize);
 
+  // Tour state
+  const tourActive = useAppStore(s => s.tourActive);
+  const startTour = useAppStore(s => s.startTour);
+
   // Share state
   const shareModalItem = useAppStore(s => s.shareModalItem);
   const shareResult = useAppStore(s => s.shareResult);
@@ -118,7 +123,14 @@ function App() {
 
     console.log('[Perf:App] Init useEffect COMPLETE at', performance.now().toFixed(1), 'ms');
 
+    // Auto-start guided tour for first-time users
+    let tourTimer = null;
+    if (!localStorage.getItem('clipbox-tour-completed')) {
+      tourTimer = setTimeout(() => startTour(), 1500);
+    }
+
     return () => {
+      if (tourTimer) clearTimeout(tourTimer);
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
@@ -506,6 +518,8 @@ function App() {
         )}
       </div>
       {shouldUseHoverPreview && <HoverPreview />}
+
+      {tourActive && <GuidedTour />}
 
       {/* Update notification bar */}
       {updateInfo && updateProgress !== 'upToDate' && (

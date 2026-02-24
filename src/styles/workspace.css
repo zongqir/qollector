@@ -231,6 +231,12 @@
   background: var(--compact-card-hover-bg, var(--bg-card-hover));
 }
 
+.compact-card:active:not(.selected) {
+  transform: scale(0.98);
+  opacity: 0.85;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+}
+
 .compact-card.selected {
   background: color-mix(in srgb, var(--selection-bg-strong) 84%, var(--compact-card-bg, var(--bg-card)) 16%);
   border-color: var(--selection-border);
@@ -1366,7 +1372,18 @@
   line-height: 1.5;
 }
 
-/* 收集箱卡片列表 */
+.collection-empty-guide {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.6;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--bg-input);
+}
+
+/* collection cards list */
 .collection-cards {
   flex: 1;
   min-height: 0;
@@ -2388,6 +2405,19 @@
   0% { transform: scale(0.94); }
   70% { transform: scale(1.04); }
   100% { transform: scale(1); }
+}
+
+.preview-tool-btn.clicked-feedback {
+  background: var(--color-success);
+  color: #fff;
+  border-color: var(--color-success);
+  pointer-events: none;
+  animation: previewToolCopiedPop 0.22s ease;
+}
+
+.preview-tool-btn.clicked-feedback:hover {
+  background: var(--color-success);
+  color: #fff;
 }
 
 .preview-tool-btn.active {

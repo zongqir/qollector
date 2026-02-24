@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { SquarePen, Minus, Square, SquareSquare, X, Pin, Shrink, Expand } from 'lucide-react';
 
 const GLASS_STORAGE_KEY = 'clipbox-glass-opacity';
-const GLASS_DEFAULT = 0.55;
+const GLASS_DEFAULT = 1.0;
 const GLASS_MIN = 0.10;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;

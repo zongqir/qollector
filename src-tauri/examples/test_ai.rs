@@ -1,31 +1,44 @@
-use clipbox::ai::{AIConfig, AIProvider, AIService};
+use std::collections::HashMap;
+use clipbox::ai::{AIConfig, AICredentials, AIProvider, AIService};
 
 #[tokio::main]
 async fn main() {
+    let mut credentials = HashMap::new();
+    credentials.insert(
+        "siliconflow".to_string(),
+        AICredentials::new(
+            "sk-your-api-key-here".to_string(),
+            "Qwen/Qwen2.5-7B-Instruct".to_string(),
+        ),
+    );
+
     let config = AIConfig {
-        provider: AIProvider::SiliconFlow,
-        api_key: "sk-huvjsuypfcuzqzolhjmccmjfcwzotwxqojwcvdwpxlyohqrp".to_string(),
-        model: "Qwen/Qwen2.5-7B-Instruct".to_string(),
+        current_provider: AIProvider::SiliconFlow,
+        credentials,
         enabled: true,
+        custom_prompt: None,
     };
 
     let service = AIService::new(config);
 
     let test_content =
-        "今天学习了 Rust 编程语言，实现了一个剪贴板管理器，使用了 Tauri 框架和 React 前端";
+        "Learned Rust programming language, built a clipboard manager with Tauri and React";
 
-    println!("测试内容: {}", test_content);
-    println!("正在生成标签...\n");
+    println!("Test content: {}", test_content);
+    println!("Generating tags...\n");
 
-    match service.generate_tags(test_content).await {
-        Ok(tags) => {
-            println!("生成的标签:");
+    match service.generate_tags(test_content, "en").await {
+        Ok((tags, summary)) => {
+            println!("Generated tags:");
             for tag in tags {
                 println!("  - {}", tag);
             }
+            if let Some(s) = summary {
+                println!("Summary: {}", s);
+            }
         }
         Err(e) => {
-            eprintln!("错误: {}", e);
+            eprintln!("Error: {}", e);
         }
     }
 }

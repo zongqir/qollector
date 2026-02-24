@@ -113,6 +113,32 @@ function GeneralSection({
         </small>
       )}
 
+      <div className="setting-group" style={{ marginTop: 8 }}>
+        <div className="sg-row">
+          <span>{t('settings.general.startTour')}</span>
+          <button
+            style={{
+              padding: '5px 14px',
+              border: 'none',
+              borderRadius: 6,
+              background: '#3b82f6',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+            onClick={() => {
+              const { setShowSettings, startTour } = useAppStore.getState();
+              setShowSettings(false);
+              setTimeout(() => startTour(), 300);
+            }}
+          >
+            {t('settings.general.startTour')}
+          </button>
+        </div>
+        <small className="setting-hint">{t('settings.general.startTourHint')}</small>
+      </div>
+
       <div className="setting-group-title section-title">{t('settings.general.featureModules')}</div>
       <div className="feature-toggles">
         <label className="setting-toggle-row">

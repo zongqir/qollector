@@ -1,7 +1,7 @@
 /* ========== macOS 风格主题变量系统 ========== */
 :root {
   /* glass opacity - controlled by scroll on titlebar */
-  --glass-opacity: 0.55;
+  --glass-opacity: 1.0;
 
   /* 基础背景 - 毛玻璃透明层 (alpha = glass-opacity * ratio) */
   --bg-primary-rgb: 245, 245, 247;

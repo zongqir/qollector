@@ -335,6 +335,10 @@ const useAppStore = create((set, get) => ({
   editModalMode: 'new',
   editingItem: null,
 
+  // ========== Guided Tour ==========
+  tourActive: false,
+  tourStep: 0,
+
   // ========== 分享 ==========
   shareModalItem: null,
   shareResult: null,
@@ -1502,6 +1506,15 @@ const useAppStore = create((set, get) => ({
   setThemeMode: (v) => set({ themeMode: v }),
   setEditNote: (v) => set({ editNote: v }),
   setNewTagInput: (v) => set({ newTagInput: v }),
+
+  // ========== Guided Tour Actions ==========
+  startTour: () => set({ tourActive: true, tourStep: 0, showSettings: false }),
+  nextTourStep: () => set((s) => ({ tourStep: s.tourStep + 1 })),
+  prevTourStep: () => set((s) => ({ tourStep: Math.max(0, s.tourStep - 1) })),
+  completeTour: () => {
+    set({ tourActive: false, tourStep: 0 });
+    localStorage.setItem('clipbox-tour-completed', 'true');
+  },
   setCopiedItemId: (v, source = 'global') => set((state) => ({
     copiedItemId: v,
     copyFeedbackSource: v ? normalizeCopyFeedbackSource(source) : null,

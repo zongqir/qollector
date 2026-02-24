@@ -110,6 +110,7 @@
     "unfavorite": "取消收藏",
     "favorited": "已收藏",
     "open": "打开",
+    "opened": "已打开",
     "saveAs": "另存为",
     "saveImageAs": "图片另存为",
     "openLink": "打开链接",
@@ -151,7 +152,7 @@
     "test": "测试连接",
     "testing": "测试中...",
     "tabs": {
-      "ai": "AI 标签",
+      "ai": "AI",
       "ocr": "文字识别",
       "general": "通用",
       "mcp": "AI 助手对接",
@@ -230,8 +231,8 @@
       "themeDark": "深色",
       "themeHint": "选择「跟随系统」会自动匹配你的系统深浅色设置",
       "featureModules": "可选功能",
-      "enableAI": "AI 自动标签",
-      "enableAIHint": "让 AI 为复制内容生成分类标签",
+      "enableAI": "AI 智能功能",
+      "enableAIHint": "启用 AI 自动标签、智能摘要等能力",
       "enableOCR": "图片文字识别",
       "enableOCRHint": "自动提取图片中的文字",
       "enableMCP": "MCP 服务",
@@ -247,6 +248,8 @@
       "lowMemoryMode": "低内存模式",
       "lowMemoryModeHint": "更激进地释放隐藏窗口的 WebView 以降低空闲内存，占用会更低但唤起可能稍慢。",
       "lowMemoryModeNotice": "低内存模式已开启。隐藏窗口会更快释放，下次显示时再重建。",
+      "startTour": "快速引导",
+      "startTourHint": "重新查看功能引导",
       "autoCleanup": "自动清理旧数据",
       "autoCleanupHint": "超过条数或天数限制的数据会自动删除，收藏和收集的内容不受影响",
       "enableWidget": "悬浮小球",
@@ -573,6 +576,7 @@
   "collection": {
     "emptyTitle": "收集箱是空的",
     "emptyHint": "点击左侧的收集按钮，或直接把卡片拖到这里",
+    "workspaceGuide": "这里是你的工作区，收集重要内容后可以在这里整理、合并、导出，让剪贴板变成你的素材库。",
     "noFilteredItems": "当前筛选条件下没有匹配的收集项",
     "quickNotePlaceholder": "输入笔记，回车添加到收集箱...",
     "expandedNotePlaceholder": "在这里写下你的想法...",
@@ -781,5 +785,21 @@
     "paidFeatureList": "AI 智能标签、OCR 文字识别、MCP 集成",
     "maskedKey": "{{prefix}}****{{suffix}}",
     "currentKey": "当前密钥"
+  },
+  "tour": {
+    "step1Title": "这是你的工作区",
+    "step1Desc": "收集重要内容到这里暂存，便于快速回溯和整理。支持拖拽、笔记、合并导出。",
+    "step2Title": "迷你模式",
+    "step2Desc": "点击这里进入窄屏模式，只保留历史流，节省屏幕空间。",
+    "step3Title": "隐藏工作区",
+    "step3Desc": "不需要工作区时可以点这里关闭，专注浏览历史记录。",
+    "step4Title": "解锁 AI 能力",
+    "step4Desc": "在设置中配置 AI 服务商和 API Key，即可使用智能标签、摘要等 AI 功能。",
+    "step4GoSettings": "前往设置",
+    "next": "下一步",
+    "prev": "上一步",
+    "skip": "跳过",
+    "done": "完成",
+    "stepOf": "{{current}} / {{total}}"
   }
 }

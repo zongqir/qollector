@@ -52,7 +52,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     theme_mode: themeMode || 'system',
     double_copy_emphasis_enabled: true,
     double_copy_window_ms: 900,
-    ctrl_shift_c_shortcut_enabled: false,
+    ctrl_shift_c_shortcut_enabled: true,
     copy_pin_shortcut: 'ctrl+shift+c',
     toggle_window_shortcut_enabled: true,
     toggle_window_shortcut: 'alt+x',
@@ -451,7 +451,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setRecordingTarget(null);
     await saveShortcutConfig({
       ...generalConfig,
-      ctrl_shift_c_shortcut_enabled: false,
+      ctrl_shift_c_shortcut_enabled: true,
       copy_pin_shortcut: 'ctrl+shift+c',
       toggle_window_shortcut_enabled: true,
       toggle_window_shortcut: 'alt+x',

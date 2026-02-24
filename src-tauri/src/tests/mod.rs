@@ -1,1 +1,1 @@
-mod config_tests;
+// Tests module

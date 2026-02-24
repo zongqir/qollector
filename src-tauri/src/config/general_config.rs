@@ -77,7 +77,7 @@ fn default_double_copy_window_ms() -> u64 {
 }
 
 fn default_ctrl_shift_c_shortcut_enabled() -> bool {
-    false
+    true
 }
 
 fn default_copy_pin_shortcut() -> String {
@@ -125,7 +125,7 @@ impl Default for GeneralConfig {
             lock_password_hash: None,
             double_copy_emphasis_enabled: true,
             double_copy_window_ms: 900,
-            ctrl_shift_c_shortcut_enabled: false,
+            ctrl_shift_c_shortcut_enabled: true,
             copy_pin_shortcut: default_copy_pin_shortcut(),
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),

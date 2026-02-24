@@ -447,6 +447,7 @@ function CollectionPanel() {
           </div>
           <div className="collection-empty-title">{t('collection.emptyTitle')}</div>
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
+          <div className="collection-empty-guide">{t('collection.workspaceGuide')}</div>
         </div>
       </div>
     );
