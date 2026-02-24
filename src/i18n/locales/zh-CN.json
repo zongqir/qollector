@@ -230,6 +230,17 @@
       "themeLight": "浅色",
       "themeDark": "深色",
       "themeHint": "选择「跟随系统」会自动匹配你的系统深浅色设置",
+      "accentColor": "强调色",
+      "accent": {
+        "blue": "蓝色",
+        "purple": "紫色",
+        "pink": "粉色",
+        "red": "红色",
+        "orange": "橙色",
+        "yellow": "黄色",
+        "green": "绿色",
+        "graphite": "石墨"
+      },
       "featureModules": "可选功能",
       "enableAI": "AI 智能功能",
       "enableAIHint": "启用 AI 自动标签、智能摘要等能力",

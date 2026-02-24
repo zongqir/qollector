@@ -230,6 +230,17 @@
       "themeLight": "Light",
       "themeDark": "Dark",
       "themeHint": "\"System\" automatically matches your OS light/dark setting",
+      "accentColor": "Accent Color",
+      "accent": {
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "green": "Green",
+        "graphite": "Graphite"
+      },
       "featureModules": "Optional Features",
       "enableAI": "AI Features",
       "enableAIHint": "Enable AI auto-tagging, smart summaries, and more",

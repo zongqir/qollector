@@ -297,3 +297,97 @@
   --color-danger-bg: rgba(255, 69, 58, 0.12);
   --bg-hover: rgba(255, 255, 255, 0.06);
 }
+
+/* ========== Accent color presets ========== */
+/* Blue is the default - no override needed */
+
+.accent-purple {
+  --accent-color: #af52de;
+  --accent-hover: #9a3dca;
+  --accent-light: rgba(175, 82, 222, 0.08);
+  --accent-medium: rgba(175, 82, 222, 0.15);
+}
+.dark-mode.accent-purple {
+  --accent-color: #bf5af2;
+  --accent-hover: #cc6ef5;
+  --accent-light: rgba(191, 90, 242, 0.12);
+  --accent-medium: rgba(191, 90, 242, 0.2);
+}
+
+.accent-pink {
+  --accent-color: #ff2d55;
+  --accent-hover: #e6264c;
+  --accent-light: rgba(255, 45, 85, 0.08);
+  --accent-medium: rgba(255, 45, 85, 0.15);
+}
+.dark-mode.accent-pink {
+  --accent-color: #ff375f;
+  --accent-hover: #ff5c7f;
+  --accent-light: rgba(255, 55, 95, 0.12);
+  --accent-medium: rgba(255, 55, 95, 0.2);
+}
+
+.accent-red {
+  --accent-color: #ff3b30;
+  --accent-hover: #e6352b;
+  --accent-light: rgba(255, 59, 48, 0.08);
+  --accent-medium: rgba(255, 59, 48, 0.15);
+}
+.dark-mode.accent-red {
+  --accent-color: #ff453a;
+  --accent-hover: #ff6961;
+  --accent-light: rgba(255, 69, 58, 0.12);
+  --accent-medium: rgba(255, 69, 58, 0.2);
+}
+
+.accent-orange {
+  --accent-color: #ff9500;
+  --accent-hover: #e68600;
+  --accent-light: rgba(255, 149, 0, 0.08);
+  --accent-medium: rgba(255, 149, 0, 0.15);
+}
+.dark-mode.accent-orange {
+  --accent-color: #ff9f0a;
+  --accent-hover: #ffb340;
+  --accent-light: rgba(255, 159, 10, 0.12);
+  --accent-medium: rgba(255, 159, 10, 0.2);
+}
+
+.accent-yellow {
+  --accent-color: #ffcc00;
+  --accent-hover: #e6b800;
+  --accent-light: rgba(255, 204, 0, 0.08);
+  --accent-medium: rgba(255, 204, 0, 0.15);
+}
+.dark-mode.accent-yellow {
+  --accent-color: #ffd60a;
+  --accent-hover: #ffe040;
+  --accent-light: rgba(255, 214, 10, 0.12);
+  --accent-medium: rgba(255, 214, 10, 0.2);
+}
+
+.accent-green {
+  --accent-color: #34c759;
+  --accent-hover: #2db84e;
+  --accent-light: rgba(52, 199, 89, 0.08);
+  --accent-medium: rgba(52, 199, 89, 0.15);
+}
+.dark-mode.accent-green {
+  --accent-color: #30d158;
+  --accent-hover: #4ddb71;
+  --accent-light: rgba(48, 209, 88, 0.12);
+  --accent-medium: rgba(48, 209, 88, 0.2);
+}
+
+.accent-graphite {
+  --accent-color: #8e8e93;
+  --accent-hover: #7a7a7f;
+  --accent-light: rgba(142, 142, 147, 0.08);
+  --accent-medium: rgba(142, 142, 147, 0.15);
+}
+.dark-mode.accent-graphite {
+  --accent-color: #98989d;
+  --accent-hover: #aeaeb2;
+  --accent-light: rgba(152, 152, 157, 0.12);
+  --accent-medium: rgba(152, 152, 157, 0.2);
+}

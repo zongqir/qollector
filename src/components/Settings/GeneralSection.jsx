@@ -1,5 +1,17 @@
 import { invoke } from '@tauri-apps/api/core';
+import { applyAccentColor } from '../../hooks/useTheme';
 import useAppStore from '../../store/useAppStore';
+
+const ACCENT_PRESETS = [
+  { key: 'blue',     light: '#007aff', dark: '#0a84ff' },
+  { key: 'purple',   light: '#af52de', dark: '#bf5af2' },
+  { key: 'pink',     light: '#ff2d55', dark: '#ff375f' },
+  { key: 'red',      light: '#ff3b30', dark: '#ff453a' },
+  { key: 'orange',   light: '#ff9500', dark: '#ff9f0a' },
+  { key: 'yellow',   light: '#ffcc00', dark: '#ffd60a' },
+  { key: 'green',    light: '#34c759', dark: '#30d158' },
+  { key: 'graphite', light: '#8e8e93', dark: '#98989d' },
+];
 
 function detectClientPlatform() {
   if (typeof navigator === 'undefined') return 'other';
@@ -61,6 +73,53 @@ function GeneralSection({
             <option value="light">{t('settings.general.themeLight')}</option>
             <option value="dark">{t('settings.general.themeDark')}</option>
           </select>
+        </div>
+        <div className="sg-row" style={{ alignItems: 'center' }}>
+          <span>{t('settings.general.accentColor')}</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {ACCENT_PRESETS.map((preset) => {
+              const isDark = document.documentElement.classList.contains('dark-mode');
+              const color = isDark ? preset.dark : preset.light;
+              const isActive = (generalConfig.accent_color || 'blue') === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  title={t(`settings.general.accent.${preset.key}`)}
+                  aria-label={t(`settings.general.accent.${preset.key}`)}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    border: isActive ? '2px solid var(--text-primary)' : '2px solid transparent',
+                    background: color,
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'border-color 0.15s ease, transform 0.15s ease',
+                    transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                  }}
+                  onClick={async () => {
+                    const updated = { ...generalConfig, accent_color: preset.key };
+                    setGeneralConfig(updated);
+                    applyAccentColor(preset.key);
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('Failed to save accent color:', error);
+                    }
+                  }}
+                >
+                  {isActive && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5.5L4 7.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="sg-row">
           <span>{t('settings.general.maxPinnedItems')}</span>

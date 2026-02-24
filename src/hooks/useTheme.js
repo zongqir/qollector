@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
+const ACCENT_PRESETS = ['blue', 'purple', 'pink', 'red', 'orange', 'yellow', 'green', 'graphite'];
+
 /**
- * 主题管理 Hook
- * 支持 light / dark / system 三种模式
+ * Theme + accent color management hook
+ * Supports light / dark / system modes and accent color presets
  */
 export function useTheme(initialMode = 'system') {
   const [themeMode, setThemeMode] = useState(initialMode);
 
-  // 根据 themeMode 计算实际主题
   const getEffectiveTheme = useCallback((mode) => {
     if (mode === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -15,7 +16,6 @@ export function useTheme(initialMode = 'system') {
     return mode;
   }, []);
 
-  // 应用主题到 DOM
   const applyTheme = useCallback((theme) => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark-mode');
@@ -24,12 +24,10 @@ export function useTheme(initialMode = 'system') {
     }
   }, []);
 
-  // 当 themeMode 变化时应用
   useEffect(() => {
     applyTheme(getEffectiveTheme(themeMode));
   }, [themeMode, applyTheme, getEffectiveTheme]);
 
-  // 监听系统主题变化
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => {
@@ -42,4 +40,12 @@ export function useTheme(initialMode = 'system') {
   }, [themeMode, applyTheme]);
 
   return { themeMode, setThemeMode };
+}
+
+export function applyAccentColor(color) {
+  const el = document.documentElement;
+  ACCENT_PRESETS.forEach((c) => el.classList.remove(`accent-${c}`));
+  if (color && color !== 'blue') {
+    el.classList.add(`accent-${color}`);
+  }
 }

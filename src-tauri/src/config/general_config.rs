@@ -58,6 +58,13 @@ pub struct GeneralConfig {
     /// Enable the floating widget window.
     #[serde(default)]
     pub widget_enabled: bool,
+    /// Accent color preset name (blue/purple/pink/red/orange/yellow/green/graphite).
+    #[serde(default = "default_accent_color")]
+    pub accent_color: String,
+}
+
+fn default_accent_color() -> String {
+    "blue".to_string()
 }
 
 fn default_language() -> String {
@@ -138,6 +145,7 @@ impl Default for GeneralConfig {
             autostart_enabled: false,
             low_memory_mode_enabled: default_low_memory_mode_enabled(),
             widget_enabled: false,
+            accent_color: default_accent_color(),
         }
     }
 }
@@ -171,5 +179,11 @@ impl GeneralConfig {
         }
         self.cleanup_max_items = self.cleanup_max_items.clamp(100, 999999);
         self.cleanup_max_age_days = self.cleanup_max_age_days.clamp(1, 3650);
+        // validate accent color
+        if !["blue", "purple", "pink", "red", "orange", "yellow", "green", "graphite"]
+            .contains(&self.accent_color.as_str())
+        {
+            self.accent_color = default_accent_color();
+        }
     }
 }

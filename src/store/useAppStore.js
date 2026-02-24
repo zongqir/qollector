@@ -656,6 +656,9 @@ const useAppStore = create((set, get) => ({
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });
       }
+      // apply accent color
+      const { applyAccentColor } = await import('../hooks/useTheme');
+      applyAccentColor(generalConfig.accent_color || 'blue');
     } catch (error) {
       console.error('加载配置失败:', error);
     }
