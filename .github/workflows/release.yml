@@ -106,6 +106,7 @@ jobs:
 
   upload-r2:
     needs: [release]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
