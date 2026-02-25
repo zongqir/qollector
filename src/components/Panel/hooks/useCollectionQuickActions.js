@@ -8,7 +8,7 @@ import {
   resolveQuickOutputTaskFromItems,
 } from '../../../features/ai-assistant/constants/actionProfiles';
 
-const SNAPSHOT_STORAGE_KEY = 'clipbox.collection.snapshot.v1';
+const SNAPSHOT_STORAGE_KEY = 'qollect.collection.snapshot.v1';
 const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
 
 const normalizeText = (value) => String(value || '')
@@ -340,7 +340,7 @@ function useCollectionQuickActions({
     try {
       const content = buildExportMarkdown(pinnedItems, t);
       const outputPath = await invoke('export_collection_text', {
-        defaultName: 'clipbox_collection',
+        defaultName: 'qollect_collection',
         content,
         format: 'markdown',
       });

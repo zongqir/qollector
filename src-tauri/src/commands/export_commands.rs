@@ -6,7 +6,7 @@ use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 use tauri::State;
 
-const MAGIC: &[u8; 8] = b"CLIPBOX\0";
+const MAGIC: &[u8; 8] = b"QOLLECT\0";
 
 #[derive(Serialize, Deserialize)]
 struct ExportData {
@@ -101,7 +101,7 @@ fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
     use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit};
 
     if data.len() < 20 || &data[..8] != MAGIC {
-        return Err("not a valid PasteHarbor encrypted file".to_string());
+        return Err("not a valid Qollect encrypted file".to_string());
     }
 
     let key_bytes = blake3::hash(password.as_bytes());
@@ -128,15 +128,15 @@ pub async fn export_data(
     password: Option<String>,
 ) -> Result<String, String> {
     // 弹出保存对话框
-    let default_ext = if password.is_some() { "clipbox" } else { "zip" };
+    let default_ext = if password.is_some() { "qollect" } else { "zip" };
     let filter_name = if password.is_some() {
-        "PasteHarbor Encrypted"
+        "Qollect Encrypted"
     } else {
         "ZIP Archive"
     };
 
     let save_path = rfd::FileDialog::new()
-        .set_file_name(&format!("clipbox_export.{}", default_ext))
+        .set_file_name(&format!("qollect_export.{}", default_ext))
         .add_filter(filter_name, &[default_ext])
         .save_file()
         .ok_or_else(|| "CANCELLED".to_string())?;
@@ -267,7 +267,7 @@ pub async fn import_data(
         std::path::PathBuf::from(p)
     } else {
         rfd::FileDialog::new()
-            .add_filter("PasteHarbor Files", &["zip", "clipbox"])
+            .add_filter("Qollect Files", &["zip", "qollect"])
             .pick_file()
             .ok_or_else(|| "CANCELLED".to_string())?
     };

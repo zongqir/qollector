@@ -105,16 +105,16 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
         }
         "tooltip" => {
             if is_zh {
-                "PasteHarbor"
+                "Qollect"
             } else {
-                "PasteHarbor"
+                "Qollect"
             }
         }
         "tooltip_paused" => {
             if is_zh {
-                "PasteHarbor (已暂停)"
+                "Qollect (已暂停)"
             } else {
-                "PasteHarbor (Paused)"
+                "Qollect (Paused)"
             }
         }
         _ => key,
@@ -358,6 +358,6 @@ pub fn perform_shutdown(app: &tauri::AppHandle) {
         .path()
         .app_data_dir()
         .expect("Failed to get app data dir");
-    let db_path = app_dir.join("clipbox.db");
+    let db_path = app_dir.join("qollect.db");
     crate::core::db_obfuscate::obfuscate_db(&db_path);
 }

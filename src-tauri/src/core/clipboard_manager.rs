@@ -17,7 +17,7 @@ use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use url::Host;
 
-const APP_NAME: &str = "PasteHarbor";
+const APP_NAME: &str = "Qollect";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;

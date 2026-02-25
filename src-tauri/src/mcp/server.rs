@@ -54,7 +54,7 @@ impl McpServer {
 
         match mode {
             McpMode::Http => {
-                let port_manager = PortManager::new("clipbox");
+                let port_manager = PortManager::new("qollect");
                 let mut attempts = 0;
                 let max_attempts = 5;
 
@@ -226,7 +226,7 @@ impl McpServer {
                 "tools": {}
             },
             "serverInfo": {
-                "name": "clipbox-mcp",
+                "name": "qollect-mcp",
                 "version": "0.1.0"
             }
         });

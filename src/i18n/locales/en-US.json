@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "PasteHarbor",
+    "title": "Qollect",
     "loading": "Loading...",
     "noItems": "No clipboard history"
   },
@@ -257,7 +257,7 @@
       "autoPaste": "Auto-paste on double-click",
       "autoPasteHint": "When enabled, double-clicking copies and pastes to the previous app, hiding the window",
       "autostart": "Launch at system startup",
-      "autostartHint": "Automatically run PasteHarbor when your system starts",
+      "autostartHint": "Automatically run Qollect when your system starts",
       "lowMemoryMode": "Low Memory Mode",
       "lowMemoryModeHint": "Release hidden window webview aggressively to reduce idle RAM. UI wake-up may be slightly slower.",
       "lowMemoryModeNotice": "Low memory mode is enabled. Hidden windows are released quickly and rebuilt on next show.",
@@ -333,8 +333,8 @@
       "running": "Running",
       "device": "Local Device",
       "deviceName": "Device Name",
-      "deviceNamePlaceholder": "PasteHarbor Device",
-      "defaultDeviceName": "PasteHarbor Device",
+      "deviceNamePlaceholder": "Qollect Device",
+      "defaultDeviceName": "Qollect Device",
       "deviceId": "Device ID",
       "servicePort": "Service Port",
       "discoveryPort": "Discovery Port",
@@ -444,7 +444,7 @@
     }
   },
   "dragDrop": {
-    "dropHere": "Drop here to add to PasteHarbor",
+    "dropHere": "Drop here to add to Qollect",
     "textAdded": "Text added",
     "imageAdded": "Image added",
     "fileAdded": "File info added",
@@ -823,7 +823,7 @@
     "step8Title": "Unlock AI Features",
     "step8Desc": "Configure an AI provider and API Key in Settings to enable smart tags, summaries, and more.",
     "step9Title": "Replay Anytime",
-    "step9Desc": "You can replay this tour anytime from Settings > General > Guided Tour. Enjoy using PasteHarbor!",
+    "step9Desc": "You can replay this tour anytime from Settings > General > Guided Tour. Enjoy using Qollect!",
     "step4GoSettings": "Go to Settings",
     "next": "Next",
     "prev": "Back",

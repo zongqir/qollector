@@ -1,7 +1,7 @@
 {
-  "productName": "PasteHarbor",
+  "productName": "Qollect",
   "version": "0.2.0",
-  "identifier": "com.clipbox.app",
+  "identifier": "com.qollect.clipboard",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -20,11 +20,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "PasteHarbor Team",
-    "copyright": "Copyright (c) 2024-2026 PasteHarbor Team",
+    "publisher": "Qollect Team",
+    "copyright": "Copyright (c) 2024-2026 Qollect Team",
     "category": "Utility",
     "shortDescription": "Modern cross-platform clipboard manager",
-    "longDescription": "PasteHarbor is a modern, cross-platform clipboard manager built with Rust and React. Features include clipboard history, AI-powered tagging, OCR support, and MCP integration.",
+    "longDescription": "Qollect is a modern, cross-platform clipboard manager built with Rust and React. Features include clipboard history, AI-powered tagging, OCR support, and MCP integration.",
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -53,7 +53,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "PasteHarbor",
+        "title": "Qollect",
         "width": 800,
         "height": 600,
         "resizable": true,

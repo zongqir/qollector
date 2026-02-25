@@ -14,7 +14,7 @@ fn sanitize_file_stem(input: &str) -> String {
         .collect::<Vec<_>>()
         .join("_");
     if compact.is_empty() {
-        "clipbox_collection".to_string()
+        "qollect_collection".to_string()
     } else {
         compact
     }
@@ -35,7 +35,7 @@ pub async fn export_collection_text(
         ("md", "Markdown")
     };
 
-    let base_name = sanitize_file_stem(default_name.as_deref().unwrap_or("clipbox_collection"));
+    let base_name = sanitize_file_stem(default_name.as_deref().unwrap_or("qollect_collection"));
     let file_name = format!("{}.{}", base_name, ext);
 
     let save_path = rfd::FileDialog::new()

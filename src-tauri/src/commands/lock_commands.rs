@@ -3,7 +3,7 @@ use crate::core::clipboard_manager::ClipboardManager;
 use std::sync::Arc;
 use tauri::State;
 
-const SALT: &str = "clipbox_lock_salt_2024";
+const SALT: &str = "qollect_lock_salt_2024";
 
 fn hash_password(password: &str) -> String {
     let input = format!("{}{}", SALT, password);

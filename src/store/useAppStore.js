@@ -17,7 +17,7 @@ const MAX_ITEMS_IN_MEMORY = 150;
 const LOW_MEMORY_PAGE_SIZE = 20;
 const LOW_MEMORY_MAX_ITEMS_IN_MEMORY = 80;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
-const HISTORY_SNAPSHOT_KEY = 'clipbox-history-snapshot-v1';
+const HISTORY_SNAPSHOT_KEY = 'qollect-history-snapshot-v1';
 const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
 const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
 const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
@@ -1516,7 +1516,7 @@ const useAppStore = create((set, get) => ({
   prevTourStep: () => set((s) => ({ tourStep: Math.max(0, s.tourStep - 1) })),
   completeTour: () => {
     set({ tourActive: false, tourStep: 0 });
-    localStorage.setItem('clipbox-tour-completed', 'true');
+    localStorage.setItem('qollect-tour-completed', 'true');
   },
   setCopiedItemId: (v, source = 'global') => set((state) => ({
     copiedItemId: v,

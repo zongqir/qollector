@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 type HmacSha256 = Hmac<Sha256>;
 
 /// Shared secret for HMAC signing (must match Worker env var).
-const HMAC_SECRET: &str = "clipbox-license-hmac-secret-v1";
+const HMAC_SECRET: &str = "qollect-license-hmac-secret-v1";
 
 /// License server base URL.
-const LICENSE_SERVER_URL: &str = "https://license.pasteharbor.com";
+const LICENSE_SERVER_URL: &str = "https://license.qollect.com";
 
 #[derive(Debug, Serialize)]
 struct LicenseRequest {

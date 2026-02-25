@@ -280,7 +280,7 @@ fn main() {
     let startup_metrics_for_setup = startup_metrics.clone();
 
     // WebView2 memory tuning via Chromium startup arguments.
-    // PasteHarbor does not rely on most browser capabilities.
+    // Qollect does not rely on most browser capabilities.
     std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", [
         // === Process and memory ===
         "--js-flags=--max-old-space-size=64 --lite-mode --optimize-for-size", // V8 heap cap + lite mode + smaller code
@@ -361,7 +361,7 @@ fn main() {
             std::fs::create_dir_all(&app_dir).expect("Failed to create app directory");
             setup_meter.mark("ensure_app_dir");
 
-            let db_path = app_dir.join("clipbox.db");
+            let db_path = app_dir.join("qollect.db");
             println!("Database path: {:?}", db_path);
 
             // Verify main window is available during setup.

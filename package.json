@@ -1,7 +1,7 @@
 {
-  "name": "pasteharbor",
+  "name": "qollect",
   "version": "0.2.0",
-  "description": "PasteHarbor - cross-platform clipboard manager",
+  "description": "Qollect - cross-platform clipboard manager",
   "main": "index.js",
   "scripts": {
     "dev": "vite",

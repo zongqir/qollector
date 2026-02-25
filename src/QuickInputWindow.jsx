@@ -16,7 +16,7 @@ const NOTE_COLORS = [
   { id: 'purple', bg: '#f3eefa', dot: '#c4a8f0' },
 ];
 
-const GLASS_KEY = 'clipbox-quick-glass-opacity';
+const GLASS_KEY = 'qollect-quick-glass-opacity';
 const GLASS_DEFAULT = 0.75;
 const GLASS_MIN = 0.15;
 const GLASS_MAX = 1.0;

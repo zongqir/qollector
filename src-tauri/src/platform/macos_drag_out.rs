@@ -51,7 +51,7 @@ impl PlatformDragOut for MacosDragOutBackend {
 
         let is_link = matches!(request.operation, DragOutOperation::Link);
         let drag_paths = if is_link {
-            let temp_dir = std::env::temp_dir().join("clipbox_drag_links");
+            let temp_dir = std::env::temp_dir().join("qollect_drag_links");
             std::fs::create_dir_all(&temp_dir)
                 .map_err(|e| DragOutError::Native(format!("create temp dir: {e}")))?;
             let mut link_paths = Vec::with_capacity(valid_paths.len());

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "PasteHarbor",
+    "title": "Qollect",
     "loading": "加载中...",
     "noItems": "暂无剪贴板历史"
   },
@@ -257,7 +257,7 @@
       "autoPaste": "双击自动粘贴",
       "autoPasteHint": "开启后，双击条目会自动复制并粘贴到上一个应用，窗口会自动隐藏",
       "autostart": "开机自启动",
-      "autostartHint": "系统启动时自动运行 PasteHarbor",
+      "autostartHint": "系统启动时自动运行 Qollect",
       "lowMemoryMode": "低内存模式",
       "lowMemoryModeHint": "更激进地释放隐藏窗口的 WebView 以降低空闲内存，占用会更低但唤起可能稍慢。",
       "lowMemoryModeNotice": "低内存模式已开启。隐藏窗口会更快释放，下次显示时再重建。",
@@ -333,8 +333,8 @@
       "running": "运行中",
       "device": "本机设备",
       "deviceName": "设备名称",
-      "deviceNamePlaceholder": "PasteHarbor Device",
-      "defaultDeviceName": "PasteHarbor 设备",
+      "deviceNamePlaceholder": "Qollect Device",
+      "defaultDeviceName": "Qollect 设备",
       "deviceId": "设备 ID",
       "servicePort": "服务端口",
       "discoveryPort": "发现端口",

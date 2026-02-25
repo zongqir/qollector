@@ -63,7 +63,7 @@ fn create_shortcut(target: &std::path::Path, lnk_path: &std::path::Path) -> Resu
 
 #[cfg(target_os = "windows")]
 fn create_link_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, DragOutError> {
-    let temp_dir = std::env::temp_dir().join("clipbox_drag_links");
+    let temp_dir = std::env::temp_dir().join("qollect_drag_links");
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| DragOutError::Native(format!("create temp dir: {e}")))?;
 

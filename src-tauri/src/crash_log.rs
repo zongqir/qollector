@@ -5,17 +5,17 @@ fn crash_log_path() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         let appdata = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(appdata).join("com.clipbox.app").join("crash.log")
+        PathBuf::from(appdata).join("com.qollect.clipboard").join("crash.log")
     }
     #[cfg(target_os = "linux")]
     {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".local/share/com.clipbox.app/crash.log")
+        PathBuf::from(home).join(".local/share/com.qollect.clipboard/crash.log")
     }
     #[cfg(target_os = "macos")]
     {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join("Library/Application Support/com.clipbox.app/crash.log")
+        PathBuf::from(home).join("Library/Application Support/com.qollect.clipboard/crash.log")
     }
 }
 

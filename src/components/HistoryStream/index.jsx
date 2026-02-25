@@ -868,7 +868,7 @@ function HistoryStream({ style }) {
     const text = getDragText(item, externalPaths);
 
     e.dataTransfer.setData('text/plain', text);
-    e.dataTransfer.setData('application/x-clipbox-item', JSON.stringify({ id: item.id }));
+    e.dataTransfer.setData('application/x-qollect-item', JSON.stringify({ id: item.id }));
     e.dataTransfer.effectAllowed = 'copyMove';
 
     switchToCollection();

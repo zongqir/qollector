@@ -39,7 +39,7 @@ pub async fn upload_to_s3(
         .extension()
         .and_then(|e| e.to_str())
         .unwrap_or("bin");
-    let path = format!("clipbox/{}/{}.{}", date, id, ext);
+    let path = format!("qollect/{}/{}.{}", date, id, ext);
 
     let resp = bucket
         .put_object(&path, content)
@@ -67,8 +67,8 @@ pub async fn upload_to_s3(
 /// Test S3 connectivity by uploading and deleting a small test file.
 pub async fn test_s3_connection(config: &S3Config) -> Result<(), ShareError> {
     let bucket = make_bucket(config)?;
-    let test_path = "clipbox/.connection-test";
-    let test_content = b"clipbox-connection-test";
+    let test_path = "qollect/.connection-test";
+    let test_content = b"qollect-connection-test";
 
     bucket
         .put_object(test_path, test_content)

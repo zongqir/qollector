@@ -40,5 +40,5 @@ fn default_device_name() -> String {
         .ok()
         .map(|name| name.trim().to_string())
         .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| "PasteHarbor Device".to_string())
+        .unwrap_or_else(|| "Qollect Device".to_string())
 }

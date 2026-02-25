@@ -298,10 +298,10 @@ function CollectionPanel() {
 
   const handleNativeDrop = useCallback(async (e) => {
     e.preventDefault();
-    const clipboxData = e.dataTransfer.getData('application/x-clipbox-item');
-    if (clipboxData) {
+    const qollectData = e.dataTransfer.getData('application/x-qollect-item');
+    if (qollectData) {
       try {
-        const { id } = JSON.parse(clipboxData);
+        const { id } = JSON.parse(qollectData);
         const item = items.find(i => i.id === id);
         if (item && !item.is_pinned) {
           await togglePin(item);

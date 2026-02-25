@@ -30,7 +30,7 @@ impl ClipboardTools {
     pub fn list_tools(&self) -> Vec<McpTool> {
         vec![
             McpTool {
-                name: "clipbox_search".to_string(),
+                name: "qollect_search".to_string(),
                 description: "搜索剪贴板历史记录。支持按内容、标签、笔记、来源应用搜索。"
                     .to_string(),
                 input_schema: json!({
@@ -50,7 +50,7 @@ impl ClipboardTools {
                 }),
             },
             McpTool {
-                name: "clipbox_recent".to_string(),
+                name: "qollect_recent".to_string(),
                 description: "获取最近的剪贴板记录".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -64,7 +64,7 @@ impl ClipboardTools {
                 }),
             },
             McpTool {
-                name: "clipbox_get".to_string(),
+                name: "qollect_get".to_string(),
                 description: "根据 ID 获取指定剪贴板条目的详细信息".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -78,7 +78,7 @@ impl ClipboardTools {
                 }),
             },
             McpTool {
-                name: "clipbox_add".to_string(),
+                name: "qollect_add".to_string(),
                 description: "添加新的剪贴板条目 (仅支持文本)".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -96,7 +96,7 @@ impl ClipboardTools {
                 }),
             },
             McpTool {
-                name: "clipbox_delete".to_string(),
+                name: "qollect_delete".to_string(),
                 description: "删除指定的剪贴板条目".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -110,7 +110,7 @@ impl ClipboardTools {
                 }),
             },
             McpTool {
-                name: "clipbox_stats".to_string(),
+                name: "qollect_stats".to_string(),
                 description: "获取剪贴板统计信息 (总条目数、类型分布等)".to_string(),
                 input_schema: json!({
                     "type": "object",
@@ -123,12 +123,12 @@ impl ClipboardTools {
     /// 调用工具
     pub async fn call_tool(&self, name: &str, arguments: Value) -> Result<Value, ToolError> {
         match name {
-            "clipbox_search" => self.search(arguments).await,
-            "clipbox_recent" => self.recent(arguments).await,
-            "clipbox_get" => self.get(arguments).await,
-            "clipbox_add" => self.add(arguments).await,
-            "clipbox_delete" => self.delete(arguments).await,
-            "clipbox_stats" => self.stats(arguments).await,
+            "qollect_search" => self.search(arguments).await,
+            "qollect_recent" => self.recent(arguments).await,
+            "qollect_get" => self.get(arguments).await,
+            "qollect_add" => self.add(arguments).await,
+            "qollect_delete" => self.delete(arguments).await,
+            "qollect_stats" => self.stats(arguments).await,
             _ => Err(ToolError::NotFound(name.to_string())),
         }
     }

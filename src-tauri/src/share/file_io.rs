@@ -13,7 +13,7 @@ pub async fn upload_to_file_hosting(content: &[u8], filename: &str) -> Result<St
     let form = multipart::Form::new().part("file", part);
 
     let client = reqwest::Client::builder()
-        .user_agent("ClipBox/1.0")
+        .user_agent("Qollect/1.0")
         .build()
         .map_err(|e| ShareError::Upload(e.to_string()))?;
     let resp = client

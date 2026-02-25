@@ -3,7 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import { SquarePen, Minus, Square, SquareSquare, X, Pin, Shrink, Expand } from 'lucide-react';
 
-const GLASS_STORAGE_KEY = 'clipbox-glass-opacity';
+const GLASS_STORAGE_KEY = 'qollect-glass-opacity';
 const GLASS_DEFAULT = 1.0;
 const GLASS_MIN = 0.10;
 const GLASS_MAX = 1.0;
@@ -79,8 +79,8 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop, onOpenQuickInput, isMini
       <div data-tauri-drag-region className="titlebar-drag-area">
         <div className="titlebar-brand">
           <img
-            src="/clipbox-logo.svg"
-            alt="PasteHarbor logo"
+            src="/qollect-logo.svg"
+            alt="Qollect logo"
             className="titlebar-logo"
             draggable="false"
           />

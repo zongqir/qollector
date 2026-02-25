@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use clipbox::ai::{AIConfig, AICredentials, AIProvider, AIService};
+use qollect::ai::{AIConfig, AICredentials, AIProvider, AIService};
 
 #[tokio::main]
 async fn main() {

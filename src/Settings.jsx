@@ -1469,7 +1469,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <pre className="code-block">
 {`{
   "mcpServers": {
-    "pasteharbor": {
+    "qollect": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }
@@ -1479,7 +1479,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   onClick={() => {
                     const config = `{
   "mcpServers": {
-    "pasteharbor": {
+    "qollect": {
       "url": "http://localhost:${actualMcpPort}/mcp"
     }
   }
@@ -1659,7 +1659,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="settings-section">
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
                 <div style={{ fontSize: 40 }}>📋</div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>PasteHarbor</div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>Qollect</div>
                 <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
                 <div style={{
                   display: 'inline-block',

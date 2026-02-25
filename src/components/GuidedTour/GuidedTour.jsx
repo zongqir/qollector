@@ -84,7 +84,7 @@ function GuidedTour() {
       try {
         const appWindow = getCurrentWindow();
         await appWindow.setSize(new LogicalSize(NORMAL_SIZE.width, NORMAL_SIZE.height));
-        localStorage.setItem('clipbox-window-mode', 'normal');
+        localStorage.setItem('qollect-window-mode', 'normal');
         useAppStore.setState({ isMiniMode: false, collectionPanelEnabled: true });
       } catch (error) {
         console.error('failed to exit mini mode during tour:', error);

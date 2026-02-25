@@ -26,7 +26,7 @@ const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
 
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
-const WINDOW_MODE_STORAGE_KEY = 'clipbox-window-mode';
+const WINDOW_MODE_STORAGE_KEY = 'qollect-window-mode';
 const WINDOW_MODE_MINI = 'mini';
 const WINDOW_MODE_NORMAL = 'normal';
 
@@ -125,7 +125,7 @@ function App() {
 
     // Auto-start guided tour for first-time users
     let tourTimer = null;
-    if (!localStorage.getItem('clipbox-tour-completed')) {
+    if (!localStorage.getItem('qollect-tour-completed')) {
       tourTimer = setTimeout(() => startTour(), 1500);
     }
 

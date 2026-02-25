@@ -12,7 +12,7 @@ use tokio::net::UdpSocket;
 use tokio::sync::{watch, Mutex as TokioMutex};
 use tokio::time::{self, Duration};
 
-const DISCOVERY_KIND: &str = "pasteharbor_lan_sync_v1";
+const DISCOVERY_KIND: &str = "qollect_lan_sync_v1";
 mod discovery;
 mod http_server;
 mod protocol;
@@ -441,7 +441,7 @@ impl LanSyncService {
             config.device_id = uuid::Uuid::new_v4().to_string();
         }
         if config.device_name.trim().is_empty() {
-            config.device_name = "PasteHarbor Device".to_string();
+            config.device_name = "Qollect Device".to_string();
         }
         config.service_port = config.service_port.clamp(1024, u16::MAX);
         config.discovery_port = config.discovery_port.clamp(1024, u16::MAX);
