@@ -44,3 +44,4 @@ AGENTS.md
 .aider*
 .continue/
 temp_secret_key.txt
+.wrangler/

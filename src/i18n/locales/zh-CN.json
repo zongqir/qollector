@@ -296,7 +296,8 @@
       }
     },
     "about": {
-      "betaNotice": "当前为 Beta 版本，所有功能免费开放。正式版发布后，OCR 识别、AI 标签、MCP 服务及加锁功能将作为高级功能提供。"
+      "betaNotice": "当前为 Beta 版本，所有功能免费开放。正式版发布后，OCR 识别、AI 标签、MCP 服务及加锁功能将作为高级功能提供。",
+      "website": "官网"
     },
     "shortcuts": {
       "globalHotkeys": "全局快捷键",

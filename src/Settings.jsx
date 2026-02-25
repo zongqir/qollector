@@ -1662,6 +1662,21 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <div style={{ fontSize: 18, fontWeight: 600 }}>Qollect</div>
                 <div style={{ fontSize: 12, opacity: 0.5, fontStyle: 'italic' }}>{t('app.slogan')}</div>
                 <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'https://www.135070.xyz' }); }}
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--accent-blue, #3b82f6)',
+                    textDecoration: 'none',
+                    opacity: 0.8,
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '1'}
+                  onMouseLeave={(e) => e.target.style.opacity = '0.8'}
+                >
+                  {t('settings.about.website')}: www.135070.xyz
+                </a>
                 <div style={{
                   display: 'inline-block',
                   padding: '2px 10px',

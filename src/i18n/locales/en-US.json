@@ -296,7 +296,8 @@
       }
     },
     "about": {
-      "betaNotice": "This is a Beta release — all features are free. After the official launch, OCR, AI Tags, MCP Service, and App Lock will become premium features."
+      "betaNotice": "This is a Beta release — all features are free. After the official launch, OCR, AI Tags, MCP Service, and App Lock will become premium features.",
+      "website": "Website"
     },
     "shortcuts": {
       "globalHotkeys": "Global Hotkeys",

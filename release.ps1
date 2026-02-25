@@ -10,7 +10,9 @@ $PRIVATE_KEY_PATH = "$KEY_DIR\clipbox.key"
 $PUBLIC_KEY_PATH = "$KEY_DIR\clipbox.key.pub"
 $TAURI_CONF = "src-tauri\tauri.conf.json"
 $OUTPUT_DIR = "release-artifacts"
-$GITHUB_REPO = "zongqir/clipbox"
+$GITHUB_REPO = "zongqir/qollect"
+$R2_BUCKET = "qollect"
+$R2_PUBLIC_URL = "https://dl.135070.xyz"
 
 function Write-Step($msg) { Write-Host "`n>> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "   $msg" -ForegroundColor Green }
@@ -97,13 +99,13 @@ $latestJson = @{
     platforms = @{
         "windows-x86_64" = @{
             signature = $sigContent
-            url       = "https://github.com/$GITHUB_REPO/releases/download/v$version/$($installer.Name)"
+            url       = "$R2_PUBLIC_URL/releases/v$version/$($installer.Name)"
         }
     }
 } | ConvertTo-Json -Depth 10
 
 $latestJson | Set-Content "$OUTPUT_DIR\latest.json" -Encoding UTF8
-Write-Ok "latest.json generated"
+Write-Ok "latest.json generated (R2 URL)"
 
 # ===== Step 6: Upload to GitHub Release =====
 Write-Step "Uploading to GitHub Release v$version"
@@ -131,3 +133,29 @@ if ($LASTEXITCODE -ne 0) { throw "GitHub release upload failed" }
 
 Write-Ok "Release v$version published!"
 Write-Host "`n   https://github.com/$GITHUB_REPO/releases/tag/v$version`n" -ForegroundColor Green
+
+# ===== Step 7: Upload to Cloudflare R2 =====
+Write-Step "Uploading to Cloudflare R2 ($R2_PUBLIC_URL)"
+
+if (!(Get-Command wrangler -ErrorAction SilentlyContinue)) {
+    Write-Warn "wrangler CLI not found. Install: npm install -g wrangler"
+    Write-Warn "Then login: wrangler login"
+    Write-Warn "Skipping R2 upload."
+} else {
+    # Upload installer to releases/v{version}/
+    wrangler r2 object put "$R2_BUCKET/releases/v$version/$($installer.Name)" --file "$OUTPUT_DIR\$($installer.Name)" --remote
+    if ($LASTEXITCODE -ne 0) { Write-Warn "R2 upload installer failed" }
+    else { Write-Ok "Uploaded installer to R2" }
+
+    # Upload signature
+    wrangler r2 object put "$R2_BUCKET/releases/v$version/$($sig.Name)" --file "$OUTPUT_DIR\$($sig.Name)" --remote
+    if ($LASTEXITCODE -ne 0) { Write-Warn "R2 upload signature failed" }
+    else { Write-Ok "Uploaded signature to R2" }
+
+    # Upload latest.json to root (updater endpoint)
+    wrangler r2 object put "$R2_BUCKET/latest.json" --file "$OUTPUT_DIR\latest.json" --content-type "application/json" --remote
+    if ($LASTEXITCODE -ne 0) { Write-Warn "R2 upload latest.json failed" }
+    else { Write-Ok "Uploaded latest.json to R2" }
+
+    Write-Ok "R2 upload complete: $R2_PUBLIC_URL/latest.json"
+}
