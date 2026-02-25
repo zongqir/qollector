@@ -96,10 +96,99 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ steps.version.outputs.version }}
-          releaseName: "PasteHarbor ${{ steps.version.outputs.version }}"
+          releaseName: "Qollect ${{ steps.version.outputs.version }}"
           releaseBody: "See the assets to download and install this version.\n\n> **Note:** Linux build is experimental — clipboard functionality is not yet implemented."
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
           updaterJsonKeepUniversal: true
           args: ${{ matrix.args }}
+
+  upload-r2:
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | head -1 | cut -d'"' -f4)
+          echo "version=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_num=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p r2-upload/releases/${{ steps.version.outputs.version }}
+          cd r2-upload/releases/${{ steps.version.outputs.version }}
+
+          # Download all assets from the GitHub Release
+          gh release download "${{ steps.version.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.exe" \
+            --pattern "*.exe.sig" \
+            --pattern "*.dmg" \
+            --pattern "*.dmg.sig" \
+            --pattern "*.AppImage" \
+            --pattern "*.AppImage.sig" \
+            --pattern "*.deb" \
+            --pattern "*.deb.sig" \
+            --clobber || true
+
+          echo "Downloaded assets:"
+          ls -la
+
+      - name: Generate R2 latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          R2_BASE="https://dl.135070.xyz/releases/${VERSION}"
+
+          # Download the tauri-generated latest.json from GitHub Release
+          gh release download "$VERSION" \
+            --repo "${{ github.repository }}" \
+            --pattern "latest.json" \
+            --dir r2-upload/tmp \
+            --clobber
+
+          # Replace GitHub download URLs with R2 URLs
+          sed -E "s|https://github\.com/[^/]+/[^/]+/releases/download/[^/]+/|${R2_BASE}/|g" \
+            r2-upload/tmp/latest.json > r2-upload/latest.json
+
+          echo "Generated latest.json:"
+          cat r2-upload/latest.json
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Upload to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUCKET="qollect"
+
+          # Upload latest.json
+          wrangler r2 object put "${BUCKET}/latest.json" \
+            --file r2-upload/latest.json \
+            --content-type "application/json" \
+            --remote
+
+          # Upload all release assets
+          for file in r2-upload/releases/${VERSION}/*; do
+            [ -f "$file" ] || continue
+            filename=$(basename "$file")
+            echo "Uploading: $filename"
+            wrangler r2 object put "${BUCKET}/releases/${VERSION}/${filename}" \
+              --file "$file" \
+              --remote
+          done
+
+          echo "R2 upload complete: https://dl.135070.xyz/latest.json"
