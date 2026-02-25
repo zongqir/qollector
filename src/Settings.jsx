@@ -1660,6 +1660,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '32px 0' }}>
                 <div style={{ fontSize: 40 }}>📋</div>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>Qollect</div>
+                <div style={{ fontSize: 12, opacity: 0.5, fontStyle: 'italic' }}>{t('app.slogan')}</div>
                 <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
                 <div style={{
                   display: 'inline-block',

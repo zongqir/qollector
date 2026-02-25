@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Qollect",
+    "slogan": "无感标记，一触即回",
     "loading": "加载中...",
     "noItems": "暂无剪贴板历史"
   },
@@ -506,9 +507,9 @@
     "pinItem": "放入工作台",
     "saveHint": "保存 (Ctrl+Enter)",
     "cancelHint": "取消 (Esc)",
-    "quickAddTip": "快速记录 · 内容将自动添加到收藏",
+    "quickAddTip": "快速记录 · 内容将自动添加到工作台",
     "saveAndContinue": "保存并继续",
-    "savedToast": "已保存到收藏",
+    "savedToast": "已保存到工作台",
     "unpin": "取消固定，可自由拖动位置",
     "pin": "固定在窗口最前面"
   },

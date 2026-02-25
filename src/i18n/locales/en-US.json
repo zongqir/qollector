@@ -1,6 +1,7 @@
 {
   "app": {
     "title": "Qollect",
+    "slogan": "Effortless mark. Instant recall.",
     "loading": "Loading...",
     "noItems": "No clipboard history"
   },
