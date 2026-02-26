@@ -30,7 +30,7 @@ url = "2.5"
 thiserror = "1"
 parking_lot = "0.12"
 async-trait = "0.1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "gif", "tiff", "webp"] }
 fast_image_resize = { version = "5", features = ["image"] }
 arboard = "3"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart"] }

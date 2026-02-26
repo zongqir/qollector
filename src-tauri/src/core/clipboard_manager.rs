@@ -8,7 +8,7 @@ use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, Platfo
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
 use crate::lan_sync::PairedSyncDevice;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -264,35 +264,49 @@ impl ClipboardManager {
             ClipboardContent::File(paths_str) => {
                 println!("File clipboard content detected");
 
-                let paths: Vec<&str> = paths_str.lines().collect();
-                let file_count = paths.len();
-
-                // Create a summary of files
-                let file_names: Vec<String> = paths
-                    .iter()
-                    .map(|p| {
-                        std::path::Path::new(p)
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or(p)
-                            .to_string()
-                    })
-                    .collect();
-
-                let summary = if file_count == 1 {
-                    format!("File: {}", file_names[0])
+                if let Some(image_item) = Self::promote_pixpin_image_file_to_item(
+                    paths_str,
+                    &metadata,
+                    &image_dir,
+                    &source_app,
+                )? {
+                    println!("Promoted PixPin file payload to image item");
+                    image_item
                 } else {
-                    format!("{} files: {}", file_count, file_names.join(", "))
-                };
+                    let paths: Vec<&str> = paths_str
+                        .lines()
+                        .map(str::trim)
+                        .filter(|p| !p.is_empty())
+                        .collect();
+                    let file_count = paths.len();
 
-                println!("Files: {}", summary);
+                    // Create a summary of files
+                    let file_names: Vec<String> = paths
+                        .iter()
+                        .map(|p| {
+                            std::path::Path::new(p)
+                                .file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or(p)
+                                .to_string()
+                        })
+                        .collect();
 
-                let mut item = ClipboardItem::new_text(summary, metadata);
-                item.type_ = "file".to_string();
-                item.content = Some(paths_str.to_string());
-                // Use full path payload hash to avoid false collisions on same filename.
-                item.content_hash = blake3::hash(paths_str.as_bytes()).to_hex().to_string();
-                item
+                    let summary = if file_count == 1 && !file_names.is_empty() {
+                        format!("File: {}", file_names[0])
+                    } else {
+                        format!("{} files: {}", file_count, file_names.join(", "))
+                    };
+
+                    println!("Files: {}", summary);
+
+                    let mut item = ClipboardItem::new_text(summary, metadata);
+                    item.type_ = "file".to_string();
+                    item.content = Some(paths_str.to_string());
+                    // Use full path payload hash to avoid false collisions on same filename.
+                    item.content_hash = blake3::hash(paths_str.as_bytes()).to_hex().to_string();
+                    item
+                }
             }
         };
 
@@ -1549,6 +1563,172 @@ impl ClipboardManager {
                 let _ = std::fs::remove_file(&thumb);
             }
         }
+    }
+
+    fn promote_pixpin_image_file_to_item(
+        paths_str: &str,
+        metadata: &WindowMetadata,
+        image_dir: &Path,
+        source_app: &str,
+    ) -> Result<Option<ClipboardItem>, Box<dyn std::error::Error>> {
+        let Some(path_str) = Self::single_file_path(paths_str) else {
+            return Ok(None);
+        };
+
+        let source_path = Path::new(path_str);
+        if !source_path.is_file() {
+            return Ok(None);
+        }
+
+        let pixpin_source =
+            Self::is_pixpin_source(source_app) || Self::is_pixpin_capture_path(source_path);
+        if !pixpin_source {
+            return Ok(None);
+        }
+
+        let extension = source_path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+
+        if !Self::is_promotable_image_extension(&extension) {
+            return Ok(None);
+        }
+
+        let Some((source_bytes, decoded)) = Self::read_and_decode_image_with_retry(source_path, 8, 25)
+        else {
+            eprintln!(
+                "Skipped PixPin image-file promotion: decode failed after retries for '{}'",
+                path_str
+            );
+            return Ok(None);
+        };
+
+        let rgba = decoded.to_rgba8();
+        let mut normalized_png = Vec::new();
+        {
+            use image::codecs::png::PngEncoder;
+            use image::ImageEncoder;
+            let encoder = PngEncoder::new(&mut normalized_png);
+            encoder
+                .write_image(
+                    rgba.as_raw(),
+                    decoded.width(),
+                    decoded.height(),
+                    image::ColorType::Rgba8.into(),
+                )
+                .map_err(|e| format!("Failed to encode promoted image as png: {}", e))?;
+        }
+
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_millis();
+        let filename = format!("{}.png", timestamp);
+        let thumb_filename = format!("{}_thumb.png", timestamp);
+        let image_path = image_dir.join(&filename);
+        let thumb_path = image_dir.join(&thumb_filename);
+
+        std::fs::write(&image_path, &normalized_png)?;
+
+        let thumbnail = crate::core::thumbnail::generate_thumbnail(&decoded, 300);
+        if let Err(error) = thumbnail.save(&thumb_path) {
+            eprintln!(
+                "Failed to save promoted image thumbnail for '{}': {}. Fallback to source copy.",
+                path_str, error
+            );
+            std::fs::copy(&image_path, &thumb_path)?;
+        }
+
+        let image_paths_json = serde_json::json!({
+            "original": image_path.to_string_lossy().to_string(),
+            "thumbnail": thumb_path.to_string_lossy().to_string()
+        })
+        .to_string();
+
+        let now = chrono::Utc::now().timestamp();
+        let item = ClipboardItem {
+            id: uuid::Uuid::new_v4().to_string(),
+            type_: "image".to_string(),
+            content: Some(format!("[Image: {}]", filename)),
+            original_content: None,
+            content_hash: blake3::hash(&normalized_png).to_hex().to_string(),
+            image_paths: Some(image_paths_json),
+            ocr_text: None,
+            code_language: None,
+            embedding: None,
+            tags: None,
+            user_note: None,
+            metadata: Some(serde_json::to_string(metadata).unwrap()),
+            is_pinned: false,
+            is_favorite: false,
+            is_deleted: false,
+            pinned_at: None,
+            created_at: now,
+            updated_at: now,
+            has_raw_formats: false,
+            content_truncated: false,
+            ocr_truncated: false,
+            content_updated: false,
+        };
+
+        Ok(Some(item))
+    }
+
+    fn single_file_path(paths_str: &str) -> Option<&str> {
+        let mut iter = paths_str.lines().map(str::trim).filter(|p| !p.is_empty());
+        let path = iter.next()?;
+        if iter.next().is_some() {
+            return None;
+        }
+        Some(path)
+    }
+
+    fn is_pixpin_source(source_app: &str) -> bool {
+        source_app.to_ascii_lowercase().contains("pixpin")
+    }
+
+    fn is_pixpin_capture_path(path: &Path) -> bool {
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+        if file_name.starts_with("pixpin_") {
+            return true;
+        }
+
+        let full_path = path.to_string_lossy().to_ascii_lowercase();
+        full_path.contains("pixpin")
+    }
+
+    fn read_and_decode_image_with_retry(
+        path: &Path,
+        retries: usize,
+        delay_ms: u64,
+    ) -> Option<(Vec<u8>, image::DynamicImage)> {
+        let total = retries.max(1);
+        for attempt in 0..total {
+            if let Ok(bytes) = std::fs::read(path) {
+                if !bytes.is_empty() {
+                    if let Ok(image) = image::load_from_memory(&bytes) {
+                        return Some((bytes, image));
+                    }
+                }
+            }
+
+            if attempt + 1 < total {
+                std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+            }
+        }
+        None
+    }
+
+    fn is_promotable_image_extension(extension: &str) -> bool {
+        matches!(
+            extension,
+            "bmp" | "png" | "jpg" | "jpeg" | "webp" | "gif" | "tif" | "tiff"
+        )
     }
 
     pub fn image_dir(&self) -> &std::path::Path {
