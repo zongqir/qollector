@@ -179,12 +179,12 @@ function MultiSelectBar({
         </div>
       )}
       {batchTagFeedback && (
-        <div className={`multi-select-feedback ${batchTagFeedback.type}`}>
+        <div className={`multi-select-feedback ui-feedback ${batchTagFeedback.type}`} role="status" aria-live="polite">
           {batchTagFeedback.text}
         </div>
       )}
       {batchAiFeedback && (
-        <div className={`multi-select-feedback ${batchAiFeedback.type}`}>
+        <div className={`multi-select-feedback ui-feedback ${batchAiFeedback.type}`} role="status" aria-live="polite">
           {batchAiFeedback.text}
         </div>
       )}

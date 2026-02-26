@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  animation: overlayFadeIn 0.2s ease-out;
+  animation: overlayFadeIn var(--motion-base) var(--ease-standard);
 }
 
 @keyframes overlayFadeIn {
@@ -29,7 +29,7 @@
   width: 90%;
   max-width: 600px;
   overflow: hidden;
-  animation: modalSlideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: modalSlideIn var(--motion-slow) var(--ease-emphasized);
   backface-visibility: hidden;
   transform: translateZ(0);
 }
@@ -72,7 +72,10 @@
   font-size: 20px;
   cursor: pointer;
   border-radius: 8px;
-  transition: all 0.2s;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,7 +151,11 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-standard);
 }
 
 .quick-input-btn.cancel {
@@ -164,7 +171,7 @@
 
 .quick-input-btn.submit {
   background: var(--accent-color);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .quick-input-btn.submit:hover {

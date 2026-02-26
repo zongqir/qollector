@@ -16,6 +16,7 @@ import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
 import HoverPreview from './components/HoverPreview';
 import GuidedTour from './components/GuidedTour/GuidedTour';
+import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 
 console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
 
@@ -29,21 +30,102 @@ const MINI_SIZE = { width: 320, height: 450 };
 const WINDOW_MODE_STORAGE_KEY = 'qollect-window-mode';
 const WINDOW_MODE_MINI = 'mini';
 const WINDOW_MODE_NORMAL = 'normal';
+const LAYOUT_PRESET_STORAGE_KEY = 'qollect-layout-preset';
+const LAYOUT_PRESET_WIDTHS_STORAGE_KEY = 'qollect-layout-preset-widths';
+const LAYOUT_PRESET_FOCUS = 'focus';
+const LAYOUT_PRESET_REVIEW = 'review';
+const LAYOUT_PRESET_COMPARE = 'compare';
+const LAYOUT_PRESET_DEFAULT = LAYOUT_PRESET_REVIEW;
+const LAYOUT_PRESET_DEFAULT_WIDTHS = {
+  [LAYOUT_PRESET_FOCUS]: 360,
+  [LAYOUT_PRESET_REVIEW]: 340,
+  [LAYOUT_PRESET_COMPARE]: 440,
+};
+
+const isValidLayoutPreset = (preset) => (
+  preset === LAYOUT_PRESET_FOCUS
+  || preset === LAYOUT_PRESET_REVIEW
+  || preset === LAYOUT_PRESET_COMPARE
+);
+
+const clampHistoryWidth = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return LAYOUT_PRESET_DEFAULT_WIDTHS[LAYOUT_PRESET_DEFAULT];
+  return Math.min(Math.max(Math.round(parsed), 220), 600);
+};
+
+const readLayoutPreset = () => {
+  if (typeof window === 'undefined') return LAYOUT_PRESET_DEFAULT;
+  try {
+    const raw = localStorage.getItem(LAYOUT_PRESET_STORAGE_KEY);
+    if (!isValidLayoutPreset(raw)) return LAYOUT_PRESET_DEFAULT;
+    return raw;
+  } catch (error) {
+    console.warn('[LayoutPreset] read preset failed:', error);
+    return LAYOUT_PRESET_DEFAULT;
+  }
+};
+
+const readLayoutPresetWidths = () => {
+  const defaults = { ...LAYOUT_PRESET_DEFAULT_WIDTHS };
+  if (typeof window === 'undefined') return defaults;
+  try {
+    const raw = localStorage.getItem(LAYOUT_PRESET_WIDTHS_STORAGE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return defaults;
+    const next = { ...defaults };
+    if (parsed[LAYOUT_PRESET_FOCUS] != null) {
+      next[LAYOUT_PRESET_FOCUS] = clampHistoryWidth(parsed[LAYOUT_PRESET_FOCUS]);
+    }
+    if (parsed[LAYOUT_PRESET_REVIEW] != null) {
+      next[LAYOUT_PRESET_REVIEW] = clampHistoryWidth(parsed[LAYOUT_PRESET_REVIEW]);
+    }
+    if (parsed[LAYOUT_PRESET_COMPARE] != null) {
+      next[LAYOUT_PRESET_COMPARE] = clampHistoryWidth(parsed[LAYOUT_PRESET_COMPARE]);
+    }
+    return next;
+  } catch (error) {
+    console.warn('[LayoutPreset] read widths failed:', error);
+    return defaults;
+  }
+};
+
+const persistLayoutPreset = (preset) => {
+  if (typeof window === 'undefined' || !isValidLayoutPreset(preset)) return;
+  try {
+    localStorage.setItem(LAYOUT_PRESET_STORAGE_KEY, preset);
+  } catch (error) {
+    console.warn('[LayoutPreset] persist preset failed:', error);
+  }
+};
+
+const persistLayoutPresetWidths = (widths) => {
+  if (typeof window === 'undefined' || !widths) return;
+  try {
+    localStorage.setItem(LAYOUT_PRESET_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  } catch (error) {
+    console.warn('[LayoutPreset] persist widths failed:', error);
+  }
+};
 
 function App() {
   console.log('[Perf:App] App() function called at', performance.now().toFixed(1), 'ms');
 
   const { t } = useTranslation();
+  const appFeedbackTimerRef = useRef(null);
 
   // Beta expiry state
   const [betaExpired, setBetaExpired] = useState(false);
   const [betaStatus, setBetaStatus] = useState(null);
+  const [appFeedback, setAppFeedback] = useState(null);
 
   // Update state
   const [updateInfo, setUpdateInfo] = useState(null); // { version, update }
   const [updateProgress, setUpdateProgress] = useState(null); // null | number (0-100) | 'ready'
   const [updateError, setUpdateError] = useState(null);
   const [updateChecking, setUpdateChecking] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 
   // Store state
   const isLocked = useAppStore(s => s.isLocked);
@@ -56,9 +138,15 @@ function App() {
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
   const widgetEnabled = useAppStore(s => s.widgetEnabled);
+  const copiedItemId = useAppStore(s => s.copiedItemId);
+  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
+  const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
+  const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
   const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
+  const showHistoryStream = isMiniMode || historyStreamEnabled || !collectionPanelEnabled;
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -70,6 +158,7 @@ function App() {
   const setCollectionPanelBeforeMini = useAppStore(s => s.setCollectionPanelBeforeMini);
   const collectionPanelBeforeMini = useAppStore(s => s.collectionPanelBeforeMini);
   const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
+  const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const setThemeMode = useAppStore(s => s.setThemeMode);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
@@ -275,7 +364,112 @@ function App() {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
 
+  useEffect(() => {
+    if (!copiedItemId) return undefined;
+
+    const channelKey = copyFeedbackSource || 'global';
+    const channelLabel = t(`feedback.channel.${channelKey}`, { defaultValue: t('feedback.channel.global') });
+    const actionLabel = lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied');
+
+    setAppFeedback({
+      type: 'success',
+      text: `${actionLabel} - ${channelLabel}`,
+    });
+
+    if (appFeedbackTimerRef.current) {
+      clearTimeout(appFeedbackTimerRef.current);
+    }
+    appFeedbackTimerRef.current = setTimeout(() => {
+      setAppFeedback(null);
+      appFeedbackTimerRef.current = null;
+    }, 1400);
+
+    return undefined;
+  }, [copiedItemId, copyFeedbackToken, copyFeedbackSource, lastCopyWasAutoPaste, t]);
+
+  useEffect(() => () => {
+    if (appFeedbackTimerRef.current) {
+      clearTimeout(appFeedbackTimerRef.current);
+      appFeedbackTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const isEditableElement = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+      if (target.isContentEditable) return true;
+      return Boolean(target.closest('[contenteditable="true"]'));
+    };
+
+    const handleShortcutHelpHotkey = (event) => {
+      if (event.defaultPrevented) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (isEditableElement(event.target)) return;
+      const isQuestionMark = event.key === '?' || (event.key === '/' && event.shiftKey);
+      if (!isQuestionMark) return;
+      event.preventDefault();
+      setShowShortcutHelp(current => !current);
+    };
+
+    window.addEventListener('keydown', handleShortcutHelpHotkey);
+    return () => window.removeEventListener('keydown', handleShortcutHelpHotkey);
+  }, []);
+
   // Mini 模式
+  const initialLayoutPresetRef = useRef(readLayoutPreset());
+  const layoutPresetWidthsRef = useRef(readLayoutPresetWidths());
+  const [layoutPreset, setLayoutPreset] = useState(initialLayoutPresetRef.current);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const preset = initialLayoutPresetRef.current;
+    const widths = layoutPresetWidthsRef.current;
+    const fallback = LAYOUT_PRESET_DEFAULT_WIDTHS[preset] || LAYOUT_PRESET_DEFAULT_WIDTHS[LAYOUT_PRESET_DEFAULT];
+    return clampHistoryWidth(widths[preset] ?? fallback);
+  });
+  const leftWidthRef = useRef(leftWidth);
+
+  useEffect(() => {
+    leftWidthRef.current = leftWidth;
+  }, [leftWidth]);
+
+  const rememberPresetWidth = useCallback((preset, width) => {
+    if (!isValidLayoutPreset(preset)) return;
+    const normalized = clampHistoryWidth(width);
+    const current = layoutPresetWidthsRef.current[preset];
+    if (current === normalized) return;
+    const next = { ...layoutPresetWidthsRef.current, [preset]: normalized };
+    layoutPresetWidthsRef.current = next;
+    persistLayoutPresetWidths(next);
+  }, []);
+
+  const applyLayoutPreset = useCallback((preset) => {
+    if (!isValidLayoutPreset(preset) || isMiniMode) return;
+
+    if (collectionPanelEnabled && showHistoryStream) {
+      rememberPresetWidth(layoutPreset, leftWidthRef.current);
+    }
+
+    const nextShowPanel = preset !== LAYOUT_PRESET_FOCUS;
+    const targetWidth = layoutPresetWidthsRef.current[preset] ?? LAYOUT_PRESET_DEFAULT_WIDTHS[preset];
+
+    setLayoutPreset(preset);
+    persistLayoutPreset(preset);
+    setCollectionPanelBeforeMini(null);
+    setHistoryStreamEnabled(true);
+    setCollectionPanelEnabled(nextShowPanel);
+    setLeftWidth(clampHistoryWidth(targetWidth));
+  }, [
+    collectionPanelEnabled,
+    isMiniMode,
+    layoutPreset,
+    rememberPresetWidth,
+    setCollectionPanelBeforeMini,
+    setCollectionPanelEnabled,
+    setHistoryStreamEnabled,
+    showHistoryStream,
+  ]);
+
   const MINI_THRESHOLD = 450;
   const PANEL_CLOSE_THRESHOLD = 350;
 
@@ -368,7 +562,6 @@ function App() {
   };
 
   // ========== 分割线拖拽 ==========
-  const [leftWidth, setLeftWidth] = useState(340);
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -386,7 +579,7 @@ function App() {
     const handleMouseMove = (e) => {
       if (!isDraggingRef.current) return;
       const delta = e.clientX - startXRef.current;
-      const newWidth = Math.min(Math.max(startWidthRef.current + delta, 220), 600);
+      const newWidth = clampHistoryWidth(startWidthRef.current + delta);
       setLeftWidth(newWidth);
     };
     const handleMouseUp = () => {
@@ -394,6 +587,9 @@ function App() {
       isDraggingRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      if (!isMiniMode && collectionPanelEnabled && showHistoryStream) {
+        rememberPresetWidth(layoutPreset, leftWidthRef.current);
+      }
     };
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
@@ -401,7 +597,13 @@ function App() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [
+    collectionPanelEnabled,
+    isMiniMode,
+    layoutPreset,
+    rememberPresetWidth,
+    showHistoryStream,
+  ]);
 
   // Beta expired overlay removed - soft banner is shown at the bottom instead
 
@@ -414,7 +616,11 @@ function App() {
   }
 
   return (
-    <div className={`app ${isMiniMode ? 'mini-mode' : ''}`}>
+    <div
+      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !collectionPanelEnabled ? 'panel-hidden' : ''}`}
+      role="application"
+      aria-label={t('app.title')}
+    >
       {showSettings && (
         <Suspense fallback={null}>
           <Settings
@@ -425,6 +631,10 @@ function App() {
           />
         </Suspense>
       )}
+      <ShortcutHelpOverlay
+        isOpen={showShortcutHelp}
+        onClose={() => setShowShortcutHelp(false)}
+      />
       <DragDrop onItemAdded={loadItems} />
 
       {showEditModal && (
@@ -466,13 +676,17 @@ function App() {
         }}
         isMiniMode={isMiniMode}
         onToggleMiniMode={() => setMiniMode(!isMiniMode)}
+        layoutPreset={layoutPreset}
+        onApplyLayoutPreset={applyLayoutPreset}
       />
 
       <div className="workspace">
-        <HistoryStream style={{ width: isMiniMode || !collectionPanelEnabled ? '100%' : `${leftWidth}px` }} />
+        {showHistoryStream && (
+          <HistoryStream style={{ width: isMiniMode || !collectionPanelEnabled ? '100%' : `${leftWidth}px` }} />
+        )}
         {!isMiniMode && collectionPanelEnabled && (
           <>
-            <div className="resize-handle" onMouseDown={handleResizeStart} />
+            {showHistoryStream && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />
           </>
         )}
@@ -480,6 +694,12 @@ function App() {
       {shouldUseHoverPreview && <HoverPreview />}
 
       {tourActive && <GuidedTour />}
+
+      {appFeedback && (
+        <div className={`app-feedback-toast ${appFeedback.type}`} role="status" aria-live="polite">
+          {appFeedback.text}
+        </div>
+      )}
 
       {/* Beta expired soft banner */}
       {betaExpired && !updateInfo && (

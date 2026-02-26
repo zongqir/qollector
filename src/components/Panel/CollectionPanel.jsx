@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Package,
   Star,
-  Calendar,
-  Check,
   X,
   Type,
   Image,
@@ -12,7 +10,6 @@ import {
   Link,
   Braces,
   Layers,
-  ChevronDown,
 } from 'lucide-react';
 import {
   DndContext,
@@ -33,6 +30,13 @@ import SortableCollectionCard from './SortableCollectionCard';
 import CollectionQuickNoteSection from './CollectionQuickNoteSection';
 import CollectionMultiSelectBar from './CollectionMultiSelectBar';
 import CollectionQuickActionsBar from './CollectionQuickActionsBar';
+import useEscapeDismiss from '../hooks/useEscapeDismiss';
+import useClickOutsideDismiss from '../hooks/useClickOutsideDismiss';
+import useFilterDropdownCoordinator from '../hooks/useFilterDropdownCoordinator';
+import TagFilterControl from '../shared/TagFilterControl';
+import SavedViewControl from '../shared/SavedViewControl';
+import TypeFilterControl from '../shared/TypeFilterControl';
+import DateFilterControl from '../shared/DateFilterControl';
 import useCollectionQuickActions from './hooks/useCollectionQuickActions';
 import useCollectionBatchActions from './hooks/useCollectionBatchActions';
 import {
@@ -40,6 +44,7 @@ import {
   dateStringToTimestamp,
   dateStringToEndTimestamp,
 } from '../../utils/dateHelpers';
+import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
 
 function CollectionPanel() {
   const { t, i18n } = useTranslation();
@@ -47,17 +52,18 @@ function CollectionPanel() {
   const [pinnedOrder, setPinnedOrder] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
-  const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
-  const [collectionSelectedType, setCollectionSelectedType] = useState('all');
   const [showCollectionTypeFilter, setShowCollectionTypeFilter] = useState(false);
-  const [showFavoritesOnlyInCollection, setShowFavoritesOnlyInCollection] = useState(false);
-  const [collectionSelectedDateRange, setCollectionSelectedDateRange] = useState(null);
   const [showCollectionDateFilter, setShowCollectionDateFilter] = useState(false);
-  const [collectionCustomDateStart, setCollectionCustomDateStart] = useState('');
-  const [collectionCustomDateEnd, setCollectionCustomDateEnd] = useState('');
+  const [showCollectionTagFilter, setShowCollectionTagFilter] = useState(false);
+  const [showCollectionSavedViews, setShowCollectionSavedViews] = useState(false);
+  const [collectionSavedViewName, setCollectionSavedViewName] = useState('');
+  const [collectionTagSearchQuery, setCollectionTagSearchQuery] = useState('');
   const selectionAnchorIndexRef = useRef(-1);
   const collectionTypeWrapperRef = useRef(null);
   const collectionDateWrapperRef = useRef(null);
+  const collectionTagWrapperRef = useRef(null);
+  const collectionSavedViewWrapperRef = useRef(null);
+  const collectionTagListboxRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const aiEnabled = useAppStore(s => s.aiEnabled);
@@ -72,7 +78,27 @@ function CollectionPanel() {
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const setCardBackground = useAppStore(s => s.setCardBackground);
-  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
+  const searchQuery = useAppStore(s => s.searchQuery);
+  const selectedType = useAppStore(s => s.selectedType);
+  const selectedTags = useAppStore(s => s.selectedTags);
+  const showFavoritesOnly = useAppStore(s => s.showFavoritesOnly);
+  const selectedDateRange = useAppStore(s => s.selectedDateRange);
+  const customDateStart = useAppStore(s => s.customDateStart);
+  const customDateEnd = useAppStore(s => s.customDateEnd);
+  const savedFilterViews = useAppStore(s => s.savedFilterViews);
+  const activeFilterViewId = useAppStore(s => s.activeFilterViewId);
+  const setSearchQuery = useAppStore(s => s.setSearchQuery);
+  const setSelectedType = useAppStore(s => s.setSelectedType);
+  const setSelectedTags = useAppStore(s => s.setSelectedTags);
+  const setShowFavoritesOnly = useAppStore(s => s.setShowFavoritesOnly);
+  const setSelectedDateRange = useAppStore(s => s.setSelectedDateRange);
+  const setCustomDateStart = useAppStore(s => s.setCustomDateStart);
+  const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
+  const clearDateFilter = useAppStore(s => s.clearDateFilter);
+  const saveCurrentFilterView = useAppStore(s => s.saveCurrentFilterView);
+  const applySavedFilterView = useAppStore(s => s.applySavedFilterView);
+  const deleteSavedFilterView = useAppStore(s => s.deleteSavedFilterView);
+  const clearActiveFilterView = useAppStore(s => s.clearActiveFilterView);
 
   const allPinnedItems = useMemo(() => {
     const pinned = items.filter(i => i.is_pinned);
@@ -86,44 +112,70 @@ function CollectionPanel() {
   }, [items, pinnedOrder]);
 
   const pinnedItems = useMemo(() => {
-    const normalizedQuery = collectionSearchQuery.trim().toLowerCase();
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const queryTerms = normalizedQuery.split(/\s+/).filter(Boolean);
+
     return allPinnedItems.filter((item) => {
-      if (normalizedQuery) {
+      if (queryTerms.length > 0) {
+        const itemTags = getTags(item.tags);
+        const sourceApp = getSourceApp(item.metadata);
+        const sourceTag = buildSourceTag(sourceApp, t);
+        const typeTag = buildTypeTag(item.type_, t);
+        const typeLabel = item.code_language
+          ? t('search.typeFilter.code')
+          : t(`search.typeFilter.${item.type_ || 'text'}`);
+
         const searchTarget = [
           item.content,
           item.user_note,
           item.ocr_text,
-          item.tags,
+          itemTags.join(' '),
+          sourceApp,
+          sourceTag,
+          typeTag,
+          typeLabel,
           item.type_,
+          item.code_language,
         ]
           .filter(Boolean)
           .join('\n')
           .toLowerCase();
-        if (!searchTarget.includes(normalizedQuery)) return false;
+        if (!queryTerms.some(term => searchTarget.includes(term))) return false;
       }
 
-      if (collectionSelectedType === 'code') {
+      if (selectedType === 'code') {
         if (!item.code_language) return false;
-      } else if (collectionSelectedType !== 'all' && item.type_ !== collectionSelectedType) {
+      } else if (selectedType !== 'all' && item.type_ !== selectedType) {
         return false;
       }
 
-      if (showFavoritesOnlyInCollection && !item.is_favorite) return false;
+      if (showFavoritesOnly && !item.is_favorite) return false;
 
-      if (collectionSelectedDateRange) {
+      if (selectedTags.length > 0) {
+        const itemTags = getTags(item.tags);
+        const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+        const typeTag = buildTypeTag(item.type_, t);
+        const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
+        if (!selectedTags.some(st => allItemTags.includes(st))) return false;
+      }
+
+      if (selectedDateRange) {
         const createdAt = Number(item.created_at || 0);
-        if (collectionSelectedDateRange.start != null && createdAt < collectionSelectedDateRange.start) return false;
-        if (collectionSelectedDateRange.end != null && createdAt > collectionSelectedDateRange.end) return false;
+        if (selectedDateRange.start != null && createdAt < selectedDateRange.start) return false;
+        if (selectedDateRange.end != null && createdAt > selectedDateRange.end) return false;
       }
 
       return true;
     });
   }, [
     allPinnedItems,
-    collectionSearchQuery,
-    collectionSelectedType,
-    showFavoritesOnlyInCollection,
-    collectionSelectedDateRange,
+    searchQuery,
+    selectedType,
+    showFavoritesOnly,
+    selectedTags,
+    selectedDateRange,
+    t,
+    i18n.language,
   ]);
 
   const selectedPinnedItems = useMemo(() => {
@@ -151,6 +203,40 @@ function CollectionPanel() {
   const allSelectedArePinned = selectedPinnedItems.length > 0
     && selectedPinnedItems.every(item => item.is_pinned);
 
+  const allTags = useMemo(() => {
+    const userTags = new Set();
+    const aiTags = new Set();
+    const sourceTags = new Set();
+    const typeTags = new Set();
+
+    items.forEach((item) => {
+      const tags = getTags(item.tags);
+      tags.forEach((tag) => {
+        if (tag.startsWith('AI:')) aiTags.add(tag);
+        else userTags.add(tag);
+      });
+
+      const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+      if (sourceTag) sourceTags.add(sourceTag);
+
+      const typeTag = buildTypeTag(item.type_, t);
+      if (typeTag) typeTags.add(typeTag);
+    });
+
+    return [
+      ...Array.from(typeTags).sort(),
+      ...Array.from(userTags).sort(),
+      ...Array.from(sourceTags).sort(),
+      ...Array.from(aiTags).sort(),
+    ];
+  }, [items, t, i18n.language]);
+
+  const filteredTagsList = useMemo(() => {
+    if (!collectionTagSearchQuery.trim()) return allTags;
+    const query = collectionTagSearchQuery.toLowerCase();
+    return allTags.filter(tag => tag.toLowerCase().includes(query));
+  }, [allTags, collectionTagSearchQuery]);
+
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
     { key: 'text', icon: <Type size={14} /> },
@@ -159,7 +245,36 @@ function CollectionPanel() {
     { key: 'link', icon: <Link size={14} /> },
     { key: 'code', icon: <Braces size={14} /> },
   ];
-  const selectedTypeOption = typeOptions.find(({ key }) => key === collectionSelectedType) || typeOptions[0];
+  const selectedTypeOption = typeOptions.find(({ key }) => key === selectedType) || typeOptions[0];
+  const collectionTypeDropdownId = 'collection-type-filter-dropdown';
+  const collectionDateDropdownId = 'collection-date-filter-dropdown';
+  const collectionTagDropdownId = 'collection-tag-filter-dropdown';
+  const collectionTagListboxId = `${collectionTagDropdownId}-options`;
+  const collectionSavedViewDropdownId = 'collection-saved-view-dropdown';
+  const selectedDatePreset = selectedDateRange?.preset || null;
+  const typeFilterOptions = typeOptions.map(({ key, icon }) => ({ key, icon }));
+  const parsedTagOptions = useMemo(() => (
+    filteredTagsList
+      .map((tag) => {
+        const parsed = parseSystemTag(tag, {
+          sourcePrefix: t('tag.source'),
+          typePrefix: t('tag.type'),
+        });
+        return {
+          key: tag,
+          tag,
+          kind: parsed.kind,
+          displayTag: parsed.displayText,
+          isAITag: parsed.kind === 'ai',
+          isSourceTag: parsed.kind === 'source',
+          isUserTag: parsed.kind !== 'ai' && parsed.kind !== 'source',
+        };
+      })
+      .filter((option) => option.kind !== 'type')
+  ), [filteredTagsList, t]);
+  const visibleTagOptions = parsedTagOptions.slice(0, 20);
+  const savedViews = Array.isArray(savedFilterViews) ? savedFilterViews : [];
+  const activeSavedView = savedViews.find(view => view.id === activeFilterViewId) || null;
 
   const datePresets = [
     { key: 'today', label: t('toolbar.dateToday'), badge: '1d' },
@@ -168,18 +283,21 @@ function CollectionPanel() {
     { key: '30d', label: t('toolbar.dateLast30Days'), badge: '30d' },
     { key: 'custom', label: t('toolbar.dateCustomRange'), badge: '...' },
   ];
+  const datePresetOptions = datePresets.map(({ key, label }) => ({ key, label }));
 
-  const collectionDateBadgeText = collectionSelectedDateRange
-    ? (collectionSelectedDateRange.preset === 'custom'
+  const collectionDateBadgeText = selectedDateRange
+    ? (selectedDateRange.preset === 'custom'
       ? '...'
-      : datePresets.find(preset => preset.key === collectionSelectedDateRange.preset)?.badge || '')
+      : datePresets.find(preset => preset.key === selectedDateRange.preset)?.badge || '')
     : '';
 
   const hasCollectionFilters = Boolean(
-    collectionSearchQuery.trim()
-    || collectionSelectedType !== 'all'
-    || showFavoritesOnlyInCollection
-    || collectionSelectedDateRange != null
+    searchQuery.trim()
+    || selectedType !== 'all'
+    || showFavoritesOnly
+    || selectedDateRange != null
+    || selectedTags.length > 0
+    || activeSavedView
   );
 
   const sensors = useSensors(
@@ -198,44 +316,160 @@ function CollectionPanel() {
   }, [allPinnedItems]);
 
   const handleCollectionTypeChange = useCallback((nextType) => {
-    setCollectionSelectedType(nextType);
+    setSelectedType(nextType);
     setShowCollectionTypeFilter(false);
-  }, []);
+  }, [setSelectedType]);
+
+  const closeCollectionTypeFilter = useCallback(() => {
+    if (showCollectionTypeFilter) {
+      setShowCollectionTypeFilter(false);
+    }
+  }, [showCollectionTypeFilter]);
+
+  const closeCollectionDateFilter = useCallback(() => {
+    if (showCollectionDateFilter) {
+      setShowCollectionDateFilter(false);
+    }
+  }, [showCollectionDateFilter]);
+
+  const closeCollectionTagFilter = useCallback(() => {
+    if (showCollectionTagFilter) {
+      setShowCollectionTagFilter(false);
+    }
+  }, [showCollectionTagFilter]);
+
+  const closeCollectionSavedViews = useCallback(() => {
+    if (showCollectionSavedViews) {
+      setShowCollectionSavedViews(false);
+    }
+  }, [showCollectionSavedViews]);
+
+  const coordinatedDropdowns = useMemo(() => ({
+    saved: {
+      isOpen: showCollectionSavedViews,
+      open: () => setShowCollectionSavedViews(true),
+      close: closeCollectionSavedViews,
+    },
+    type: {
+      isOpen: showCollectionTypeFilter,
+      open: () => setShowCollectionTypeFilter(true),
+      close: closeCollectionTypeFilter,
+    },
+    date: {
+      isOpen: showCollectionDateFilter,
+      open: () => setShowCollectionDateFilter(true),
+      close: closeCollectionDateFilter,
+    },
+    tag: {
+      isOpen: showCollectionTagFilter,
+      open: () => setShowCollectionTagFilter(true),
+      close: closeCollectionTagFilter,
+    },
+  }), [
+    showCollectionSavedViews,
+    closeCollectionSavedViews,
+    showCollectionTypeFilter,
+    closeCollectionTypeFilter,
+    showCollectionDateFilter,
+    closeCollectionDateFilter,
+    showCollectionTagFilter,
+    closeCollectionTagFilter,
+  ]);
+
+  const {
+    hasOpenDropdown,
+    toggleDropdown,
+    dismissOpenDropdowns,
+  } = useFilterDropdownCoordinator(coordinatedDropdowns);
+
+  const toggleCollectionTypeFilter = useCallback(() => {
+    toggleDropdown('type');
+  }, [toggleDropdown]);
+
+  const toggleCollectionDateFilter = useCallback(() => {
+    toggleDropdown('date');
+  }, [toggleDropdown]);
+
+  const toggleCollectionTagFilter = useCallback(() => {
+    toggleDropdown('tag');
+  }, [toggleDropdown]);
+
+  const toggleCollectionSavedViews = useCallback(() => {
+    toggleDropdown('saved');
+  }, [toggleDropdown]);
 
   const handleSelectCollectionDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
-      setCollectionSelectedDateRange({ preset: 'custom', start: null, end: null });
+      setSelectedDateRange({ preset: 'custom', start: null, end: null });
       return;
     }
 
     const range = getDateRangeForPreset(preset);
     if (range) {
-      setCollectionSelectedDateRange(range);
+      setSelectedDateRange(range);
     }
-  }, []);
+  }, [setSelectedDateRange]);
 
   const handleApplyCollectionCustomDateRange = useCallback(() => {
-    const start = dateStringToTimestamp(collectionCustomDateStart);
-    const end = dateStringToEndTimestamp(collectionCustomDateEnd);
+    const start = dateStringToTimestamp(customDateStart);
+    const end = dateStringToEndTimestamp(customDateEnd);
     if (start != null || end != null) {
-      setCollectionSelectedDateRange({ preset: 'custom', start, end });
+      setSelectedDateRange({ preset: 'custom', start, end });
     }
-  }, [collectionCustomDateStart, collectionCustomDateEnd]);
+  }, [customDateStart, customDateEnd, setSelectedDateRange]);
 
   const handleClearCollectionDateFilter = useCallback(() => {
-    setCollectionSelectedDateRange(null);
-    setCollectionCustomDateStart('');
-    setCollectionCustomDateEnd('');
+    clearDateFilter();
     setShowCollectionDateFilter(false);
-  }, []);
+  }, [clearDateFilter]);
+
+  const handleToggleCollectionTag = useCallback((tag) => {
+    setSelectedTags(
+      selectedTags.includes(tag)
+        ? selectedTags.filter(current => current !== tag)
+        : [...selectedTags, tag],
+    );
+  }, [selectedTags, setSelectedTags]);
+
+  const handleCollectionTagSearchInputKeyDown = useCallback((event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (visibleTagOptions.length === 0) return;
+    event.preventDefault();
+    if (event.key === 'ArrowUp') {
+      collectionTagListboxRef.current?.focusLast?.();
+      return;
+    }
+    collectionTagListboxRef.current?.focusFirst?.();
+  }, [visibleTagOptions.length]);
+
+  const handleSaveCollectionView = useCallback(() => {
+    const normalizedName = collectionSavedViewName.trim();
+    if (!normalizedName) return;
+    const result = saveCurrentFilterView(normalizedName);
+    if (result?.ok) {
+      setCollectionSavedViewName('');
+    }
+  }, [collectionSavedViewName, saveCurrentFilterView]);
 
   const handleClearCollectionFilters = useCallback(() => {
-    setCollectionSearchQuery('');
-    setCollectionSelectedType('all');
+    setSearchQuery('');
+    setSelectedType('all');
+    setSelectedTags([]);
+    setCollectionTagSearchQuery('');
+    setShowCollectionTagFilter(false);
+    setShowCollectionSavedViews(false);
     setShowCollectionTypeFilter(false);
-    setShowFavoritesOnlyInCollection(false);
+    setShowFavoritesOnly(false);
     handleClearCollectionDateFilter();
-  }, [handleClearCollectionDateFilter]);
+    clearActiveFilterView();
+  }, [
+    clearActiveFilterView,
+    handleClearCollectionDateFilter,
+    setSearchQuery,
+    setSelectedType,
+    setSelectedTags,
+    setShowFavoritesOnly,
+  ]);
 
   useEffect(() => {
     const pinnedIdSet = new Set(pinnedItems.map(item => item.id));
@@ -250,27 +484,28 @@ function CollectionPanel() {
     selectionAnchorIndexRef.current = -1;
   }, [selectedPinnedIds.length]);
 
-  useEffect(() => {
-    if (!showCollectionTypeFilter) return undefined;
-    const handleClickOutside = (event) => {
-      if (!collectionTypeWrapperRef.current?.contains(event.target)) {
-        setShowCollectionTypeFilter(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showCollectionTypeFilter]);
+  useClickOutsideDismiss({
+    isOpen: showCollectionTypeFilter,
+    wrapperRef: collectionTypeWrapperRef,
+    onDismiss: () => setShowCollectionTypeFilter(false),
+  });
+  useClickOutsideDismiss({
+    isOpen: showCollectionDateFilter,
+    wrapperRef: collectionDateWrapperRef,
+    onDismiss: () => setShowCollectionDateFilter(false),
+  });
+  useClickOutsideDismiss({
+    isOpen: showCollectionTagFilter,
+    wrapperRef: collectionTagWrapperRef,
+    onDismiss: () => setShowCollectionTagFilter(false),
+  });
+  useClickOutsideDismiss({
+    isOpen: showCollectionSavedViews,
+    wrapperRef: collectionSavedViewWrapperRef,
+    onDismiss: () => setShowCollectionSavedViews(false),
+  });
 
-  useEffect(() => {
-    if (!showCollectionDateFilter) return undefined;
-    const handleClickOutside = (event) => {
-      if (!collectionDateWrapperRef.current?.contains(event.target)) {
-        setShowCollectionDateFilter(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showCollectionDateFilter]);
+  useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
 
   const handleQuickNoteSubmit = useCallback(async (e) => {
     if (e.key === 'Enter' && !e.shiftKey && quickNote.trim()) {
@@ -433,7 +668,6 @@ function CollectionPanel() {
       onExpandedSubmit={handleExpandedSubmit}
       onCollapse={() => setIsExpanded(false)}
       onExpand={() => setIsExpanded(true)}
-      onToggleCollectionPanel={toggleCollectionPanel}
     />
   );
 
@@ -462,133 +696,124 @@ function CollectionPanel() {
             type="text"
             className="collection-search-input"
             placeholder={t('search.placeholder')}
-            value={collectionSearchQuery}
-            onChange={(event) => setCollectionSearchQuery(event.target.value)}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
           />
-          {collectionSearchQuery && (
+          {searchQuery && (
             <button
-              onClick={() => setCollectionSearchQuery('')}
+              type="button"
+              onClick={() => setSearchQuery('')}
               className="collection-search-clear-btn"
               title={t('toolbar.clearFilter')}
+              aria-label={t('toolbar.clearFilter')}
             >
               <X size={12} />
             </button>
           )}
         </div>
 
-        <div className="collection-type-filter-wrapper type-select-wrapper" ref={collectionTypeWrapperRef}>
-          <button
-            onClick={() => {
-              setShowCollectionDateFilter(false);
-              setShowCollectionTypeFilter(current => !current);
-            }}
-            className={`header-icon-btn type-select-btn ${collectionSelectedType !== 'all' ? 'has-selection' : ''} ${showCollectionTypeFilter ? 'active' : ''}`}
-            title={t('toolbar.filterType')}
-          >
-            {selectedTypeOption.icon}
-            <span className="type-select-text">{t(`search.typeFilter.${collectionSelectedType}`)}</span>
-            <ChevronDown size={12} className={`type-select-arrow ${showCollectionTypeFilter ? 'open' : ''}`} />
-          </button>
-          {showCollectionTypeFilter && (
-            <div className="type-dropdown">
-              <div className="type-dropdown-list">
-                {typeOptions.map(({ key, icon }) => (
-                  <div
-                    key={key}
-                    onClick={() => handleCollectionTypeChange(key)}
-                    className={`type-dropdown-item ${collectionSelectedType === key ? 'selected' : ''}`}
-                  >
-                    <span className="type-check">
-                      {collectionSelectedType === key ? <Check size={14} /> : ''}
-                    </span>
-                    <span className="type-option-icon">{icon}</span>
-                    <span className="type-option-label">{t(`search.typeFilter.${key}`)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <TypeFilterControl
+          wrapperRef={collectionTypeWrapperRef}
+          wrapperClassName="collection-type-filter-wrapper"
+          isOpen={showCollectionTypeFilter}
+          onToggle={toggleCollectionTypeFilter}
+          onClose={closeCollectionTypeFilter}
+          controlsId={collectionTypeDropdownId}
+          selectedType={selectedType}
+          selectedTypeIcon={selectedTypeOption.icon}
+          showSelectedTypeText
+          selectedTypeText={t(`search.typeFilter.${selectedType}`)}
+          options={typeFilterOptions}
+          onSelectType={handleCollectionTypeChange}
+          typeLabelText={t('toolbar.filterType')}
+          getOptionLabel={(key) => t(`search.typeFilter.${key}`)}
+        />
 
         <button
-          onClick={() => setShowFavoritesOnlyInCollection(current => !current)}
-          className={`header-icon-btn ${showFavoritesOnlyInCollection ? 'active fav-active' : ''}`}
-          title={showFavoritesOnlyInCollection ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+          onClick={() => setShowFavoritesOnly(current => !current)}
+          className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`}
+          title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+          aria-label={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+          aria-pressed={showFavoritesOnly}
         >
-          <Star size={15} fill={showFavoritesOnlyInCollection ? 'currentColor' : 'none'} />
+          <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
         </button>
 
-        <div className="date-select-wrapper" ref={collectionDateWrapperRef}>
-          <button
-            onClick={() => {
-              setShowCollectionTypeFilter(false);
-              setShowCollectionDateFilter(current => !current);
-            }}
-            className={`header-icon-btn ${collectionSelectedDateRange ? 'active' : ''}`}
-            title={t('toolbar.dateFilter')}
-          >
-            <Calendar size={15} />
-            {collectionSelectedDateRange && (
-              <span className="icon-btn-badge">{collectionDateBadgeText}</span>
-            )}
-          </button>
-          {showCollectionDateFilter && (
-            <div className="date-dropdown">
-              <div className="date-dropdown-presets">
-                {datePresets.map(({ key, label }) => (
-                  <div
-                    key={key}
-                    onClick={() => handleSelectCollectionDatePreset(key)}
-                    className={`date-dropdown-item ${collectionSelectedDateRange?.preset === key ? 'selected' : ''}`}
-                  >
-                    <span className="date-check">
-                      {collectionSelectedDateRange?.preset === key ? <Check size={14} /> : ''}
-                    </span>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </div>
-              {collectionSelectedDateRange?.preset === 'custom' && (
-                <div className="date-dropdown-custom">
-                  <div className="date-input-row">
-                    <label>{t('toolbar.dateStart')}</label>
-                    <input
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={collectionCustomDateStart}
-                      onChange={(event) => setCollectionCustomDateStart(event.target.value)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
-                  </div>
-                  <div className="date-input-row">
-                    <label>{t('toolbar.dateEnd')}</label>
-                    <input
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={collectionCustomDateEnd}
-                      onChange={(event) => setCollectionCustomDateEnd(event.target.value)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
-                  </div>
-                  <button
-                    className="date-apply-btn"
-                    disabled={!collectionCustomDateStart && !collectionCustomDateEnd}
-                    onClick={handleApplyCollectionCustomDateRange}
-                  >
-                    {t('toolbar.dateApply')}
-                  </button>
-                </div>
-              )}
-              {collectionSelectedDateRange && (
-                <div className="date-dropdown-footer">
-                  <button onClick={handleClearCollectionDateFilter} className="clear-selection-btn">
-                    {t('toolbar.clearDateFilter')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {allTags.length > 0 && (
+          <TagFilterControl
+            wrapperRef={collectionTagWrapperRef}
+            triggerClassName="collection-tag-filter-wrapper"
+            isOpen={showCollectionTagFilter}
+            onToggle={toggleCollectionTagFilter}
+            onClose={closeCollectionTagFilter}
+            controlsId={collectionTagDropdownId}
+            listboxId={collectionTagListboxId}
+            listboxRef={collectionTagListboxRef}
+            selectedTags={selectedTags}
+            tagSearchQuery={collectionTagSearchQuery}
+            onTagSearchChange={setCollectionTagSearchQuery}
+            onTagSearchInputKeyDown={handleCollectionTagSearchInputKeyDown}
+            visibleTagOptions={visibleTagOptions}
+            totalTagOptionsCount={parsedTagOptions.length}
+            onToggleTag={handleToggleCollectionTag}
+            onClearTags={() => setSelectedTags([])}
+            labelText={t('toolbar.filterTags')}
+            searchPlaceholderText={t('toolbar.searchTags')}
+            noTagsFoundText={t('toolbar.noTagsFound')}
+            moreTagsHintText={(count) => t('toolbar.moreTagsHint', { count })}
+            clearAllText={t('toolbar.clearAll')}
+          />
+        )}
+
+        <DateFilterControl
+          wrapperRef={collectionDateWrapperRef}
+          isOpen={showCollectionDateFilter}
+          onToggle={toggleCollectionDateFilter}
+          onClose={closeCollectionDateFilter}
+          controlsId={collectionDateDropdownId}
+          hasSelection={Boolean(selectedDateRange)}
+          badgeText={collectionDateBadgeText}
+          dateFilterText={t('toolbar.dateFilter')}
+          datePresetOptions={datePresetOptions}
+          selectedDatePreset={selectedDatePreset}
+          onSelectDatePreset={handleSelectCollectionDatePreset}
+          selectedDateRange={selectedDateRange}
+          customDateStart={customDateStart}
+          customDateEnd={customDateEnd}
+          onCustomDateStartChange={setCustomDateStart}
+          onCustomDateEndChange={setCustomDateEnd}
+          onApplyCustomDateRange={handleApplyCollectionCustomDateRange}
+          onClearDateFilter={handleClearCollectionDateFilter}
+          dateStartText={t('toolbar.dateStart')}
+          dateEndText={t('toolbar.dateEnd')}
+          dateApplyText={t('toolbar.dateApply')}
+          clearDateFilterText={t('toolbar.clearDateFilter')}
+        />
+
+        <SavedViewControl
+          wrapperRef={collectionSavedViewWrapperRef}
+          triggerClassName="collection-saved-view-wrapper"
+          isOpen={showCollectionSavedViews}
+          onToggle={toggleCollectionSavedViews}
+          onClose={closeCollectionSavedViews}
+          controlsId={collectionSavedViewDropdownId}
+          savedViews={savedViews}
+          activeFilterViewId={activeFilterViewId}
+          activeSavedView={activeSavedView}
+          savedViewName={collectionSavedViewName}
+          onSavedViewNameChange={setCollectionSavedViewName}
+          onSaveView={handleSaveCollectionView}
+          onApplySavedView={applySavedFilterView}
+          onDeleteSavedView={deleteSavedFilterView}
+          onClearActiveSavedView={clearActiveFilterView}
+          titleText={t('search.savedViews.title')}
+          namePlaceholderText={t('search.savedViews.namePlaceholder')}
+          saveCurrentText={t('search.savedViews.saveCurrent')}
+          emptyText={t('search.savedViews.empty')}
+          activeText={t('search.savedViews.active')}
+          deleteText={t('search.savedViews.delete')}
+          clearActiveText={t('search.savedViews.clearActive')}
+        />
 
         {hasCollectionFilters && (
           <button

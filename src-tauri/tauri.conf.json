@@ -3,7 +3,7 @@
   "version": "0.2.1",
   "identifier": "com.qollect.clipboard",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run dev:ensure",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"

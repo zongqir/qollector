@@ -1,7 +1,14 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Inbox, Tag, ChevronDown, Settings, Type, Image, File, Link, Braces, Check, Layers, Calendar, PanelRightOpen } from 'lucide-react';
+import { X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers } from 'lucide-react';
 import { parseSystemTag } from '../utils/tagHelpers';
+import useEscapeDismiss from './hooks/useEscapeDismiss';
+import useClickOutsideDismiss from './hooks/useClickOutsideDismiss';
+import useFilterDropdownCoordinator from './hooks/useFilterDropdownCoordinator';
+import TagFilterControl from './shared/TagFilterControl';
+import SavedViewControl from './shared/SavedViewControl';
+import TypeFilterControl from './shared/TypeFilterControl';
+import DateFilterControl from './shared/DateFilterControl';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -20,15 +27,24 @@ function SearchBar({
   customDateStart, customDateEnd,
   onCustomDateStartChange, onCustomDateEndChange,
   onApplyCustomDateRange,
-  collectionPanelEnabled, onToggleCollectionPanel,
   onSearchKeyDown,
+  savedFilterViews,
+  activeFilterViewId,
+  onSaveCurrentView,
+  onApplySavedView,
+  onDeleteSavedView,
+  onClearActiveSavedView,
 }) {
   const { t } = useTranslation();
   const searchInputRef = useRef(null);
+  const tagListboxRef = useRef(null);
   const tagWrapperRef = useRef(null);
   const dateWrapperRef = useRef(null);
   const typeWrapperRef = useRef(null);
+  const savedViewWrapperRef = useRef(null);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
+  const [showSavedViews, setShowSavedViews] = useState(false);
+  const [savedViewName, setSavedViewName] = useState('');
 
   useEffect(() => {
     const focusSearchInput = () => {
@@ -52,38 +68,26 @@ function SearchBar({
     };
   }, []);
 
-  useEffect(() => {
-    if (!showTagFilter) return;
-    const handleClickOutside = (e) => {
-      if (tagWrapperRef.current && !tagWrapperRef.current.contains(e.target)) {
-        onToggleTagFilter();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showTagFilter, onToggleTagFilter]);
-
-  useEffect(() => {
-    if (!showDateFilter) return;
-    const handleClickOutside = (e) => {
-      if (dateWrapperRef.current && !dateWrapperRef.current.contains(e.target)) {
-        onToggleDateFilter();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showDateFilter, onToggleDateFilter]);
-
-  useEffect(() => {
-    if (!showTypeFilter) return;
-    const handleClickOutside = (e) => {
-      if (typeWrapperRef.current && !typeWrapperRef.current.contains(e.target)) {
-        setShowTypeFilter(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showTypeFilter]);
+  useClickOutsideDismiss({
+    isOpen: showTagFilter,
+    wrapperRef: tagWrapperRef,
+    onDismiss: onToggleTagFilter,
+  });
+  useClickOutsideDismiss({
+    isOpen: showDateFilter,
+    wrapperRef: dateWrapperRef,
+    onDismiss: onToggleDateFilter,
+  });
+  useClickOutsideDismiss({
+    isOpen: showTypeFilter,
+    wrapperRef: typeWrapperRef,
+    onDismiss: () => setShowTypeFilter(false),
+  });
+  useClickOutsideDismiss({
+    isOpen: showSavedViews,
+    wrapperRef: savedViewWrapperRef,
+    onDismiss: () => setShowSavedViews(false),
+  });
 
   const datePresets = [
     { key: 'today', label: t('toolbar.dateToday'), badge: '1d' },
@@ -96,6 +100,7 @@ function SearchBar({
   const dateBadgeText = selectedDateRange
     ? (selectedDateRange.preset === 'custom' ? '...' : datePresets.find(p => p.key === selectedDateRange.preset)?.badge || '')
     : '';
+  const selectedDatePreset = selectedDateRange?.preset || null;
 
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
@@ -106,6 +111,137 @@ function SearchBar({
     { key: 'code', icon: <Braces size={14} /> },
   ];
   const selectedTypeOption = typeOptions.find(({ key }) => key === selectedType) || typeOptions[0];
+  const datePresetOptions = datePresets.map(({ key, label }) => ({ key, label }));
+  const typeFilterOptions = typeOptions.map(({ key, icon }) => ({ key, icon }));
+  const parsedTagOptions = useMemo(() => (
+    filteredTagsList
+      .map((tag) => {
+        const parsed = parseSystemTag(tag, {
+          sourcePrefix: t('tag.source'),
+          typePrefix: t('tag.type'),
+        });
+        return {
+          key: tag,
+          tag,
+          kind: parsed.kind,
+          displayTag: parsed.displayText,
+          isAITag: parsed.kind === 'ai',
+          isSourceTag: parsed.kind === 'source',
+          isUserTag: parsed.kind !== 'ai' && parsed.kind !== 'source',
+        };
+      })
+      .filter((option) => option.kind !== 'type')
+  ), [filteredTagsList, t]);
+  const visibleTagOptions = parsedTagOptions.slice(0, 20);
+  const savedViews = Array.isArray(savedFilterViews) ? savedFilterViews : [];
+  const activeSavedView = savedViews.find(view => view.id === activeFilterViewId) || null;
+  const tagDropdownId = 'search-tag-filter-dropdown';
+  const tagListboxId = `${tagDropdownId}-options`;
+  const dateDropdownId = 'search-date-filter-dropdown';
+  const typeDropdownId = 'search-type-filter-dropdown';
+  const savedViewDropdownId = 'search-saved-view-dropdown';
+
+  const closeTagFilter = useCallback(() => {
+    if (showTagFilter) {
+      onToggleTagFilter?.();
+    }
+  }, [showTagFilter, onToggleTagFilter]);
+
+  const closeDateFilter = useCallback(() => {
+    if (showDateFilter) {
+      onToggleDateFilter?.();
+    }
+  }, [showDateFilter, onToggleDateFilter]);
+
+  const closeTypeFilter = useCallback(() => {
+    if (showTypeFilter) {
+      setShowTypeFilter(false);
+    }
+  }, [showTypeFilter]);
+
+  const closeSavedViews = useCallback(() => {
+    if (showSavedViews) {
+      setShowSavedViews(false);
+    }
+  }, [showSavedViews]);
+
+  const coordinatedDropdowns = useMemo(() => ({
+    saved: {
+      isOpen: showSavedViews,
+      open: () => setShowSavedViews(true),
+      close: closeSavedViews,
+    },
+    type: {
+      isOpen: showTypeFilter,
+      open: () => setShowTypeFilter(true),
+      close: closeTypeFilter,
+    },
+    date: {
+      isOpen: showDateFilter,
+      open: onToggleDateFilter,
+      close: closeDateFilter,
+    },
+    tag: {
+      isOpen: showTagFilter,
+      open: onToggleTagFilter,
+      close: closeTagFilter,
+    },
+  }), [
+    showSavedViews,
+    closeSavedViews,
+    showTypeFilter,
+    closeTypeFilter,
+    showDateFilter,
+    onToggleDateFilter,
+    closeDateFilter,
+    showTagFilter,
+    onToggleTagFilter,
+    closeTagFilter,
+  ]);
+
+  const {
+    hasOpenDropdown,
+    toggleDropdown,
+    dismissOpenDropdowns,
+  } = useFilterDropdownCoordinator(coordinatedDropdowns);
+
+  useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
+
+  const toggleTagFilter = useCallback(() => {
+    toggleDropdown('tag');
+  }, [toggleDropdown]);
+
+  const toggleDateFilter = useCallback(() => {
+    toggleDropdown('date');
+  }, [toggleDropdown]);
+
+  const toggleTypeFilter = useCallback(() => {
+    toggleDropdown('type');
+  }, [toggleDropdown]);
+
+  const toggleSavedViews = useCallback(() => {
+    toggleDropdown('saved');
+  }, [toggleDropdown]);
+
+  const handleTagSearchInputKeyDown = useCallback((event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (visibleTagOptions.length === 0) return;
+    event.preventDefault();
+    if (event.key === 'ArrowUp') {
+      tagListboxRef.current?.focusLast?.();
+      return;
+    }
+    tagListboxRef.current?.focusFirst?.();
+  }, [visibleTagOptions.length]);
+
+  const handleSaveView = () => {
+    const normalizedName = savedViewName.trim();
+    if (!normalizedName) return;
+    const result = onSaveCurrentView?.(normalizedName);
+    if (result?.ok) {
+      setSavedViewName('');
+    }
+  };
 
   return (
     <header className="header" onClick={(e) => e.stopPropagation()}>
@@ -113,6 +249,7 @@ function SearchBar({
       <div className="header-row">
         <div className="search-box">
           <input
+            id="history-search-input"
             ref={searchInputRef}
             type="text"
             placeholder={t('search.placeholder')}
@@ -122,7 +259,12 @@ function SearchBar({
             className="search-input"
           />
           {searchQuery && (
-            <button onClick={() => onSearchChange('')} className="clear-search">
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className="clear-search"
+              aria-label={t('toolbar.clearFilter')}
+            >
               <X size={14} />
             </button>
           )}
@@ -132,6 +274,8 @@ function SearchBar({
           onClick={onToggleFavorites}
           className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`}
           title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+          aria-label={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+          aria-pressed={showFavoritesOnly}
         >
           <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
         </button>
@@ -141,162 +285,86 @@ function SearchBar({
             onClick={onTogglePinned}
             className={`header-icon-btn pin-filter-btn ${showPinnedOnly ? 'active pin-active' : ''}`}
             title={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
+            aria-label={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
+            aria-pressed={showPinnedOnly}
           >
             <Inbox size={15} fill={showPinnedOnly ? 'currentColor' : 'none'} />
           </button>
         )}
 
         {allTags.length > 0 && (
-          <div className="tag-select-wrapper" ref={tagWrapperRef}>
-            <button
-              onClick={onToggleTagFilter}
-              className={`header-icon-btn ${selectedTags.length > 0 ? 'active' : ''}`}
-              title={t('toolbar.filterTags')}
-            >
-              <Tag size={15} />
-              {selectedTags.length > 0 && (
-                <span className="icon-btn-badge">{selectedTags.length}</span>
-              )}
-            </button>
-            {showTagFilter && (
-              <div className="tag-dropdown">
-                <div className="tag-dropdown-search">
-                  <input
-                    type="text"
-                    placeholder={t('toolbar.searchTags')}
-                    value={tagSearchQuery}
-                    onChange={(e) => onTagSearchChange(e.target.value)}
-                    className="tag-search-input"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <div className="tag-dropdown-list">
-                  {(() => {
-                    const tagsWithoutType = filteredTagsList.filter(tag => {
-                      const parsed = parseSystemTag(tag, {
-                        sourcePrefix: t('tag.source'),
-                        typePrefix: t('tag.type'),
-                      });
-                      return parsed.kind !== 'type';
-                    });
-                    return tagsWithoutType.length > 0 ? (
-                      <>
-                        {tagsWithoutType.slice(0, 20).map(tag => {
-                          const parsed = parseSystemTag(tag, {
-                            sourcePrefix: t('tag.source'),
-                            typePrefix: t('tag.type'),
-                          });
-                          const isAITag = parsed.kind === 'ai';
-                          const isSourceTag = parsed.kind === 'source';
-                          const isUserTag = !isAITag && !isSourceTag;
-                          const displayTag = parsed.displayText;
-                          return (
-                            <div
-                              key={tag}
-                              onClick={() => onToggleTag(tag)}
-                              className={`tag-dropdown-item ${selectedTags.includes(tag) ? 'selected' : ''}`}
-                            >
-                              <span className="tag-check">{selectedTags.includes(tag) ? <Check size={14} /> : ''}</span>
-                              <span className={`tag-text ${isAITag ? 'ai-tag-text' : ''} ${isUserTag ? 'user-tag-text' : ''} ${isSourceTag ? 'source-tag-text' : ''}`}>
-                                {isAITag && <span className="ai-badge">AI</span>}
-                                {isUserTag && <span className="user-badge">M</span>}
-                                {isSourceTag && <span className="source-badge">S</span>}
-                                {displayTag}
-                              </span>
-                            </div>
-                          );
-                        })}
-                        {tagsWithoutType.length > 20 && (
-                          <div className="tag-dropdown-more-hint">
-                            {t('toolbar.moreTagsHint', { count: tagsWithoutType.length - 20 })}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="tag-dropdown-empty">{t('toolbar.noTagsFound')}</div>
-                    );
-                  })()}
-                </div>
-                {selectedTags.length > 0 && (
-                  <div className="tag-dropdown-footer">
-                    <button onClick={onClearTags} className="clear-selection-btn">
-                      {t('toolbar.clearAll')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <TagFilterControl
+            wrapperRef={tagWrapperRef}
+            isOpen={showTagFilter}
+            onToggle={toggleTagFilter}
+            onClose={closeTagFilter}
+            controlsId={tagDropdownId}
+            listboxId={tagListboxId}
+            listboxRef={tagListboxRef}
+            selectedTags={selectedTags}
+            tagSearchQuery={tagSearchQuery}
+            onTagSearchChange={onTagSearchChange}
+            onTagSearchInputKeyDown={handleTagSearchInputKeyDown}
+            visibleTagOptions={visibleTagOptions}
+            totalTagOptionsCount={parsedTagOptions.length}
+            onToggleTag={onToggleTag}
+            onClearTags={onClearTags}
+            labelText={t('toolbar.filterTags')}
+            searchPlaceholderText={t('toolbar.searchTags')}
+            noTagsFoundText={t('toolbar.noTagsFound')}
+            moreTagsHintText={(count) => t('toolbar.moreTagsHint', { count })}
+            clearAllText={t('toolbar.clearAll')}
+          />
         )}
 
-        <div className="date-select-wrapper" ref={dateWrapperRef}>
-          <button
-            onClick={onToggleDateFilter}
-            className={`header-icon-btn ${selectedDateRange ? 'active' : ''}`}
-            title={t('toolbar.dateFilter')}
-          >
-            <Calendar size={15} />
-            {selectedDateRange && (
-              <span className="icon-btn-badge">{dateBadgeText}</span>
-            )}
-          </button>
-          {showDateFilter && (
-            <div className="date-dropdown">
-              <div className="date-dropdown-presets">
-                {datePresets.map(({ key, label }) => (
-                  <div
-                    key={key}
-                    onClick={() => onSelectDatePreset(key)}
-                    className={`date-dropdown-item ${selectedDateRange?.preset === key ? 'selected' : ''}`}
-                  >
-                    <span className="date-check">
-                      {selectedDateRange?.preset === key ? <Check size={14} /> : ''}
-                    </span>
-                    <span>{label}</span>
-                  </div>
-                ))}
-              </div>
-              {selectedDateRange?.preset === 'custom' && (
-                <div className="date-dropdown-custom">
-                  <div className="date-input-row">
-                    <label>{t('toolbar.dateStart')}</label>
-                    <input
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={customDateStart}
-                      onChange={(e) => onCustomDateStartChange(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <div className="date-input-row">
-                    <label>{t('toolbar.dateEnd')}</label>
-                    <input
-                      type="text"
-                      placeholder="YYYY-MM-DD"
-                      value={customDateEnd}
-                      onChange={(e) => onCustomDateEndChange(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <button
-                    className="date-apply-btn"
-                    disabled={!customDateStart && !customDateEnd}
-                    onClick={onApplyCustomDateRange}
-                  >
-                    {t('toolbar.dateApply')}
-                  </button>
-                </div>
-              )}
-              {selectedDateRange && (
-                <div className="date-dropdown-footer">
-                  <button onClick={onClearDateFilter} className="clear-selection-btn">
-                    {t('toolbar.clearDateFilter')}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <DateFilterControl
+          wrapperRef={dateWrapperRef}
+          isOpen={showDateFilter}
+          onToggle={toggleDateFilter}
+          onClose={closeDateFilter}
+          controlsId={dateDropdownId}
+          hasSelection={Boolean(selectedDateRange)}
+          badgeText={dateBadgeText}
+          dateFilterText={t('toolbar.dateFilter')}
+          datePresetOptions={datePresetOptions}
+          selectedDatePreset={selectedDatePreset}
+          onSelectDatePreset={onSelectDatePreset}
+          selectedDateRange={selectedDateRange}
+          customDateStart={customDateStart}
+          customDateEnd={customDateEnd}
+          onCustomDateStartChange={onCustomDateStartChange}
+          onCustomDateEndChange={onCustomDateEndChange}
+          onApplyCustomDateRange={onApplyCustomDateRange}
+          onClearDateFilter={onClearDateFilter}
+          dateStartText={t('toolbar.dateStart')}
+          dateEndText={t('toolbar.dateEnd')}
+          dateApplyText={t('toolbar.dateApply')}
+          clearDateFilterText={t('toolbar.clearDateFilter')}
+        />
+
+        <SavedViewControl
+          wrapperRef={savedViewWrapperRef}
+          isOpen={showSavedViews}
+          onToggle={toggleSavedViews}
+          onClose={closeSavedViews}
+          controlsId={savedViewDropdownId}
+          savedViews={savedViews}
+          activeFilterViewId={activeFilterViewId}
+          activeSavedView={activeSavedView}
+          savedViewName={savedViewName}
+          onSavedViewNameChange={setSavedViewName}
+          onSaveView={handleSaveView}
+          onApplySavedView={onApplySavedView}
+          onDeleteSavedView={onDeleteSavedView}
+          onClearActiveSavedView={onClearActiveSavedView}
+          titleText={t('search.savedViews.title')}
+          namePlaceholderText={t('search.savedViews.namePlaceholder')}
+          saveCurrentText={t('search.savedViews.saveCurrent')}
+          emptyText={t('search.savedViews.empty')}
+          activeText={t('search.savedViews.active')}
+          deleteText={t('search.savedViews.delete')}
+          clearActiveText={t('search.savedViews.clearActive')}
+        />
 
         <div className="type-filter-group">
           {typeOptions.map(({ key, icon }) => (
@@ -305,58 +373,34 @@ function SearchBar({
               onClick={() => onTypeChange(key)}
               className={`type-filter-btn ${selectedType === key ? 'active' : ''}`}
               title={t(`search.typeFilter.${key}`)}
+              aria-label={t(`search.typeFilter.${key}`)}
+              aria-pressed={selectedType === key}
             >
               {icon}
             </button>
           ))}
         </div>
 
-        <div className="type-select-wrapper" ref={typeWrapperRef}>
-          <button
-            onClick={() => setShowTypeFilter(!showTypeFilter)}
-            className={`header-icon-btn type-select-btn ${selectedType !== 'all' ? 'has-selection' : ''} ${showTypeFilter ? 'active' : ''}`}
-            title={t('toolbar.filterType')}
-          >
-            {selectedTypeOption.icon}
-            <ChevronDown size={12} className={`type-select-arrow ${showTypeFilter ? 'open' : ''}`} />
-          </button>
-          {showTypeFilter && (
-            <div className="type-dropdown">
-              <div className="type-dropdown-list">
-                {typeOptions.map(({ key, icon }) => (
-                  <div
-                    key={key}
-                    onClick={() => {
-                      onTypeChange(key);
-                      setShowTypeFilter(false);
-                    }}
-                    className={`type-dropdown-item ${selectedType === key ? 'selected' : ''}`}
-                  >
-                    <span className="type-check">
-                      {selectedType === key ? <Check size={14} /> : ''}
-                    </span>
-                    <span className="type-option-icon">{icon}</span>
-                    <span className="type-option-label">{t(`search.typeFilter.${key}`)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <TypeFilterControl
+          wrapperRef={typeWrapperRef}
+          isOpen={showTypeFilter}
+          onToggle={toggleTypeFilter}
+          onClose={closeTypeFilter}
+          controlsId={typeDropdownId}
+          selectedType={selectedType}
+          selectedTypeIcon={selectedTypeOption.icon}
+          options={typeFilterOptions}
+          onSelectType={(key) => {
+            onTypeChange(key);
+            setShowTypeFilter(false);
+          }}
+          typeLabelText={t('toolbar.filterType')}
+          getOptionLabel={(key) => t(`search.typeFilter.${key}`)}
+        />
 
-        <button onClick={onOpenSettings} className="header-icon-btn settings-btn" title={t('settings.title')}>
+        <button onClick={onOpenSettings} className="header-icon-btn settings-btn" title={t('settings.title')} aria-label={t('settings.title')}>
           <Settings size={15} />
         </button>
-
-        {!collectionPanelEnabled && !isMiniMode && (
-          <button
-            onClick={onToggleCollectionPanel}
-            className="header-icon-btn"
-            title={t('collection.showPanel')}
-          >
-            <PanelRightOpen size={15} />
-          </button>
-        )}
       </div>
 
       {/* 筛选状态提示（仅在有标签筛选时显示） */}
@@ -378,6 +422,17 @@ function SearchBar({
           </span>
           <button onClick={onClearDateFilter} className="clear-filter-btn" title={t('toolbar.clearDateFilter')}>
             <X size={12} /> {t('toolbar.clearDateFilter')}
+          </button>
+        </div>
+      )}
+
+      {activeSavedView && (
+        <div className="filter-status saved-view-status">
+          <span className="filter-status-text">
+            {t('search.savedViews.using', { name: activeSavedView.name })}
+          </span>
+          <button onClick={onClearActiveSavedView} className="clear-filter-btn" title={t('search.savedViews.clearActive')}>
+            <X size={12} /> {t('search.savedViews.clearActive')}
           </button>
         </div>
       )}

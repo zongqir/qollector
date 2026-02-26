@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+﻿import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import {
@@ -33,6 +33,7 @@ function PreviewPanel() {
   const [editContent, setEditContent] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
+  const [showSecondaryTools, setShowSecondaryTools] = useState(false);
   const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
@@ -69,7 +70,7 @@ function PreviewPanel() {
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
 
-  // 备注相关
+  // 澶囨敞鐩稿叧
   const editingNoteId = useAppStore(s => s.editingNoteId);
   const editNote = useAppStore(s => s.editNote);
   const setEditNote = useAppStore(s => s.setEditNote);
@@ -77,7 +78,7 @@ function PreviewPanel() {
   const saveNote = useAppStore(s => s.saveNote);
   const cancelNoteEdit = useAppStore(s => s.cancelNoteEdit);
 
-  // 标签相关
+  // 鏍囩鐩稿叧
   const selectedTags = useAppStore(s => s.selectedTags);
   const addingTagItemId = useAppStore(s => s.addingTagItemId);
   const newTagInput = useAppStore(s => s.newTagInput);
@@ -146,6 +147,13 @@ function PreviewPanel() {
   ), [timestampCandidate, i18n.language]);
   const shouldShowTimestampConvertButton = Boolean(timestampCandidate && convertedTimestampText);
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
+  const previewTypeClass = item.code_language ? 'type-code' : `type-${item.type_ || 'text'}`;
+  const itemTypeLabel = useMemo(() => {
+    const typeKey = item.code_language
+      ? 'code'
+      : (['text', 'image', 'file', 'link'].includes(item.type_) ? item.type_ : 'all');
+    return t(`search.typeFilter.${typeKey}`);
+  }, [item.code_language, item.type_, t]);
   const selectPreviewContent = useCallback(() => {
     const contentEl = contentSelectableRef.current;
     const selection = window.getSelection();
@@ -261,6 +269,16 @@ function PreviewPanel() {
   }, [item.id]);
 
   useEffect(() => {
+    setShowSecondaryTools(false);
+  }, [item.id, isEditingContent]);
+
+  useEffect(() => {
+    if (!isToolbarCompact) {
+      setShowSecondaryTools(false);
+    }
+  }, [isToolbarCompact]);
+
+  useEffect(() => {
     setShowTimestampConverted(false);
   }, [item.id]);
 
@@ -268,7 +286,7 @@ function PreviewPanel() {
     setShowAIAssistant(false);
   }, [item.id]);
 
-  // 收集并切回收集箱
+  // 鏀堕泦骞跺垏鍥炴敹闆嗙
   const handlePreviewPinToggle = async () => {
     const wasPinned = item.is_pinned;
     await togglePin(item);
@@ -277,13 +295,13 @@ function PreviewPanel() {
     }
   };
 
-  // 开始编辑内容
+  // 寮€濮嬬紪杈戝唴瀹?
   const handleStartEditContent = () => {
     setEditContent(item.content || '');
     setIsEditingContent(true);
   };
 
-  // 内容区键盘事件处理
+  // 鍐呭鍖洪敭鐩樹簨浠跺鐞?
   const handleContentKeyDown = (e) => {
     // Ctrl+A / Cmd+A: select only current preview content block, not whole page
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
@@ -294,7 +312,7 @@ function PreviewPanel() {
     }
   };
 
-  // 内容区双击行为
+  // 鍐呭鍖哄弻鍑昏涓?
   const handleContentDoubleClick = async () => {
     if (item.type_ === 'file') {
       // file open
@@ -310,7 +328,7 @@ function PreviewPanel() {
     }
   };
 
-  // 删除按钮点击
+  // 鍒犻櫎鎸夐挳鐐瑰嚮
   const handleDeleteClick = () => {
     if (showDeleteConfirm) {
       deleteItem(item);
@@ -320,7 +338,7 @@ function PreviewPanel() {
     }
   };
 
-  // 保存内容编辑
+  // 淇濆瓨鍐呭缂栬緫
   const handleSaveContent = async () => {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -334,11 +352,11 @@ function PreviewPanel() {
       await useAppStore.getState().loadItems();
       setIsEditingContent(false);
     } catch (error) {
-      console.error('保存内容失败:', error);
+      console.error('淇濆瓨鍐呭澶辫触:', error);
     }
   };
 
-  // 计算用户标签（用于标签建议）
+  // 璁＄畻鐢ㄦ埛鏍囩锛堢敤浜庢爣绛惧缓璁級
   const rankedUserTags = useMemo(() => {
     const statsByTag = new Map();
     items.forEach((candidate) => {
@@ -571,12 +589,21 @@ function PreviewPanel() {
   };
 
   return (
-    <div className="preview-panel" ref={panelRef}>
+    <div className={`preview-panel ${previewTypeClass}`} ref={panelRef}>
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
-        <button className="preview-back-btn" onClick={switchToCollection}>
-          <ArrowLeft size={16} />
-        </button>
+        <div className="preview-nav-main">
+          <button className="preview-back-btn" onClick={switchToCollection}>
+            <ArrowLeft size={16} />
+          </button>
+          <div className="preview-nav-context">
+            <span className="preview-nav-type">{itemTypeLabel}</span>
+            <span className="preview-nav-divider">|</span>
+            <span className="preview-nav-source">{getSourceApp(item.metadata)}</span>
+            <span className="preview-nav-divider">|</span>
+            <span className="preview-nav-updated">{formatDate(item.updated_at, i18n.language)}</span>
+          </div>
+        </div>
         <div className="preview-nav-actions">
           <button
             className={`preview-action-btn copy-btn ${isCopied ? 'copied' : ''}`}
@@ -599,6 +626,7 @@ function PreviewPanel() {
           >
             <Inbox size={16} />
           </button>
+          <span className="preview-nav-action-divider" aria-hidden="true" />
           <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
             onClick={handleDeleteClick}
@@ -609,7 +637,7 @@ function PreviewPanel() {
         </div>
       </div>
 
-      {/* 标签区 */}
+      {/* 鏍囩鍖?*/}
       <div className="preview-tags-section">
         <ItemTags
           item={item}
@@ -628,7 +656,7 @@ function PreviewPanel() {
         />
       </div>
 
-      {/* 内容区 */}
+      {/* 鍐呭鍖?*/}
       <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
         {isCopied && (
           <div className="copy-success-toast">
@@ -666,7 +694,7 @@ function PreviewPanel() {
         {!showAIAssistant && renderContent()}
       </div>
 
-      {/* 备注区 - 内容下方，作为批注 */}
+      {/* 澶囨敞鍖?- 鍐呭涓嬫柟锛屼綔涓烘壒娉?*/}
       {!showAIAssistant && !isEditingContent && (
         <div className="preview-note-section">
           <NoteDisplay
@@ -687,7 +715,7 @@ function PreviewPanel() {
         </div>
       )}
 
-      {/* 元信息 - 底部参考 */}
+      {/* 鍏冧俊鎭?- 搴曢儴鍙傝€?*/}
       {!showAIAssistant && !isEditingContent && (
         <div className="preview-meta">
           {pureColorPreview && (
@@ -709,8 +737,11 @@ function PreviewPanel() {
         </div>
       )}
 
-      {/* 工具栏 */}
-      <div ref={toolbarRef} className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''}`}>
+      {/* 宸ュ叿鏍?*/}
+      <div
+        ref={toolbarRef}
+        className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''} ${showSecondaryTools ? 'show-secondary' : ''}`}
+      >
         {isEditingContent ? (
           <>
             <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
@@ -726,7 +757,7 @@ function PreviewPanel() {
           <>
             {item.has_raw_formats && item.content && (
               <button
-                className={`preview-tool-btn ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
+                className={`preview-tool-btn secondary ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
                 onClick={() => runToolbarCopyAction('plain-text', () => handleCopyPlainText(item.content, 'preview'))}
               >
                 {copiedToolbarAction === 'plain-text' ? <Check size={14} /> : <FileText size={14} />}
@@ -735,7 +766,7 @@ function PreviewPanel() {
             )}
             {isJson && (
               <button
-                className={`preview-tool-btn ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
+                className={`preview-tool-btn secondary ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
                 onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
               >
                 {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
@@ -744,7 +775,7 @@ function PreviewPanel() {
             )}
             {pureColorPreview && (
               <button
-                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
+                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
                 onClick={() => runToolbarCopyAction('hex', () => handleCopyPlainText(pureColorPreview.hex, 'preview'))}
                 title={t('item.copyHex')}
               >
@@ -755,7 +786,7 @@ function PreviewPanel() {
             )}
             {pureColorPreview && (
               <button
-                className={`preview-tool-btn color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
+                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
                 onClick={() => runToolbarCopyAction('rgb', () => handleCopyPlainText(pureColorPreview.rgb, 'preview'))}
                 title={t('item.copyRgb')}
               >
@@ -766,7 +797,7 @@ function PreviewPanel() {
             )}
             {pureColorPreview && (
               <button
-                className={`preview-tool-btn color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
+                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
                 onClick={() => runToolbarCopyAction('hsl', () => handleCopyPlainText(pureColorPreview.hsl, 'preview'))}
                 title={t('item.copyHsl')}
               >
@@ -777,7 +808,7 @@ function PreviewPanel() {
             )}
             {shouldShowTimestampConvertButton && (
               <button
-                className={`preview-tool-btn ${showTimestampConverted ? 'active' : ''}`}
+                className={`preview-tool-btn secondary ${showTimestampConverted ? 'active' : ''}`}
                 onClick={() => setShowTimestampConverted((prev) => !prev)}
                 title={t('item.convertTimestamp')}
               >
@@ -816,21 +847,32 @@ function PreviewPanel() {
                 <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
               </button>
             )}
+            {isToolbarCompact && (
+              <button
+                className={`preview-tool-btn tool-more-btn ${showSecondaryTools ? 'active' : ''}`}
+                onClick={() => setShowSecondaryTools(prev => !prev)}
+                title={t('collection.moreActions')}
+                aria-pressed={showSecondaryTools}
+              >
+                <MoreHorizontal size={14} />
+                <span>{t('collection.moreActions')}</span>
+              </button>
+            )}
             {shouldShowOpenButton && (
-              <button className={`preview-tool-btn ${openFeedback === 'open' ? 'clicked-feedback' : ''}`} onClick={handleOpen} title={openButtonTitle}>
+              <button className={`preview-tool-btn secondary ${openFeedback === 'open' ? 'clicked-feedback' : ''}`} onClick={handleOpen} title={openButtonTitle}>
                 {openFeedback === 'open' ? <Check size={14} /> : <ExternalLink size={14} />}
                 <span>{openFeedback === 'open' ? t('item.opened') : t('item.open')}</span>
               </button>
             )}
             {shouldShowRevealButton && (
-              <button className={`preview-tool-btn ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
+              <button className={`preview-tool-btn secondary ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
                 {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
                 <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
               </button>
             )}
             {shouldShowSaveImageButton && (
               <button
-                className="preview-tool-btn"
+                className="preview-tool-btn secondary"
                 onClick={() => handleSaveImageAs(item)}
                 title={t('item.saveImageAs')}
               >
@@ -839,12 +881,12 @@ function PreviewPanel() {
               </button>
             )}
             {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
-              <button className="preview-tool-btn" onClick={handleStartEditContent}>
+              <button className="preview-tool-btn secondary" onClick={handleStartEditContent}>
                 <Edit2 size={14} />
                 <span>{t('panel.editContent')}</span>
               </button>
             )}
-            <button className="preview-tool-btn" onClick={() => openShareModal(item)}>
+            <button className="preview-tool-btn secondary" onClick={() => openShareModal(item)}>
               <Share2 size={14} />
               <span>{t('share.button')}</span>
             </button>
@@ -856,3 +898,4 @@ function PreviewPanel() {
 }
 
 export default PreviewPanel;
+

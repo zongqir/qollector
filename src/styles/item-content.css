@@ -11,7 +11,7 @@
   max-height: 80px;
   overflow: hidden;
   position: relative;
-  transition: max-height 0.2s ease-out;
+  transition: max-height var(--motion-base) var(--ease-emphasized);
   border: none;
 }
 
@@ -26,12 +26,12 @@
 }
 
 .item-content.copied {
-  animation: copyFlash 0.5s ease-out;
+  animation: copyFlash var(--motion-flash) var(--ease-emphasized);
 }
 
 @keyframes copyFlash {
   0% { background: transparent; }
-  50% { background: rgba(52, 199, 89, 0.1); }
+  50% { background: var(--state-success-bg); }
   100% { background: transparent; }
 }
 

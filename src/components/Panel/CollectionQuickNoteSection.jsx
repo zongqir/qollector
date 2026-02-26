@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Send, PanelRightClose } from 'lucide-react';
+import { Plus, X, Send } from 'lucide-react';
 
 function CollectionQuickNoteSection({
   isExpanded,
@@ -10,7 +10,6 @@ function CollectionQuickNoteSection({
   onExpandedSubmit,
   onCollapse,
   onExpand,
-  onToggleCollectionPanel,
 }) {
   const { t } = useTranslation();
 
@@ -65,13 +64,6 @@ function CollectionQuickNoteSection({
               onKeyDown={onQuickNoteKeyDown}
             />
           </div>
-          <button
-            className="collection-close-inline-btn quick-note-panel-close-btn"
-            onClick={onToggleCollectionPanel}
-            title={t('collection.hidePanel')}
-          >
-            <PanelRightClose size={14} />
-          </button>
         </div>
       )}
     </div>

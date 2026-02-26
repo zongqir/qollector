@@ -1,21 +1,41 @@
-/* macOS 风格标题栏 */
+﻿/* TitleBar 2.0 - layered glass + status capsules */
 .titlebar {
-  height: 38px;
-  background: var(--bg-secondary);
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 46px;
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
   align-items: center;
-  border-bottom: 1px solid var(--border-light);
+  gap: 10px;
+  background:
+    linear-gradient(120deg, var(--surface-elevated), var(--surface-muted)),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--surface-glow) 72%, transparent), transparent 46%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  overflow: hidden;
   user-select: none;
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.titlebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-glow) 82%, transparent), transparent);
+  pointer-events: none;
 }
 
 .titlebar-drag-area {
-  flex: 1;
+  min-width: 0;
   height: 100%;
   display: flex;
   align-items: center;
-  padding-left: 14px;
-  min-width: 0;
+  padding-inline: 8px;
 }
 
 .titlebar-brand {
@@ -25,43 +45,272 @@
   min-width: 0;
 }
 
+.titlebar-mode-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .titlebar-logo {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
   flex-shrink: 0;
   display: block;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-color) 18%, transparent);
 }
 
 .titlebar-title {
   font-size: 13px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.012em;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.titlebar-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 74%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.titlebar-mode-pill.mini {
+  color: color-mix(in srgb, var(--accent-color) 78%, white 22%);
+  border-color: color-mix(in srgb, var(--accent-color) 35%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 72%, transparent);
+}
+
+.titlebar-status-group {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.titlebar-status-group.visible {
+  display: inline-flex;
+}
+
+.titlebar-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 74%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar-status-pill svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.titlebar-status-pill.active {
+  border-color: color-mix(in srgb, var(--accent-color) 36%, transparent);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 78%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-light) 30%, transparent);
+}
+
+.titlebar-status-pill.active span {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.titlebar-status-pill.active svg {
+  animation: titlebarStatusPulse var(--motion-pulse) var(--ease-pulse) infinite;
+}
+
+@keyframes titlebarStatusPulse {
+  0%, 100% {
+    opacity: 0.82;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.glass-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 74%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+  animation: glassIndicatorIn var(--motion-base) var(--ease-standard);
+}
+
+.glass-indicator-track {
+  width: 54px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 72%, transparent);
+  overflow: hidden;
+}
+
+.glass-indicator-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-color) 68%, white 32%), var(--accent-color));
+  transition: width var(--motion-fast) var(--ease-standard);
+}
+
+.glass-indicator-value {
+  min-width: 30px;
+  text-align: right;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+@keyframes glassIndicatorIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .titlebar-buttons {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0;
+  padding: 2px;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 72%, transparent);
+  border-right-color: color-mix(in srgb, var(--border-light) 24%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+}
+
+.titlebar-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.titlebar-btn-group-capture {
+  padding: 1px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-light) 30%, transparent);
+}
+
+.titlebar-layout-presets {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 3px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-card) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-light) 76%, transparent);
+}
+
+.titlebar-layout-btn {
+  min-width: 20px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.titlebar-layout-btn:hover {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
+}
+
+.titlebar-layout-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+.titlebar-layout-btn.active {
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 86%, transparent);
+}
+
+.titlebar-layout-btn:active {
+  transform: scale(0.96);
+}
+
+.titlebar-btn-group-window .titlebar-btn {
+  color: color-mix(in srgb, var(--text-tertiary) 96%, var(--text-secondary) 4%);
+  opacity: 0.84;
+}
+
+.titlebar-btn-group-window .titlebar-btn:hover,
+.titlebar-btn-group-window .titlebar-btn:focus-visible,
+.titlebar-btn-group-window .titlebar-btn.active {
+  opacity: 1;
+}
+
+.titlebar-btn-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 5px;
+  background: color-mix(in srgb, var(--border-color) 68%, transparent);
+  border-radius: 999px;
+  opacity: 0.85;
 }
 
 .titlebar-btn {
-  width: 40px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border: none;
+  border-radius: 8px;
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: all 0.15s ease;
-  display: flex;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: relative;
 }
 
 .titlebar-btn:focus {
@@ -69,38 +318,31 @@
 }
 
 .titlebar-btn:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--accent-medium);
-}
-
-.titlebar-btn svg {
-  transition: all 0.15s ease;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 32%, transparent);
 }
 
 .titlebar-btn:hover {
-  background: var(--btn-hover-bg);
+  background: color-mix(in srgb, var(--btn-hover-bg) 82%, transparent);
   color: var(--text-secondary);
 }
 
 .titlebar-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.93);
 }
 
-/* 关闭按钮 */
 .titlebar-btn.close-btn:hover {
-  background: rgba(255, 59, 48, 0.12);
-  color: #ff3b30;
+  background: color-mix(in srgb, var(--state-error-bg) 88%, transparent);
+  color: var(--state-error-fg);
 }
 
-/* 置顶按钮 */
 .titlebar-btn.pin-btn:hover {
-  background: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
+  background: color-mix(in srgb, var(--state-warning-bg) 82%, transparent);
+  color: var(--state-warning-fg);
 }
 
 .titlebar-btn.pin-btn.active {
-  color: #ff9500;
-  background: rgba(255, 149, 0, 0.12);
+  color: var(--state-warning-fg);
+  background: color-mix(in srgb, var(--state-warning-bg) 94%, transparent);
 }
 
 .titlebar-btn.pin-btn.active svg {
@@ -108,79 +350,156 @@
 }
 
 .titlebar-btn.pin-btn.active:hover {
-  background: rgba(255, 149, 0, 0.18);
+  background: color-mix(in srgb, var(--state-warning-bg) 100%, transparent);
 }
 
-/* 最小化按钮 */
 .titlebar-btn.minimize-btn:hover {
   background: var(--accent-light);
   color: var(--accent-color);
 }
 
-/* 最大化按钮 */
 .titlebar-btn.maximize-btn:hover {
-  background: rgba(52, 199, 89, 0.1);
-  color: #34c759;
+  background: color-mix(in srgb, var(--state-success-bg) 84%, transparent);
+  color: var(--state-success-fg);
 }
 
-/* Mini 模式按钮 */
 .titlebar-btn.mini-btn:hover {
-  background: rgba(175, 82, 222, 0.1);
-  color: #af52de;
+  background: color-mix(in srgb, var(--accent-light) 84%, transparent);
+  color: var(--accent-color);
 }
 
 .titlebar-btn.mini-btn.active {
-  color: #af52de;
-  background: rgba(175, 82, 222, 0.12);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 92%, transparent);
 }
 
 .titlebar-btn.mini-btn.active:hover {
-  background: rgba(175, 82, 222, 0.18);
+  background: color-mix(in srgb, var(--accent-medium) 92%, transparent);
 }
 
-/* 快速添加按钮 */
 .titlebar-btn.quick-add-btn {
   color: var(--accent-color);
-  font-weight: 600;
 }
 
 .titlebar-btn.quick-add-btn:hover {
-  background: var(--accent-light);
   color: var(--accent-color);
-  transform: scale(1.08) rotate(90deg);
+  background: var(--accent-light);
+  transform: rotate(90deg) scale(1.06);
 }
 
 .titlebar-btn.quick-add-btn:active {
-  transform: scale(0.92) rotate(90deg);
+  transform: rotate(90deg) scale(0.9);
 }
 
-/* Mini mode titlebar compact */
+.titlebar-btn.density-btn:hover {
+  background: color-mix(in srgb, var(--accent-light) 72%, transparent);
+  color: var(--accent-color);
+}
+
+.titlebar-btn.density-btn.active {
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+}
+
+.titlebar-btn.panel-btn:hover,
+.titlebar-btn.history-btn:hover {
+  background: color-mix(in srgb, var(--accent-light) 74%, transparent);
+  color: var(--accent-color);
+}
+
+.titlebar-btn.panel-btn.active,
+.titlebar-btn.history-btn.active {
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+}
+
+@media (max-width: 920px) {
+  .titlebar {
+    grid-template-columns: minmax(180px, 1fr) auto;
+  }
+
+  .titlebar-status-group {
+    display: none;
+  }
+
+  .titlebar-btn-divider {
+    margin: 0 3px;
+    opacity: 0.72;
+  }
+
+  .titlebar-layout-btn {
+    min-width: 24px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .titlebar-btn-group-capture {
+    background: transparent;
+    padding: 0;
+  }
+}
+
+/* Mini mode titlebar */
 .app.mini-mode .titlebar {
-  height: 30px;
+  height: 36px;
+  padding: 3px 5px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
 }
 
 .app.mini-mode .titlebar-drag-area {
-  padding-left: 8px;
-}
-
-.app.mini-mode .titlebar-brand {
-  gap: 6px;
+  padding-inline: 5px;
 }
 
 .app.mini-mode .titlebar-logo {
   width: 13px;
   height: 13px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .app.mini-mode .titlebar-title {
   font-size: 11px;
-  opacity: 0.78;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.app.mini-mode .titlebar-status-group,
+.app.mini-mode .glass-indicator {
+  display: none;
+}
+
+.app.mini-mode .titlebar-mode-pill {
+  min-height: 16px;
+  padding: 0 7px;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+}
+
+.app.mini-mode .titlebar-buttons {
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+}
+
+.app.mini-mode .titlebar-btn-group {
+  gap: 2px;
+}
+
+.app.mini-mode .titlebar-btn-group-capture {
+  padding: 0;
+  background: transparent;
+}
+
+.app.mini-mode .titlebar-btn-divider {
+  display: none;
 }
 
 .app.mini-mode .titlebar-btn {
-  width: 28px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
 }
 
 .app.mini-mode .titlebar-btn svg {
@@ -188,35 +507,13 @@
   height: 13px;
 }
 
-.app.mini-mode .titlebar-buttons {
-  gap: 2px;
-  padding-right: 2px;
-}
-
-.app.mini-mode .titlebar-btn {
-  border-radius: 7px;
-  color: var(--text-secondary);
-}
-
-.app.mini-mode .titlebar-btn:hover {
-  background: var(--btn-hover-bg);
-  color: var(--text-primary);
-}
-
 .app.mini-mode .titlebar-btn.quick-add-btn,
+.app.mini-mode .titlebar-btn.density-btn,
+.app.mini-mode .titlebar-btn.history-btn,
+.app.mini-mode .titlebar-btn.panel-btn,
 .app.mini-mode .titlebar-btn.mini-btn,
 .app.mini-mode .titlebar-btn.pin-btn {
   color: var(--text-secondary);
-}
-
-.app.mini-mode .titlebar-btn.quick-add-btn {
-  font-weight: 500;
-}
-
-.app.mini-mode .titlebar-btn.quick-add-btn:hover,
-.app.mini-mode .titlebar-btn.mini-btn:hover,
-.app.mini-mode .titlebar-btn.pin-btn:hover {
-  color: var(--text-primary);
 }
 
 .app.mini-mode .titlebar-btn.quick-add-btn:hover,
@@ -235,40 +532,11 @@
   background: var(--accent-medium);
 }
 
-/* ========== Glass opacity indicator ========== */
-.glass-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  animation: glassIndicatorIn 0.15s ease;
-}
-
-.glass-indicator-track {
-  width: 48px;
-  height: 3px;
-  border-radius: 1.5px;
-  background: var(--border-color);
-  overflow: hidden;
-}
-
-.glass-indicator-fill {
-  height: 100%;
-  border-radius: 1.5px;
-  background: var(--accent-color);
-  transition: width 0.08s ease-out;
-}
-
-.glass-indicator-value {
-  font-size: 10px;
-  color: var(--text-tertiary);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  min-width: 28px;
-  text-align: right;
-}
-
-@keyframes glassIndicatorIn {
-  from { opacity: 0; transform: translateY(-2px); }
-  to { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .titlebar-btn,
+  .titlebar-status-pill.active svg {
+    transition-duration: var(--motion-reduced) !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }

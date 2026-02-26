@@ -30,6 +30,25 @@
   padding: 4px 8px;
 }
 
+.density-compact .history-stream .code-block.compact {
+  max-height: 1.8em; /* one visual line in compact history */
+}
+
+.density-compact .history-stream .code-block.compact pre {
+  padding: 2px 8px;
+}
+
+.density-compact .history-stream .code-block.compact code {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.density-compact .history-stream .code-block.compact .code-language-badge {
+  display: none;
+}
+
 .code-language-badge {
   position: absolute;
   top: 2px;

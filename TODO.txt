@@ -1,80 +1,69 @@
-[-] 提示词切换语言能力设计
+
 [] OCR去掉本地Tesseract前端入口（后端代码保留）：
    - 前端 Settings.jsx：OCR_PROVIDERS 列表删除 Local 项
    - 前端 Settings.jsx：删除 localInfo 安装指引 UI 块
    - 前端 zh-CN.json / en-US.json：删除 settings.ocr.localInfo.* 和 settings.ocr.providers.Local 翻译键
    - 后端不动（local.rs、OcrProviderType::Local 枚举值全部保留，零成本）
-[-] 设置中支持添加密码锁 可选设置 隐私设计
-[-] 目前来源我认为其实是不太准的
-[] 支持APP级别的禁止保存
+
+
 [] SKILL支持 看看是不是做成能导出的
 [-] 导出能力和导入能力支持（默认导出不加密 但是支持加密 此时导入检查到加密了要求先输入密码匹配上） 可选提示
 [] 是否需要设计加密数据库（复杂吗）
-[] 设置编排 避免使用用户心智负担太重的地方
-[] 分析那些算是高级设置 减少心智负担 高级用户解释成本是比较低的 但是比如导入导出 SKILL这种其实解释负担只要是知道的来了自然
-[] 如何设计设置保证整体来说不会很累 
-[] 我一直认为搜索栏有点太长了（导致某些时候类型筛选出不来 你看看）
+
 [] mini模式下的搜索体验有问题
 [] 验证拖出来的能力 文件是关键
-[] 图标logo
+
 [] 复制支持在内容区域直接局部复制 这个要讨论下
 [] 加密能力代码混淆 避免被破解
-[] 靠近卡片点亮的能力我认为比较关键
-[] 富文本我目前支持吗？时候归并为文本呢？
+
+
 [] excel表格场景支持
 [] 快速添加的那个图标其实不顾明显 我认为其实正常人是不知道那个功能是干嘛的（需要提示+图标表示意图明显）
 [] 其他版本的windows有影响吗
-[] 性能还得挑右
-[] 情况是一个拖拽，我拖拽出来的这个东西不仅仅是文字，其实还有一种是文件或者是图片。
 
 
 
 
-  - theme.css — 全新的 macOS 色系，亮色/暗色都换成了 Apple 系统色（#007aff、#34c759、#ff9500、#af52de 等），背景使用半透明 rgba 配合 backdrop-filter 实现毛玻璃效果
-  - base.css — SF Pro 字体优先，抗锯齿渲染，字间距微调
-  - titlebar.css — 更精致的标题栏，毛玻璃背景
-  - search-bar.css — Spotlight 风格搜索框，无边框设计，focus 时用 ring 高亮
-  - workspace.css — 卡片毛玻璃效果，更紧凑的间距，macOS 风格的选中态
-  - item-card.css — 统一毛玻璃卡片风格
-  - toolbar.css — 按钮使用 macOS 系统色
-  - tags.css / tag-dropdown.css — 标签和下拉使用 macOS 色系
-  - scrollbar.css — macOS 风格自动隐藏滚动条
-  - notes.css / item-content.css / edit-mode.css / quick-input.css — 统一 macOS 风格
-  - EditModal.css / Settings.css / LockScreen.css — 弹窗毛玻璃效果
-  - formatters.js — 时间线颜色换成 macOS 系统色
+  1. 统一样式系统，先降“样式债”                                                                                                                                                                              
+                                                                                                                                                                                                             
+  - 问题：当前样式层有明显叠加和覆盖竞争，维护成本高。                                                                                                                                                       
+  - 证据：workspace.css 2724 行 + polish.css 889 行 + titlebar.css 354 行。                                                                                                                                  
+  - 建议：建立“组件样式归属边界 + token 白名单”，逐步去硬编码色值/时长。                                                                                                                                     
+  - 参考：workspace.css (/D:/code/qollect/src/styles/workspace.css) polish.css (/D:/code/qollect/src/styles/polish.css) titlebar.css (/D:/code/qollect/src/styles/titlebar.css)                              
 
+  2. 减少硬编码颜色与过渡，彻底改为语义 token                                                                                                                                                                
+                                                                                                                                                                                                             
+  - 问题：虽然你已经开始 token 化，但仍有大量 rgba(...)、#ff...、0.15s ease 分散存在，主题一致性不稳。                                                                                                       
+  - 建议：状态色只走 --state-*，动效只走 --motion-* + --ease-*，lint 阶段禁止新增硬编码。                                                                                                                    
 
+  5. 搜索区与收藏区做“交互一致性协议”
 
-  
-# 角色设定
-你是一位资深的 UI/UX 设计
+  - 问题：SearchBar 与 CollectionPanel 都有过滤器，但行为细节和反馈风格仍有微差。
+  - 建议：抽统一 Filter primitives（type/date/tag/saved-view），共享状态视觉和键盘语义。
+  - 参考：SearchBar.jsx (/D:/code/qollect/src/components/SearchBar.jsx) CollectionPanel.jsx (/D:/code/qollect/src/components/Panel/CollectionPanel.jsx)
 
-# 任务目标
-师和前端工程师。
+  6. 时间轴可继续“弱轴强化卡”
 
-# 设计要求（请自由发挥创意）
-1. **布局策略：**
-   - 不要用死板的单列列表，改用多列瀑布流布局。
-   - 卡片的高度应该根据内容自动适应（文字多的卡片长一点 但是不要太长，图片卡片大一点），减少空白间隙。宽度可以适当窄一点。能展示的差不多就好。 
-   - 最上面保留工具栏（工具栏对所有卡片都有效， 选中了后移到工具栏做事情 ---看看放哪儿美观吧）
+  - 你已经改好了很多，但还可进一步：轴线只在组边界明显，行内仅保留点位与轻微 hover 响应。
+  - 目标：用户第一眼看卡片内容，不是看结构线。
+  - 参考：polish.css (/D:/code/qollect/src/styles/polish.css)
 
-2. **卡片视觉风格：**
-   - 风格要干净、清爽。使用白色背景、圆角（Rounded-xl）和轻微的阴影。
-   - 边框要极细、极淡，让卡片看起来像是“浮”在画布上的纸片。
+  7. 空状态从“提示”升级为“任务流入口”
 
-3. **交互动效（微交互）：**
-   - 鼠标悬停（Hover）在卡片上时，卡片要有一个平滑的“上浮”动画（Translate Y），阴影加深。
-   - 边框颜色可以变成主题色（比如绿色），给用户明确的反馈。
-   - 整个过程要丝滑、有触感。
+  - 你已做 first-use 很好；下一步建议每种空状态都给“下一步最高价值动作”。
+  - 例如“筛选后为空”直接给一键恢复最近可用视图，而不只是清空过滤。
+  - 参考：HistoryStream/index.jsx (/D:/code/qollect/src/components/HistoryStream/index.jsx) en-US.json (/D:/code/qollect/src/i18n/locales/en-US.json) zh-CN.json (/D:/code/qollect/src/i18n/locales/zh-      
+    CN.json)
 
-4. **智能内容展示（重点）：**
-   - **文件/文件夹：** 不要只显示一行枯燥的文件路径字符串。
-     - 请设计一个**图形化**的展示方式。如果是文件， 可以显示一个大大的文件类型图标（PDF、Word、文件夹图标等），下面优雅地显示文件名。
-   - **图片：** 直接展示图片缩略图，保持视觉冲击力。
-   - **长文本：** 像便利贴一样展示，如果太长可以优雅地截断。
+  8. 做一个可视化“快捷键帮助层”
 
+  - 你快捷键很多且强大，但可发现性不够。
+  - 建议：? 打开快捷键面板，按上下文动态显示可用键位，减少记忆负担。
+  - 参考：TitleBar.jsx (/D:/code/qollect/src/components/TitleBar.jsx) HistoryStream/index.jsx (/D:/code/qollect/src/components/HistoryStream/index.jsx)
 
+  9. 圆角与透明窗口问题做宿主层兜底
 
-# 执行说明
-请帮我设计并实现这个组件。你可以自由调整间距、颜色和排版，让它看起来既专业又有“呼吸感”。给我一个高保真的 UI 实现。
+  - 你遇到的“直角”本质是前端层裁剪与窗口宿主层的叠加问题。
+  - 建议：前端保留裁剪，同时在 Tauri 窗口层加平台兜底策略，避免不同显卡/缩放下偶发破角。
+  10. 建立“视觉回归基线”
 

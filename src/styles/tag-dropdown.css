@@ -13,7 +13,11 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -26,7 +30,7 @@
 .tag-select-btn.has-selection {
   border-color: var(--accent-color);
   background: var(--accent-color);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .tag-icon {
@@ -74,7 +78,7 @@
   max-width: 350px;
   overflow: hidden;
   z-index: 10000;
-  animation: dropdownSlide 0.15s ease;
+  animation: dropdownSlide var(--motion-fast) var(--ease-standard);
 }
 
 @keyframes dropdownSlide {
@@ -93,7 +97,11 @@
   border: none;
   border-radius: 8px;
   font-size: 13px;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
   background: var(--bg-input);
   color: var(--text-primary);
 }
@@ -120,7 +128,10 @@
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
 }
 
 .tag-dropdown-item:hover {
@@ -140,9 +151,12 @@
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .tag-dropdown-item.selected .tag-check {
@@ -161,7 +175,7 @@
 }
 
 .tag-text.ai-tag-text {
-  color: #af52de;
+  color: var(--state-ai-fg);
   font-weight: 500;
 }
 
@@ -171,12 +185,12 @@
 }
 
 .tag-text.source-tag-text {
-  color: #ff9500;
+  color: var(--state-warning-fg);
   font-weight: 500;
 }
 
 .tag-text.type-tag-text {
-  color: #5ac8fa;
+  color: var(--state-info-fg);
   font-weight: 500;
 }
 
@@ -185,8 +199,8 @@
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: #af52de;
-  color: white;
+  background: var(--state-ai-fg);
+  color: var(--text-on-accent);
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
@@ -200,7 +214,7 @@
   justify-content: center;
   padding: 1px 4px;
   background: var(--accent-color);
-  color: white;
+  color: var(--text-on-accent);
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
@@ -213,8 +227,8 @@
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: #ff9500;
-  color: white;
+  background: var(--state-warning-fg);
+  color: var(--text-on-accent);
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
@@ -227,8 +241,8 @@
   align-items: center;
   justify-content: center;
   padding: 1px 4px;
-  background: #5ac8fa;
-  color: white;
+  background: var(--state-info-fg);
+  color: var(--text-on-accent);
   border-radius: 4px;
   font-size: 9px;
   font-weight: 700;
@@ -267,12 +281,15 @@
   cursor: pointer;
   font-size: 12px;
   color: var(--text-secondary);
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
   font-weight: 500;
 }
 
 .clear-selection-btn:hover {
-  background: #ff9500;
-  color: white;
-  border-color: #ff9500;
+  background: var(--state-warning-fg);
+  color: var(--text-on-accent);
+  border-color: var(--state-warning-fg);
 }

@@ -19,7 +19,7 @@
   max-width: 300px;
   overflow: hidden;
   z-index: 10000;
-  animation: dateDropdownSlide 0.15s ease;
+  animation: dateDropdownSlide var(--motion-fast) var(--ease-standard);
 }
 
 @keyframes dateDropdownSlide {
@@ -38,7 +38,10 @@
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.1s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
   font-size: 13px;
   color: var(--text-primary);
 }
@@ -60,9 +63,12 @@
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: white;
+  color: var(--text-on-accent);
   flex-shrink: 0;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .date-dropdown-item.selected .date-check {
@@ -100,7 +106,9 @@
   font-family: inherit;
   background: var(--bg-input);
   color: var(--text-primary);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -124,9 +132,9 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
-  color: white;
+  color: var(--text-on-accent);
   font-weight: 500;
-  transition: opacity 0.15s;
+  transition: opacity var(--motion-fast) var(--ease-standard);
   margin-top: 2px;
 }
 

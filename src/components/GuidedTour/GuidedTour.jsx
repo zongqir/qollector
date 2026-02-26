@@ -11,7 +11,7 @@ const TOUR_STEPS = [
   { selector: '.titlebar-btn.mini-btn', placement: 'bottom', titleKey: 'tour.step2Title', descKey: 'tour.step2Desc', action: 'exitMini' },
   { selector: null, placement: 'center', titleKey: 'tour.stepShowPanelTitle', descKey: 'tour.stepShowPanelDesc', action: 'showPanel' },
   { selector: '.polymorphic-panel', placement: 'left', titleKey: 'tour.step1Title', descKey: 'tour.step1Desc' },
-  { selector: '.quick-note-panel-close-btn', placement: 'left', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc' },
+  { selector: '.titlebar-btn.panel-btn', placement: 'bottom', titleKey: 'tour.step3Title', descKey: 'tour.step3Desc' },
   { selector: '.titlebar', placement: 'bottom', titleKey: 'tour.step4Title', descKey: 'tour.step4Desc' },
   { selector: '.titlebar-btn.pin-btn', placement: 'bottom', titleKey: 'tour.step5Title', descKey: 'tour.step5Desc' },
   { selector: '.titlebar-btn.quick-add-btn', placement: 'bottom', titleKey: 'tour.step6Title', descKey: 'tour.step6Desc' },

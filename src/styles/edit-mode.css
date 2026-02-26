@@ -73,13 +73,17 @@
 .tag-add-btn {
   padding: 8px 16px;
   background: var(--accent-color);
-  color: white;
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 18px;
   font-weight: bold;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .tag-add-btn:hover {
@@ -101,16 +105,20 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .save-btn {
-  background: #34c759;
-  color: white;
+  background: var(--state-success-fg);
+  color: var(--text-on-accent);
 }
 
 .save-btn:hover {
-  background: #2db84e;
+  background: color-mix(in srgb, var(--state-success-fg) 88%, black 12%);
 }
 
 .cancel-btn {

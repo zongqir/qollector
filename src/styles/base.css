@@ -1,7 +1,13 @@
-* {
+﻿* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  height: 100%;
+  background: transparent;
 }
 
 @font-face {
@@ -40,6 +46,8 @@ textarea {
 }
 
 body {
+  width: 100%;
+  height: 100%;
   font-family: 'Alibaba PuHuiTi 3', 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
   background: transparent;
   color: var(--text-primary);
@@ -51,24 +59,113 @@ body {
 }
 
 #root {
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: transparent;
+  overflow: hidden;
+  border-radius: 14px;
+  clip-path: inset(0 round 14px);
+}
+
+#root:has(.app.mini-mode) {
+  border-radius: 10px;
+  clip-path: inset(0 round 10px);
 }
 
 .app {
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
-  border-radius: 12px;
+  position: relative;
+  isolation: isolate;
+  background: var(--surface-elevated);
+  border-radius: 14px;
   overflow: hidden;
-  border: 1px solid var(--border-light);
+  clip-path: inset(0 round 14px);
+  border: 1px solid var(--surface-border-soft);
+  box-shadow:
+    0 12px 30px var(--shadow-sm),
+    0 28px 60px color-mix(in srgb, var(--shadow-md) 80%, transparent);
+}
+
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-glow) 36%, transparent), transparent 16%),
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent-light) 58%, transparent), transparent 42%);
+}
+
+.app::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.24;
+  background-image:
+    linear-gradient(0deg, var(--surface-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--surface-grid-line) 1px, transparent 1px);
+  background-size: 3px 3px, 3px 3px;
+  mix-blend-mode: soft-light;
 }
 
 .app.mini-mode {
+  border-radius: 10px;
+  clip-path: inset(0 round 10px);
+  box-shadow: 0 8px 18px var(--shadow-sm);
+}
+
+.app-feedback-toast {
+  position: fixed;
+  right: 14px;
+  bottom: 12px;
+  z-index: 9100;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 6px 10px;
   border-radius: 9px;
+  border: 1px solid var(--state-success-border);
+  background: color-mix(in srgb, var(--state-success-bg) 90%, var(--surface-strong) 10%);
+  color: var(--state-success-fg);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow-md) 66%, transparent);
+  backdrop-filter: blur(12px);
+  animation: appFeedbackIn var(--motion-base) var(--ease-standard);
+}
+
+.app.mini-mode .app-feedback-toast {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  max-width: none;
+  justify-content: center;
+}
+
+@keyframes appFeedbackIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+:where(button, input, textarea, [role='button']):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 72%, transparent);
+  outline-offset: 1px;
 }
 
 /* Mini mode - macOS widget style */
@@ -136,3 +233,4 @@ body {
 .app.mini-mode .compact-link-path {
   display: none;
 }
+

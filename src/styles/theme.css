@@ -148,6 +148,85 @@
   --color-danger: #ff3b30;
   --color-danger-bg: rgba(255, 59, 48, 0.08);
   --bg-hover: rgba(0, 0, 0, 0.04);
+
+  /* Unified state tokens */
+  --state-success-fg: #0a7d3d;
+  --state-success-border: rgba(10, 125, 61, 0.3);
+  --state-success-bg: rgba(10, 125, 61, 0.1);
+  --state-warning-fg: #9a6700;
+  --state-warning-border: rgba(154, 103, 0, 0.3);
+  --state-warning-bg: rgba(154, 103, 0, 0.1);
+  --state-info-fg: #0b6a7d;
+  --state-info-border: rgba(11, 106, 125, 0.3);
+  --state-info-bg: rgba(11, 106, 125, 0.1);
+  --state-ai-fg: #6e33a3;
+  --state-ai-border: rgba(110, 51, 163, 0.32);
+  --state-ai-bg: rgba(110, 51, 163, 0.12);
+  --state-error-fg: #b42318;
+  --state-error-border: rgba(180, 35, 24, 0.3);
+  --state-error-bg: rgba(180, 35, 24, 0.1);
+  --state-warning-fg-strong: #c07d00;
+  --state-info-fg-strong: #0f8098;
+
+  /* Accent interaction tokens */
+  --accent-border-soft: color-mix(in srgb, var(--accent-color) 30%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent-color) 38%, transparent);
+  --accent-border-strong: color-mix(in srgb, var(--accent-color) 45%, transparent);
+  --accent-bg-soft: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  --accent-bg: color-mix(in srgb, var(--accent-color) 16%, transparent);
+  --accent-bg-strong: color-mix(in srgb, var(--accent-color) 24%, transparent);
+  --accent-ring: color-mix(in srgb, var(--accent-color) 12%, transparent);
+
+  /* Unified motion tokens */
+  --motion-fast: 120ms;
+  --motion-snappy: 160ms;
+  --motion-base: 180ms;
+  --motion-pop: 220ms;
+  --motion-slow: 280ms;
+  --motion-flash: 500ms;
+  --motion-toast: 1000ms;
+  --motion-spin: 800ms;
+  --motion-sparkle: 1500ms;
+  --motion-pulse: 2100ms;
+  --motion-reduced: 1ms;
+  --motion-widget-expand: 400ms;
+  --motion-widget-swallow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.16, 1);
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-linear: linear;
+  --ease-pulse: ease-in-out;
+  --ease-widget-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-widget-swallow: cubic-bezier(0.6, 0, 0.7, 0.2);
+
+  /* Widget tokens */
+  --widget-dot-bg: rgba(15, 15, 20, 0.78);
+  --widget-dot-bg-hover: rgba(15, 15, 20, 0.88);
+  --widget-dot-bg-drag: rgba(15, 15, 20, 0.82);
+  --widget-dot-border: rgba(255, 255, 255, 0.1);
+  --widget-dot-border-hover: rgba(255, 255, 255, 0.18);
+  --widget-dot-drag-border: color-mix(in srgb, var(--accent-color) 60%, transparent);
+  --widget-dot-shadow-rest-near: rgba(0, 0, 0, 0.3);
+  --widget-dot-shadow-rest-far: rgba(0, 0, 0, 0.15);
+  --widget-dot-shadow-hover-near: rgba(0, 0, 0, 0.35);
+  --widget-dot-shadow-hover-far: rgba(0, 0, 0, 0.2);
+  --widget-plus-fg: rgba(255, 255, 255, 0.7);
+  --widget-breathe-halo-start: color-mix(in srgb, var(--accent-color) 0%, transparent);
+  --widget-breathe-halo-mid: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  --widget-breathe-shadow-start: rgba(0, 0, 0, 0.3);
+  --widget-breathe-shadow-mid: rgba(0, 0, 0, 0.25);
+
+  /* Scheme C surface tokens */
+  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.9));
+  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.58));
+  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 1.12));
+  --surface-border-strong: rgba(0, 0, 0, 0.14);
+  --surface-border-soft: rgba(0, 0, 0, 0.08);
+  --surface-glow: rgba(255, 255, 255, 0.38);
+  --surface-grid-line: rgba(255, 255, 255, 0.03);
+  --ambient-bg:
+    radial-gradient(120% 100% at 6% 0%, rgba(0, 122, 255, 0.12), transparent 52%),
+    radial-gradient(150% 120% at 98% 0%, rgba(255, 149, 0, 0.12), transparent 46%),
+    linear-gradient(170deg, #f6f8fb 0%, #eef1f8 100%);
 }
 
 /* ========== 深色主题 - macOS Ventura 毛玻璃风格 ========== */
@@ -296,6 +375,38 @@
   --color-danger: #ff453a;
   --color-danger-bg: rgba(255, 69, 58, 0.12);
   --bg-hover: rgba(255, 255, 255, 0.06);
+
+  /* Unified state tokens */
+  --state-success-fg: #8ef0bb;
+  --state-success-border: rgba(48, 209, 88, 0.38);
+  --state-success-bg: rgba(48, 209, 88, 0.16);
+  --state-warning-fg: #ffd08a;
+  --state-warning-border: rgba(255, 159, 10, 0.38);
+  --state-warning-bg: rgba(255, 159, 10, 0.16);
+  --state-info-fg: #8dddf0;
+  --state-info-border: rgba(90, 200, 250, 0.38);
+  --state-info-bg: rgba(90, 200, 250, 0.16);
+  --state-ai-fg: #d6b2f7;
+  --state-ai-border: rgba(191, 90, 242, 0.38);
+  --state-ai-bg: rgba(191, 90, 242, 0.16);
+  --state-error-fg: #ffb4ae;
+  --state-error-border: rgba(255, 69, 58, 0.38);
+  --state-error-bg: rgba(255, 69, 58, 0.16);
+  --state-warning-fg-strong: #ffb340;
+  --state-info-fg-strong: #9de8f8;
+
+  /* Scheme C surface tokens */
+  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.76));
+  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.56));
+  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.96));
+  --surface-border-strong: rgba(255, 255, 255, 0.17);
+  --surface-border-soft: rgba(255, 255, 255, 0.09);
+  --surface-glow: rgba(255, 255, 255, 0.2);
+  --surface-grid-line: rgba(255, 255, 255, 0.03);
+  --ambient-bg:
+    radial-gradient(110% 100% at 6% 0%, rgba(10, 132, 255, 0.24), transparent 55%),
+    radial-gradient(150% 120% at 98% 0%, rgba(255, 159, 10, 0.2), transparent 45%),
+    linear-gradient(170deg, #10141e 0%, #171c2a 100%);
 }
 
 /* ========== Accent color presets ========== */

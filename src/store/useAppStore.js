@@ -21,6 +21,9 @@ const HISTORY_SNAPSHOT_KEY = 'qollect-history-snapshot-v1';
 const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
 const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
 const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
+const FILTER_VIEWS_STORAGE_KEY = 'qollect-filter-views-v1';
+const HISTORY_STREAM_ENABLED_KEY = 'qollect-history-stream-enabled';
+const MAX_FILTER_VIEWS = 12;
 const MANUAL_ENTRY_SOURCE = 'Quick Input';
 const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
@@ -177,6 +180,112 @@ const clearHistorySnapshot = () => {
   }
 };
 
+const FILTER_TYPE_KEYS = new Set(['all', 'text', 'image', 'file', 'link', 'code']);
+
+const normalizeDateRange = (range) => {
+  if (!range || typeof range !== 'object') return null;
+  const parsedStart = range.start == null ? null : Number(range.start);
+  const parsedEnd = range.end == null ? null : Number(range.end);
+  return {
+    preset: typeof range.preset === 'string' ? range.preset : 'custom',
+    start: Number.isFinite(parsedStart) ? parsedStart : null,
+    end: Number.isFinite(parsedEnd) ? parsedEnd : null,
+  };
+};
+
+const normalizeFilterPayload = (payload = {}) => {
+  const selectedType = typeof payload.selectedType === 'string' && FILTER_TYPE_KEYS.has(payload.selectedType)
+    ? payload.selectedType
+    : 'all';
+  return {
+    searchQuery: typeof payload.searchQuery === 'string' ? payload.searchQuery : '',
+    selectedType,
+    selectedTags: Array.isArray(payload.selectedTags)
+      ? Array.from(new Set(payload.selectedTags.filter(tag => typeof tag === 'string' && tag.trim())))
+      : [],
+    showFavoritesOnly: Boolean(payload.showFavoritesOnly),
+    showPinnedOnly: Boolean(payload.showPinnedOnly),
+    selectedDateRange: normalizeDateRange(payload.selectedDateRange),
+    customDateStart: typeof payload.customDateStart === 'string' ? payload.customDateStart : '',
+    customDateEnd: typeof payload.customDateEnd === 'string' ? payload.customDateEnd : '',
+  };
+};
+
+const buildFilterPayloadFromState = (state) => normalizeFilterPayload({
+  searchQuery: state.searchQuery,
+  selectedType: state.selectedType,
+  selectedTags: state.selectedTags,
+  showFavoritesOnly: state.showFavoritesOnly,
+  showPinnedOnly: state.showPinnedOnly,
+  selectedDateRange: state.selectedDateRange,
+  customDateStart: state.customDateStart,
+  customDateEnd: state.customDateEnd,
+});
+
+const normalizeSavedFilterView = (entry, fallbackIndex = 0) => {
+  if (!entry || typeof entry !== 'object') return null;
+  const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+  if (!name) return null;
+  const createdAt = Number(entry.createdAt) || Date.now();
+  const updatedAt = Number(entry.updatedAt) || createdAt;
+  const fallbackId = `view_${createdAt}_${fallbackIndex}`;
+  return {
+    id: typeof entry.id === 'string' && entry.id.trim() ? entry.id : fallbackId,
+    name,
+    filters: normalizeFilterPayload(entry.filters),
+    createdAt,
+    updatedAt,
+  };
+};
+
+const readSavedFilterViews = () => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(FILTER_VIEWS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry, index) => normalizeSavedFilterView(entry, index))
+      .filter(Boolean)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_FILTER_VIEWS);
+  } catch (error) {
+    console.warn('[FilterViews] read failed:', error);
+    return [];
+  }
+};
+
+const readHistoryStreamEnabled = () => {
+  if (typeof window === 'undefined') return true;
+  try {
+    const raw = localStorage.getItem(HISTORY_STREAM_ENABLED_KEY);
+    if (raw == null) return true;
+    return raw !== 'false';
+  } catch (error) {
+    console.warn('[HistoryStreamVisibility] read failed:', error);
+    return true;
+  }
+};
+
+const persistHistoryStreamEnabled = (enabled) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(HISTORY_STREAM_ENABLED_KEY, enabled ? 'true' : 'false');
+  } catch (error) {
+    console.warn('[HistoryStreamVisibility] persist failed:', error);
+  }
+};
+
+const persistSavedFilterViews = (views) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(FILTER_VIEWS_STORAGE_KEY, JSON.stringify(views));
+  } catch (error) {
+    console.warn('[FilterViews] persist failed:', error);
+  }
+};
+
 const itemNeedsHydration = (item) => (
   Boolean(item?.content_truncated || item?.ocr_truncated)
 );
@@ -282,6 +391,8 @@ const useAppStore = create((set, get) => ({
   showDateFilter: false,
   customDateStart: '',
   customDateEnd: '',
+  savedFilterViews: readSavedFilterViews(),
+  activeFilterViewId: null,
 
   // ========== 多选状态 ==========
   selectedItemIds: [],
@@ -312,6 +423,7 @@ const useAppStore = create((set, get) => ({
   isLocked: true,
   hasPassword: false,
   collectionPanelEnabled: true,
+  historyStreamEnabled: readHistoryStreamEnabled(),
   lowMemoryModeEnabled: false,
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
@@ -455,8 +567,9 @@ const useAppStore = create((set, get) => ({
 
   // ========== 收集箱面板开关 ==========
   setCollectionPanelEnabled: (v) => {
-    const updates = { collectionPanelEnabled: v };
-    if (!v) {
+    const nextPanelEnabled = Boolean(v);
+    const updates = { collectionPanelEnabled: nextPanelEnabled };
+    if (!nextPanelEnabled) {
       Object.assign(updates, { hoverPreviewItem: null, hoverPreviewPosition: null });
     }
     set(updates);
@@ -473,6 +586,27 @@ const useAppStore = create((set, get) => ({
     } catch (error) {
       console.error('persist collection_panel_enabled failed:', error);
     }
+  },
+
+  setHistoryStreamEnabled: (v) => {
+    const next = Boolean(v);
+    const state = get();
+    if (state.isMiniMode && !next) {
+      return;
+    }
+    const updates = { historyStreamEnabled: next };
+    if (!next && !state.collectionPanelEnabled) {
+      updates.collectionPanelEnabled = true;
+    }
+    set(updates);
+    persistHistoryStreamEnabled(next);
+  },
+
+  toggleHistoryStream: () => {
+    const state = get();
+    if (state.isMiniMode) return;
+    const visibleNow = state.historyStreamEnabled || !state.collectionPanelEnabled;
+    get().setHistoryStreamEnabled(!visibleNow);
   },
 
   setHoverPreview: (item, position) => {
@@ -1260,6 +1394,94 @@ const useAppStore = create((set, get) => ({
   setCustomDateStart: (v) => set({ customDateStart: v }),
   setCustomDateEnd: (v) => set({ customDateEnd: v }),
   clearDateFilter: () => set({ selectedDateRange: null, customDateStart: '', customDateEnd: '', showDateFilter: false }),
+  setActiveFilterViewId: (id) => set({ activeFilterViewId: id || null }),
+  clearActiveFilterView: () => set({ activeFilterViewId: null }),
+
+  saveCurrentFilterView: (name) => {
+    const trimmedName = String(name || '').trim();
+    if (!trimmedName) {
+      return { ok: false, reason: 'empty-name' };
+    }
+
+    const now = Date.now();
+    let savedId = null;
+    set((state) => {
+      const snapshot = buildFilterPayloadFromState(state);
+      const existingIndex = state.savedFilterViews.findIndex(
+        view => view.name.toLowerCase() === trimmedName.toLowerCase(),
+      );
+
+      let nextViews;
+      if (existingIndex >= 0) {
+        const existing = state.savedFilterViews[existingIndex];
+        savedId = existing.id;
+        const updated = {
+          ...existing,
+          name: trimmedName,
+          filters: snapshot,
+          updatedAt: now,
+        };
+        nextViews = [
+          updated,
+          ...state.savedFilterViews.filter((_, idx) => idx !== existingIndex),
+        ];
+      } else {
+        savedId = `view_${now}_${Math.random().toString(36).slice(2, 8)}`;
+        nextViews = [
+          {
+            id: savedId,
+            name: trimmedName,
+            filters: snapshot,
+            createdAt: now,
+            updatedAt: now,
+          },
+          ...state.savedFilterViews,
+        ];
+      }
+
+      nextViews = nextViews.slice(0, MAX_FILTER_VIEWS);
+      persistSavedFilterViews(nextViews);
+      return {
+        savedFilterViews: nextViews,
+        activeFilterViewId: savedId,
+      };
+    });
+
+    return { ok: true, id: savedId };
+  },
+
+  applySavedFilterView: (id) => {
+    const targetId = String(id || '').trim();
+    if (!targetId) return false;
+    const { savedFilterViews } = get();
+    const target = savedFilterViews.find(view => view.id === targetId);
+    if (!target) return false;
+
+    const payload = normalizeFilterPayload(target.filters);
+    set({
+      ...payload,
+      showTagFilter: false,
+      tagSearchQuery: '',
+      showDateFilter: false,
+      activeFilterViewId: target.id,
+    });
+    return true;
+  },
+
+  deleteSavedFilterView: (id) => {
+    const targetId = String(id || '').trim();
+    if (!targetId) return;
+
+    set((state) => {
+      const nextViews = state.savedFilterViews.filter(view => view.id !== targetId);
+      if (nextViews.length === state.savedFilterViews.length) return {};
+      persistSavedFilterViews(nextViews);
+      return {
+        savedFilterViews: nextViews,
+        activeFilterViewId: state.activeFilterViewId === targetId ? null : state.activeFilterViewId,
+      };
+    });
+  },
 
   toggleTagFilter: (tag) => {
     const { selectedTags } = get();

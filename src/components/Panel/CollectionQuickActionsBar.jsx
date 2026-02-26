@@ -64,6 +64,7 @@ function CollectionQuickActionsBar({
             <span>{t('collection.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
           </button>
           <button
+            type="button"
             className="collection-btn quick-output-toggle-btn"
             onClick={() => {
               setShowCollectionMoreMenu(false);
@@ -71,6 +72,9 @@ function CollectionQuickActionsBar({
             }}
             disabled={isBusy}
             title={t('collection.quickOutputSelectTitle')}
+            aria-label={t('collection.quickOutputSelectTitle')}
+            aria-expanded={showQuickOutputMenu}
+            aria-haspopup="menu"
           >
             <ChevronDown size={14} />
           </button>
@@ -136,7 +140,7 @@ function CollectionQuickActionsBar({
       </div>
 
       {feedback && (
-        <div className={`collection-bottom-feedback ${feedback.type}`}>
+        <div className={`collection-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
           <span>{feedback.text}</span>
           {feedback.withUndo && lastClearedPinnedIds.length > 0 && (
             <button

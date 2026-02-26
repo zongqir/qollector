@@ -5,8 +5,17 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "dev:server": "vite",
+    "dev:ensure": "node scripts/ensure-dev-server.mjs",
     "build": "vite build",
     "preview": "vite preview",
+    "lint:styles": "node scripts/check-style-tokens.mjs --mode=report",
+    "lint:styles:strict": "node scripts/check-style-tokens.mjs --mode=strict",
+    "lint:styles:baseline": "node scripts/check-style-tokens.mjs --mode=report --update-baseline",
+    "visual:baseline:capture": "node scripts/visual-regression/capture.mjs --mode=baseline --clean",
+    "visual:current:capture": "node scripts/visual-regression/capture.mjs --mode=current --clean",
+    "visual:diff": "node scripts/visual-regression/compare.mjs",
+    "visual:check": "npm run visual:current:capture && npm run visual:diff",
     "tauri": "tauri"
   },
   "keywords": [],

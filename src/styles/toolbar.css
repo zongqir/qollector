@@ -11,7 +11,11 @@
   min-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: opacity 0.15s ease, height 0.15s ease, padding 0.15s ease, margin 0.15s ease;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    height var(--motion-fast) var(--ease-standard),
+    padding var(--motion-fast) var(--ease-standard),
+    margin var(--motion-fast) var(--ease-standard);
 }
 
 .item-card:hover .item-toolbar {
@@ -52,7 +56,11 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 11px;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   flex-shrink: 0;
   color: var(--text-secondary);
   font-weight: 500;
@@ -84,15 +92,15 @@
 }
 
 .toolbar-btn.pin-btn:hover:not(:disabled) {
-  background: rgba(255, 149, 0, 0.1);
-  border-color: #ff9500;
-  color: #ff9500;
+  background: var(--state-warning-bg);
+  border-color: var(--state-warning-fg);
+  color: var(--state-warning-fg);
 }
 
 .toolbar-btn.pin-btn.active {
-  background: #ff9500;
-  border-color: #ff9500;
-  color: white;
+  background: var(--state-warning-fg);
+  border-color: var(--state-warning-fg);
+  color: var(--text-on-accent);
 }
 
 .toolbar-btn.pin-btn.active .toolbar-btn-icon {
@@ -101,47 +109,47 @@
 
 /* AI按钮 */
 .toolbar-btn.ai-btn {
-  background: rgba(175, 82, 222, 0.08);
-  border-color: rgba(175, 82, 222, 0.2);
-  color: #af52de;
+  background: var(--state-ai-bg);
+  border-color: var(--state-ai-border);
+  color: var(--state-ai-fg);
 }
 
 .toolbar-btn.ai-btn:hover:not(:disabled) {
-  background: #af52de;
-  border-color: #af52de;
-  color: white;
+  background: var(--state-ai-fg);
+  border-color: var(--state-ai-fg);
+  color: var(--text-on-accent);
 }
 
 .toolbar-btn.ai-btn.is-loading {
   background: var(--accent-light);
-  border-color: rgba(0, 122, 255, 0.32);
+  border-color: color-mix(in srgb, var(--accent-color) 32%, transparent);
   color: var(--accent-color);
 }
 
 /* OCR按钮 */
 .toolbar-btn.ocr-btn {
   background: var(--ocr-btn-bg);
-  border-color: rgba(52, 199, 89, 0.2);
-  color: #34c759;
+  border-color: var(--state-success-border);
+  color: var(--state-success-fg);
 }
 
 .toolbar-btn.ocr-btn:hover:not(:disabled) {
-  background: #34c759;
-  border-color: #34c759;
-  color: white;
+  background: var(--state-success-fg);
+  border-color: var(--state-success-fg);
+  color: var(--text-on-accent);
 }
 
 /* 备注按钮 */
 .toolbar-btn.note-btn.has-note {
   background: var(--note-btn-has-bg);
-  border-color: rgba(255, 149, 0, 0.3);
-  color: #ff9500;
+  border-color: var(--state-warning-border);
+  color: var(--state-warning-fg);
 }
 
 .toolbar-btn.note-btn:hover:not(:disabled) {
-  background: #ff9500;
-  border-color: #ff9500;
-  color: white;
+  background: var(--state-warning-fg);
+  border-color: var(--state-warning-fg);
+  color: var(--text-on-accent);
 }
 
 /* 收藏按钮 */
@@ -152,19 +160,19 @@
 }
 
 .toolbar-btn.favorite-btn:hover:not(:disabled) {
-  background: rgba(255, 149, 0, 0.1);
-  border-color: #ff9500;
-  color: #ff9500;
+  background: var(--state-warning-bg);
+  border-color: var(--state-warning-fg);
+  color: var(--state-warning-fg);
 }
 
 .toolbar-btn.favorite-btn.active {
-  background: #ff9500;
-  border-color: #ff9500;
-  color: white;
+  background: var(--state-warning-fg);
+  border-color: var(--state-warning-fg);
+  color: var(--text-on-accent);
 }
 
 .toolbar-btn.favorite-btn.active .toolbar-btn-icon {
-  animation: starPulse 0.4s ease-out;
+  animation: starPulse var(--motion-slow) var(--ease-standard);
 }
 
 @keyframes starPulse {
@@ -193,10 +201,14 @@
   height: 24px;
   padding: 0;
   background: var(--float-btn-bg);
-  border: 1px solid rgba(175, 82, 222, 0.2);
+  border: 1px solid var(--state-ai-border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
   z-index: 10;
   box-shadow: 0 1px 4px var(--shadow-sm);
 }
@@ -204,17 +216,17 @@
 .ai-tag-icon-btn-inline .ai-icon {
   font-size: 10px;
   font-weight: 700;
-  color: #af52de;
+  color: var(--state-ai-fg);
   letter-spacing: 0.5px;
 }
 
 .ai-tag-icon-btn-inline:hover:not(:disabled) {
-  background: #af52de;
+  background: var(--state-ai-fg);
   transform: scale(1.05);
 }
 
 .ai-tag-icon-btn-inline:hover:not(:disabled) .ai-icon {
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .ai-tag-icon-btn-inline:disabled {
@@ -224,7 +236,7 @@
 
 .ai-tag-icon-btn-inline .ai-loading {
   font-size: 12px;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: pulse var(--motion-pulse) var(--ease-pulse) infinite;
 }
 
 /* 置顶按钮 - 内联 */
@@ -242,7 +254,12 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
   z-index: 10;
   font-size: 14px;
   opacity: 0.5;
@@ -251,19 +268,15 @@
 
 .pin-icon-btn:hover {
   opacity: 1;
-  background: rgba(255, 149, 0, 0.1);
-  border-color: #ff9500;
-}
-
-.dark-mode .pin-icon-btn:hover {
-  background: rgba(255, 149, 0, 0.15);
+  background: var(--state-warning-bg);
+  border-color: var(--state-warning-fg);
 }
 
 .pin-icon-btn.pinned {
   opacity: 1;
-  background: #ff9500;
-  border-color: #ff9500;
-  color: white;
+  background: var(--state-warning-fg);
+  border-color: var(--state-warning-fg);
+  color: var(--text-on-accent);
   transform: rotate(45deg);
 }
 

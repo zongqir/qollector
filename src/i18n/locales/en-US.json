@@ -14,7 +14,31 @@
     "close": "Close",
     "quickAdd": "Quick Input",
     "miniMode": "Mini Mode",
-    "exitMini": "Exit Mini Mode"
+    "exitMini": "Exit Mini Mode",
+    "modeMini": "Mini",
+    "modeTimeline": "Timeline",
+    "modeMain": "Main",
+    "densityCompact": "Compact",
+    "densityCozy": "Cozy",
+    "switchToCozy": "Switch to cozy density (Ctrl/Cmd+Shift+D)",
+    "switchToCompact": "Switch to compact density (Ctrl/Cmd+Shift+D)",
+    "pinTop": "Pinned",
+    "floatMode": "Floating",
+    "panelVisible": "Workbench visible",
+    "panelHidden": "Workbench hidden",
+    "panelMode": "Panel",
+    "focusMode": "Focus",
+    "layoutPresetGroup": "Layout presets",
+    "layoutFocusShort": "Focus",
+    "layoutReviewShort": "Review",
+    "layoutCompareShort": "Compare",
+    "layoutFocusShortcut": "Switch to Focus layout (Ctrl/Cmd+1)",
+    "layoutReviewShortcut": "Switch to Review layout (Ctrl/Cmd+2)",
+    "layoutCompareShortcut": "Switch to Compare layout (Ctrl/Cmd+3)",
+    "hideHistoryShortcut": "Hide history stream (Ctrl/Cmd+Shift+H)",
+    "showHistoryShortcut": "Show history stream (Ctrl/Cmd+Shift+H)",
+    "hidePanelShortcut": "Hide workbench (Ctrl/Cmd+Shift+P)",
+    "showPanelShortcut": "Show workbench (Ctrl/Cmd+Shift+P)"
   },
   "search": {
     "placeholder": "Search content, tags, notes...",
@@ -27,6 +51,43 @@
       "file": "File",
       "link": "Link",
       "code": "Code"
+    },
+    "savedViews": {
+      "title": "Saved Views",
+      "namePlaceholder": "Name current filters...",
+      "saveCurrent": "Save current filters",
+      "empty": "No saved views yet",
+      "active": "Active",
+      "delete": "Delete view",
+      "clearActive": "Stop using",
+      "using": "Using saved view: {{name}}"
+    },
+    "matchSource": {
+      "content": "Content",
+      "note": "Note",
+      "ocr": "OCR",
+      "tag": "Tag",
+      "source": "Source",
+      "type": "Type"
+    },
+    "empty": {
+      "noSearchResults": "No search results found",
+      "tryOtherKeywords": "Try different keywords or reduce conditions",
+      "filteredAfterSearch": "Search matched, but filters removed all results",
+      "filteredNoMatch": "Current filters returned no results",
+      "firstUseTitle": "Your history is empty",
+      "firstUseDescription": "Start by adding a quick note, or replay the guide to learn the main workflow.",
+      "startQuickCapture": "Quick Add",
+      "replayGuide": "Replay Guide",
+      "restoreRecentView": "Restore Recent View",
+      "restoreRecentViewHint": "Apply \"{{name}}\" to return to the latest available results.",
+      "activeFilters": "Active filters: {{filters}}",
+      "clearAllFilters": "Clear all filters",
+      "filterType": "Type: {{type}}",
+      "filterTags": "Tags: {{count}}",
+      "filterFavorites": "Favorites only",
+      "filterPinned": "Workbench only",
+      "filterDate": "Date: {{range}}"
     }
   },
   "toolbar": {
@@ -123,7 +184,6 @@
     "copyHex": "Copy HEX",
     "copyRgb": "Copy RGB",
     "copyHsl": "Copy HSL",
-    "delete": "Delete",
     "autoPasted": "Pasted to foreground app",
     "justNow": "Just now",
     "cardBackground": {
@@ -134,6 +194,15 @@
       "sky": "Sky",
       "rose": "Rose",
       "violet": "Violet"
+    }
+  },
+  "feedback": {
+    "channel": {
+      "history": "History",
+      "preview": "Preview",
+      "hover": "Hover Preview",
+      "collection": "Workbench",
+      "global": "Global"
     }
   },
   "edit": {
@@ -594,7 +663,7 @@
   "collection": {
     "emptyTitle": "Your workbench is empty",
     "emptyHint": "Click the workbench button on any item, or drag cards here",
-    "workspaceGuide": "This is your workbench. Add important items here to organize, merge, and export them \u2014 turn your clipboard into a personal library.",
+    "workspaceGuide": "This is your workbench. Add important items here to organize, merge, and export them — turn your clipboard into a personal library.",
     "noFilteredItems": "No workbench items match current filters",
     "quickNotePlaceholder": "Type a note, press Enter to add to workbench...",
     "expandedNotePlaceholder": "Write down your thoughts here...",
@@ -832,5 +901,49 @@
     "skip": "Skip",
     "done": "Done",
     "stepOf": "{{current}} / {{total}}"
+  },
+  "history": {
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7": "Last 7 Days",
+      "older": "Older"
+    }
+  },
+  "shortcutHelp": {
+    "title": "Keyboard Shortcuts",
+    "close": "Close shortcut help",
+    "contextLabel": "Current context: {{mode}}",
+    "context": {
+      "mini": "Mini mode",
+      "timeline": "Timeline panel",
+      "preview": "Preview panel",
+      "collection": "Collection panel"
+    },
+    "sections": {
+      "global": "Global",
+      "history": "History Stream",
+      "selection": "Selection ({{count}})",
+      "collection": "Collection"
+    },
+    "items": {
+      "toggleHelp": "Open / close this help",
+      "toggleDensity": "Switch cozy / compact density",
+      "layoutFocus": "Switch to Focus layout preset",
+      "layoutReview": "Switch to Review layout preset",
+      "layoutCompare": "Switch to Compare layout preset",
+      "toggleHistory": "Show / hide history stream",
+      "togglePanel": "Show / hide collection panel",
+      "focusSearch": "Focus search input",
+      "moveCards": "Move focused card",
+      "copyFocused": "Copy focused item",
+      "jumpGroups": "Jump to day groups",
+      "selectAllVisible": "Select all visible history items",
+      "batchTag": "Open batch tag editor",
+      "copySelection": "Copy selected items (merged)",
+      "deleteSelection": "Delete selected items",
+      "clearSelection": "Clear current selection",
+      "selectAllCollection": "Select all items in collection (when focused)"
+    }
   }
 }

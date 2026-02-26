@@ -1,17 +1,17 @@
 import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
-import CompactCard from './CompactCard';
+import HistoryVirtualRow from './HistoryVirtualRow';
 import MultiSelectBar from './MultiSelectBar';
+import useHistoryEmptyDiagnostic from './hooks/useHistoryEmptyDiagnostic';
+import useHistoryBatchActions from './hooks/useHistoryBatchActions';
+import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
+import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { searchItems } from '../../services/clipboardService';
-import { runPromptAssistantTask } from '../../features/ai-assistant/services/promptAssistantService';
-import { getActionExecutionPreset } from '../../features/ai-assistant/constants/actionProfiles';
-import { resolveOutputLanguageFromUi } from '../../features/ai-assistant/utils/language';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -36,45 +36,156 @@ function detectClientPlatform() {
 }
 
 const SUPPORTS_NATIVE_EXTERNAL_DRAG = ['windows', 'macos'].includes(detectClientPlatform());
+const HISTORY_GROUP_ORDER = ['today', 'yesterday', 'last7', 'older'];
 
-function getExternalFilePaths(item) {
-  if (item.type_ === 'file' && item.content) {
-    return item.content
-      .split(/\r?\n/)
-      .map(s => s.trim())
-      .filter(Boolean);
+const normalizeText = (value) => (typeof value === 'string' ? value : '');
+const tokenizeSearchQuery = (query) => normalizeText(query).toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
+
+const findFirstMatch = (text, terms) => {
+  const normalized = normalizeText(text);
+  if (!normalized || !Array.isArray(terms) || terms.length === 0) return null;
+  const normalizedLower = normalized.toLowerCase();
+  let best = null;
+  terms.forEach((term) => {
+    if (!term) return;
+    const index = normalizedLower.indexOf(term);
+    if (index < 0) return;
+    if (!best || index < best.index) {
+      best = { term, index };
+    }
+  });
+  return best;
+};
+
+const buildSnippet = (text, match, radius = 46) => {
+  const rawText = normalizeText(text).replace(/\s+/g, ' ').trim();
+  if (!rawText) return '';
+  if (!match || typeof match.index !== 'number' || !match.term) {
+    return rawText.slice(0, 120);
   }
+  const start = Math.max(0, match.index - radius);
+  const end = Math.min(rawText.length, match.index + match.term.length + radius);
+  const prefix = start > 0 ? '...' : '';
+  const suffix = end < rawText.length ? '...' : '';
+  return `${prefix}${rawText.slice(start, end)}${suffix}`;
+};
 
-  if (item.type_ === 'image' && item.image_paths) {
-    try {
-      const paths = JSON.parse(item.image_paths);
-      const original = paths.original || paths.raw;
-      return original ? [original] : [];
-    } catch {
-      return [];
+const buildDayBoundaries = (nowMs) => {
+  const now = new Date(typeof nowMs === 'number' ? nowMs : Date.now());
+  now.setHours(0, 0, 0, 0);
+  const startToday = Math.floor(now.getTime() / 1000);
+  const startYesterday = startToday - 86400;
+  const startLast7 = startToday - (86400 * 6);
+  return { startToday, startYesterday, startLast7 };
+};
+
+const getHistoryGroupKey = (timestampSec, boundaries) => {
+  const ts = Number(timestampSec || 0);
+  if (ts >= boundaries.startToday) return 'today';
+  if (ts >= boundaries.startYesterday) return 'yesterday';
+  if (ts >= boundaries.startLast7) return 'last7';
+  return 'older';
+};
+
+const sameDateRange = (a, b) => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return (a.preset || '') === (b.preset || '')
+    && (a.start ?? null) === (b.start ?? null)
+    && (a.end ?? null) === (b.end ?? null);
+};
+
+const sameStringArray = (a, b) => {
+  const arrA = Array.isArray(a) ? a : [];
+  const arrB = Array.isArray(b) ? b : [];
+  if (arrA.length !== arrB.length) return false;
+  for (let i = 0; i < arrA.length; i += 1) {
+    if (arrA[i] !== arrB[i]) return false;
+  }
+  return true;
+};
+
+const sameFilterSnapshot = (left, right) => (
+  normalizeText(left?.searchQuery) === normalizeText(right?.searchQuery)
+  && normalizeText(left?.selectedType || 'all') === normalizeText(right?.selectedType || 'all')
+  && sameStringArray(left?.selectedTags, right?.selectedTags)
+  && Boolean(left?.showFavoritesOnly) === Boolean(right?.showFavoritesOnly)
+  && Boolean(left?.showPinnedOnly) === Boolean(right?.showPinnedOnly)
+  && sameDateRange(left?.selectedDateRange, right?.selectedDateRange)
+  && normalizeText(left?.customDateStart) === normalizeText(right?.customDateStart)
+  && normalizeText(left?.customDateEnd) === normalizeText(right?.customDateEnd)
+);
+
+const itemMatchesFilterSnapshot = (item, snapshot, t) => {
+  const queryTerms = tokenizeSearchQuery(snapshot?.searchQuery || '');
+  if (queryTerms.length > 0) {
+    const itemTags = getTags(item.tags);
+    const sourceApp = getSourceApp(item.metadata);
+    const sourceTag = buildSourceTag(sourceApp, t);
+    const typeTag = buildTypeTag(item.type_, t);
+    const typeLabel = item.code_language
+      ? t('search.typeFilter.code')
+      : t(`search.typeFilter.${item.type_ || 'text'}`);
+
+    const searchTarget = [
+      item.content,
+      item.user_note,
+      item.ocr_text,
+      itemTags.join(' '),
+      sourceApp,
+      sourceTag,
+      typeTag,
+      typeLabel,
+      item.type_,
+      item.code_language,
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .toLowerCase();
+
+    if (!queryTerms.some(term => searchTarget.includes(term))) {
+      return false;
     }
   }
 
-  return [];
-}
+  const selectedType = normalizeText(snapshot?.selectedType || 'all');
+  if (selectedType === 'code') {
+    if (!item.code_language) return false;
+  } else if (selectedType !== 'all' && item.type_ !== selectedType) {
+    return false;
+  }
 
-function getDragText(item, externalPaths) {
-  if (item.type_ === 'text') return item.content || '';
-  if (item.type_ === 'file') return item.content || externalPaths.join('\n');
-  if (item.type_ === 'image') return item.ocr_text || externalPaths[0] || item.content || '';
-  return item.content || '';
-}
+  if (snapshot?.showFavoritesOnly && !item.is_favorite) return false;
+  if (snapshot?.showPinnedOnly && !item.is_pinned) return false;
+
+  const selectedTags = Array.isArray(snapshot?.selectedTags) ? snapshot.selectedTags : [];
+  if (selectedTags.length > 0) {
+    const itemTags = getTags(item.tags);
+    const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+    const typeTag = buildTypeTag(item.type_, t);
+    const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
+    if (!selectedTags.some(tag => allItemTags.includes(tag))) return false;
+  }
+
+  const selectedDateRange = snapshot?.selectedDateRange;
+  if (selectedDateRange) {
+    const createdAt = Number(item.created_at || 0);
+    const start = selectedDateRange.start != null ? Number(selectedDateRange.start) : null;
+    const end = selectedDateRange.end != null ? Number(selectedDateRange.end) : null;
+    if (start != null && createdAt < start) return false;
+    if (end != null && createdAt > end) return false;
+  }
+
+  return true;
+};
 
 function HistoryStream({ style }) {
   const { t, i18n } = useTranslation();
-  const clickTimerRef = useRef(null);
   const selectionAnchorIndexRef = useRef(-1);
   const filterProbeRef = useRef(null);
   const lastFilterProbeLogAtRef = useRef(0);
   const hasTopTrackerInitRef = useRef(false);
   const prevTopItemIdRef = useRef(null);
-  const batchTagEditorRef = useRef(null);
-  const batchTagSuggestionsRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -107,6 +218,8 @@ function HistoryStream({ style }) {
   const showDateFilter = useAppStore(s => s.showDateFilter);
   const customDateStart = useAppStore(s => s.customDateStart);
   const customDateEnd = useAppStore(s => s.customDateEnd);
+  const savedFilterViews = useAppStore(s => s.savedFilterViews);
+  const activeFilterViewId = useAppStore(s => s.activeFilterViewId);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const toggleTagFilter = useAppStore(s => s.toggleTagFilter);
   const setSelectedDateRange = useAppStore(s => s.setSelectedDateRange);
@@ -114,6 +227,10 @@ function HistoryStream({ style }) {
   const setCustomDateStart = useAppStore(s => s.setCustomDateStart);
   const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
+  const saveCurrentFilterView = useAppStore(s => s.saveCurrentFilterView);
+  const applySavedFilterView = useAppStore(s => s.applySavedFilterView);
+  const deleteSavedFilterView = useAppStore(s => s.deleteSavedFilterView);
+  const clearActiveFilterView = useAppStore(s => s.clearActiveFilterView);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
@@ -132,13 +249,14 @@ function HistoryStream({ style }) {
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
-  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
   const setHoverPreview = useAppStore(s => s.setHoverPreview);
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+  const openEditModal = useAppStore(s => s.openEditModal);
+  const startTour = useAppStore(s => s.startTour);
   const previewItemId = previewItem?.id;
   const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
 
@@ -155,14 +273,7 @@ function HistoryStream({ style }) {
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [timeTick, setTimeTick] = useState(() => Date.now());
-  const [showBatchTagEditor, setShowBatchTagEditor] = useState(false);
-  const [batchTagInput, setBatchTagInput] = useState('');
-  const [batchTagPending, setBatchTagPending] = useState(false);
-  const [batchTagFeedback, setBatchTagFeedback] = useState(null);
-  const [batchTagActiveSuggestionIndex, setBatchTagActiveSuggestionIndex] = useState(-1);
-  const [batchAiRunningTask, setBatchAiRunningTask] = useState(null);
-  const [batchAiFeedback, setBatchAiFeedback] = useState(null);
-  const [batchFlagPending, setBatchFlagPending] = useState(false);
+  const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -221,60 +332,11 @@ function HistoryStream({ style }) {
     ];
   }, [items, t, i18n.language]);
 
-  const rankedUserTags = useMemo(() => {
-    const statsByTag = new Map();
-    items.forEach((item) => {
-      const rankTimestamp = Math.max(item.updated_at || 0, item.created_at || 0);
-      const uniqueUserTags = new Set(
-        getTags(item.tags).filter(tag => !tag.startsWith('AI:')),
-      );
-      uniqueUserTags.forEach((tag) => {
-        const existing = statsByTag.get(tag);
-        if (existing) {
-          existing.count += 1;
-          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
-          return;
-        }
-        statsByTag.set(tag, { tag, count: 1, lastUsedAt: rankTimestamp });
-      });
-    });
-    return Array.from(statsByTag.values())
-      .sort((a, b) => (
-        b.count - a.count
-        || b.lastUsedAt - a.lastUsedAt
-        || a.tag.localeCompare(b.tag)
-      ))
-      .map(stat => stat.tag);
-  }, [items]);
-
   const filteredTagsList = useMemo(() => {
     if (!tagSearchQuery.trim()) return allTags;
     const query = tagSearchQuery.toLowerCase();
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
-
-  const filteredBatchTagSuggestions = useMemo(() => {
-    const normalizedInput = batchTagInput.trim().toLowerCase();
-    if (!normalizedInput) return rankedUserTags.slice(0, 8);
-
-    const prefixMatches = [];
-    const partialMatches = [];
-    rankedUserTags.forEach((tag) => {
-      const normalizedTag = tag.toLowerCase();
-      if (!normalizedTag.includes(normalizedInput) || normalizedTag === normalizedInput) return;
-      if (normalizedTag.startsWith(normalizedInput)) {
-        prefixMatches.push(tag);
-      } else {
-        partialMatches.push(tag);
-      }
-    });
-    return [...prefixMatches, ...partialMatches].slice(0, 8);
-  }, [rankedUserTags, batchTagInput]);
-
-  const activeBatchTagSuggestion =
-    batchTagActiveSuggestionIndex >= 0
-      ? filteredBatchTagSuggestions[batchTagActiveSuggestionIndex] || null
-      : null;
 
   const handleSelectDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
@@ -292,6 +354,40 @@ function HistoryStream({ style }) {
       setSelectedDateRange({ preset: 'custom', start, end });
     }
   }, [customDateStart, customDateEnd, setSelectedDateRange]);
+
+  const activeFilterView = useMemo(() => (
+    savedFilterViews.find(view => view.id === activeFilterViewId) || null
+  ), [savedFilterViews, activeFilterViewId]);
+
+  useEffect(() => {
+    if (!activeFilterView) return;
+
+    const currentSnapshot = {
+      searchQuery,
+      selectedType,
+      selectedTags,
+      showFavoritesOnly,
+      showPinnedOnly,
+      selectedDateRange,
+      customDateStart,
+      customDateEnd,
+    };
+
+    if (!sameFilterSnapshot(activeFilterView.filters, currentSnapshot)) {
+      clearActiveFilterView();
+    }
+  }, [
+    activeFilterView,
+    searchQuery,
+    selectedType,
+    selectedTags,
+    showFavoritesOnly,
+    showPinnedOnly,
+    selectedDateRange,
+    customDateStart,
+    customDateEnd,
+    clearActiveFilterView,
+  ]);
 
   const filteredItems = useMemo(() => {
     const startedAt = performance.now();
@@ -355,323 +451,215 @@ function HistoryStream({ style }) {
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange, t, i18n.language]);
 
-  const selectedItemsForBatchActions = useMemo(() => {
-    if (selectedItemIds.length === 0) return [];
-    const selectedIdSet = new Set(selectedItemIds);
-    const preferredOrdered = filteredItems.filter(item => selectedIdSet.has(item.id));
-    if (preferredOrdered.length === selectedItemIds.length) {
-      return preferredOrdered;
-    }
+  const searchTerms = useMemo(() => tokenizeSearchQuery(debouncedSearchQuery), [debouncedSearchQuery]);
 
-    const fallbackById = new Map(items.map(item => [item.id, item]));
-    const fallbackOrdered = selectedItemIds
-      .map(id => fallbackById.get(id))
-      .filter(Boolean);
-    const preferredIdSet = new Set(preferredOrdered.map(item => item.id));
-    return preferredOrdered.length > 0
-      ? [...preferredOrdered, ...fallbackOrdered.filter(item => !preferredIdSet.has(item.id))]
-      : fallbackOrdered;
-  }, [selectedItemIds, filteredItems, items]);
+  const searchExplainById = useMemo(() => {
+    if (searchTerms.length === 0) return new Map();
 
-  const allSelectedAreText = useMemo(
-    () => selectedItemsForBatchActions.length > 0 && selectedItemsForBatchActions.every(item => item.type_ === 'text'),
-    [selectedItemsForBatchActions],
-  );
+    const explains = new Map();
+    filteredItems.forEach((item) => {
+      const matchedSources = [];
+      let snippet = '';
+      let highlightTerm = searchTerms[0];
 
-  const batchAiSourceText = useMemo(
-    () => selectedItemsForBatchActions
-      .map(item => item.content || '')
-      .filter(Boolean)
-      .join('\n\n'),
-    [selectedItemsForBatchActions],
-  );
+      const assignSnippet = (text, match) => {
+        if (snippet || !match) return;
+        snippet = buildSnippet(text, match);
+        highlightTerm = match.term;
+      };
 
-  const canRunBatchAi = aiEnabled && allSelectedAreText && batchAiSourceText.trim().length > 0;
-  const allSelectedAreFavorite = selectedItemsForBatchActions.length > 0
-    && selectedItemsForBatchActions.every(item => item.is_favorite);
-  const allSelectedArePinned = selectedItemsForBatchActions.length > 0
-    && selectedItemsForBatchActions.every(item => item.is_pinned);
-
-  const closeBatchTagEditor = useCallback(() => {
-    if (batchTagPending) return;
-    setShowBatchTagEditor(false);
-    setBatchTagInput('');
-    setBatchTagActiveSuggestionIndex(-1);
-  }, [batchTagPending]);
-
-  const openBatchTagEditor = useCallback(() => {
-    if (batchTagPending) return;
-    setBatchTagFeedback(null);
-    setBatchTagInput('');
-    setBatchTagActiveSuggestionIndex(-1);
-    setShowBatchTagEditor(true);
-  }, [batchTagPending]);
-
-  const applyBatchTag = useCallback(async (tagValue = batchTagInput) => {
-    const normalizedTag = tagValue.trim();
-    if (!normalizedTag || batchTagPending) return;
-
-    setBatchTagPending(true);
-    setBatchTagFeedback(null);
-    try {
-      const result = await addTagToSelectedItems(normalizedTag, filteredItems);
-      if (!result?.ok) {
-        if (result?.reason === 'reserved-prefix') {
-          setBatchTagFeedback({ type: 'error', text: t('multiSelect.addTagReservedPrefix') });
-          return;
-        }
-        if (result?.reason === 'empty-tag') {
-          setBatchTagFeedback({ type: 'error', text: t('multiSelect.addTagEmpty') });
-          return;
-        }
-        setBatchTagFeedback({
-          type: 'error',
-          text: t('multiSelect.addTagFailed', { error: result?.error || 'Unknown error' }),
-        });
-        return;
+      const contentMatch = findFirstMatch(item.content, searchTerms);
+      if (contentMatch) {
+        matchedSources.push('content');
+        assignSnippet(item.content, contentMatch);
       }
 
-      if (Array.isArray(result.updates) && result.updates.length > 0) {
-        const updatesById = new Map(result.updates.map(update => [update.id, update]));
-        setBackendSearchResults((prev) => {
-          if (!Array.isArray(prev) || prev.length === 0) return prev;
-          return prev.map((item) => {
-            const updated = updatesById.get(item.id);
-            if (!updated) return item;
-            return {
-              ...item,
-              tags: updated.tags,
-              updated_at: updated.updated_at,
-            };
-          });
-        });
+      const noteMatch = findFirstMatch(item.user_note, searchTerms);
+      if (noteMatch) {
+        matchedSources.push('note');
+        assignSnippet(item.user_note, noteMatch);
       }
 
-      if (result.failedCount > 0 && result.updatedCount === 0 && result.unchangedCount === 0) {
-        setBatchTagFeedback({
-          type: 'error',
-          text: t('multiSelect.addTagFailed', {
-            error: result.error || t('multiSelect.addTagAllFailed', { failed: result.failedCount }),
-          }),
-        });
-      } else if (result.failedCount > 0) {
-        setBatchTagFeedback({
-          type: 'warning',
-          text: t('multiSelect.addTagPartial', {
-            updated: result.updatedCount,
-            failed: result.failedCount,
-          }),
-        });
-      } else if (result.updatedCount > 0) {
-        setBatchTagFeedback({
-          type: 'success',
-          text: t('multiSelect.addTagSuccess', {
-            count: result.updatedCount,
-            tag: result.tag,
-          }),
-        });
-      } else {
-        setBatchTagFeedback({ type: 'warning', text: t('multiSelect.addTagNoChanges') });
+      const ocrMatch = findFirstMatch(item.ocr_text, searchTerms);
+      if (ocrMatch) {
+        matchedSources.push('ocr');
+        assignSnippet(item.ocr_text, ocrMatch);
       }
-      setBatchTagInput('');
-      setShowBatchTagEditor(false);
-    } catch (error) {
-      setBatchTagFeedback({
-        type: 'error',
-        text: t('multiSelect.addTagFailed', { error: String(error) }),
+
+      const tags = getTags(item.tags);
+      const matchedTag = tags.find(tag => findFirstMatch(tag, searchTerms));
+      if (matchedTag) {
+        matchedSources.push('tag');
+        assignSnippet(matchedTag, findFirstMatch(matchedTag, searchTerms));
+      }
+
+      const sourceApp = getSourceApp(item.metadata);
+      const sourceMatch = findFirstMatch(sourceApp, searchTerms);
+      if (sourceMatch) {
+        matchedSources.push('source');
+        assignSnippet(sourceApp, sourceMatch);
+      }
+
+      const typeLabel = item.code_language
+        ? t('search.typeFilter.code')
+        : t(`search.typeFilter.${item.type_ || 'text'}`);
+      const typeMatch = findFirstMatch(typeLabel, searchTerms);
+      if (typeMatch) {
+        matchedSources.push('type');
+        assignSnippet(typeLabel, typeMatch);
+      }
+
+      if (matchedSources.length === 0) {
+        matchedSources.push('content');
+      }
+
+      explains.set(item.id, {
+        sources: matchedSources.slice(0, 4),
+        snippet: snippet || buildSnippet(item.content || item.user_note || item.ocr_text, null),
+        highlightTerm,
       });
-    } finally {
-      setBatchTagPending(false);
-    }
-  }, [addTagToSelectedItems, batchTagInput, batchTagPending, filteredItems, t]);
+    });
 
-  const handleBatchFavoriteToggle = useCallback(async () => {
-    if (batchFlagPending || selectedItemsForBatchActions.length === 0) return;
-    const targetFavoriteState = !allSelectedAreFavorite;
-    const targets = selectedItemsForBatchActions.filter(item => Boolean(item.is_favorite) !== targetFavoriteState);
-    if (targets.length === 0) return;
+    return explains;
+  }, [filteredItems, searchTerms, t, i18n.language]);
 
-    setBatchFlagPending(true);
-    try {
-      for (const item of targets) {
-        await invoke('toggle_favorite_item', { id: item.id });
-      }
-      await loadItems();
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      setBatchAiFeedback({
-        type: 'error',
-        text: t('multiSelect.batchActionFailed', { error: message }),
-      });
-    } finally {
-      setBatchFlagPending(false);
-    }
-  }, [allSelectedAreFavorite, batchFlagPending, selectedItemsForBatchActions, loadItems, t]);
+  const dayBoundaries = useMemo(() => buildDayBoundaries(timeTick), [timeTick]);
 
-  const handleBatchPinToggle = useCallback(async () => {
-    if (batchFlagPending || selectedItemsForBatchActions.length === 0) return;
-    const targetPinnedState = !allSelectedArePinned;
-    const targets = selectedItemsForBatchActions.filter(item => Boolean(item.is_pinned) !== targetPinnedState);
-    if (targets.length === 0) return;
-
-    setBatchFlagPending(true);
-    try {
-      const maxPinned = targetPinnedState ? maxPinnedItems : 999;
-      for (const item of targets) {
-        await invoke('toggle_pin_item', { id: item.id, maxPinned });
-      }
-      await loadItems();
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      setBatchAiFeedback({
-        type: 'error',
-        text: t('multiSelect.batchActionFailed', { error: message }),
-      });
-    } finally {
-      setBatchFlagPending(false);
-    }
-  }, [allSelectedArePinned, batchFlagPending, selectedItemsForBatchActions, maxPinnedItems, loadItems, t]);
-
-  const handleBatchAiAction = useCallback(async (taskType) => {
-    if ((taskType !== 'summarize' && taskType !== 'rewrite') || !canRunBatchAi || batchAiRunningTask) {
-      return;
-    }
-
-    setBatchAiRunningTask(taskType);
-    setBatchAiFeedback(null);
-    try {
-      const executionPreset = getActionExecutionPreset(taskType, 'quick-output');
-      const response = await runPromptAssistantTask({
-        taskType,
-        input: batchAiSourceText.trim(),
-        uiLanguage: i18n.language,
-        outputLanguage: resolveOutputLanguageFromUi(i18n.language),
-        tone: executionPreset.tone,
-        length: executionPreset.length,
-        extraInstruction: executionPreset.extraInstruction,
-      });
-
-      const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
-      if (!outputText) {
-        setBatchAiFeedback({ type: 'warning', text: t('multiSelect.batchAiEmpty') });
-        return;
-      }
-
-      await invoke('copy_plain_text', { text: outputText });
-      setBatchAiFeedback({
-        type: 'success',
-        text: taskType === 'rewrite'
-          ? t('multiSelect.batchRewriteCopied')
-          : t('multiSelect.batchSummarizeCopied'),
-      });
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      setBatchAiFeedback({
-        type: 'error',
-        text: t('multiSelect.batchAiFailed', { error: message }),
-      });
-    } finally {
-      setBatchAiRunningTask(null);
-    }
-  }, [batchAiRunningTask, batchAiSourceText, canRunBatchAi, i18n.language, t]);
-
-  const handleBatchTagInputKeyDown = useCallback((e) => {
-    if (e.nativeEvent?.isComposing || e.isComposing) return;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      if (filteredBatchTagSuggestions.length === 0) return;
-      e.preventDefault();
-      setBatchTagActiveSuggestionIndex((current) => {
-        if (e.key === 'ArrowDown') {
-          if (current < 0) return 0;
-          return Math.min(current + 1, filteredBatchTagSuggestions.length - 1);
-        }
-        if (current < 0) return filteredBatchTagSuggestions.length - 1;
-        return Math.max(current - 1, 0);
-      });
-      return;
-    }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (activeBatchTagSuggestion) {
-        applyBatchTag(activeBatchTagSuggestion);
-        return;
-      }
-      if (!batchTagInput.trim()) return;
-      applyBatchTag();
-      return;
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeBatchTagEditor();
-    }
-  }, [
-    activeBatchTagSuggestion,
-    applyBatchTag,
-    batchTagInput,
-    closeBatchTagEditor,
-    filteredBatchTagSuggestions.length,
-  ]);
-
-  // reset keyboard focus when list changes
-  useEffect(() => {
-    setFocusedIndex(-1);
-    selectionAnchorIndexRef.current = -1;
-  }, [filteredItems, setFocusedIndex]);
-
-  useEffect(() => {
-    if (selectedItemIds.length > 0) return;
-    setShowBatchTagEditor(false);
-    setBatchTagInput('');
-    setBatchTagActiveSuggestionIndex(-1);
-    setBatchAiFeedback(null);
-    selectionAnchorIndexRef.current = -1;
-  }, [selectedItemIds.length]);
-
-  useEffect(() => {
-    if (!showBatchTagEditor || filteredBatchTagSuggestions.length === 0) {
-      setBatchTagActiveSuggestionIndex(-1);
-      return;
-    }
-    setBatchTagActiveSuggestionIndex((current) => (
-      current >= filteredBatchTagSuggestions.length ? filteredBatchTagSuggestions.length - 1 : current
-    ));
-  }, [showBatchTagEditor, filteredBatchTagSuggestions.length]);
-
-  useEffect(() => {
-    if (!showBatchTagEditor || batchTagActiveSuggestionIndex < 0) return;
-    const activeItem = batchTagSuggestionsRef.current
-      ?.querySelector(`[data-suggestion-index="${batchTagActiveSuggestionIndex}"]`);
-    activeItem?.scrollIntoView?.({ block: 'nearest' });
-  }, [showBatchTagEditor, batchTagActiveSuggestionIndex]);
-
-  useEffect(() => {
-    if (!showBatchTagEditor) return undefined;
-
-    const handleOutsidePointerDown = (event) => {
-      if (!batchTagEditorRef.current?.contains(event.target)) {
-        closeBatchTagEditor();
-      }
+  const historyGrouping = useMemo(() => {
+    const groupByIndex = [];
+    const isGroupStart = [];
+    const firstIndexByGroup = {};
+    const countByGroup = {
+      today: 0,
+      yesterday: 0,
+      last7: 0,
+      older: 0,
     };
 
-    window.addEventListener('mousedown', handleOutsidePointerDown);
-    return () => window.removeEventListener('mousedown', handleOutsidePointerDown);
-  }, [showBatchTagEditor, closeBatchTagEditor]);
+    filteredItems.forEach((item, index) => {
+      const timestamp = Number(item.updated_at || item.created_at || 0);
+      const groupKey = getHistoryGroupKey(timestamp, dayBoundaries);
+      groupByIndex[index] = groupKey;
+      countByGroup[groupKey] += 1;
+      if (firstIndexByGroup[groupKey] == null) {
+        firstIndexByGroup[groupKey] = index;
+        isGroupStart[index] = true;
+      } else {
+        isGroupStart[index] = false;
+      }
+    });
 
-  useEffect(() => {
-    if (!batchTagFeedback) return undefined;
-    const timer = setTimeout(() => {
-      setBatchTagFeedback(null);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [batchTagFeedback]);
+    const availableGroups = HISTORY_GROUP_ORDER.filter(groupKey => firstIndexByGroup[groupKey] != null);
+    return {
+      groupByIndex,
+      isGroupStart,
+      firstIndexByGroup,
+      countByGroup,
+      availableGroups,
+    };
+  }, [filteredItems, dayBoundaries]);
 
-  useEffect(() => {
-    if (!batchAiFeedback) return undefined;
-    const timer = setTimeout(() => {
-      setBatchAiFeedback(null);
-    }, 2500);
-    return () => clearTimeout(timer);
-  }, [batchAiFeedback]);
+  const activeVisibleGroup = useMemo(() => {
+    if (filteredItems.length === 0) return null;
+    const safeIndex = Math.max(0, Math.min(filteredItems.length - 1, visibleRangeStartIndex));
+    return historyGrouping.groupByIndex[safeIndex] || historyGrouping.availableGroups[0] || null;
+  }, [filteredItems.length, visibleRangeStartIndex, historyGrouping]);
+
+  const { emptyDiagnostic, handleResetAllFilters } = useHistoryEmptyDiagnostic({
+    searchTermsLength: searchTerms.length,
+    backendSearchResults,
+    itemsLength: items.length,
+    selectedType,
+    selectedTags,
+    showFavoritesOnly,
+    showPinnedOnly,
+    selectedDateRange,
+    t,
+    setSearchQuery,
+    setSelectedType,
+    setSelectedTags,
+    setShowFavoritesOnly,
+    setShowPinnedOnly,
+    setShowTagFilter,
+    setTagSearchQuery,
+    clearDateFilter,
+    clearActiveFilterView,
+  });
+
+  const recentUsableSavedView = useMemo(() => {
+    const shouldRecommendRestore = filteredItems.length === 0
+      && emptyDiagnostic.mode !== 'first-use'
+      && Array.isArray(savedFilterViews)
+      && savedFilterViews.length > 0;
+    if (!shouldRecommendRestore) return null;
+
+    const rankedViews = [...savedFilterViews].sort(
+      (left, right) => (right.updatedAt || right.createdAt || 0) - (left.updatedAt || left.createdAt || 0),
+    );
+
+    for (const view of rankedViews) {
+      if (!view?.id || view.id === activeFilterViewId) continue;
+      if (!view?.filters) continue;
+      const hasAnyMatch = items.some(item => itemMatchesFilterSnapshot(item, view.filters, t));
+      if (hasAnyMatch) return view;
+    }
+
+    return null;
+  }, [
+    filteredItems.length,
+    emptyDiagnostic.mode,
+    savedFilterViews,
+    activeFilterViewId,
+    items,
+    t,
+    i18n.language,
+  ]);
+
+  const handleRestoreRecentSavedView = useCallback(() => {
+    if (!recentUsableSavedView?.id) return;
+    applySavedFilterView(recentUsableSavedView.id);
+  }, [recentUsableSavedView, applySavedFilterView]);
+
+  const {
+    showBatchTagEditor,
+    batchTagEditorRef,
+    batchTagSuggestionsRef,
+    batchTagInput,
+    batchTagPending,
+    batchTagFeedback,
+    batchTagActiveSuggestionIndex,
+    setBatchTagActiveSuggestionIndex,
+    batchAiRunningTask,
+    batchAiFeedback,
+    batchFlagPending,
+    filteredBatchTagSuggestions,
+    activeBatchTagSuggestion,
+    canApplyBatchTag,
+    canRunBatchAi,
+    allSelectedAreFavorite,
+    allSelectedArePinned,
+    openBatchTagEditor,
+    closeBatchTagEditor,
+    applyBatchTag,
+    handleBatchFavoriteToggle,
+    handleBatchPinToggle,
+    handleBatchAiAction,
+    handleBatchTagInputKeyDown,
+    handleBatchTagInputChange,
+  } = useHistoryBatchActions({
+    items,
+    filteredItems,
+    selectedItemIds,
+    aiEnabled,
+    maxPinnedItems,
+    loadItems,
+    addTagToSelectedItems,
+    setBackendSearchResults,
+    setFocusedIndex,
+    selectionAnchorIndexRef,
+    t,
+    i18nLanguage: i18n.language,
+  });
 
   useEffect(() => {
     const probe = filterProbeRef.current;
@@ -745,297 +733,57 @@ function HistoryStream({ style }) {
     selectedDateRange,
   ]);
 
-  const handleCardClick = useCallback((item, index, e) => {
-    e.stopPropagation();
-    if (typeof index !== 'number' || index < 0 || index >= filteredItems.length) return;
-
-    if (e.shiftKey) {
-      e.preventDefault();
-      const anchorCandidate = selectionAnchorIndexRef.current >= 0
-        ? selectionAnchorIndexRef.current
-        : (focusedIndex >= 0 ? focusedIndex : index);
-      const anchorIndex = Math.max(0, Math.min(filteredItems.length - 1, anchorCandidate));
-      const start = Math.min(anchorIndex, index);
-      const end = Math.max(anchorIndex, index);
-      const rangeIds = filteredItems.slice(start, end + 1).map(candidate => candidate.id);
-      if (rangeIds.length > 0) {
-        setSelectedItemIds(rangeIds);
-        setFocusedIndex(index);
-        selectionAnchorIndexRef.current = anchorIndex;
-      }
-      return;
-    }
-
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const shouldIncludePreviewSelection =
-        selectedItemIds.length === 0 &&
-        panelMode === 'preview' &&
-        previewItemId &&
-        previewItemId !== item.id &&
-        filteredItems.some(candidate => candidate.id === previewItemId);
-
-      if (shouldIncludePreviewSelection) {
-        toggleSelectItem(previewItemId);
-      }
-      toggleSelectItem(item.id);
-      setFocusedIndex(index);
-      selectionAnchorIndexRef.current = index;
-      return;
-    }
-    if (selectedItemIds.length > 0) {
-      clearSelection();
-    }
-    selectionAnchorIndexRef.current = index;
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-      clickTimerRef.current = null;
-    }
-    if (shouldUseHoverPreview) {
-      if (hoverPreviewItem?.id === item.id) {
-        clearHoverPreview();
-        return;
-      }
-      clickTimerRef.current = setTimeout(() => {
-        const el = document.querySelector(`[data-item-id="${item.id}"]`);
-        const rect = el ? el.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
-        setHoverPreview(item, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
-        clickTimerRef.current = null;
-      }, 250);
-      return;
-    }
-    clickTimerRef.current = setTimeout(() => {
-      setPanelMode('preview', item);
-      clickTimerRef.current = null;
-    }, 250);
-  }, [
+  const {
+    handleCardClick,
+    handleCardDoubleClick,
+    handleStartExternalDrag,
+    handleDragStart,
+    handleStreamClick,
+  } = useHistoryRowInteractions({
+    filteredItems,
+    selectedItemIds,
+    panelMode,
+    previewItemId,
+    focusedIndex,
+    shouldUseHoverPreview,
+    hoverPreviewItem,
+    selectionAnchorIndexRef,
+    supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
+    setSelectedItemIds,
+    setFocusedIndex,
     setPanelMode,
     toggleSelectItem,
     clearSelection,
-    selectedItemIds.length,
-    panelMode,
-    previewItemId,
+    setHoverPreview,
+    clearHoverPreview,
+    handleCopyAndAutoPaste,
+    handleCopy,
+    switchToCollection,
+  });
+
+  const { handleSearchInputKeyDown } = useHistoryKeyboardNavigation({
     filteredItems,
     focusedIndex,
-    setSelectedItemIds,
     setFocusedIndex,
     shouldUseHoverPreview,
     setHoverPreview,
-    hoverPreviewItem,
+    setPanelMode,
+    handleCopy,
+    handleCopyAndAutoPaste,
     clearHoverPreview,
-  ]);
-
-  const handleCardDoubleClick = useCallback((item, e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    window.getSelection()?.removeAllRanges();
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-      clickTimerRef.current = null;
-    }
-    clearHoverPreview();
-    // Image/file: copy only, no auto-paste
-    if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item, 'history');
-    } else {
-      handleCopyAndAutoPaste(item, 'history');
-    }
-  }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
-
-  const handleStartExternalDrag = useCallback(async (item) => {
-    if (!SUPPORTS_NATIVE_EXTERNAL_DRAG) return;
-    const paths = getExternalFilePaths(item);
-    if (paths.length === 0) return;
-
-    try {
-      await invoke('start_native_file_drag', {
-        paths,
-        operation: 'copy',
-      });
-    } catch (error) {
-      console.error('native drag out failed:', error);
-    }
-  }, []);
-
-  const handleDragStart = useCallback((item, e) => {
-    const externalPaths = getExternalFilePaths(item);
-    if (SUPPORTS_NATIVE_EXTERNAL_DRAG && externalPaths.length > 0 && !e.shiftKey) {
-      e.preventDefault();
-      handleStartExternalDrag(item);
-      return;
-    }
-
-    const text = getDragText(item, externalPaths);
-
-    e.dataTransfer.setData('text/plain', text);
-    e.dataTransfer.setData('application/x-qollect-item', JSON.stringify({ id: item.id }));
-    e.dataTransfer.effectAllowed = 'copyMove';
-
-    switchToCollection();
-
-    const dragEl = document.createElement('div');
-    dragEl.textContent = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-    dragEl.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;';
-    document.body.appendChild(dragEl);
-    e.dataTransfer.setDragImage(dragEl, 0, 0);
-    setTimeout(() => document.body.removeChild(dragEl), 0);
-  }, [handleStartExternalDrag, switchToCollection]);
-
-  const handleStreamClick = useCallback(() => {
-    if (selectedItemIds.length > 0) {
-      clearSelection();
-      return;
-    }
-    if (shouldUseHoverPreview) {
-      clearHoverPreview();
-      return;
-    }
-    if (panelMode === 'preview') {
-      switchToCollection();
-    }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearHoverPreview]);
-
-  const moveFocusedSelection = useCallback((dir) => {
-    const total = filteredItems.length;
-    if (total === 0) return;
-
-    const next = focusedIndex < 0
-      ? (dir === 1 ? 0 : total - 1)
-      : Math.max(0, Math.min(total - 1, focusedIndex + dir));
-
-    setFocusedIndex(next);
-    virtuosoRef.current?.scrollIntoView({ index: next, behavior: 'auto', align: 'end' });
-
-    const nextItem = filteredItems[next];
-    if (!nextItem) return;
-
-    if (shouldUseHoverPreview) {
-      const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
-      }
-      return;
-    }
-
-    setPanelMode('preview', nextItem);
-  }, [filteredItems, focusedIndex, setFocusedIndex, shouldUseHoverPreview, setHoverPreview, setPanelMode]);
-
-  const submitFocusedSelection = useCallback(() => {
-    if (focusedIndex < 0 || focusedIndex >= filteredItems.length) return false;
-
-    const focusedItem = filteredItems[focusedIndex];
-    if (focusedItem.type_ === 'image' || focusedItem.type_ === 'file') {
-      handleCopy(focusedItem, 'history');
-    } else {
-      handleCopyAndAutoPaste(focusedItem, 'history');
-    }
-    return true;
-  }, [focusedIndex, filteredItems, handleCopy, handleCopyAndAutoPaste]);
-
-  const handleSearchInputKeyDown = useCallback((e) => {
-    if (e.nativeEvent?.isComposing || e.isComposing) return;
-
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
-      return;
-    }
-
-    if (e.key === 'Enter' && submitFocusedSelection()) {
-      e.preventDefault();
-    }
-  }, [moveFocusedSelection, submitFocusedSelection]);
-
-  useEffect(() => {
-    if (!shouldUseHoverPreview) {
-      clearHoverPreview();
-    }
-  }, [shouldUseHoverPreview, clearHoverPreview]);
-
-  useEffect(() => {
-    if (selectedItemIds.length > 0) {
-      clearHoverPreview();
-    }
-  }, [selectedItemIds.length, clearHoverPreview]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // skip when focus is inside an input / textarea / editable
-      const tag = e.target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
-
-      // skip when focus is inside the collection panel
-      if (e.target.closest('.collection-panel') || document.activeElement?.closest?.('.collection-panel')) return;
-
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
-        return;
-      }
-
-      if (e.key === 'Enter' && submitFocusedSelection()) {
-        e.preventDefault();
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'a') {
-        if (filteredItems.length === 0) return;
-        e.preventDefault();
-        setSelectedItemIds(filteredItems.map(item => item.id));
-        setFocusedIndex(0);
-        selectionAnchorIndexRef.current = 0;
-        return;
-      }
-
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 't') {
-        if (!historyTagShortcutEnabled) return;
-        e.preventDefault();
-        if (panelMode === 'preview' && selectedItemIds.length === 0) {
-          return;
-        }
-        if (selectedItemIds.length === 0) {
-          const focusedItem = focusedIndex >= 0 && focusedIndex < filteredItems.length
-            ? filteredItems[focusedIndex]
-            : null;
-          if (!focusedItem) return;
-          toggleSelectItem(focusedItem.id);
-        }
-        openBatchTagEditor();
-        return;
-      }
-
-      if (selectedItemIds.length === 0 && focusedIndex < 0) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        deleteSelectedItems();
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        e.preventDefault();
-        copySelectedItemsMerged(filteredItems);
-      } else if (e.key === 'Escape') {
-        clearSelection();
-        setFocusedIndex(-1);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    selectedItemIds.length,
     selectedItemIds,
-    deleteSelectedItems,
-    copySelectedItemsMerged,
-    clearSelection,
     historyTagShortcutEnabled,
     panelMode,
-    focusedIndex,
-    filteredItems,
     setSelectedItemIds,
     toggleSelectItem,
     openBatchTagEditor,
-    moveFocusedSelection,
-    submitFocusedSelection,
-    setFocusedIndex,
-  ]);
+    deleteSelectedItems,
+    copySelectedItemsMerged,
+    clearSelection,
+    selectionAnchorIndexRef,
+    historyGrouping,
+    virtuosoRef,
+  });
 
   const rowGap = isMiniMode ? 3 : 4;
 
@@ -1043,72 +791,72 @@ function HistoryStream({ style }) {
     loadMore();
   }, [loadMore]);
 
+  const handleJumpToGroup = useCallback((groupKey) => {
+    const targetIndex = historyGrouping.firstIndexByGroup[groupKey];
+    if (typeof targetIndex !== 'number') return;
+    virtuosoRef.current?.scrollToIndex?.({
+      index: targetIndex,
+      align: 'start',
+      behavior: 'smooth',
+    });
+    setFocusedIndex(targetIndex);
+  }, [historyGrouping, setFocusedIndex]);
+
+  const handleRangeChanged = useCallback((range) => {
+    const nextStart = Number(range?.startIndex);
+    if (!Number.isFinite(nextStart)) return;
+    setVisibleRangeStartIndex(nextStart);
+  }, []);
+
+  const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
 
-  const renderVirtualRow = useCallback((index) => {
+  const buildRowViewModel = useCallback((index) => {
     const item = filteredItems[index];
     if (!item) return null;
-    const isSelected = panelMode === 'preview' && previewItem?.id === item.id;
-    const isMultiSelected = selectedItemIds.includes(item.id);
-    const isFocused = focusedIndex === index;
-
-    return (
-      <div
-        className="history-stream-row"
-        data-item-id={item.id}
-        style={{ paddingBottom: `${rowGap}px` }}
-        onMouseDownCapture={(e) => {
-          if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
-          e.stopPropagation();
-          e.preventDefault();
-          handleCardClick(item, index, e);
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (e.ctrlKey || e.metaKey || e.shiftKey) {
-            e.preventDefault();
-            return;
-          }
-          handleCardClick(item, index, e);
-        }}
-        onContextMenu={(e) => {
-          if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onDoubleClick={(e) => handleCardDoubleClick(item, e)}
-      >
-        <CompactCard
-          item={item}
-          isSelected={isSelected}
-          isMultiSelected={isMultiSelected}
-          isFocused={isFocused}
-          isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
-          timeTick={timeTick}
-          onDragStart={handleDragStart}
-          supportsNativeExternalDrag={SUPPORTS_NATIVE_EXTERNAL_DRAG}
-          onStartExternalDrag={handleStartExternalDrag}
-          onTogglePin={togglePin}
-          onToggleFavorite={toggleFavorite}
-          onOpenItem={handleOpenItem}
-          onRevealInFolder={handleRevealInFolder}
-          onSetCardBackground={setCardBackground}
-          onTagClick={handleTagClick}
-        />
-      </div>
-    );
+    const groupKey = historyGrouping.groupByIndex[index];
+    return {
+      item,
+      index,
+      groupKey,
+      showGroupHeader: Boolean(historyGrouping.isGroupStart[index]),
+      groupCount: historyGrouping.countByGroup[groupKey] || 0,
+      searchExplain: searchExplainById.get(item.id) || null,
+      isSelected: panelMode === 'preview' && previewItem?.id === item.id,
+      isMultiSelected: selectedItemIdSet.has(item.id),
+      isFocused: focusedIndex === index,
+    };
   }, [
     filteredItems,
+    historyGrouping,
+    searchExplainById,
     panelMode,
     previewItem?.id,
+    selectedItemIdSet,
+    focusedIndex,
+  ]);
+
+  const rowCommonProps = useMemo(() => ({
+    rowGap,
+    t,
     copiedItemId,
     copyFeedbackSource,
-    selectedItemIds,
-    focusedIndex,
-    rowGap,
     timeTick,
-    handleCardClick,
-    handleCardDoubleClick,
+    onDragStart: handleDragStart,
+    supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
+    onStartExternalDrag: handleStartExternalDrag,
+    onTogglePin: togglePin,
+    onToggleFavorite: toggleFavorite,
+    onOpenItem: handleOpenItem,
+    onRevealInFolder: handleRevealInFolder,
+    onSetCardBackground: setCardBackground,
+    onTagClick: handleTagClick,
+  }), [
+    rowGap,
+    t,
+    copiedItemId,
+    copyFeedbackSource,
+    timeTick,
     handleDragStart,
     handleStartExternalDrag,
     togglePin,
@@ -1119,58 +867,291 @@ function HistoryStream({ style }) {
     handleTagClick,
   ]);
 
-  const canApplyBatchTag = Boolean(activeBatchTagSuggestion || batchTagInput.trim());
-  const handleBatchTagInputChange = useCallback((value) => {
-    setBatchTagInput(value);
-    setBatchTagActiveSuggestionIndex(-1);
-  }, []);
+  const renderVirtualRow = useCallback((index) => {
+    const rowViewModel = buildRowViewModel(index);
+    if (!rowViewModel) return null;
+    return (
+      <HistoryVirtualRow
+        {...rowCommonProps}
+        {...rowViewModel}
+        onCardClick={handleCardClick}
+        onCardDoubleClick={handleCardDoubleClick}
+      />
+    );
+  }, [
+    buildRowViewModel,
+    rowCommonProps,
+    handleCardClick,
+    handleCardDoubleClick,
+  ]);
+
+  const handleToggleFavoritesOnly = useCallback(() => {
+    setShowFavoritesOnly(!showFavoritesOnly);
+  }, [setShowFavoritesOnly, showFavoritesOnly]);
+
+  const handleTogglePinnedOnly = useCallback(() => {
+    setShowPinnedOnly(!showPinnedOnly);
+  }, [setShowPinnedOnly, showPinnedOnly]);
+
+  const handleClearSelectedTags = useCallback(() => {
+    setSelectedTags([]);
+  }, [setSelectedTags]);
+
+  const handleToggleTagFilterVisible = useCallback(() => {
+    setShowTagFilter(!showTagFilter);
+  }, [setShowTagFilter, showTagFilter]);
+
+  const handleOpenSettingsPanel = useCallback(() => {
+    setShowSettings(true);
+  }, [setShowSettings]);
+
+  const handleToggleDateFilterVisible = useCallback(() => {
+    setShowDateFilter(!showDateFilter);
+  }, [setShowDateFilter, showDateFilter]);
+
+  const searchBarProps = useMemo(() => ({
+    searchQuery,
+    onSearchChange: setSearchQuery,
+    selectedType,
+    onTypeChange: setSelectedType,
+    showFavoritesOnly,
+    onToggleFavorites: handleToggleFavoritesOnly,
+    showPinnedOnly,
+    onTogglePinned: handleTogglePinnedOnly,
+    isMiniMode,
+    selectedTags,
+    onClearTags: handleClearSelectedTags,
+    showTagFilter,
+    onToggleTagFilter: handleToggleTagFilterVisible,
+    allTags,
+    filteredTagsList,
+    tagSearchQuery,
+    onTagSearchChange: setTagSearchQuery,
+    onToggleTag: toggleTagFilter,
+    onOpenSettings: handleOpenSettingsPanel,
+    selectedDateRange,
+    showDateFilter,
+    onToggleDateFilter: handleToggleDateFilterVisible,
+    onClearDateFilter: clearDateFilter,
+    onSelectDatePreset: handleSelectDatePreset,
+    customDateStart,
+    customDateEnd,
+    onCustomDateStartChange: setCustomDateStart,
+    onCustomDateEndChange: setCustomDateEnd,
+    onApplyCustomDateRange: handleApplyCustomDateRange,
+    onSearchKeyDown: handleSearchInputKeyDown,
+    savedFilterViews,
+    activeFilterViewId,
+    onSaveCurrentView: saveCurrentFilterView,
+    onApplySavedView: applySavedFilterView,
+    onDeleteSavedView: deleteSavedFilterView,
+    onClearActiveSavedView: clearActiveFilterView,
+  }), [
+    searchQuery,
+    setSearchQuery,
+    selectedType,
+    setSelectedType,
+    showFavoritesOnly,
+    handleToggleFavoritesOnly,
+    showPinnedOnly,
+    handleTogglePinnedOnly,
+    isMiniMode,
+    selectedTags,
+    handleClearSelectedTags,
+    showTagFilter,
+    handleToggleTagFilterVisible,
+    allTags,
+    filteredTagsList,
+    tagSearchQuery,
+    setTagSearchQuery,
+    toggleTagFilter,
+    handleOpenSettingsPanel,
+    selectedDateRange,
+    showDateFilter,
+    handleToggleDateFilterVisible,
+    clearDateFilter,
+    handleSelectDatePreset,
+    customDateStart,
+    customDateEnd,
+    setCustomDateStart,
+    setCustomDateEnd,
+    handleApplyCustomDateRange,
+    handleSearchInputKeyDown,
+    savedFilterViews,
+    activeFilterViewId,
+    saveCurrentFilterView,
+    applySavedFilterView,
+    deleteSavedFilterView,
+    clearActiveFilterView,
+  ]);
+
+  const handleToggleBatchTagEditor = useCallback(() => {
+    if (showBatchTagEditor) {
+      closeBatchTagEditor();
+      return;
+    }
+    openBatchTagEditor();
+  }, [showBatchTagEditor, closeBatchTagEditor, openBatchTagEditor]);
+
+  const handleMergeCopySelected = useCallback(() => {
+    copySelectedItemsMerged(filteredItems);
+  }, [copySelectedItemsMerged, filteredItems]);
+
+  const selectedCount = selectedItemIds.length;
+  const multiSelectBarProps = useMemo(() => ({
+    selectedCount,
+    showBatchTagEditor,
+    onToggleBatchTagEditor: handleToggleBatchTagEditor,
+    onBatchFavoriteToggle: handleBatchFavoriteToggle,
+    allSelectedAreFavorite,
+    onBatchPinToggle: handleBatchPinToggle,
+    allSelectedArePinned,
+    onMergeCopy: handleMergeCopySelected,
+    canRunBatchAi,
+    onBatchAiAction: handleBatchAiAction,
+    batchFlagPending,
+    batchAiRunningTask,
+    onDeleteSelected: deleteSelectedItems,
+    batchTagEditorRef,
+    batchTagInput,
+    onBatchTagInputChange: handleBatchTagInputChange,
+    handleBatchTagInputKeyDown,
+    canApplyBatchTag,
+    applyBatchTag,
+    activeBatchTagSuggestion,
+    batchTagPending,
+    closeBatchTagEditor,
+    filteredBatchTagSuggestions,
+    batchTagSuggestionsRef,
+    batchTagActiveSuggestionIndex,
+    setBatchTagActiveSuggestionIndex,
+    batchTagFeedback,
+    batchAiFeedback,
+  }), [
+    selectedCount,
+    showBatchTagEditor,
+    handleToggleBatchTagEditor,
+    handleBatchFavoriteToggle,
+    allSelectedAreFavorite,
+    handleBatchPinToggle,
+    allSelectedArePinned,
+    handleMergeCopySelected,
+    canRunBatchAi,
+    handleBatchAiAction,
+    batchFlagPending,
+    batchAiRunningTask,
+    deleteSelectedItems,
+    batchTagEditorRef,
+    batchTagInput,
+    handleBatchTagInputChange,
+    handleBatchTagInputKeyDown,
+    canApplyBatchTag,
+    applyBatchTag,
+    activeBatchTagSuggestion,
+    batchTagPending,
+    closeBatchTagEditor,
+    filteredBatchTagSuggestions,
+    batchTagSuggestionsRef,
+    batchTagActiveSuggestionIndex,
+    setBatchTagActiveSuggestionIndex,
+    batchTagFeedback,
+    batchAiFeedback,
+  ]);
 
   return (
     <div className="history-stream" style={style} onClick={handleStreamClick}>
-      <SearchBar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        showFavoritesOnly={showFavoritesOnly}
-        onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
-        showPinnedOnly={showPinnedOnly}
-        onTogglePinned={() => setShowPinnedOnly(!showPinnedOnly)}
-        isMiniMode={isMiniMode}
-        selectedTags={selectedTags}
-        onClearTags={() => setSelectedTags([])}
-        showTagFilter={showTagFilter}
-        onToggleTagFilter={() => setShowTagFilter(!showTagFilter)}
-        allTags={allTags}
-        filteredTagsList={filteredTagsList}
-        tagSearchQuery={tagSearchQuery}
-        onTagSearchChange={setTagSearchQuery}
-        onToggleTag={toggleTagFilter}
-        onOpenSettings={() => setShowSettings(true)}
-        selectedDateRange={selectedDateRange}
-        showDateFilter={showDateFilter}
-        onToggleDateFilter={() => setShowDateFilter(!showDateFilter)}
-        onClearDateFilter={clearDateFilter}
-        onSelectDatePreset={handleSelectDatePreset}
-        customDateStart={customDateStart}
-        customDateEnd={customDateEnd}
-        onCustomDateStartChange={setCustomDateStart}
-        onCustomDateEndChange={setCustomDateEnd}
-        onApplyCustomDateRange={handleApplyCustomDateRange}
-        collectionPanelEnabled={collectionPanelEnabled}
-        onToggleCollectionPanel={toggleCollectionPanel}
-        onSearchKeyDown={handleSearchInputKeyDown}
-      />
+      <SearchBar {...searchBarProps} />
 
       <div className="history-stream-content">
+        {historyGrouping.availableGroups.length > 1 && (
+          <div className="history-group-jump" onClick={(event) => event.stopPropagation()}>
+            {historyGrouping.availableGroups.map((groupKey) => (
+              <button
+                key={groupKey}
+                type="button"
+                className={`history-group-jump-btn ${activeVisibleGroup === groupKey ? 'active' : ''}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleJumpToGroup(groupKey);
+                }}
+                title={`${t(`history.groups.${groupKey}`)} (${historyGrouping.countByGroup[groupKey]})`}
+                aria-label={`${t(`history.groups.${groupKey}`)} (${historyGrouping.countByGroup[groupKey]})`}
+                aria-pressed={activeVisibleGroup === groupKey}
+              >
+                <span>{t(`history.groups.${groupKey}`)}</span>
+                <span className="history-group-jump-count">{historyGrouping.countByGroup[groupKey]}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {loading ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
             <div className="loading-text">{t('app.loading')}</div>
           </div>
+        ) : isSearching ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">{t('search.searching')}</div>
+          </div>
         ) : filteredItems.length === 0 ? (
-          <div className="empty">
-            {searchQuery ? t('search.noResults') : t('app.noItems')}
+          <div className="empty empty-diagnostic" role="status" aria-live="polite">
+            <div className="empty-content">
+              <div className="empty-title">{emptyDiagnostic.title}</div>
+              {emptyDiagnostic.description && (
+                <div className="empty-detail">{emptyDiagnostic.description}</div>
+              )}
+              {emptyDiagnostic.mode === 'first-use' && (
+                <div className="empty-actions-row">
+                  <button
+                    type="button"
+                    className="empty-action-btn"
+                    onClick={() => openEditModal()}
+                    aria-label={t('search.empty.startQuickCapture')}
+                  >
+                    {t('search.empty.startQuickCapture')}
+                  </button>
+                  <button
+                    type="button"
+                    className="empty-action-btn ghost"
+                    onClick={() => startTour()}
+                    aria-label={t('search.empty.replayGuide')}
+                  >
+                    {t('search.empty.replayGuide')}
+                  </button>
+                </div>
+              )}
+              {emptyDiagnostic.mode !== 'first-use' && recentUsableSavedView && (
+                <>
+                  <div className="empty-actions-row">
+                    <button
+                      type="button"
+                      className="empty-action-btn"
+                      onClick={handleRestoreRecentSavedView}
+                    >
+                      {t('search.empty.restoreRecentView')}
+                    </button>
+                    {emptyDiagnostic.canReset && (
+                      <button
+                        type="button"
+                        className="empty-action-btn ghost"
+                        onClick={handleResetAllFilters}
+                      >
+                        {t('search.empty.clearAllFilters')}
+                      </button>
+                    )}
+                  </div>
+                  <div className="empty-detail">
+                    {t('search.empty.restoreRecentViewHint', { name: recentUsableSavedView.name })}
+                  </div>
+                </>
+              )}
+              {emptyDiagnostic.canReset && !recentUsableSavedView && (
+                <button type="button" className="empty-action-btn" onClick={handleResetAllFilters}>
+                  {t('search.empty.clearAllFilters')}
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <Virtuoso
@@ -1181,6 +1162,7 @@ function HistoryStream({ style }) {
             computeItemKey={computeItemKey}
             itemContent={renderVirtualRow}
             endReached={handleEndReached}
+            rangeChanged={handleRangeChanged}
             increaseViewportBy={{ top: 200, bottom: 400 }}
           />
         )}
@@ -1192,43 +1174,8 @@ function HistoryStream({ style }) {
         </div>
       )}
 
-      {selectedItemIds.length > 0 && (
-        <MultiSelectBar
-          selectedCount={selectedItemIds.length}
-          showBatchTagEditor={showBatchTagEditor}
-          onToggleBatchTagEditor={() => {
-            if (showBatchTagEditor) {
-              closeBatchTagEditor();
-              return;
-            }
-            openBatchTagEditor();
-          }}
-          onBatchFavoriteToggle={handleBatchFavoriteToggle}
-          allSelectedAreFavorite={allSelectedAreFavorite}
-          onBatchPinToggle={handleBatchPinToggle}
-          allSelectedArePinned={allSelectedArePinned}
-          onMergeCopy={() => copySelectedItemsMerged(filteredItems)}
-          canRunBatchAi={canRunBatchAi}
-          onBatchAiAction={handleBatchAiAction}
-          batchFlagPending={batchFlagPending}
-          batchAiRunningTask={batchAiRunningTask}
-          onDeleteSelected={deleteSelectedItems}
-          batchTagEditorRef={batchTagEditorRef}
-          batchTagInput={batchTagInput}
-          onBatchTagInputChange={handleBatchTagInputChange}
-          handleBatchTagInputKeyDown={handleBatchTagInputKeyDown}
-          canApplyBatchTag={canApplyBatchTag}
-          applyBatchTag={applyBatchTag}
-          activeBatchTagSuggestion={activeBatchTagSuggestion}
-          batchTagPending={batchTagPending}
-          closeBatchTagEditor={closeBatchTagEditor}
-          filteredBatchTagSuggestions={filteredBatchTagSuggestions}
-          batchTagSuggestionsRef={batchTagSuggestionsRef}
-          batchTagActiveSuggestionIndex={batchTagActiveSuggestionIndex}
-          setBatchTagActiveSuggestionIndex={setBatchTagActiveSuggestionIndex}
-          batchTagFeedback={batchTagFeedback}
-          batchAiFeedback={batchAiFeedback}
-        />
+      {selectedCount > 0 && (
+        <MultiSelectBar {...multiSelectBarProps} />
       )}
     </div>
   );

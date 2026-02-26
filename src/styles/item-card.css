@@ -26,7 +26,7 @@
   border-radius: 14px;
   padding: 16px;
   border: 1px solid var(--border-light);
-  transition: all 0.15s ease;
+  transition: all var(--motion-fast) var(--ease-standard);
   cursor: pointer;
   position: relative;
   overflow: visible;

@@ -29,7 +29,10 @@
   border: none;
   border-radius: 8px;
   font-size: 13px;
-  transition: all 0.2s ease;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard);
   background: var(--bg-input);
   color: var(--text-primary);
   letter-spacing: -0.01em;
@@ -60,7 +63,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
 }
 
 .clear-search:hover {
@@ -90,7 +95,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.15s ease;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   position: relative;
 }
 
@@ -114,12 +123,12 @@
 }
 
 .header-icon-btn.fav-active {
-  color: #ff9500;
-  background: rgba(255, 149, 0, 0.1);
+  color: var(--state-warning-fg);
+  background: color-mix(in srgb, var(--state-warning-bg) 84%, transparent);
 }
 
 .header-icon-btn.fav-active:hover {
-  background: rgba(255, 149, 0, 0.15);
+  background: color-mix(in srgb, var(--state-warning-bg) 95%, transparent);
 }
 
 .header-icon-btn.pin-active {
@@ -139,7 +148,7 @@
   height: 14px;
   border-radius: 7px;
   background: var(--accent-color);
-  color: white;
+  color: var(--text-on-accent);
   font-size: 9px;
   font-weight: 600;
   display: flex;
@@ -173,7 +182,11 @@
   border-radius: 7px;
   cursor: pointer;
   color: var(--text-tertiary);
-  transition: all 0.15s ease;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -181,7 +194,7 @@
 
 .type-filter-btn:hover:not(.active) {
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--bg-hover);
 }
 
 .type-filter-btn:focus {
@@ -258,7 +271,7 @@
   color: var(--accent-color);
   font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .clear-filter-btn:hover {
@@ -321,4 +334,393 @@
   font-size: 8px;
   top: -2px;
   right: -2px;
+}
+
+/* ========== Scheme C Overrides: Search Rail ========== */
+.header {
+  padding: 10px 12px 9px;
+  gap: 8px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-strong) 88%, transparent), color-mix(in srgb, var(--surface-muted) 82%, transparent));
+  border-bottom: 1px solid var(--surface-border-soft);
+  position: relative;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-glow) 55%, transparent), transparent);
+  pointer-events: none;
+}
+
+.header-row {
+  gap: 7px;
+  min-width: 0;
+}
+
+.search-box {
+  min-width: 0;
+}
+
+.search-input {
+  min-height: 33px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 7px 30px 7px 11px;
+  background: color-mix(in srgb, var(--bg-input) 82%, transparent);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  letter-spacing: 0.005em;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.search-input:hover {
+  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+}
+
+.search-input:focus {
+  border-color: color-mix(in srgb, var(--accent-color) 40%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-light) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-input) 70%, white 30%);
+}
+
+.clear-search {
+  width: 17px;
+  height: 17px;
+  right: 7px;
+}
+
+.header-icon-btn {
+  width: 31px;
+  height: 31px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-muted) 55%, transparent);
+  color: var(--text-tertiary);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.header-icon-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+  color: var(--text-secondary);
+}
+
+.header-icon-btn.active {
+  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+}
+
+.filter-trigger-btn[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+}
+
+.type-filter-group {
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 85%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 68%, transparent);
+}
+
+.type-filter-btn {
+  width: 27px;
+  height: 26px;
+  border-radius: 7px;
+}
+
+.type-filter-btn.active {
+  box-shadow: 0 4px 11px color-mix(in srgb, var(--shadow-lg) 26%, transparent);
+}
+
+.tag-select-wrapper .tag-dropdown,
+.date-select-wrapper .date-dropdown,
+.type-select-wrapper .type-dropdown {
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--surface-strong) 95%, transparent);
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--shadow-lg) 60%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.filter-status {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-light) 72%, transparent);
+  color: var(--accent-color);
+  font-size: 11px;
+}
+
+.clear-filter-btn {
+  border-radius: 6px;
+  padding: 2px 7px;
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  color: var(--accent-color);
+}
+
+.app.mini-mode .header {
+  padding: 6px 7px;
+  gap: 4px;
+}
+
+.app.mini-mode .search-input {
+  min-height: 25px;
+  border-radius: 7px;
+  padding: 3px 21px 3px 8px;
+  font-size: 11.5px;
+}
+
+.app.mini-mode .header-icon-btn {
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+}
+
+/* ========== Scheme C Polishing Pass: Search Rail ========== */
+.tag-dropdown-list,
+.date-dropdown-presets,
+.type-dropdown-list {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) 80%, transparent) transparent;
+}
+
+.tag-dropdown-list:focus-visible,
+.date-dropdown-presets:focus-visible,
+.type-dropdown-list:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  border-radius: 8px;
+}
+
+.tag-dropdown-item,
+.date-dropdown-item,
+.type-dropdown-item {
+  border-radius: 8px;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.tag-dropdown-item:hover,
+.date-dropdown-item:hover,
+.type-dropdown-item:hover {
+  background: color-mix(in srgb, var(--accent-light) 62%, transparent);
+}
+
+.tag-dropdown-item.keyboard-active,
+.date-dropdown-item.keyboard-active,
+.type-dropdown-item.keyboard-active {
+  border: 1px solid var(--accent-border-soft);
+  background: var(--accent-bg-soft);
+}
+
+.tag-dropdown-item.selected,
+.date-dropdown-item.selected,
+.type-dropdown-item.selected {
+  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+}
+
+.type-select-arrow {
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.type-select-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* Saved filter views */
+.saved-view-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.saved-view-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 270px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--shadow-lg) 58%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 20;
+  padding: 8px;
+}
+
+.saved-view-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 7px;
+  padding: 0 2px;
+}
+
+.saved-view-create-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.saved-view-input {
+  flex: 1;
+  min-width: 0;
+  height: 29px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--bg-input) 85%, transparent);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 0 9px;
+}
+
+.saved-view-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-color) 36%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-light) 64%, transparent);
+}
+
+.saved-view-save-btn {
+  width: 30px;
+  height: 29px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-light) 80%, transparent);
+  color: var(--accent-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.saved-view-save-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.saved-view-list {
+  max-height: 200px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
+}
+
+.saved-view-list:focus-visible {
+  outline: none;
+}
+
+.saved-view-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+  padding: 2px;
+}
+
+.saved-view-item.active {
+  border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 76%, transparent);
+}
+
+.saved-view-item.keyboard-active {
+  border-color: var(--accent-border-soft);
+  background: var(--accent-bg-soft);
+}
+
+.saved-view-apply-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 5px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saved-view-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+.saved-view-active-pill {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 14%, white 86%);
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-primary) 14%);
+}
+
+.saved-view-delete-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.saved-view-delete-btn:hover {
+  color: var(--state-error-fg);
+  background: color-mix(in srgb, var(--state-error-bg) 80%, transparent);
+}
+
+.saved-view-empty {
+  padding: 8px 6px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: center;
+}
+
+.saved-view-footer {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px dashed color-mix(in srgb, var(--surface-border-soft) 82%, transparent);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saved-view-status {
+  background: color-mix(in srgb, var(--accent-light) 64%, transparent);
+}
+
+.app.mini-mode .saved-view-wrapper {
+  display: none;
 }

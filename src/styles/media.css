@@ -4,7 +4,9 @@
   border-radius: 6px;
   display: block;
   object-fit: contain;
-  transition: max-height 0.3s ease-out, box-shadow 0.2s;
+  transition:
+    max-height var(--motion-slow) var(--ease-emphasized),
+    box-shadow var(--motion-base) var(--ease-standard);
   cursor: pointer;
 }
 
@@ -44,7 +46,7 @@
   padding-left: 12px;
   max-height: 120px;
   overflow-y: auto;
-  transition: max-height 0.3s ease-out;
+  transition: max-height var(--motion-slow) var(--ease-emphasized);
   display: flex;
   flex-direction: column;
   gap: 6px;

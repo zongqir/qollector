@@ -40,6 +40,10 @@ release-artifacts/
 CLAUDE.md
 AGENTS.md
 todo.md
+TODO.txt
+output/playwright/current/
+output/playwright/diff/
+output/playwright/report.json
 lessons.md
 .claude/
 .cursorrules
@@ -47,3 +51,4 @@ lessons.md
 .continue/
 temp_secret_key.txt
 .wrangler/
+TODO.txt

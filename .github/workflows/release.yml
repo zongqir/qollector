@@ -16,8 +16,10 @@ jobs:
             args: ""
           - platform: macos-latest
             args: --target universal-apple-darwin
-          - platform: ubuntu-22.04
-            args: ""
+          # Linux build is temporarily disabled.
+          # Re-enable by restoring:
+          # - platform: ubuntu-22.04
+          #   args: ""
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -41,6 +43,9 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Enforce style token guard
+        run: npm run lint:styles:strict
 
       - name: Sanitize signing key
         shell: bash

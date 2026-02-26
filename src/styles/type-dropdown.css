@@ -26,7 +26,9 @@
 .type-select-arrow {
   margin-left: auto;
   opacity: 0.7;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
 }
 
 .type-select-arrow.open {
@@ -45,7 +47,7 @@
   max-width: 236px;
   overflow: hidden;
   z-index: 10000;
-  animation: typeDropdownSlide 0.15s ease;
+  animation: typeDropdownSlide var(--motion-fast) var(--ease-standard);
 }
 
 @keyframes typeDropdownSlide {
@@ -75,7 +77,11 @@
   border-radius: 8px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.1s;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   font-size: 12px;
   color: var(--text-secondary);
 }
@@ -101,7 +107,9 @@
   opacity: 0;
   transform: scale(0.8);
   flex-shrink: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .type-dropdown-item.selected .type-check {

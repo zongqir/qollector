@@ -14,7 +14,31 @@
     "close": "关闭",
     "quickAdd": "快速输入",
     "miniMode": "迷你模式",
-    "exitMini": "退出迷你模式"
+    "exitMini": "退出迷你模式",
+    "modeMini": "迷你模式",
+    "modeTimeline": "时间线模式",
+    "modeMain": "主界面模式",
+    "densityCompact": "紧凑",
+    "densityCozy": "宽松",
+    "switchToCozy": "切换到宽松模式 (Ctrl/Cmd+Shift+D)",
+    "switchToCompact": "切换到紧凑模式 (Ctrl/Cmd+Shift+D)",
+    "pinTop": "置顶",
+    "floatMode": "浮动",
+    "panelVisible": "工作区已展开",
+    "panelHidden": "工作区已收起",
+    "panelMode": "面板模式",
+    "focusMode": "专注模式",
+    "layoutPresetGroup": "分栏预设",
+    "layoutFocusShort": "专注",
+    "layoutReviewShort": "复核",
+    "layoutCompareShort": "对比",
+    "layoutFocusShortcut": "切换到专注预设 (Ctrl/Cmd+1)",
+    "layoutReviewShortcut": "切换到复核预设 (Ctrl/Cmd+2)",
+    "layoutCompareShortcut": "切换到对比预设 (Ctrl/Cmd+3)",
+    "hideHistoryShortcut": "收起历史流 (Ctrl/Cmd+Shift+H)",
+    "showHistoryShortcut": "展开历史流 (Ctrl/Cmd+Shift+H)",
+    "hidePanelShortcut": "收起工作区 (Ctrl/Cmd+Shift+P)",
+    "showPanelShortcut": "展开工作区 (Ctrl/Cmd+Shift+P)"
   },
   "search": {
     "placeholder": "搜索内容、标签、备注...",
@@ -27,6 +51,43 @@
       "file": "文件",
       "link": "链接",
       "code": "代码"
+    },
+    "savedViews": {
+      "title": "保存视图",
+      "namePlaceholder": "给当前筛选起个名字...",
+      "saveCurrent": "保存当前筛选",
+      "empty": "还没有保存视图",
+      "active": "当前",
+      "delete": "删除视图",
+      "clearActive": "取消使用",
+      "using": "正在使用视图：{{name}}"
+    },
+    "matchSource": {
+      "content": "内容",
+      "note": "备注",
+      "ocr": "OCR",
+      "tag": "标签",
+      "source": "来源",
+      "type": "类型"
+    },
+    "empty": {
+      "noSearchResults": "没有找到搜索结果",
+      "tryOtherKeywords": "试试其他关键词，或减少筛选条件",
+      "filteredAfterSearch": "搜索命中了内容，但被筛选条件全部过滤",
+      "filteredNoMatch": "当前筛选条件下没有结果",
+      "activeFilters": "生效筛选：{{filters}}",
+      "clearAllFilters": "清除全部筛选",
+      "filterType": "类型：{{type}}",
+      "filterTags": "标签：{{count}}",
+      "filterFavorites": "仅收藏",
+      "filterPinned": "仅工作台",
+      "filterDate": "日期：{{range}}",
+      "firstUseTitle": "还没有历史记录",
+      "firstUseDescription": "先通过快速录入添加第一条内容，或重看引导了解核心流程。",
+      "startQuickCapture": "快速录入",
+      "replayGuide": "重播引导",
+      "restoreRecentView": "恢复最近可用视图",
+      "restoreRecentViewHint": "应用“{{name}}”并回到最近可用结果。"
     }
   },
   "toolbar": {
@@ -123,7 +184,6 @@
     "copyHex": "复制 HEX",
     "copyRgb": "复制 RGB",
     "copyHsl": "复制 HSL",
-    "delete": "删除",
     "autoPasted": "已粘贴到前台应用",
     "justNow": "刚刚",
     "cardBackground": {
@@ -322,8 +382,8 @@
       "recordReserved": "{{shortcut}} 已被系统占用，请换一个组合。",
       "conflictError": "「复制并放入工作台」和「呼出主面板」不能用同一个快捷键。",
       "occupiedHint": "已自动保留之前可用的快捷键。你可以试试 Ctrl+Alt+X 或 Ctrl+Shift+V 等其他组合。",
-      "defaultCandidate": "{{platform}} \u9ed8\u8ba4\u5019\u9009\uff1a{{shortcut}}",
-      "occupiedHintOne": "\u5df2\u81ea\u52a8\u4fdd\u7559\u4e4b\u524d\u53ef\u7528\u7684\u5feb\u6377\u952e\u3002{{platform}} \u5efa\u8bae\u4f7f\u7528\uff1a{{shortcut}}\u3002"
+      "defaultCandidate": "{{platform}} 默认候选：{{shortcut}}",
+      "occupiedHintOne": "已自动保留之前可用的快捷键。{{platform}} 建议使用：{{shortcut}}。"
     },
     "lanSync": {
       "title": "局域网设备同步",
@@ -577,18 +637,18 @@
     "addTagAllFailed": "为 {{failed}} 条记录添加标签失败",
     "addTagFailed": "添加标签失败: {{error}}",
     "mergeCopy": "合并复制",
-    "batchFavorite": "\u6279\u91cf\u6536\u85cf",
-    "batchUnfavorite": "\u6279\u91cf\u53d6\u6d88\u6536\u85cf",
+    "batchFavorite": "批量收藏",
+    "batchUnfavorite": "批量取消收藏",
     "batchPin": "批量放入工作台",
     "batchUnpin": "批量移出工作台",
-    "batchSummarize": "\u6279\u91cf\u603b\u7ed3",
-    "batchRewrite": "\u6279\u91cf\u6539\u5199",
-    "batchSummarizeCopied": "\u6279\u91cf\u603b\u7ed3\u7ed3\u679c\u5df2\u590d\u5236\u5230\u526a\u8d34\u677f",
-    "batchRewriteCopied": "\u6279\u91cf\u6539\u5199\u7ed3\u679c\u5df2\u590d\u5236\u5230\u526a\u8d34\u677f",
-    "batchAiEmpty": "AI \u672a\u8fd4\u56de\u53ef\u590d\u5236\u5185\u5bb9",
-    "batchActionFailed": "\u6279\u91cf\u64cd\u4f5c\u5931\u8d25: {{error}}",
-    "batchAiFailed": "\u6279\u91cf AI \u5904\u7406\u5931\u8d25: {{error}}",
-    "clearSelection": "\u53d6\u6d88\u9009\u4e2d",
+    "batchSummarize": "批量总结",
+    "batchRewrite": "批量改写",
+    "batchSummarizeCopied": "批量总结结果已复制到剪贴板",
+    "batchRewriteCopied": "批量改写结果已复制到剪贴板",
+    "batchAiEmpty": "AI 未返回可复制内容",
+    "batchActionFailed": "批量操作失败: {{error}}",
+    "batchAiFailed": "批量 AI 处理失败: {{error}}",
+    "clearSelection": "取消选中",
     "delete": "删除"
   },
   "collection": {
@@ -832,5 +892,58 @@
     "skip": "跳过",
     "done": "完成",
     "stepOf": "{{current}} / {{total}}"
+  },
+  "history": {
+    "groups": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "last7": "最近 7 天",
+      "older": "更早"
+    }
+  },
+  "feedback": {
+    "channel": {
+      "history": "历史流",
+      "preview": "预览区",
+      "hover": "悬浮预览",
+      "collection": "工作区",
+      "global": "全局"
+    }
+  },
+  "shortcutHelp": {
+    "title": "快捷键帮助",
+    "close": "关闭快捷键帮助",
+    "contextLabel": "当前上下文：{{mode}}",
+    "context": {
+      "mini": "Mini 模式",
+      "timeline": "时间轴面板",
+      "preview": "预览面板",
+      "collection": "收藏面板"
+    },
+    "sections": {
+      "global": "全局",
+      "history": "历史流",
+      "selection": "已选项（{{count}}）",
+      "collection": "收藏区"
+    },
+    "items": {
+      "toggleHelp": "打开 / 关闭此帮助层",
+      "toggleDensity": "切换舒适 / 紧凑密度",
+      "layoutFocus": "切换到专注分栏预设",
+      "layoutReview": "切换到复核分栏预设",
+      "layoutCompare": "切换到对比分栏预设",
+      "toggleHistory": "显示 / 隐藏历史流",
+      "togglePanel": "显示 / 隐藏收藏面板",
+      "focusSearch": "聚焦搜索输入框",
+      "moveCards": "上下移动焦点卡片",
+      "copyFocused": "复制当前焦点项",
+      "jumpGroups": "跳转到时间分组",
+      "selectAllVisible": "全选历史流可见项",
+      "batchTag": "打开批量标签编辑",
+      "copySelection": "复制已选项（合并）",
+      "deleteSelection": "删除已选项",
+      "clearSelection": "清除当前选择",
+      "selectAllCollection": "在收藏区聚焦时全选"
+    }
   }
 }

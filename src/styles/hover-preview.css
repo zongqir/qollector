@@ -9,11 +9,13 @@
   background: color-mix(in srgb, var(--bg-card) 94%, white 6%);
   border: 1px solid var(--border-light);
   border-radius: 14px;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 18px 42px color-mix(in srgb, var(--shadow-lg) 52%, transparent),
+    0 3px 10px color-mix(in srgb, var(--shadow-md) 68%, transparent);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  animation: hoverPreviewFadeIn 0.12s ease;
+  animation: hoverPreviewFadeIn var(--motion-fast) var(--ease-standard);
   pointer-events: auto;
 }
 
@@ -103,7 +105,11 @@
   border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .hover-preview.mini .hover-preview-action-btn {
@@ -128,30 +134,30 @@
 }
 
 .hover-preview-action-btn.copied {
-  background: var(--color-success);
-  color: #fff;
-  border-color: var(--color-success);
+  background: var(--state-success-fg);
+  color: var(--text-on-accent);
+  border-color: var(--state-success-fg);
 }
 
 .hover-preview-action-btn.favorite.active {
-  color: var(--color-warning);
+  color: var(--state-warning-fg);
 }
 
 .hover-preview-action-btn.favorite.active:hover {
-  color: var(--color-warning);
+  color: var(--state-warning-fg);
 }
 
 .hover-preview-action-btn.delete:hover {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border-color: var(--color-danger);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  border-color: var(--state-error-fg);
 }
 
 .hover-preview-action-btn.delete.confirm {
-  background: var(--color-danger);
-  color: #fff;
-  border-color: var(--color-danger);
-  animation: deleteConfirmPulse 0.5s ease;
+  background: var(--state-error-fg);
+  color: var(--text-on-accent);
+  border-color: var(--state-error-fg);
+  animation: deleteConfirmPulse var(--motion-slow) var(--ease-standard);
 }
 
 @keyframes deleteConfirmPulse {
@@ -181,7 +187,7 @@
 .hover-preview-image,
 .hover-preview-files {
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--motion-fast) var(--ease-standard);
   outline: none;
 }
 
@@ -248,5 +254,7 @@
 }
 
 .dark-mode .hover-preview {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 20px 48px color-mix(in srgb, var(--shadow-overlay) 58%, transparent),
+    0 3px 10px color-mix(in srgb, var(--shadow-lg) 72%, transparent);
 }
