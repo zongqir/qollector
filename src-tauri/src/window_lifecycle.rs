@@ -132,3 +132,10 @@ pub fn hide_main_window_with_release(app: &AppHandle, reason: &str) {
         schedule_main_window_release(app.clone(), reason);
     }
 }
+
+pub fn hide_main_window_without_release(app: &AppHandle, reason: &str) {
+    cancel_main_window_release(app, reason);
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        let _ = window.hide();
+    }
+}
