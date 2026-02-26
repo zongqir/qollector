@@ -39,6 +39,8 @@ release-artifacts/
 # AI tool configs
 CLAUDE.md
 AGENTS.md
+todo.md
+lessons.md
 .claude/
 .cursorrules
 .aider*
