@@ -16,7 +16,9 @@ import './Settings.css';
 
 const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
 
-const OCR_PROVIDERS = ['Native', 'Local', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
+const OCR_PROVIDERS = ['Native', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
+
+const normalizeOcrProvider = (provider) => (provider === 'Local' ? 'Native' : provider);
 
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
@@ -555,7 +557,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   }, [aiConfig.current_provider]); // Reload AI credentials when current provider changes.
   useEffect(() => {
     if (ocrConfig.current_provider) {
-      const providerKey = ocrConfig.current_provider.toLowerCase();
+      const providerKey = normalizeOcrProvider(ocrConfig.current_provider).toLowerCase();
       const creds = ocrConfig.credentials[providerKey];
       setCurrentOcrApiKey(creds?.api_key || '');
       setCurrentOcrApiSecret(creds?.api_secret || '');
@@ -585,7 +587,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         setCustomUrl(ai.current_provider.Custom.base_url || '');
       }
 
-      setOcrConfig(ocr);
+      setOcrConfig({
+        ...ocr,
+        current_provider: normalizeOcrProvider(ocr.current_provider),
+      });
       setMcpConfig(mcp);
       setActualMcpPort(mcpPort);
       setGeneralConfig(general);
@@ -734,7 +739,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setOcrTestResult(null);
 
     try {
-      if (ocrConfig.current_provider !== 'Local' && ocrConfig.current_provider !== 'Native' && !currentOcrApiKey) {
+      if (ocrConfig.current_provider !== 'Native' && !currentOcrApiKey) {
         console.error('api key is empty');
         setOcrTestResult({ success: false, message: t('settings.ocr.apiKeyRequired') });
         setOcrTesting(false);
@@ -1332,23 +1337,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </select>
             </div>
 
-            {ocrConfig.current_provider === 'Local' && (
-              <div className="setting-item">
-                <label>{t('settings.ocr.language')}</label>
-                <input
-                  type="text"
-                  value={ocrConfig.language}
-                  onChange={(e) => setOcrConfig({ ...ocrConfig, language: e.target.value })}
-                  placeholder={t('settings.ocr.languagePlaceholder')}
-                  className="setting-input"
-                />
-                <small className="setting-hint">
-                  {t('settings.ocr.languageHint')}
-                </small>
-              </div>
-            )}
-
-            {ocrConfig.current_provider !== 'Local' && ocrConfig.current_provider !== 'Native' && (
+            {ocrConfig.current_provider !== 'Native' && (
               <div className="setting-item">
                 <label>{t('settings.ocr.apiKey')}</label>
                 <div className="password-input-wrapper">
@@ -1368,19 +1357,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       {showOcrApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   )}
-                </div>
-              </div>
-            )}
-
-            {ocrConfig.current_provider === 'Local' && (
-              <div className="setting-item">
-                <div className="info-box">
-                  <strong>{t('settings.ocr.localInfo.title')}</strong>
-                  <ul>
-                    <li>{t('settings.ocr.localInfo.windows')}</li>
-                    <li>{t('settings.ocr.localInfo.macos')}</li>
-                    <li>{t('settings.ocr.localInfo.linux')}</li>
-                  </ul>
                 </div>
               </div>
             )}
@@ -1667,7 +1643,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 <div style={{ fontSize: 13, opacity: 0.6 }}>v{appVersion}</div>
                 <a
                   href="#"
-                  onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'https://www.135070.xyz' }); }}
+                  onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'https://qollect.zongqir.com/' }); }}
                   style={{
                     fontSize: 12,
                     color: 'var(--accent-blue, #3b82f6)',
@@ -1678,7 +1654,22 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   onMouseEnter={(e) => e.target.style.opacity = '1'}
                   onMouseLeave={(e) => e.target.style.opacity = '0.8'}
                 >
-                  {t('settings.about.website')}: www.135070.xyz
+                  {t('settings.about.website')}: qollect.zongqir.com
+                </a>
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); invoke('open_url', { url: 'mailto:hi@zongqir.com' }); }}
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--accent-blue, #3b82f6)',
+                    textDecoration: 'none',
+                    opacity: 0.8,
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '1'}
+                  onMouseLeave={(e) => e.target.style.opacity = '0.8'}
+                >
+                  Contact: hi@zongqir.com
                 </a>
                 <div style={{
                   display: 'inline-block',
