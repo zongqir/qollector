@@ -437,6 +437,8 @@ impl LanSyncService {
     }
 
     fn sanitize_config(mut config: LanSyncConfig) -> LanSyncConfig {
+        // LAN sync is beta-gated for now; force disabled at runtime.
+        config.enabled = false;
         if config.device_id.trim().is_empty() {
             config.device_id = uuid::Uuid::new_v4().to_string();
         }

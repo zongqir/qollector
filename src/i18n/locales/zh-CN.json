@@ -305,6 +305,7 @@
         "graphite": "石墨"
       },
       "featureModules": "可选功能",
+      "betaBadge": "Beta",
       "enableAI": "AI 智能功能",
       "enableAIHint": "启用 AI 自动标签、智能摘要等能力",
       "enableOCR": "图片文字识别",
@@ -387,7 +388,9 @@
     },
     "lanSync": {
       "title": "局域网设备同步",
+      "betaBadge": "Beta",
       "enabled": "启用局域网同步",
+      "betaDisabledHint": "该功能处于 Beta 阶段，当前暂不可开启。",
       "enabledHint": "自动发现同一局域网设备，并仅同步可传输的最新一条数据。",
       "started": "已启用局域网同步",
       "stopped": "已停用局域网同步",

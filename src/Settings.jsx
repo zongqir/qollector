@@ -1069,7 +1069,10 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               </label>
               <label className="sg-row setting-toggle-row">
                 <span className="toggle-label-group">
-                  <span className="toggle-label">{t('settings.general.enableMCP')}</span>
+                  <span className="toggle-title-inline">
+                    <span className="toggle-label">{t('settings.general.enableMCP')}</span>
+                    <span className="beta-badge">{t('settings.general.betaBadge')}</span>
+                  </span>
                   <span className="toggle-desc">{t('settings.general.enableMCPHint')}</span>
                 </span>
                 <span className="toggle-switch">

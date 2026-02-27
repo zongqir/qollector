@@ -314,6 +314,7 @@
         "graphite": "Graphite"
       },
       "featureModules": "Optional Features",
+      "betaBadge": "Beta",
       "enableAI": "AI Features",
       "enableAIHint": "Enable AI auto-tagging, smart summaries, and more",
       "enableOCR": "Image Text Recognition",
@@ -396,7 +397,9 @@
     },
     "lanSync": {
       "title": "LAN Device Sync",
+      "betaBadge": "Beta",
       "enabled": "Enable LAN Sync",
+      "betaDisabledHint": "This feature is in beta and temporarily unavailable.",
       "enabledHint": "Discover nearby devices and sync only the latest transferable item.",
       "started": "LAN sync enabled",
       "stopped": "LAN sync disabled",

@@ -228,7 +228,10 @@ function GeneralSection({
         </label>
         <label className="setting-toggle-row">
           <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.enableWidget')}</span>
+            <span className="toggle-title-inline">
+              <span className="toggle-label">{t('settings.general.enableWidget')}</span>
+              <span className="beta-badge">{t('settings.general.betaBadge')}</span>
+            </span>
             <span className="toggle-desc">{t('settings.general.enableWidgetHint')}</span>
           </span>
           <span className="toggle-switch">
