@@ -2,8 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
-import { Check, Pin, PinOff, Plus, X } from 'lucide-react';
-import { saveQuickNote } from './services/quickNoteService';
+import { emit } from '@tauri-apps/api/event';
+import { Check, Palette, Pin, PinOff, Plus, X } from 'lucide-react';
+import {
+  QUICK_INPUT_OPEN_WORKBENCH_EVENT,
+  QUICK_INPUT_WINDOW_STATE_EVENT,
+  saveQuickNote,
+} from './services/quickNoteService';
 
 import './styles/quick-input-window.css';
 
@@ -21,6 +26,7 @@ const GLASS_DEFAULT = 0.75;
 const GLASS_MIN = 0.15;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
+const DRAFT_KEY = 'qollect-quick-input-draft-v1';
 
 function resolveEffectiveTheme(themeMode) {
   if (themeMode === 'dark') return 'dark';
@@ -33,6 +39,8 @@ function QuickInputWindow() {
   const textareaRef = useRef(null);
   const toastTimerRef = useRef(null);
   const appWindowRef = useRef(getCurrentWindow());
+  const allowCloseRef = useRef(false);
+  const colorPanelRef = useRef(null);
   const appWindow = appWindowRef.current;
 
   const [content, setContent] = useState('');
@@ -40,6 +48,8 @@ function QuickInputWindow() {
   const [noteColor, setNoteColor] = useState('default');
   const [saving, setSaving] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [showWorkbenchCta, setShowWorkbenchCta] = useState(false);
+  const [showColorPanel, setShowColorPanel] = useState(false);
 
   const [glassOpacity, setGlassOpacity] = useState(() => {
     const saved = localStorage.getItem(GLASS_KEY);
@@ -51,6 +61,43 @@ function QuickInputWindow() {
   useEffect(() => {
     document.documentElement.style.setProperty('--glass-opacity', glassOpacity);
   }, []);
+
+  useEffect(() => {
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (typeof draft === 'string' && draft.trim()) {
+      setContent(draft);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (content.trim()) {
+      localStorage.setItem(DRAFT_KEY, content);
+      return;
+    }
+    localStorage.removeItem(DRAFT_KEY);
+  }, [content]);
+
+  useEffect(() => {
+    void emit(QUICK_INPUT_WINDOW_STATE_EVENT, { open: true });
+    return () => {
+      void emit(QUICK_INPUT_WINDOW_STATE_EVENT, { open: false });
+    };
+  }, []);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+  }, []);
+
+  const requestClose = useCallback(async () => {
+    if (saving || allowCloseRef.current) return;
+    allowCloseRef.current = true;
+    try {
+      await appWindow.close();
+    } catch (error) {
+      allowCloseRef.current = false;
+      console.error('Failed to close quick input window:', error);
+    }
+  }, [appWindow, saving]);
 
   const handleHeaderWheel = useCallback((e) => {
     e.preventDefault();
@@ -94,8 +141,47 @@ function QuickInputWindow() {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
       }
+      if (glassTimerRef.current) {
+        window.clearTimeout(glassTimerRef.current);
+      }
     };
   }, [appWindow]);
+
+  useEffect(() => {
+    let unlistenCloseRequested = null;
+
+    appWindow.onCloseRequested((event) => {
+      if (allowCloseRef.current) return;
+      if (saving) {
+        event.preventDefault?.();
+        return;
+      }
+      if (!content.trim()) clearDraft();
+    }).then((unlisten) => {
+      unlistenCloseRequested = unlisten;
+    }).catch((error) => {
+      console.error('Failed to bind quick input close guard:', error);
+    });
+
+    return () => {
+      if (typeof unlistenCloseRequested === 'function') {
+        unlistenCloseRequested();
+      }
+    };
+  }, [appWindow, clearDraft, content, saving]);
+
+  useEffect(() => {
+    if (!showColorPanel) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!colorPanelRef.current?.contains(event.target)) {
+        setShowColorPanel(false);
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, [showColorPanel]);
 
   const handleTogglePin = useCallback(async () => {
     const next = !isPinned;
@@ -113,14 +199,18 @@ function QuickInputWindow() {
     setSaving(true);
     try {
       await saveQuickNote(content, t('quickInput.source'));
+      clearDraft();
 
       if (closeAfterSave) {
-        await appWindow.close();
+        setContent('');
+        setShowWorkbenchCta(false);
+        await requestClose();
         return;
       }
 
       setContent('');
       setSavedToast(true);
+      setShowWorkbenchCta(true);
       textareaRef.current?.focus();
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
@@ -134,7 +224,16 @@ function QuickInputWindow() {
     } finally {
       setSaving(false);
     }
-  }, [appWindow, content, saving, t]);
+  }, [clearDraft, content, requestClose, saving, t]);
+
+  const handleOpenWorkbench = useCallback(async () => {
+    try {
+      await emit(QUICK_INPUT_OPEN_WORKBENCH_EVENT, { source: 'quick-input' });
+    } catch (error) {
+      console.error('Failed to emit open workbench event:', error);
+    }
+    await requestClose();
+  }, [requestClose]);
 
   const handleKeyDown = useCallback((event) => {
     if (event.key === 'Enter' && event.ctrlKey) {
@@ -144,9 +243,9 @@ function QuickInputWindow() {
     }
     if (event.key === 'Escape') {
       event.preventDefault();
-      appWindow.close();
+      void requestClose();
     }
-  }, [appWindow, saveAndMaybeClose]);
+  }, [requestClose, saveAndMaybeClose]);
 
   const activeColor = NOTE_COLORS.find((c) => c.id === noteColor) || NOTE_COLORS[0];
   const panelStyle = { '--quick-add-bg': activeColor.bg };
@@ -169,18 +268,38 @@ function QuickInputWindow() {
           </div>
         )}
         <div className="quick-window-actions" data-tauri-drag-region="false">
-          <div className="quick-window-colors">
-            {NOTE_COLORS.map((color) => (
-              <button
-                key={color.id}
-                className={`quick-window-color-dot ${noteColor === color.id ? 'active' : ''}`}
-                style={{ '--dot-color': color.dot }}
-                title={color.id}
-                onClick={() => setNoteColor(color.id)}
-                data-tauri-drag-region="false"
-                onMouseDown={(event) => event.stopPropagation()}
-              />
-            ))}
+          <div
+            className={`quick-window-color-panel-wrap ${showColorPanel ? 'open' : ''}`}
+            ref={colorPanelRef}
+            data-tauri-drag-region="false"
+          >
+            <button
+              className={`quick-window-icon-btn ${showColorPanel ? 'active' : ''}`}
+              data-tauri-drag-region="false"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={() => setShowColorPanel(prev => !prev)}
+              title={t('quickInput.colorPanel')}
+            >
+              <Palette size={14} />
+            </button>
+            {showColorPanel && (
+              <div className="quick-window-colors">
+                {NOTE_COLORS.map((color) => (
+                  <button
+                    key={color.id}
+                    className={`quick-window-color-dot ${noteColor === color.id ? 'active' : ''}`}
+                    style={{ '--dot-color': color.dot }}
+                    title={color.id}
+                    onClick={() => {
+                      setNoteColor(color.id);
+                      setShowColorPanel(false);
+                    }}
+                    data-tauri-drag-region="false"
+                    onMouseDown={(event) => event.stopPropagation()}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           <button
             className={`quick-window-icon-btn ${isPinned ? 'active' : ''}`}
@@ -195,7 +314,9 @@ function QuickInputWindow() {
             className="quick-window-icon-btn danger"
             data-tauri-drag-region="false"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={() => appWindow.close()}
+            onClick={() => {
+              void requestClose();
+            }}
             title={t('titlebar.close')}
           >
             <X size={14} />
@@ -208,18 +329,38 @@ function QuickInputWindow() {
         className="quick-window-textarea"
         placeholder={t('quickInput.placeholder')}
         value={content}
-        onChange={(event) => setContent(event.target.value)}
+        onChange={(event) => {
+          setContent(event.target.value);
+          if (showWorkbenchCta) {
+            setShowWorkbenchCta(false);
+          }
+        }}
         onKeyDown={handleKeyDown}
         autoFocus
       />
 
       <footer className="quick-window-footer">
-        {savedToast && (
-          <div className="quick-window-toast">
-            <Check size={13} />
-            <span>{t('quickInput.success')}</span>
-          </div>
-        )}
+        <div className="quick-window-feedback">
+          {savedToast && (
+            <div className="quick-window-toast">
+              <Check size={13} />
+              <span>{t('quickInput.success')}</span>
+            </div>
+          )}
+          {showWorkbenchCta && (
+            <button
+              type="button"
+              className="quick-window-workbench-cta"
+              data-tauri-drag-region="false"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                void handleOpenWorkbench();
+              }}
+            >
+              {t('quickInput.viewWorkbench')}
+            </button>
+          )}
+        </div>
         <div className="quick-window-footer-actions">
           <button
             className="quick-window-btn secondary"

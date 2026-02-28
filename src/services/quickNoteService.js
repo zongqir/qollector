@@ -2,6 +2,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
 
 export const QUICK_NOTE_SAVED_EVENT = 'quick-note-saved';
+export const QUICK_INPUT_WINDOW_STATE_EVENT = 'quick-input-window-state';
+export const QUICK_INPUT_OPEN_WORKBENCH_EVENT = 'quick-input-open-workbench';
 
 const resolveMaxPinnedItems = async () => {
   try {

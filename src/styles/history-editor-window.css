@@ -1,0 +1,282 @@
+:root {
+  --history-editor-accent: var(--accent-primary);
+  --history-editor-bg: rgba(var(--bg-card-rgb), 1);
+  --history-editor-header-bg: rgba(var(--bg-secondary-rgb), 1);
+  --history-editor-muted-bg: rgba(var(--bg-secondary-rgb), 0.94);
+  --history-editor-window-opacity: 1;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: transparent;
+}
+
+.history-editor-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--history-editor-bg);
+  opacity: var(--history-editor-window-opacity, 1);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--shadow-lg) 46%, transparent),
+    0 1px 4px color-mix(in srgb, var(--shadow-md) 58%, transparent);
+  overflow: hidden;
+}
+
+.history-editor-header {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--history-editor-header-bg);
+}
+
+.history-editor-header-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.history-editor-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.history-editor-header-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.history-editor-glass-indicator {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--history-editor-header-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-editor-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+.history-editor-icon-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent-color);
+}
+
+.history-editor-icon-btn:active {
+  transform: translateY(1px);
+}
+
+.history-editor-icon-btn.active {
+  color: var(--accent-color);
+}
+
+.history-editor-icon-btn.danger:hover {
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+}
+
+.history-editor-color-panel-wrap {
+  position: relative;
+}
+
+.history-editor-colors {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--history-editor-header-bg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--shadow-lg) 48%, transparent);
+}
+
+.history-editor-color-dot {
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--dot-color) 68%, #ffffff 32%);
+  background: var(--dot-color);
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--motion-fast) var(--ease-standard);
+}
+
+.history-editor-color-dot:hover {
+  transform: translateY(-1px);
+}
+
+.history-editor-color-dot.active::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--history-editor-accent) 70%, #ffffff 30%);
+}
+
+.history-editor-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px 14px;
+  overflow: auto;
+}
+
+.history-editor-body.content-heavy .history-editor-section:not(.note) {
+  flex: 1 1 auto;
+}
+
+.history-editor-body.content-heavy .history-editor-section.note {
+  flex: 0 0 88px;
+}
+
+.history-editor-body.note-focus .history-editor-section.image {
+  flex: 1 1 auto;
+}
+
+.history-editor-body.note-focus .history-editor-section.note {
+  flex: 0 0 92px;
+}
+
+.history-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.history-editor-section.image {
+  flex: 0 0 auto;
+}
+
+.history-editor-section.note {
+  flex: 1;
+  margin-top: 2px;
+}
+
+.history-editor-textarea {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--border-light) 90%, transparent);
+  border-radius: 10px;
+  background: rgba(var(--bg-card-rgb), 1);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 10px 11px;
+  resize: none;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.history-editor-textarea:focus {
+  border-color: var(--history-editor-accent);
+}
+
+.history-editor-textarea.content {
+  min-height: 300px;
+  flex: 1;
+}
+
+.history-editor-textarea.note {
+  min-height: 58px;
+  flex: 1;
+  border-radius: 8px;
+  border-color: transparent;
+  background: var(--history-editor-muted-bg);
+  box-shadow: none;
+}
+
+.history-editor-image-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  max-height: 460px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--history-editor-muted-bg);
+}
+
+.history-editor-image-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.history-editor-state {
+  min-height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-light);
+  border-radius: 10px;
+}
+
+.history-editor-state.inline {
+  border: 0;
+  min-height: auto;
+}
+
+.history-editor-state.error {
+  color: var(--state-error-fg);
+}
+
+.history-editor-footer {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border-light);
+  background: var(--history-editor-header-bg);
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.history-editor-footer.saved {
+  color: var(--state-success-fg);
+}
+
+.history-editor-footer.error {
+  color: var(--state-error-fg);
+}

@@ -665,8 +665,8 @@
   display: flex;
   gap: 2px;
   align-items: center;
-  width: 124px;
-  min-width: 124px;
+  width: 156px;
+  min-width: 156px;
   flex-shrink: 0;
   overflow: hidden;
   pointer-events: auto;
@@ -741,6 +741,10 @@
 }
 
 .badge-btn.badge-open:hover {
+  color: var(--accent-color);
+}
+
+.badge-btn.badge-window:hover {
   color: var(--accent-color);
 }
 
@@ -832,7 +836,8 @@
 }
 
 @container (max-width: 260px) {
-  .badge-btn.badge-open {
+  .badge-btn.badge-open,
+  .badge-btn.badge-window {
     display: none;
   }
 }
@@ -1002,7 +1007,8 @@
 
 @container (max-width: 240px) {
   .badge-btn.badge-dragout,
-  .badge-btn.badge-open {
+  .badge-btn.badge-open,
+  .badge-btn.badge-window {
     display: none;
   }
 }
@@ -2765,8 +2771,8 @@
 }
 
 .compact-card-badges {
-  width: 132px;
-  min-width: 132px;
+  width: 156px;
+  min-width: 156px;
   gap: 3px;
 }
 

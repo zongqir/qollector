@@ -62,11 +62,23 @@ body {
   gap: 6px;
 }
 
+.quick-window-color-panel-wrap {
+  position: relative;
+}
+
 .quick-window-colors {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-right: 2px;
+  padding: 7px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 78%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 94%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, black 24%, transparent);
+  z-index: 4;
 }
 
 .quick-window-color-dot {
@@ -142,6 +154,10 @@ body {
   font-family: inherit;
 }
 
+.quick-window-textarea:focus-visible {
+  outline: none;
+}
+
 .quick-window-textarea::placeholder {
   color: var(--text-tertiary);
 }
@@ -162,6 +178,71 @@ body {
   gap: 5px;
   color: var(--state-success-fg);
   font-size: 12px;
+}
+
+.quick-window-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.quick-window-workbench-cta {
+  border: 1px solid color-mix(in srgb, var(--accent-color) 35%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  color: var(--accent-color);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.quick-window-workbench-cta:hover {
+  background: color-mix(in srgb, var(--accent-light) 96%, transparent);
+  border-color: color-mix(in srgb, var(--accent-color) 48%, transparent);
+}
+
+.quick-window-discard-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+.quick-window-inline-btn {
+  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.quick-window-inline-btn.secondary:hover {
+  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+  color: var(--text-primary);
+}
+
+.quick-window-inline-btn.danger {
+  color: var(--state-error-fg);
+  border-color: color-mix(in srgb, var(--state-error-fg) 40%, transparent);
+}
+
+.quick-window-inline-btn.danger:hover {
+  background: color-mix(in srgb, var(--state-error-bg) 82%, transparent);
 }
 
 .quick-window-footer-actions {

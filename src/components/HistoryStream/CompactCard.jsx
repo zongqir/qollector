@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette } from 'lucide-react';
+import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Expand, Check, FolderOpen, Palette } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -20,6 +20,7 @@ import {
   getCardBackgroundPreset,
 } from '../../utils/cardBackgrounds';
 import useAppStore from '../../store/useAppStore';
+import { openHistoryEditorWindow } from '../../services/windowService';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -247,6 +248,20 @@ function CompactCard({
                 aria-label={t('item.revealInFolder')}
               >
                 <FolderOpen size={10} />
+              </button>
+            )}
+            {item.type_ !== 'file' && (
+              <button
+                type="button"
+                className="badge-btn badge-window"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void openHistoryEditorWindow(item.id, t);
+                }}
+                title={t('item.openInNewWindow')}
+                aria-label={t('item.openInNewWindow')}
+              >
+                <Expand size={10} />
               </button>
             )}
             <button

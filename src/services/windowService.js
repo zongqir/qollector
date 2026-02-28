@@ -157,6 +157,57 @@ export const openQuickInputWindow = async (t) => {
   return webview;
 };
 
+const HISTORY_EDITOR_WINDOW_PREFIX = 'history-editor-';
+
+const normalizeWindowLabelToken = (value) => {
+  if (typeof value !== 'string') return '';
+  const normalized = value.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+  return normalized.slice(0, 80);
+};
+
+export const openHistoryEditorWindow = async (itemId, t) => {
+  const normalizedItemId = typeof itemId === 'string' ? itemId.trim() : '';
+  const labelToken = normalizeWindowLabelToken(normalizedItemId);
+  if (!normalizedItemId || !labelToken) return null;
+
+  const label = `${HISTORY_EDITOR_WINDOW_PREFIX}${labelToken}`;
+  const existing = await WebviewWindow.getByLabel(label);
+  if (existing) {
+    await focusWindowSafely(existing);
+    return existing;
+  }
+
+  const WIN_W = 620;
+  const WIN_H = 620;
+  const pos = await centerOnCursorMonitor(WIN_W, WIN_H);
+
+  const webview = new WebviewWindow(label, {
+    url: `${resolveSubWindowUrl('history-editor.html')}?itemId=${encodeURIComponent(normalizedItemId)}`,
+    title: t('historyEditor.title'),
+    width: WIN_W,
+    height: WIN_H,
+    minWidth: 420,
+    minHeight: 460,
+    ...(pos || { center: true }),
+    resizable: true,
+    alwaysOnTop: true,
+    decorations: false,
+    transparent: true,
+    shadow: false,
+    skipTaskbar: false,
+  });
+
+  webview.once('tauri://created', async () => {
+    await focusWindowSafely(webview);
+  });
+
+  webview.once('tauri://error', (e) => {
+    console.error(t('historyEditor.openFailed', { error: e }));
+  });
+
+  return webview;
+};
+
 export const toggleWindowAlwaysOnTop = async (currentState) => {
   const appWindow = getCurrentWindow();
   const newState = !currentState;

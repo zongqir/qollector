@@ -1,12 +1,13 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, Star, Trash2 } from 'lucide-react';
+import { Copy, ExternalLink, Star, Trash2 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { formatDate } from '../../utils/formatters';
 import { getSourceApp } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import { getFileName } from '../../utils/formatters';
+import { openHistoryEditorWindow } from '../../services/windowService';
 import '../../styles/hover-preview.css';
 
 const DESKTOP_MAX_WIDTH = 540;
@@ -118,6 +119,15 @@ function HoverPreviewInner() {
     } else {
       setShowDeleteConfirm(true);
       setTimeout(() => setShowDeleteConfirm(false), 3000);
+    }
+  };
+
+  const handleOpenWindowClick = async (e) => {
+    e.stopPropagation();
+    try {
+      await openHistoryEditorWindow(item.id, t);
+    } catch (error) {
+      console.error('open history editor failed:', error);
     }
   };
 
@@ -297,6 +307,15 @@ function HoverPreviewInner() {
           >
             <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
           </button>
+          {item.type_ !== 'file' && (
+            <button
+              className="hover-preview-action-btn"
+              onClick={handleOpenWindowClick}
+              title={t('item.openInNewWindow')}
+            >
+              <ExternalLink size={16} />
+            </button>
+          )}
           <button
             className={`hover-preview-action-btn delete ${showDeleteConfirm ? 'confirm' : ''}`}
             onClick={handleDeleteClick}

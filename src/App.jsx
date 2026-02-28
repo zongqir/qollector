@@ -3,13 +3,23 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { invoke } from '@tauri-apps/api/core';
+import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
-import { openQuickInputWindow, openWidgetWindow, closeWidgetWindow } from './services/windowService';
-import { QUICK_NOTE_SAVED_EVENT } from './services/quickNoteService';
+import {
+  QUICK_INPUT_WINDOW_LABEL,
+  openQuickInputWindow,
+  openWidgetWindow,
+  closeWidgetWindow,
+} from './services/windowService';
+import {
+  QUICK_INPUT_OPEN_WORKBENCH_EVENT,
+  QUICK_INPUT_WINDOW_STATE_EVENT,
+  QUICK_NOTE_SAVED_EVENT,
+} from './services/quickNoteService';
 import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
@@ -125,6 +135,7 @@ function App() {
   const [updateError, setUpdateError] = useState(null);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [isQuickInputOpen, setIsQuickInputOpen] = useState(false);
 
   const showAppFeedback = useCallback((text, type = 'info', duration = 1200) => {
     if (!text) return;
@@ -171,6 +182,7 @@ function App() {
   const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const setThemeMode = useAppStore(s => s.setThemeMode);
+  const setPanelMode = useAppStore(s => s.setPanelMode);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
   const handleEditModalCancel = useAppStore(s => s.handleEditModalCancel);
@@ -598,6 +610,71 @@ function App() {
       .then(() => performViewModeSwitch(mode));
   }, [performViewModeSwitch]);
 
+  const handleOpenQuickInput = useCallback(() => {
+    openQuickInputWindow(t)
+      .then(() => setIsQuickInputOpen(true))
+      .catch((error) => {
+        setIsQuickInputOpen(false);
+        console.error(t('quickInput.failed', { error }));
+      });
+  }, [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncQuickInputState = async () => {
+      try {
+        const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
+        if (!cancelled) {
+          setIsQuickInputOpen(Boolean(existing));
+        }
+      } catch {
+        if (!cancelled) {
+          setIsQuickInputOpen(false);
+        }
+      }
+    };
+
+    void syncQuickInputState();
+    const unlistenPromise = listen(QUICK_INPUT_WINDOW_STATE_EVENT, (event) => {
+      setIsQuickInputOpen(Boolean(event?.payload?.open));
+    });
+
+    return () => {
+      cancelled = true;
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlistenPromise = listen(QUICK_INPUT_OPEN_WORKBENCH_EVENT, async () => {
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.unminimize();
+      } catch {
+      }
+
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.show();
+      } catch {
+      }
+
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.setFocus();
+      } catch {
+      }
+
+      handleSelectViewMode(VIEW_MODE_ALL);
+      setPanelMode('collection');
+      showAppFeedback(t('quickInput.openWorkbenchFeedback'), 'success', 1400);
+    });
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten());
+    };
+  }, [handleSelectViewMode, setPanelMode, showAppFeedback, t]);
+
   const MINI_THRESHOLD = 450;
   const PANEL_CLOSE_THRESHOLD = 350;
 
@@ -785,11 +862,8 @@ function App() {
       <TitleBar
         isAlwaysOnTop={isAlwaysOnTop}
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
-        onOpenQuickInput={() => {
-          openQuickInputWindow(t).catch((error) => {
-            console.error(t('quickInput.failed', { error }));
-          });
-        }}
+        onOpenQuickInput={handleOpenQuickInput}
+        isQuickInputOpen={isQuickInputOpen}
         isMiniMode={isMiniMode}
         currentViewMode={activeViewMode}
         onSelectViewMode={handleSelectViewMode}

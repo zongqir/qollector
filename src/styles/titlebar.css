@@ -479,7 +479,12 @@
 }
 
 .titlebar-btn.quick-add-btn {
+  color: var(--text-secondary);
+}
+
+.titlebar-btn.quick-add-btn.active {
   color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 90%, transparent);
 }
 
 .titlebar-btn.quick-add-btn:hover {
@@ -682,8 +687,14 @@
   background: var(--accent-light);
 }
 
+.app.mini-mode .titlebar-btn.quick-add-btn.active {
+  color: var(--accent-color);
+  background: var(--accent-light);
+}
+
 .app.mini-mode .titlebar-btn.layout-menu-btn.active:hover,
-.app.mini-mode .titlebar-btn.pin-btn.active:hover {
+.app.mini-mode .titlebar-btn.pin-btn.active:hover,
+.app.mini-mode .titlebar-btn.quick-add-btn.active:hover {
   background: var(--accent-medium);
 }
 

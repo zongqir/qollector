@@ -35,6 +35,7 @@ function TitleBar({
   isAlwaysOnTop,
   onToggleAlwaysOnTop,
   onOpenQuickInput,
+  isQuickInputOpen = false,
   isMiniMode,
   currentViewMode,
   onSelectViewMode,
@@ -266,7 +267,7 @@ function TitleBar({
         <div className="titlebar-btn-group titlebar-btn-group-capture">
           <button
             onClick={onOpenQuickInput}
-            className="titlebar-btn quick-add-btn"
+            className={`titlebar-btn quick-add-btn ${isQuickInputOpen ? 'active' : ''}`}
             title={t('titlebar.quickAdd')}
           >
             <SquarePen size={15} />
