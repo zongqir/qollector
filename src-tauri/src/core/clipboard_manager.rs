@@ -1003,6 +1003,17 @@ impl ClipboardManager {
         repo.get_items_by_date_range(start, end).await
     }
 
+    pub async fn get_history_group_counts(
+        &self,
+        start_today: i64,
+        start_yesterday: i64,
+        start_last7: i64,
+    ) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_history_group_counts(start_today, start_yesterday, start_last7)
+            .await
+    }
+
     pub async fn copy_to_clipboard(&self, item: &ClipboardItem) -> Result<(), ClipboardError> {
         let content = if item.type_ == "image" {
             // Load original image from file

@@ -395,6 +395,36 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    /// Count items by history groups based on `updated_at`.
+    pub async fn get_history_group_counts(
+        &self,
+        start_today: i64,
+        start_yesterday: i64,
+        start_last7: i64,
+    ) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+        let (today, yesterday, last7, older) = sqlx::query_as::<_, (i64, i64, i64, i64)>(
+            r#"
+            SELECT
+                COALESCE(SUM(CASE WHEN updated_at >= ? THEN 1 ELSE 0 END), 0) AS today_count,
+                COALESCE(SUM(CASE WHEN updated_at >= ? AND updated_at < ? THEN 1 ELSE 0 END), 0) AS yesterday_count,
+                COALESCE(SUM(CASE WHEN updated_at >= ? AND updated_at < ? THEN 1 ELSE 0 END), 0) AS last7_count,
+                COALESCE(SUM(CASE WHEN updated_at < ? THEN 1 ELSE 0 END), 0) AS older_count
+            FROM clipboard_items
+            WHERE is_deleted = 0
+            "#,
+        )
+        .bind(start_today)
+        .bind(start_yesterday)
+        .bind(start_today)
+        .bind(start_last7)
+        .bind(start_yesterday)
+        .bind(start_last7)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok((today, yesterday, last7, older))
+    }
+
     pub async fn search(
         &self,
         query: &str,

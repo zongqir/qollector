@@ -595,3 +595,35 @@ pub async fn get_items_by_date_range(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[derive(Serialize)]
+pub struct HistoryGroupCounts {
+    pub today: i64,
+    pub yesterday: i64,
+    pub last7: i64,
+    pub older: i64,
+}
+
+#[tauri::command]
+pub async fn get_history_group_counts(
+    manager: State<'_, Arc<ClipboardManager>>,
+    start_today: i64,
+    start_yesterday: i64,
+    start_last7: i64,
+) -> Result<HistoryGroupCounts, String> {
+    if !(start_last7 <= start_yesterday && start_yesterday <= start_today) {
+        return Err("Invalid day boundaries".to_string());
+    }
+
+    let (today, yesterday, last7, older) = manager
+        .get_history_group_counts(start_today, start_yesterday, start_last7)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(HistoryGroupCounts {
+        today,
+        yesterday,
+        last7,
+        older,
+    })
+}

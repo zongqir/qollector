@@ -749,6 +749,7 @@ fn main() {
             export_collection_text,
             search_items,
             get_items_by_date_range,
+            get_history_group_counts,
             generate_timeline_summary,
             run_prompt_assistant_task,
             get_mcp_config,

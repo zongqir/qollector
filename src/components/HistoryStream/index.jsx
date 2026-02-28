@@ -11,7 +11,7 @@ import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
-import { searchItems } from '../../services/clipboardService';
+import { getHistoryGroupCounts, searchItems } from '../../services/clipboardService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -276,6 +276,7 @@ function HistoryStream({ style }) {
 
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [backendGroupCounts, setBackendGroupCounts] = useState(null);
   const [timeTick, setTimeTick] = useState(() => Date.now());
   const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
   const [compareFeedback, setCompareFeedback] = useState(null);
@@ -556,6 +557,43 @@ function HistoryStream({ style }) {
   }, [filteredItems, searchTerms, t, i18n.language]);
 
   const dayBoundaries = useMemo(() => buildDayBoundaries(timeTick), [timeTick]);
+  const shouldUseBackendGroupCounts = !debouncedSearchQuery.trim()
+    && selectedType === 'all'
+    && selectedTags.length === 0
+    && !showFavoritesOnly
+    && !showPinnedOnly
+    && !selectedDateRange;
+
+  useEffect(() => {
+    if (!shouldUseBackendGroupCounts) {
+      setBackendGroupCounts(null);
+      return;
+    }
+
+    let cancelled = false;
+    getHistoryGroupCounts(
+      dayBoundaries.startToday,
+      dayBoundaries.startYesterday,
+      dayBoundaries.startLast7,
+    )
+      .then((counts) => {
+        if (!cancelled) setBackendGroupCounts(counts);
+      })
+      .catch((error) => {
+        console.error('[History] load group counts failed:', error);
+        if (!cancelled) setBackendGroupCounts(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shouldUseBackendGroupCounts,
+    dayBoundaries.startToday,
+    dayBoundaries.startYesterday,
+    dayBoundaries.startLast7,
+    itemsRevision,
+  ]);
 
   const historyGrouping = useMemo(() => {
     const groupByIndex = [];
@@ -581,6 +619,13 @@ function HistoryStream({ style }) {
       }
     });
 
+    if (shouldUseBackendGroupCounts && backendGroupCounts) {
+      countByGroup.today = Number(backendGroupCounts.today ?? countByGroup.today);
+      countByGroup.yesterday = Number(backendGroupCounts.yesterday ?? countByGroup.yesterday);
+      countByGroup.last7 = Number(backendGroupCounts.last7 ?? countByGroup.last7);
+      countByGroup.older = Number(backendGroupCounts.older ?? countByGroup.older);
+    }
+
     const availableGroups = HISTORY_GROUP_ORDER.filter(groupKey => firstIndexByGroup[groupKey] != null);
     return {
       groupByIndex,
@@ -589,7 +634,7 @@ function HistoryStream({ style }) {
       countByGroup,
       availableGroups,
     };
-  }, [filteredItems, dayBoundaries]);
+  }, [filteredItems, dayBoundaries, shouldUseBackendGroupCounts, backendGroupCounts]);
 
   const activeVisibleGroup = useMemo(() => {
     if (filteredItems.length === 0) return null;

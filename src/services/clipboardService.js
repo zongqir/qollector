@@ -32,6 +32,10 @@ export const getMoreItems = async (limit = 50, offset = 0) => {
   return invoke('get_more_items', { limit, offset });
 };
 
+export const getHistoryGroupCounts = async (startToday, startYesterday, startLast7) => {
+  return invoke('get_history_group_counts', { startToday, startYesterday, startLast7 });
+};
+
 export const searchItems = async (query, limit = 200) => {
   return invoke('search_items', { query, limit });
 };

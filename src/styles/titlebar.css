@@ -90,18 +90,17 @@
 }
 
 .titlebar-mini-flow-btn {
+  width: 24px;
   height: 22px;
-  padding: 0 10px;
+  padding: 0;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 36%, transparent);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-light) 86%, transparent), color-mix(in srgb, var(--surface-elevated) 92%, transparent));
-  color: var(--accent-color);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  border: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  color: color-mix(in srgb, var(--text-secondary) 92%, var(--text-tertiary) 8%);
   cursor: pointer;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   -webkit-app-region: no-drag;
   transition:
     transform var(--motion-fast) var(--ease-standard),
@@ -109,10 +108,15 @@
     box-shadow var(--motion-fast) var(--ease-standard);
 }
 
+.titlebar-mini-flow-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
 .titlebar-mini-flow-btn:hover {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 18%, transparent);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-light) 94%, transparent), color-mix(in srgb, var(--surface-elevated) 94%, transparent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 14%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 36%, var(--bg-card) 64%);
+  color: var(--accent-color);
 }
 
 .titlebar-mini-flow-btn:active {
@@ -297,10 +301,6 @@
   min-width: 0;
 }
 
-.titlebar-btn-group-layout {
-  position: relative;
-}
-
 .titlebar-btn-group-capture {
   padding: 1px;
   border-radius: 8px;
@@ -317,23 +317,37 @@
   border: 1px solid color-mix(in srgb, var(--border-light) 76%, transparent);
 }
 
+.titlebar-layout-separator {
+  width: 1px;
+  height: 14px;
+  margin-inline: 2px 1px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 72%, transparent);
+  opacity: 0.75;
+}
+
 .titlebar-layout-btn {
-  min-width: 20px;
+  width: 24px;
+  min-width: 24px;
   height: 22px;
-  padding: 0 6px;
+  padding: 0;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--text-tertiary);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.03em;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
+}
+
+.titlebar-layout-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .titlebar-layout-btn:hover {
@@ -353,6 +367,14 @@
 
 .titlebar-layout-btn:active {
   transform: scale(0.96);
+}
+
+.titlebar-layout-density-btn {
+  color: color-mix(in srgb, var(--text-secondary) 85%, var(--text-tertiary) 15%);
+}
+
+.titlebar-layout-density-btn:hover {
+  color: var(--accent-color);
 }
 
 .titlebar-btn-group-window .titlebar-btn {
@@ -470,16 +492,6 @@
   transform: rotate(90deg) scale(0.9);
 }
 
-.titlebar-btn.density-btn:hover {
-  background: color-mix(in srgb, var(--accent-light) 72%, transparent);
-  color: var(--accent-color);
-}
-
-.titlebar-btn.density-btn.active {
-  color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
-}
-
 .titlebar-btn.layout-menu-btn:hover {
   background: color-mix(in srgb, var(--accent-light) 74%, transparent);
   color: var(--accent-color);
@@ -559,9 +571,8 @@
   }
 
   .titlebar-layout-btn {
-    min-width: 24px;
-    padding: 0 5px;
-    font-size: 9px;
+    width: 22px;
+    min-width: 22px;
   }
 
   .titlebar-btn-group-capture {
@@ -585,8 +596,8 @@
 }
 
 .app.mini-mode .titlebar-logo {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   border-radius: 4px;
 }
 
@@ -619,9 +630,13 @@
 }
 
 .app.mini-mode .titlebar-mini-flow-btn {
-  height: 21px;
-  padding: 0 9px;
-  font-size: 9.5px;
+  width: 24px;
+  height: 22px;
+}
+
+.app.mini-mode .titlebar-mini-flow-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .app.mini-mode .titlebar-drag-hitbox {
@@ -649,7 +664,6 @@
 }
 
 .app.mini-mode .titlebar-btn.quick-add-btn,
-.app.mini-mode .titlebar-btn.density-btn,
 .app.mini-mode .titlebar-btn.history-btn,
 .app.mini-mode .titlebar-btn.panel-btn,
 .app.mini-mode .titlebar-btn.layout-menu-btn,

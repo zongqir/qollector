@@ -8,6 +8,11 @@ import {
   SquareSquare,
   X,
   Pin,
+  Expand,
+  Minimize2,
+  PanelLeft,
+  PanelRight,
+  LayoutGrid,
   Rows2,
   Rows3,
 } from 'lucide-react';
@@ -182,41 +187,60 @@ function TitleBar({
                 className="titlebar-mini-flow-btn"
                 onClick={() => onSelectViewMode?.('restore')}
                 title={t('titlebar.exitMiniRestore')}
+                aria-label={t('titlebar.exitMiniRestore')}
                 data-tauri-drag-region="false"
               >
-                {t('titlebar.exitMiniRestore')}
+                <Expand size={13} strokeWidth={1.9} />
               </button>
             )}
             {!isMiniMode && (
               <>
                 <div className="titlebar-layout-presets" role="group" aria-label={t('titlebar.layoutPresetGroup')}>
                   <button
+                    type="button"
                     onClick={() => onSelectViewMode?.('mini')}
                     className={`titlebar-layout-btn ${currentViewMode === 'mini' ? 'active' : ''}`}
                     title={t('titlebar.layoutMiniShortcut')}
+                    aria-label={t('titlebar.layoutMiniShortcut')}
                   >
-                    {t('titlebar.layoutMiniShort')}
+                    <Minimize2 size={13} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => onSelectViewMode?.('left')}
                     className={`titlebar-layout-btn ${currentViewMode === 'left' ? 'active' : ''}`}
                     title={t('titlebar.layoutFocusShortcut')}
+                    aria-label={t('titlebar.layoutFocusShortcut')}
                   >
-                    {t('titlebar.layoutFocusShort')}
+                    <PanelLeft size={13} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => onSelectViewMode?.('right')}
                     className={`titlebar-layout-btn ${currentViewMode === 'right' ? 'active' : ''}`}
                     title={t('titlebar.layoutReviewShortcut')}
+                    aria-label={t('titlebar.layoutReviewShortcut')}
                   >
-                    {t('titlebar.layoutReviewShort')}
+                    <PanelRight size={13} />
                   </button>
                   <button
+                    type="button"
                     onClick={() => onSelectViewMode?.('all')}
                     className={`titlebar-layout-btn ${currentViewMode === 'all' ? 'active' : ''}`}
                     title={t('titlebar.layoutAllShortcut')}
+                    aria-label={t('titlebar.layoutAllShortcut')}
                   >
-                    {t('titlebar.layoutAllShort')}
+                    <LayoutGrid size={13} />
+                  </button>
+                  <span className="titlebar-layout-separator" aria-hidden="true" />
+                  <button
+                    type="button"
+                    onClick={handleToggleDensity}
+                    className={`titlebar-layout-btn titlebar-layout-density-btn ${densityMode === DENSITY_COMPACT ? 'active' : ''}`}
+                    title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
+                    aria-label={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
+                  >
+                    {densityMode === DENSITY_COMPACT ? <Rows2 size={13} /> : <Rows3 size={13} />}
                   </button>
                 </div>
               </>
@@ -246,17 +270,6 @@ function TitleBar({
             title={t('titlebar.quickAdd')}
           >
             <SquarePen size={15} />
-          </button>
-        </div>
-        <span className="titlebar-btn-divider" aria-hidden="true" />
-
-        <div className="titlebar-btn-group titlebar-btn-group-layout">
-          <button
-            onClick={handleToggleDensity}
-            className={`titlebar-btn density-btn ${densityMode === DENSITY_COMPACT ? 'active' : ''}`}
-            title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
-          >
-            {densityMode === DENSITY_COMPACT ? <Rows2 size={14} /> : <Rows3 size={14} />}
           </button>
         </div>
         <span className="titlebar-btn-divider" aria-hidden="true" />
