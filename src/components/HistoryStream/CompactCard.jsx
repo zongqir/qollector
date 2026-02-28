@@ -238,7 +238,7 @@ function CompactCard({
                 <ExternalLink size={10} />
               </button>
             )}
-            {item.type_ === 'file' && (
+            {(item.type_ === 'file' || item.type_ === 'image') && (
               <button
                 type="button"
                 className="badge-btn badge-open"

@@ -348,19 +348,19 @@ pub async fn reveal_in_folder(
         .map_err(|e| e.to_string())?
         .ok_or_else(|| "Item not found".to_string())?;
 
-    if item.type_ != "file" {
-        return Err("Only file types can be revealed".to_string());
-    }
+    let target_path = match item.type_.as_str() {
+        "file" => first_file_target(
+            item.content
+                .as_deref()
+                .ok_or_else(|| "File path is empty".to_string())?,
+        )?,
+        "image" => image_source_path(&item)?,
+        _ => return Err("Only file and image types can be revealed".to_string()),
+    };
 
-    let file_path = first_file_target(
-        item.content
-            .as_deref()
-            .ok_or_else(|| "File path is empty".to_string())?,
-    )?;
-
-    let path = Path::new(&file_path);
+    let path = Path::new(&target_path);
     if !path.exists() {
-        return Err("File does not exist".to_string());
+        return Err("Target file does not exist".to_string());
     }
 
     reveal_path_in_explorer(path)?;

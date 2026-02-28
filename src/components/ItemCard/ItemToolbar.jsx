@@ -118,7 +118,7 @@ function ItemToolbar({
           </button>
         </>
       )}
-      {item.type_ === 'file' && (
+      {(item.type_ === 'file' || item.type_ === 'image') && (
         <>
           <div className="toolbar-divider"></div>
           <button

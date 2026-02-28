@@ -124,7 +124,7 @@ function PreviewPanel() {
     return extractOpenableFilePaths(item.content);
   }, [item.type_, item.content]);
   const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenablePaths.length > 0 || textOpenableUrls.length > 0;
-  const shouldShowRevealButton = item.type_ === 'file' || textOpenablePaths.length > 0;
+  const shouldShowRevealButton = item.type_ === 'file' || (item.type_ === 'image' && !!item.image_paths) || textOpenablePaths.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
   const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const assistantSourceText = useMemo(() => {
@@ -468,7 +468,7 @@ function PreviewPanel() {
     if (openFeedback === 'reveal') return;
     setOpenFeedback('reveal');
     setTimeout(() => setOpenFeedback(null), 1500);
-    if (item.type_ === 'file') {
+    if (item.type_ === 'file' || item.type_ === 'image') {
       handleRevealInFolder(item);
       return;
     }
@@ -898,4 +898,3 @@ function PreviewPanel() {
 }
 
 export default PreviewPanel;
-
