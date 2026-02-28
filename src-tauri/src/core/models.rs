@@ -112,7 +112,107 @@ impl ClipboardItem {
         }
     }
 
-    // 检测是否为URL - 使用 url crate 进行正确的解析
+    fn has_disallowed_fullwidth_punctuation(text: &str) -> bool {
+        text.chars().any(|c| {
+            matches!(
+                c,
+                '。'
+                    | '，'
+                    | '、'
+                    | '；'
+                    | '：'
+                    | '！'
+                    | '？'
+                    | '（'
+                    | '）'
+                    | '【'
+                    | '】'
+                    | '《'
+                    | '》'
+                    | '“'
+                    | '”'
+                    | '‘'
+                    | '’'
+                    | '…'
+                    | '—'
+            )
+        })
+    }
+
+    fn is_likely_domain_host(host: &str) -> bool {
+        if host.is_empty() || host.starts_with('.') || host.ends_with('.') {
+            return false;
+        }
+
+        let labels: Vec<&str> = host.split('.').collect();
+        if labels.len() < 2 {
+            return false;
+        }
+
+        let mut has_alpha = false;
+        for label in &labels {
+            if label.is_empty() || label.len() > 63 {
+                return false;
+            }
+
+            let bytes = label.as_bytes();
+            let first = bytes.first().copied().unwrap_or_default();
+            let last = bytes.last().copied().unwrap_or_default();
+            if !first.is_ascii_alphanumeric() || !last.is_ascii_alphanumeric() {
+                return false;
+            }
+
+            if !bytes
+                .iter()
+                .all(|b| b.is_ascii_alphanumeric() || *b == b'-')
+            {
+                return false;
+            }
+
+            if bytes.iter().any(|b| b.is_ascii_alphabetic()) {
+                has_alpha = true;
+            }
+        }
+
+        let tld = labels.last().copied().unwrap_or_default();
+        if tld.len() < 2 {
+            return false;
+        }
+
+        has_alpha
+    }
+
+    fn is_bare_url_candidate(text: &str) -> bool {
+        if text.is_empty()
+            || text.contains(char::is_whitespace)
+            || text.starts_with('.')
+            || text.ends_with('.')
+            // Bare text containing '@' is usually an email address, not a link.
+            || text.contains('@')
+        {
+            return false;
+        }
+
+        if Self::has_disallowed_fullwidth_punctuation(text) {
+            return false;
+        }
+
+        true
+    }
+
+    fn is_supported_link_scheme(scheme: &str) -> bool {
+        matches!(scheme, "http" | "https" | "ftp" | "ftps" | "ws" | "wss")
+    }
+
+    fn is_valid_link_host(host: &str) -> bool {
+        if host.parse::<std::net::IpAddr>().is_ok() {
+            return true;
+        }
+
+        Self::is_likely_domain_host(host)
+    }
+
+    // 检测是否为URL：显式链接 + 裸域名（无协议）两段式判断
     fn is_url(text: &str) -> bool {
         let trimmed = text.trim();
 
@@ -126,26 +226,31 @@ impl ClipboardItem {
             return false;
         }
 
-        let valid_schemes = ["http", "https", "ftp", "ftps", "ws", "wss"];
-
-        // 使用 url crate 解析
-        let parsed = url::Url::parse(trimmed).or_else(|_| {
-            // bare domain like "userscloud.com" or "tmp.link/abc"
-            url::Url::parse(&format!("https://{}", trimmed))
-        });
-
-        if let Ok(parsed_url) = parsed {
-            let scheme = parsed_url.scheme();
-            if !valid_schemes.contains(&scheme) {
+        // 1) 显式 URL（带协议）
+        if let Ok(parsed_url) = url::Url::parse(trimmed) {
+            if !Self::is_supported_link_scheme(parsed_url.scheme()) {
                 return false;
             }
 
-            // must have a host
             if let Some(host) = parsed_url.host_str() {
-                // bare domain must contain a dot (e.g. "userscloud.com")
-                if host.contains('.') {
-                    return true;
-                }
+                return Self::is_valid_link_host(host);
+            }
+
+            return false;
+        }
+
+        // 2) 裸域名 / 无协议链接（如 mp.weixin.qq.com、tmp.link/abc）
+        if !Self::is_bare_url_candidate(trimmed) {
+            return false;
+        }
+
+        if let Ok(parsed_url) = url::Url::parse(&format!("https://{}", trimmed)) {
+            if !Self::is_supported_link_scheme(parsed_url.scheme()) {
+                return false;
+            }
+
+            if let Some(host) = parsed_url.host_str() {
+                return Self::is_valid_link_host(host);
             }
         }
 
@@ -260,6 +365,57 @@ pub struct SearchFilters {
     pub date_range: Option<DateRange>,
     pub is_pinned: Option<bool>,
     pub is_favorite: Option<bool>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ClipboardItem;
+
+    #[test]
+    fn detects_bare_domain_without_scheme() {
+        assert!(ClipboardItem::is_url("mp.weixin.qq.com"));
+        assert!(ClipboardItem::is_url("tmp.link/abc"));
+    }
+
+    #[test]
+    fn rejects_plain_text_with_fullwidth_period() {
+        assert!(!ClipboardItem::is_url("你好。"));
+        assert!(!ClipboardItem::is_url("这是一句话。"));
+    }
+
+    #[test]
+    fn rejects_invalid_domain_shape() {
+        assert!(!ClipboardItem::is_url("a."));
+        assert!(!ClipboardItem::is_url("example"));
+    }
+
+    #[test]
+    fn keeps_explicit_url_and_ip() {
+        assert!(ClipboardItem::is_url("https://mp.weixin.qq.com/path"));
+        assert!(ClipboardItem::is_url("https://127.0.0.1:5173"));
+        assert!(ClipboardItem::is_url("127.0.0.1:5173"));
+    }
+
+    #[test]
+    fn real_world_clipboard_samples() {
+        // Common bare domains should still be treated as links.
+        assert!(ClipboardItem::is_url("www.qq.com"));
+        assert!(ClipboardItem::is_url("docs.rs/serde"));
+        assert!(!ClipboardItem::is_url("mp.weixin.qq.com。"));
+
+        // Wrapped links copied from Chinese text are treated as plain text.
+        assert!(!ClipboardItem::is_url("（mp.weixin.qq.com）"));
+        assert!(!ClipboardItem::is_url("“mp.weixin.qq.com”"));
+
+        // Full sentences that contain a domain are not pure-link clipboard items.
+        assert!(!ClipboardItem::is_url("我在搜 mp.weixin.qq.com"));
+
+        // Email-like strings should remain text when no explicit scheme is provided.
+        assert!(!ClipboardItem::is_url("foo@bar.com"));
+
+        // Explicit URL with user info is still a valid URL.
+        assert!(ClipboardItem::is_url("https://user:pass@example.com/path"));
+    }
 }
 
 impl Default for SearchFilters {
