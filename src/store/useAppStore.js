@@ -35,6 +35,21 @@ const normalizeCopyFeedbackSource = (source) => {
   const normalized = source.trim().toLowerCase();
   return COPY_FEEDBACK_SOURCES.has(normalized) ? normalized : 'global';
 };
+const MAX_COMPARE_CANDIDATES = 50;
+const normalizeCompareCandidateIds = (value) => {
+  const raw = Array.isArray(value) ? value : [];
+  const normalized = [];
+  for (const candidate of raw) {
+    const id = typeof candidate === 'string' ? candidate : candidate?.id;
+    if (!id || normalized.includes(id)) continue;
+    normalized.push(id);
+    if (normalized.length >= MAX_COMPARE_CANDIDATES) break;
+  }
+  return normalized;
+};
+const normalizeCompareItemIds = (value) => {
+  return normalizeCompareCandidateIds(value).slice(0, 2);
+};
 const detectClientPlatform = () => {
   if (typeof navigator === 'undefined') return 'other';
   const raw = (
@@ -366,9 +381,12 @@ const useAppStore = create((set, get) => ({
   isMemorySuspended: false,
 
   // ========== 右栏面板状态机 ==========
-  // 'collection' | 'preview' | 'timeline'
+  // 'collection' | 'preview' | 'compare' | 'timeline'
   panelMode: 'collection',
   previewItem: null,
+  previewReturnMode: 'collection',
+  compareCandidateIds: [],
+  compareItemIds: [],
 
   // ========== 时间旅行状态 ==========
   timelineDate: 'today', // 'today' | 'yesterday'
@@ -463,7 +481,18 @@ const useAppStore = create((set, get) => ({
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
-      set({ panelMode: 'preview', previewItem: item, timelineItems: [], timelineSummary: null });
+      set((state) => {
+        const keepCompareContext = state.panelMode === 'compare' && state.compareItemIds.length >= 2;
+        return {
+          panelMode: 'preview',
+          previewItem: item,
+          previewReturnMode: keepCompareContext ? 'compare' : 'collection',
+          compareCandidateIds: keepCompareContext ? state.compareCandidateIds : [],
+          compareItemIds: keepCompareContext ? state.compareItemIds : [],
+          timelineItems: [],
+          timelineSummary: null,
+        };
+      });
       if (itemNeedsHydration(item)) {
         const targetId = item.id;
         hydrateItemIfNeeded(item)
@@ -478,17 +507,111 @@ const useAppStore = create((set, get) => ({
             console.warn('[ItemHydration] preview hydration failed:', error);
           });
       }
+    } else if (mode === 'compare') {
+      const compareCandidateIds = normalizeCompareCandidateIds(item);
+      const fallbackCompareItemIds = normalizeCompareItemIds(compareCandidateIds);
+      if (fallbackCompareItemIds.length < 2) {
+        set({
+          panelMode: 'collection',
+          previewItem: null,
+          previewReturnMode: 'collection',
+          compareCandidateIds: [],
+          compareItemIds: [],
+          timelineItems: [],
+          timelineSummary: null,
+        });
+        return;
+      }
+      set((state) => {
+        const candidateSet = new Set(compareCandidateIds);
+        const canKeepCurrentPair = (
+          state.panelMode === 'compare'
+          && state.compareItemIds.length >= 2
+          && state.compareItemIds.every(id => candidateSet.has(id))
+        );
+        return {
+          panelMode: 'compare',
+          previewItem: null,
+          previewReturnMode: 'collection',
+          compareCandidateIds,
+          compareItemIds: canKeepCurrentPair ? state.compareItemIds : fallbackCompareItemIds,
+          timelineItems: [],
+          timelineSummary: null,
+        };
+      });
     } else if (mode === 'timeline') {
-      set({ panelMode: 'timeline', previewItem: null });
+      set({
+        panelMode: 'timeline',
+        previewItem: null,
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+      });
       // Auto-load timeline data when entering timeline mode
       get().loadTimelineData('today');
     } else {
-      set({ panelMode: 'collection', previewItem: null, timelineItems: [], timelineSummary: null });
+      set({
+        panelMode: 'collection',
+        previewItem: null,
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+        timelineItems: [],
+        timelineSummary: null,
+      });
     }
   },
 
+  setCompareItemIds: (itemsOrIds) => {
+    const compareItemIds = normalizeCompareItemIds(itemsOrIds);
+    if (compareItemIds.length < 2) return;
+    set((state) => {
+      const fallbackCandidateIds = normalizeCompareCandidateIds(itemsOrIds);
+      const candidateIds = state.compareCandidateIds.length >= 2
+        ? state.compareCandidateIds
+        : fallbackCandidateIds;
+      const candidateSet = new Set(candidateIds);
+      if (!compareItemIds.every(id => candidateSet.has(id))) {
+        return {};
+      }
+      return {
+        compareCandidateIds: candidateIds,
+        compareItemIds,
+      };
+    });
+  },
+
+  backFromPreview: () => {
+    set((state) => {
+      if (
+        state.panelMode === 'preview'
+        && state.previewReturnMode === 'compare'
+        && state.compareItemIds.length >= 2
+      ) {
+        return {
+          panelMode: 'compare',
+          previewItem: null,
+          previewReturnMode: 'collection',
+        };
+      }
+      return {
+        panelMode: 'collection',
+        previewItem: null,
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+      };
+    });
+  },
+
   switchToCollection: () => {
-    set({ panelMode: 'collection', previewItem: null });
+    set({
+      panelMode: 'collection',
+      previewItem: null,
+      previewReturnMode: 'collection',
+      compareCandidateIds: [],
+      compareItemIds: [],
+    });
   },
 
   // ========== 时间旅行 Actions ==========
@@ -741,6 +864,9 @@ const useAppStore = create((set, get) => ({
       processedItemIds: new Set(),
       panelMode: 'collection',
       previewItem: null,
+      previewReturnMode: 'collection',
+      compareCandidateIds: [],
+      compareItemIds: [],
       isMemorySuspended: true,
     });
     console.log('[MemorySuspend] detached heavy list state while minimized');
@@ -1013,6 +1139,7 @@ const useAppStore = create((set, get) => ({
         previewItem: state.previewItem?.id === item.id
           ? { ...state.previewItem, is_favorite: newFavorite }
           : state.previewItem,
+        itemsRevision: state.itemsRevision + 1,
       }));
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
@@ -1130,12 +1257,15 @@ const useAppStore = create((set, get) => ({
   deleteItem: async (item) => {
     try {
       await deleteItemSvc(item.id);
-      const { items } = get();
-      set({
-        items: items.filter(i => i.id !== item.id),
+      set((state) => ({
+        items: state.items.filter(i => i.id !== item.id),
         panelMode: 'collection',
         previewItem: null,
-      });
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+        itemsRevision: state.itemsRevision + 1,
+      }));
     } catch (error) {
       console.error('删除失败:', error);
     }
@@ -1331,12 +1461,16 @@ const useAppStore = create((set, get) => ({
       for (const id of selectedItemIds) {
         await deleteItemSvc(id);
       }
-      set({
+      set((state) => ({
         items: items.filter(i => !selectedItemIds.includes(i.id)),
         selectedItemIds: [],
         panelMode: 'collection',
         previewItem: null,
-      });
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+        itemsRevision: state.itemsRevision + 1,
+      }));
     } catch (error) {
       console.error('batch delete failed:', error);
     }
@@ -1758,6 +1892,9 @@ const useAppStore = create((set, get) => ({
       processedItemIds: new Set(),
       panelMode: 'collection',
       previewItem: null,
+      previewReturnMode: 'collection',
+      compareCandidateIds: [],
+      compareItemIds: [],
       hoverPreviewItem: null,
       hoverPreviewPosition: null,
       selectedItemIds: [],
@@ -1844,7 +1981,13 @@ const useAppStore = create((set, get) => ({
         await invoke('toggle_pin_item', { id: item.id, maxPinned: 999 });
       }
       await loadItems();
-      set({ panelMode: 'collection', previewItem: null });
+      set({
+        panelMode: 'collection',
+        previewItem: null,
+        previewReturnMode: 'collection',
+        compareCandidateIds: [],
+        compareItemIds: [],
+      });
     } catch (error) {
       console.error('清空收集箱失败:', error);
     }

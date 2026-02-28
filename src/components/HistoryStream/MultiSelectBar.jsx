@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Bot, Check, Copy, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
+import { Bot, Check, Columns2, Copy, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
 
 function MultiSelectBar({
   selectedCount,
@@ -10,6 +10,8 @@ function MultiSelectBar({
   onBatchPinToggle,
   allSelectedArePinned,
   onMergeCopy,
+  canCompareSelected,
+  onCompareSelected,
   canRunBatchAi,
   onBatchAiAction,
   batchFlagPending,
@@ -28,10 +30,12 @@ function MultiSelectBar({
   batchTagSuggestionsRef,
   batchTagActiveSuggestionIndex,
   setBatchTagActiveSuggestionIndex,
+  compareFeedback,
   batchTagFeedback,
   batchAiFeedback,
 }) {
   const { t } = useTranslation();
+  const activeFeedback = compareFeedback || batchTagFeedback || batchAiFeedback;
 
   return (
     <div
@@ -88,6 +92,18 @@ function MultiSelectBar({
         >
           <Copy size={14} />
           <span>{t('multiSelect.mergeCopy')}</span>
+        </button>
+        <button
+          className="multi-select-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCompareSelected?.();
+          }}
+          disabled={!canCompareSelected}
+          title={t('multiSelect.compare')}
+        >
+          <Columns2 size={14} />
+          <span>{t('multiSelect.compare')}</span>
         </button>
         {canRunBatchAi && (
           <>
@@ -178,14 +194,9 @@ function MultiSelectBar({
           <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
         </div>
       )}
-      {batchTagFeedback && (
-        <div className={`multi-select-feedback ui-feedback ${batchTagFeedback.type}`} role="status" aria-live="polite">
-          {batchTagFeedback.text}
-        </div>
-      )}
-      {batchAiFeedback && (
-        <div className={`multi-select-feedback ui-feedback ${batchAiFeedback.type}`} role="status" aria-live="polite">
-          {batchAiFeedback.text}
+      {activeFeedback && (
+        <div className={`multi-select-feedback ui-feedback ${activeFeedback.type}`} role="status" aria-live="polite">
+          {activeFeedback.text}
         </div>
       )}
     </div>

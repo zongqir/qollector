@@ -144,6 +144,18 @@ body {
   animation: appFeedbackIn var(--motion-base) var(--ease-standard);
 }
 
+.app-feedback-toast.info {
+  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
+  background: color-mix(in srgb, var(--accent-bg-soft) 76%, var(--surface-strong) 24%);
+  color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
+}
+
+.app-feedback-toast.success {
+  border-color: var(--state-success-border);
+  background: color-mix(in srgb, var(--state-success-bg) 90%, var(--surface-strong) 10%);
+  color: var(--state-success-fg);
+}
+
 .app.mini-mode .app-feedback-toast {
   left: 8px;
   right: 8px;
@@ -233,4 +245,3 @@ body {
 .app.mini-mode .compact-link-path {
   display: none;
 }
-

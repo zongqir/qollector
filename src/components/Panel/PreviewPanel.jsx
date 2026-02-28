@@ -46,6 +46,7 @@ function PreviewPanel() {
 
   const previewItem = useAppStore(s => s.previewItem);
   const switchToCollection = useAppStore(s => s.switchToCollection);
+  const backFromPreview = useAppStore(s => s.backFromPreview);
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const generateAITags = useAppStore(s => s.generateAITags);
@@ -593,7 +594,7 @@ function PreviewPanel() {
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
         <div className="preview-nav-main">
-          <button className="preview-back-btn" onClick={switchToCollection}>
+          <button className="preview-back-btn" onClick={backFromPreview}>
             <ArrowLeft size={16} />
           </button>
           <div className="preview-nav-context">

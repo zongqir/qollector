@@ -665,7 +665,8 @@
 }
 
 .density-compact .history-stream .compact-card-search-context {
-  display: none;
+  display: block;
+  margin: 0 0 4px;
 }
 
 .density-compact .history-stream .compact-card-search-sources {
@@ -680,7 +681,13 @@
 }
 
 .density-compact .history-stream .compact-card-search-snippet {
-  display: none;
+  display: -webkit-box;
+  font-size: 10px;
+  line-height: 1.35;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .density-compact .history-stream .compact-card-source,

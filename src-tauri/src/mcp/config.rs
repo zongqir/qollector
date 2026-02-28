@@ -21,7 +21,7 @@ pub enum McpMode {
 impl Default for McpConfig {
     fn default() -> Self {
         Self {
-            enabled: true,       // 默认开启
+            enabled: false,      // 默认关闭（Beta）
             port: Some(38470),   // 更偏门的默认端口
             mode: McpMode::Http, // 默认 HTTP 模式
         }

@@ -186,6 +186,7 @@ function HistoryStream({ style }) {
   const lastFilterProbeLogAtRef = useRef(0);
   const hasTopTrackerInitRef = useRef(false);
   const prevTopItemIdRef = useRef(null);
+  const compareFeedbackTimerRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -201,9 +202,11 @@ function HistoryStream({ style }) {
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
+  const compareCandidateIds = useAppStore(s => s.compareCandidateIds);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
+  const itemsRevision = useAppStore(s => s.itemsRevision);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setSelectedType = useAppStore(s => s.setSelectedType);
@@ -249,6 +252,7 @@ function HistoryStream({ style }) {
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
   const setHoverPreview = useAppStore(s => s.setHoverPreview);
   const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
   const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
@@ -274,6 +278,18 @@ function HistoryStream({ style }) {
   const [isSearching, setIsSearching] = useState(false);
   const [timeTick, setTimeTick] = useState(() => Date.now());
   const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
+  const [compareFeedback, setCompareFeedback] = useState(null);
+
+  const showCompareFeedback = useCallback((type, text) => {
+    setCompareFeedback({ type, text });
+    if (compareFeedbackTimerRef.current) {
+      clearTimeout(compareFeedbackTimerRef.current);
+    }
+    compareFeedbackTimerRef.current = setTimeout(() => {
+      setCompareFeedback(null);
+      compareFeedbackTimerRef.current = null;
+    }, 1800);
+  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -281,6 +297,22 @@ function HistoryStream({ style }) {
     }, 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => () => {
+    if (compareFeedbackTimerRef.current) {
+      clearTimeout(compareFeedbackTimerRef.current);
+      compareFeedbackTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedItemIds.length > 0) return;
+    setCompareFeedback(null);
+    if (compareFeedbackTimerRef.current) {
+      clearTimeout(compareFeedbackTimerRef.current);
+      compareFeedbackTimerRef.current = null;
+    }
+  }, [selectedItemIds.length]);
 
   useEffect(() => {
     const query = debouncedSearchQuery.trim();
@@ -302,7 +334,7 @@ function HistoryStream({ style }) {
         if (!cancelled) setIsSearching(false);
       });
     return () => { cancelled = true; };
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, itemsRevision]);
 
   const allTags = useMemo(() => {
     const userTags = new Set();
@@ -997,6 +1029,102 @@ function HistoryStream({ style }) {
     copySelectedItemsMerged(filteredItems);
   }, [copySelectedItemsMerged, filteredItems]);
 
+  const selectedItemsForCompare = useMemo(() => {
+    if (selectedItemIds.length < 2) return [];
+    const selectedIdSet = new Set(selectedItemIds);
+    const orderedByVisible = filteredItems.filter(item => selectedIdSet.has(item.id));
+    if (orderedByVisible.length >= 2) return orderedByVisible;
+
+    const fallbackById = new Map(items.map(item => [item.id, item]));
+    return selectedItemIds
+      .map(id => fallbackById.get(id))
+      .filter(Boolean);
+  }, [selectedItemIds, filteredItems, items]);
+
+  const selectedCompareCandidateIds = useMemo(
+    () => selectedItemsForCompare.map(item => item.id),
+    [selectedItemsForCompare],
+  );
+
+  const handleCompareSelected = useCallback(() => {
+    if (selectedItemsForCompare.length < 2) return;
+    const targetItems = selectedItemsForCompare;
+    if (isMiniMode) {
+      showCompareFeedback('warning', t('panel.compareNeedFullMode'));
+      return;
+    }
+    if (!collectionPanelEnabled) {
+      setCollectionPanelEnabled(true);
+      showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
+    }
+    setPanelMode('compare', targetItems);
+  }, [
+    selectedItemsForCompare,
+    isMiniMode,
+    collectionPanelEnabled,
+    setCollectionPanelEnabled,
+    showCompareFeedback,
+    t,
+    setPanelMode,
+  ]);
+
+  useEffect(() => {
+    if (panelMode !== 'compare') return;
+    if (selectedItemsForCompare.length < 2) return;
+    if (sameStringArray(selectedCompareCandidateIds, compareCandidateIds)) return;
+    setPanelMode('compare', selectedItemsForCompare);
+  }, [
+    panelMode,
+    selectedItemsForCompare,
+    selectedCompareCandidateIds,
+    compareCandidateIds,
+    setPanelMode,
+  ]);
+
+  const handleQuickCompareTopVisible = useCallback((targetItems) => {
+    if (!Array.isArray(targetItems) || targetItems.length < 2) return;
+    if (isMiniMode) {
+      showCompareFeedback('warning', t('panel.compareNeedFullMode'));
+      return;
+    }
+    if (!collectionPanelEnabled) {
+      setCollectionPanelEnabled(true);
+      showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
+    }
+    setPanelMode('compare', targetItems.slice(0, 2));
+  }, [
+    isMiniMode,
+    collectionPanelEnabled,
+    setCollectionPanelEnabled,
+    showCompareFeedback,
+    t,
+    setPanelMode,
+  ]);
+
+  useEffect(() => {
+    const isEditableElement = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tagName = target.tagName;
+      if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+      if (target.isContentEditable) return true;
+      return Boolean(target.closest('[contenteditable="true"]'));
+    };
+
+    const handleQuickCompareShortcut = (event) => {
+      if (event.defaultPrevented) return;
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.altKey) return;
+      if (isEditableElement(event.target)) return;
+      if (event.key !== '2') return;
+      if (selectedItemIds.length > 0) return;
+      if (filteredItems.length < 2) return;
+      event.preventDefault();
+      handleQuickCompareTopVisible(filteredItems.slice(0, 2));
+    };
+
+    window.addEventListener('keydown', handleQuickCompareShortcut);
+    return () => window.removeEventListener('keydown', handleQuickCompareShortcut);
+  }, [selectedItemIds.length, filteredItems, handleQuickCompareTopVisible]);
+
   const selectedCount = selectedItemIds.length;
   const multiSelectBarProps = useMemo(() => ({
     selectedCount,
@@ -1007,6 +1135,8 @@ function HistoryStream({ style }) {
     onBatchPinToggle: handleBatchPinToggle,
     allSelectedArePinned,
     onMergeCopy: handleMergeCopySelected,
+    canCompareSelected: selectedItemsForCompare.length >= 2,
+    onCompareSelected: handleCompareSelected,
     canRunBatchAi,
     onBatchAiAction: handleBatchAiAction,
     batchFlagPending,
@@ -1025,6 +1155,7 @@ function HistoryStream({ style }) {
     batchTagSuggestionsRef,
     batchTagActiveSuggestionIndex,
     setBatchTagActiveSuggestionIndex,
+    compareFeedback,
     batchTagFeedback,
     batchAiFeedback,
   }), [
@@ -1036,6 +1167,8 @@ function HistoryStream({ style }) {
     handleBatchPinToggle,
     allSelectedArePinned,
     handleMergeCopySelected,
+    selectedItemsForCompare.length,
+    handleCompareSelected,
     canRunBatchAi,
     handleBatchAiAction,
     batchFlagPending,
@@ -1054,6 +1187,7 @@ function HistoryStream({ style }) {
     batchTagSuggestionsRef,
     batchTagActiveSuggestionIndex,
     setBatchTagActiveSuggestionIndex,
+    compareFeedback,
     batchTagFeedback,
     batchAiFeedback,
   ]);

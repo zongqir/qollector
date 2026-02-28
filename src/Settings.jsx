@@ -44,7 +44,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   });
 
   const [mcpConfig, setMcpConfig] = useState({
-    enabled: true,
+    enabled: false,
     port: 38470,
     mode: 'http',
   });

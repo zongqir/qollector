@@ -10,12 +10,6 @@ import {
   Pin,
   Rows2,
   Rows3,
-  Minimize2,
-  Maximize2,
-  PanelLeftOpen,
-  PanelLeftClose,
-  PanelRightOpen,
-  PanelRightClose,
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -37,17 +31,11 @@ function TitleBar({
   onToggleAlwaysOnTop,
   onOpenQuickInput,
   isMiniMode,
-  onToggleMiniMode,
-  layoutPreset,
-  onApplyLayoutPreset,
+  currentViewMode,
+  onSelectViewMode,
 }) {
   const { t } = useTranslation();
   const panelMode = useAppStore(s => s.panelMode);
-  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
-  const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
-  const toggleCollectionPanel = useAppStore(s => s.toggleCollectionPanel);
-  const toggleHistoryStream = useAppStore(s => s.toggleHistoryStream);
-  const historyStreamVisible = historyStreamEnabled || !collectionPanelEnabled;
 
   const [glassOpacity, setGlassOpacity] = useState(() => {
     const saved = localStorage.getItem(GLASS_STORAGE_KEY);
@@ -89,39 +77,35 @@ function TitleBar({
       if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
       if (isEditableElement(event.target)) return;
       const key = event.key.toLowerCase();
-      if (!event.shiftKey && !isMiniMode && (key === '1' || key === '2' || key === '3')) {
+      if (!event.shiftKey && key === 'm') {
+        event.preventDefault();
+        onSelectViewMode?.(isMiniMode ? 'restore' : 'mini');
+        return;
+      }
+      if (!event.shiftKey && (key === '1' || key === '2' || key === '3')) {
         event.preventDefault();
         if (key === '1') {
-          onApplyLayoutPreset?.('focus');
+          onSelectViewMode?.('left');
           return;
         }
         if (key === '2') {
-          onApplyLayoutPreset?.('review');
+          onSelectViewMode?.('right');
           return;
         }
-        onApplyLayoutPreset?.('compare');
+        onSelectViewMode?.('all');
         return;
       }
       if (!event.shiftKey) return;
-      if (key !== 'd' && key !== 'p' && key !== 'h') return;
+      if (key !== 'd') return;
       event.preventDefault();
       if (key === 'd') {
         setDensityMode(prev => (prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT));
-        return;
       }
-      if (isMiniMode) {
-        return;
-      }
-      if (key === 'p') {
-        toggleCollectionPanel();
-        return;
-      }
-      toggleHistoryStream();
     };
 
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [isMiniMode, onApplyLayoutPreset, toggleCollectionPanel, toggleHistoryStream]);
+  }, [isMiniMode, onSelectViewMode]);
 
   useEffect(() => {
     const appWindow = getCurrentWindow();
@@ -165,65 +149,81 @@ function TitleBar({
     hideTimerRef.current = setTimeout(() => setShowIndicator(false), 800);
   }, []);
 
-  const handleToggleMini = () => {
-    onToggleMiniMode();
-  };
-  const handleTogglePanel = () => {
-    if (isMiniMode) return;
-    toggleCollectionPanel();
-  };
   const handleToggleDensity = () => {
     setDensityMode(prev => (prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT));
   };
 
-  const modeBadgeText = isMiniMode
-    ? t('titlebar.modeMini')
-    : (panelMode === 'timeline' ? t('titlebar.modeTimeline') : null);
+  const modeBadgeText = (!isMiniMode && panelMode === 'timeline')
+    ? t('titlebar.modeTimeline')
+    : null;
 
   return (
     <div className="titlebar" onWheel={handleWheel}>
-      <div data-tauri-drag-region className="titlebar-drag-area">
+      <div className="titlebar-drag-area">
         <div className="titlebar-brand">
-          <img
-            src="/qollect-logo.svg"
-            alt="Qollect logo"
-            className="titlebar-logo"
-            draggable="false"
-          />
-          <div className="titlebar-title">{t('app.title')}</div>
+          <div data-tauri-drag-region className="titlebar-brand-drag">
+            <img
+              src="/qollect-logo.svg"
+              alt="Qollect logo"
+              className="titlebar-logo"
+              draggable="false"
+            />
+            <div className="titlebar-title">{t('app.title')}</div>
+          </div>
           <div className="titlebar-mode-cluster">
             {modeBadgeText && (
               <span className={`titlebar-mode-pill ${isMiniMode ? 'mini' : 'normal'}`}>
                 {modeBadgeText}
               </span>
             )}
+            {isMiniMode && (
+              <button
+                type="button"
+                className="titlebar-mini-flow-btn"
+                onClick={() => onSelectViewMode?.('restore')}
+                title={t('titlebar.exitMiniRestore')}
+                data-tauri-drag-region="false"
+              >
+                {t('titlebar.exitMiniRestore')}
+              </button>
+            )}
             {!isMiniMode && (
-              <div className="titlebar-layout-presets" role="group" aria-label={t('titlebar.layoutPresetGroup')}>
-                <button
-                  onClick={() => onApplyLayoutPreset?.('focus')}
-                  className={`titlebar-layout-btn ${layoutPreset === 'focus' ? 'active' : ''}`}
-                  title={t('titlebar.layoutFocusShortcut')}
-                >
-                  {t('titlebar.layoutFocusShort')}
-                </button>
-                <button
-                  onClick={() => onApplyLayoutPreset?.('review')}
-                  className={`titlebar-layout-btn ${layoutPreset === 'review' ? 'active' : ''}`}
-                  title={t('titlebar.layoutReviewShortcut')}
-                >
-                  {t('titlebar.layoutReviewShort')}
-                </button>
-                <button
-                  onClick={() => onApplyLayoutPreset?.('compare')}
-                  className={`titlebar-layout-btn ${layoutPreset === 'compare' ? 'active' : ''}`}
-                  title={t('titlebar.layoutCompareShortcut')}
-                >
-                  {t('titlebar.layoutCompareShort')}
-                </button>
-              </div>
+              <>
+                <div className="titlebar-layout-presets" role="group" aria-label={t('titlebar.layoutPresetGroup')}>
+                  <button
+                    onClick={() => onSelectViewMode?.('mini')}
+                    className={`titlebar-layout-btn ${currentViewMode === 'mini' ? 'active' : ''}`}
+                    title={t('titlebar.layoutMiniShortcut')}
+                  >
+                    {t('titlebar.layoutMiniShort')}
+                  </button>
+                  <button
+                    onClick={() => onSelectViewMode?.('left')}
+                    className={`titlebar-layout-btn ${currentViewMode === 'left' ? 'active' : ''}`}
+                    title={t('titlebar.layoutFocusShortcut')}
+                  >
+                    {t('titlebar.layoutFocusShort')}
+                  </button>
+                  <button
+                    onClick={() => onSelectViewMode?.('right')}
+                    className={`titlebar-layout-btn ${currentViewMode === 'right' ? 'active' : ''}`}
+                    title={t('titlebar.layoutReviewShortcut')}
+                  >
+                    {t('titlebar.layoutReviewShort')}
+                  </button>
+                  <button
+                    onClick={() => onSelectViewMode?.('all')}
+                    className={`titlebar-layout-btn ${currentViewMode === 'all' ? 'active' : ''}`}
+                    title={t('titlebar.layoutAllShortcut')}
+                  >
+                    {t('titlebar.layoutAllShort')}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
+        <div data-tauri-drag-region className="titlebar-drag-hitbox" aria-hidden="true" />
       </div>
       <div className={`titlebar-status-group ${showIndicator && !isMiniMode ? 'visible' : ''}`}>
         {showIndicator && !isMiniMode && (
@@ -238,7 +238,7 @@ function TitleBar({
           </div>
         )}
       </div>
-      <div className="titlebar-buttons">
+      <div className="titlebar-buttons" data-tauri-drag-region="false">
         <div className="titlebar-btn-group titlebar-btn-group-capture">
           <button
             onClick={onOpenQuickInput}
@@ -257,31 +257,6 @@ function TitleBar({
             title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
           >
             {densityMode === DENSITY_COMPACT ? <Rows2 size={14} /> : <Rows3 size={14} />}
-          </button>
-          {!isMiniMode && (
-            <button
-              onClick={toggleHistoryStream}
-              className={`titlebar-btn history-btn ${historyStreamVisible ? 'active' : ''}`}
-              title={historyStreamVisible ? t('titlebar.hideHistoryShortcut') : t('titlebar.showHistoryShortcut')}
-            >
-              {historyStreamVisible ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
-            </button>
-          )}
-          {!isMiniMode && (
-            <button
-              onClick={handleTogglePanel}
-              className={`titlebar-btn panel-btn ${collectionPanelEnabled ? 'active' : ''}`}
-              title={collectionPanelEnabled ? t('titlebar.hidePanelShortcut') : t('titlebar.showPanelShortcut')}
-            >
-              {collectionPanelEnabled ? <PanelRightOpen size={14} /> : <PanelRightClose size={14} />}
-            </button>
-          )}
-          <button
-            onClick={handleToggleMini}
-            className={`titlebar-btn mini-btn ${isMiniMode ? 'active' : ''}`}
-            title={isMiniMode ? t('titlebar.exitMini') : t('titlebar.miniMode')}
-          >
-            {isMiniMode ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
           </button>
         </div>
         <span className="titlebar-btn-divider" aria-hidden="true" />

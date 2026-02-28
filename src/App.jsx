@@ -32,20 +32,22 @@ const WINDOW_MODE_MINI = 'mini';
 const WINDOW_MODE_NORMAL = 'normal';
 const LAYOUT_PRESET_STORAGE_KEY = 'qollect-layout-preset';
 const LAYOUT_PRESET_WIDTHS_STORAGE_KEY = 'qollect-layout-preset-widths';
-const LAYOUT_PRESET_FOCUS = 'focus';
-const LAYOUT_PRESET_REVIEW = 'review';
-const LAYOUT_PRESET_COMPARE = 'compare';
-const LAYOUT_PRESET_DEFAULT = LAYOUT_PRESET_REVIEW;
+const LAYOUT_PRESET_FLOW = 'focus';
+const LAYOUT_PRESET_DETAIL = 'review';
+const LAYOUT_PRESET_DEFAULT = LAYOUT_PRESET_DETAIL;
+const VIEW_MODE_MINI = 'mini';
+const VIEW_MODE_LEFT = 'left';
+const VIEW_MODE_RIGHT = 'right';
+const VIEW_MODE_ALL = 'all';
+const VIEW_MODE_RESTORE = 'restore';
 const LAYOUT_PRESET_DEFAULT_WIDTHS = {
-  [LAYOUT_PRESET_FOCUS]: 360,
-  [LAYOUT_PRESET_REVIEW]: 340,
-  [LAYOUT_PRESET_COMPARE]: 440,
+  [LAYOUT_PRESET_FLOW]: 360,
+  [LAYOUT_PRESET_DETAIL]: 340,
 };
 
 const isValidLayoutPreset = (preset) => (
-  preset === LAYOUT_PRESET_FOCUS
-  || preset === LAYOUT_PRESET_REVIEW
-  || preset === LAYOUT_PRESET_COMPARE
+  preset === LAYOUT_PRESET_FLOW
+  || preset === LAYOUT_PRESET_DETAIL
 );
 
 const clampHistoryWidth = (value) => {
@@ -75,14 +77,11 @@ const readLayoutPresetWidths = () => {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return defaults;
     const next = { ...defaults };
-    if (parsed[LAYOUT_PRESET_FOCUS] != null) {
-      next[LAYOUT_PRESET_FOCUS] = clampHistoryWidth(parsed[LAYOUT_PRESET_FOCUS]);
+    if (parsed[LAYOUT_PRESET_FLOW] != null) {
+      next[LAYOUT_PRESET_FLOW] = clampHistoryWidth(parsed[LAYOUT_PRESET_FLOW]);
     }
-    if (parsed[LAYOUT_PRESET_REVIEW] != null) {
-      next[LAYOUT_PRESET_REVIEW] = clampHistoryWidth(parsed[LAYOUT_PRESET_REVIEW]);
-    }
-    if (parsed[LAYOUT_PRESET_COMPARE] != null) {
-      next[LAYOUT_PRESET_COMPARE] = clampHistoryWidth(parsed[LAYOUT_PRESET_COMPARE]);
+    if (parsed[LAYOUT_PRESET_DETAIL] != null) {
+      next[LAYOUT_PRESET_DETAIL] = clampHistoryWidth(parsed[LAYOUT_PRESET_DETAIL]);
     }
     return next;
   } catch (error) {
@@ -126,6 +125,18 @@ function App() {
   const [updateError, setUpdateError] = useState(null);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+
+  const showAppFeedback = useCallback((text, type = 'info', duration = 1200) => {
+    if (!text) return;
+    setAppFeedback({ type, text });
+    if (appFeedbackTimerRef.current) {
+      clearTimeout(appFeedbackTimerRef.current);
+    }
+    appFeedbackTimerRef.current = setTimeout(() => {
+      setAppFeedback(null);
+      appFeedbackTimerRef.current = null;
+    }, duration);
+  }, []);
 
   // Store state
   const isLocked = useAppStore(s => s.isLocked);
@@ -370,22 +381,10 @@ function App() {
     const channelKey = copyFeedbackSource || 'global';
     const channelLabel = t(`feedback.channel.${channelKey}`, { defaultValue: t('feedback.channel.global') });
     const actionLabel = lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied');
-
-    setAppFeedback({
-      type: 'success',
-      text: `${actionLabel} - ${channelLabel}`,
-    });
-
-    if (appFeedbackTimerRef.current) {
-      clearTimeout(appFeedbackTimerRef.current);
-    }
-    appFeedbackTimerRef.current = setTimeout(() => {
-      setAppFeedback(null);
-      appFeedbackTimerRef.current = null;
-    }, 1400);
+    showAppFeedback(`${actionLabel} - ${channelLabel}`, 'success', 1400);
 
     return undefined;
-  }, [copiedItemId, copyFeedbackToken, copyFeedbackSource, lastCopyWasAutoPaste, t]);
+  }, [copiedItemId, copyFeedbackToken, copyFeedbackSource, lastCopyWasAutoPaste, showAppFeedback, t]);
 
   useEffect(() => () => {
     if (appFeedbackTimerRef.current) {
@@ -444,13 +443,13 @@ function App() {
   }, []);
 
   const applyLayoutPreset = useCallback((preset) => {
-    if (!isValidLayoutPreset(preset) || isMiniMode) return;
+    if (!isValidLayoutPreset(preset)) return;
 
     if (collectionPanelEnabled && showHistoryStream) {
       rememberPresetWidth(layoutPreset, leftWidthRef.current);
     }
 
-    const nextShowPanel = preset !== LAYOUT_PRESET_FOCUS;
+    const nextShowPanel = preset !== LAYOUT_PRESET_FLOW;
     const targetWidth = layoutPresetWidthsRef.current[preset] ?? LAYOUT_PRESET_DEFAULT_WIDTHS[preset];
 
     setLayoutPreset(preset);
@@ -461,7 +460,6 @@ function App() {
     setLeftWidth(clampHistoryWidth(targetWidth));
   }, [
     collectionPanelEnabled,
-    isMiniMode,
     layoutPreset,
     rememberPresetWidth,
     setCollectionPanelBeforeMini,
@@ -470,20 +468,138 @@ function App() {
     showHistoryStream,
   ]);
 
-  const MINI_THRESHOLD = 450;
-  const PANEL_CLOSE_THRESHOLD = 350;
+  const activeDesktopViewMode = !collectionPanelEnabled
+    ? VIEW_MODE_LEFT
+    : (!historyStreamEnabled ? VIEW_MODE_RIGHT : VIEW_MODE_ALL);
 
-  const setMiniMode = async (enterMini) => {
-    if (enterMini === isMiniMode) return;
-    const appWindow = getCurrentWindow();
+  const activeViewMode = isMiniMode ? VIEW_MODE_MINI : activeDesktopViewMode;
+  const activeDesktopViewModeRef = useRef(activeDesktopViewMode);
+  const lastDesktopViewModeRef = useRef(activeDesktopViewMode);
+  const hasDesktopRestoreTargetRef = useRef(false);
+  const viewModeSwitchQueueRef = useRef(Promise.resolve());
+
+  useEffect(() => {
+    activeDesktopViewModeRef.current = activeDesktopViewMode;
+    if (isMiniMode) return;
+    lastDesktopViewModeRef.current = activeDesktopViewMode;
+    hasDesktopRestoreTargetRef.current = true;
+  }, [activeDesktopViewMode, isMiniMode]);
+
+  const setMiniMode = useCallback(async (enterMini) => {
+    const currentMiniMode = useAppStore.getState().isMiniMode;
+    if (enterMini === currentMiniMode) return;
     const targetSize = enterMini ? MINI_SIZE : NORMAL_SIZE;
-    await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
+    } catch (error) {
+      console.warn('[WindowMode] setSize failed, fallback to state sync:', error);
+    }
     localStorage.setItem(
       WINDOW_MODE_STORAGE_KEY,
       enterMini ? WINDOW_MODE_MINI : WINDOW_MODE_NORMAL
     );
     setIsMiniMode(enterMini);
-  };
+  }, [setIsMiniMode]);
+
+  const performViewModeSwitch = useCallback(async (mode) => {
+    const currentMiniMode = useAppStore.getState().isMiniMode;
+
+    if (mode === VIEW_MODE_MINI) {
+      if (currentMiniMode) return;
+      lastDesktopViewModeRef.current = activeDesktopViewModeRef.current;
+      hasDesktopRestoreTargetRef.current = true;
+      await setMiniMode(true);
+      showAppFeedback(t('feedback.mode.mini'), 'info');
+      return;
+    }
+
+    if (mode === VIEW_MODE_RESTORE) {
+      const restoreMode = hasDesktopRestoreTargetRef.current
+        ? (lastDesktopViewModeRef.current || VIEW_MODE_ALL)
+        : VIEW_MODE_ALL;
+      if (currentMiniMode) {
+        await setMiniMode(false);
+      }
+      if (restoreMode === VIEW_MODE_LEFT) {
+        applyLayoutPreset(LAYOUT_PRESET_FLOW);
+      } else if (restoreMode === VIEW_MODE_RIGHT) {
+        if (collectionPanelEnabled && showHistoryStream) {
+          rememberPresetWidth(layoutPreset, leftWidthRef.current);
+        }
+        setLayoutPreset(LAYOUT_PRESET_DETAIL);
+        persistLayoutPreset(LAYOUT_PRESET_DETAIL);
+        setCollectionPanelBeforeMini(null);
+        setCollectionPanelEnabled(true);
+        setHistoryStreamEnabled(false);
+      } else {
+        applyLayoutPreset(LAYOUT_PRESET_DETAIL);
+      }
+      showAppFeedback(
+        restoreMode === VIEW_MODE_LEFT
+          ? t('feedback.mode.left')
+          : restoreMode === VIEW_MODE_RIGHT
+            ? t('feedback.mode.right')
+            : t('feedback.mode.all'),
+        'info'
+      );
+      return;
+    }
+
+    if (mode === VIEW_MODE_LEFT) {
+      if (currentMiniMode) {
+        await setMiniMode(false);
+      }
+      applyLayoutPreset(LAYOUT_PRESET_FLOW);
+      showAppFeedback(t('feedback.mode.left'), 'info');
+      return;
+    }
+
+    if (mode === VIEW_MODE_RIGHT) {
+      if (currentMiniMode) {
+        await setMiniMode(false);
+      }
+      if (collectionPanelEnabled && showHistoryStream) {
+        rememberPresetWidth(layoutPreset, leftWidthRef.current);
+      }
+      setLayoutPreset(LAYOUT_PRESET_DETAIL);
+      persistLayoutPreset(LAYOUT_PRESET_DETAIL);
+      setCollectionPanelBeforeMini(null);
+      setCollectionPanelEnabled(true);
+      setHistoryStreamEnabled(false);
+      showAppFeedback(t('feedback.mode.right'), 'info');
+      return;
+    }
+
+    if (mode === VIEW_MODE_ALL) {
+      if (currentMiniMode) {
+        await setMiniMode(false);
+      }
+      applyLayoutPreset(LAYOUT_PRESET_DETAIL);
+      showAppFeedback(t('feedback.mode.all'), 'info');
+    }
+  }, [
+    applyLayoutPreset,
+    collectionPanelEnabled,
+    layoutPreset,
+    rememberPresetWidth,
+    setCollectionPanelBeforeMini,
+    setCollectionPanelEnabled,
+    setHistoryStreamEnabled,
+    setMiniMode,
+    showAppFeedback,
+    showHistoryStream,
+    t,
+  ]);
+
+  const handleSelectViewMode = useCallback((mode) => {
+    viewModeSwitchQueueRef.current = viewModeSwitchQueueRef.current
+      .catch(() => undefined)
+      .then(() => performViewModeSwitch(mode));
+  }, [performViewModeSwitch]);
+
+  const MINI_THRESHOLD = 450;
+  const PANEL_CLOSE_THRESHOLD = 350;
 
   useEffect(() => {
     let cancelled = false;
@@ -547,7 +663,7 @@ function App() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [initialWindowModeReady, isMiniMode, collectionPanelEnabled, collectionPanelBeforeMini]);
+  }, [initialWindowModeReady, isMiniMode, collectionPanelEnabled, collectionPanelBeforeMini, setMiniMode]);
 
   // 窗口置顶
   const toggleWindowAlwaysOnTop = async () => {
@@ -675,9 +791,8 @@ function App() {
           });
         }}
         isMiniMode={isMiniMode}
-        onToggleMiniMode={() => setMiniMode(!isMiniMode)}
-        layoutPreset={layoutPreset}
-        onApplyLayoutPreset={applyLayoutPreset}
+        currentViewMode={activeViewMode}
+        onSelectViewMode={handleSelectViewMode}
       />
 
       <div className="workspace">

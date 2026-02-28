@@ -52,6 +52,7 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
     if (isMiniMode) return t('shortcutHelp.context.mini');
     if (panelMode === 'timeline') return t('shortcutHelp.context.timeline');
     if (panelMode === 'preview') return t('shortcutHelp.context.preview');
+    if (panelMode === 'compare') return t('shortcutHelp.context.compare');
     return t('shortcutHelp.context.collection');
   }, [isMiniMode, panelMode, t]);
 
@@ -61,38 +62,32 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
       { id: 'density', combo: `${modifiers.primary}+Shift+D`, label: t('shortcutHelp.items.toggleDensity') },
     ];
 
-    if (!isMiniMode) {
-      globalItems.push({
-        id: 'layout-focus',
-        combo: `${modifiers.primary}+1`,
-        label: t('shortcutHelp.items.layoutFocus'),
-      });
-      globalItems.push({
-        id: 'layout-review',
-        combo: `${modifiers.primary}+2`,
-        label: t('shortcutHelp.items.layoutReview'),
-      });
-      globalItems.push({
-        id: 'layout-compare',
-        combo: `${modifiers.primary}+3`,
-        label: t('shortcutHelp.items.layoutCompare'),
-      });
-      globalItems.push({
-        id: 'history',
-        combo: `${modifiers.primary}+Shift+H`,
-        label: t('shortcutHelp.items.toggleHistory'),
-      });
-      globalItems.push({
-        id: 'panel',
-        combo: `${modifiers.primary}+Shift+P`,
-        label: t('shortcutHelp.items.togglePanel'),
-      });
-    }
+    globalItems.push({
+      id: 'layout-mini',
+      combo: `${modifiers.primary}+M`,
+      label: t('shortcutHelp.items.layoutMini'),
+    });
+    globalItems.push({
+      id: 'layout-focus',
+      combo: `${modifiers.primary}+1`,
+      label: t('shortcutHelp.items.layoutFocus'),
+    });
+    globalItems.push({
+      id: 'layout-review',
+      combo: `${modifiers.primary}+2`,
+      label: t('shortcutHelp.items.layoutReview'),
+    });
+    globalItems.push({
+      id: 'layout-all',
+      combo: `${modifiers.primary}+3`,
+      label: t('shortcutHelp.items.layoutAll'),
+    });
 
     const historyItems = [
       { id: 'focus-search', combo: '/', label: t('shortcutHelp.items.focusSearch') },
       { id: 'move-cards', combo: '↑ / ↓', label: t('shortcutHelp.items.moveCards') },
       { id: 'copy-focused', combo: 'Enter', label: t('shortcutHelp.items.copyFocused') },
+      { id: 'quick-compare', combo: `${modifiers.primary}+Shift+2`, label: t('shortcutHelp.items.quickCompare') },
       { id: 'jump-groups', combo: `${modifiers.secondary}+1/2/3/4`, label: t('shortcutHelp.items.jumpGroups') },
       { id: 'select-all-history', combo: `${modifiers.primary}+A`, label: t('shortcutHelp.items.selectAllVisible') },
     ];
