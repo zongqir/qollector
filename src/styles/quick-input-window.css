@@ -45,6 +45,7 @@ body {
 
 .quick-window-header-left {
   min-width: 0;
+  pointer-events: none;
 }
 
 .quick-window-tip {
@@ -54,6 +55,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: 0.2px;
+  pointer-events: none;
 }
 
 .quick-window-actions {
@@ -300,6 +302,7 @@ body {
   gap: 6px;
   padding: 0 6px;
   animation: glassIndicatorIn var(--motion-fast) var(--ease-standard);
+  pointer-events: none;
 }
 
 .glass-indicator-track {

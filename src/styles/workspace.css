@@ -2674,6 +2674,7 @@
   box-shadow:
     0 8px 20px color-mix(in srgb, var(--shadow-lg) 54%, transparent),
     0 2px 6px color-mix(in srgb, var(--shadow-sm) 75%, transparent);
+  animation: historyJumpTopIn var(--motion-snappy) var(--ease-standard);
   transition:
     transform var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
@@ -2694,6 +2695,17 @@
 
 .history-jump-top-btn:active {
   transform: translateY(0);
+}
+
+@keyframes historyJumpTopIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .history-stream-scroller {

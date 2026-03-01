@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { emit } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Check, Palette, Pin, PinOff, X } from 'lucide-react';
+import { Check, Palette, Pin, PinOff, Plus, X } from 'lucide-react';
 import { getImageOriginal } from './utils/imageHelpers';
+import { getTags, hasReservedTagPrefix, parseSystemTag } from './utils/tagHelpers';
 import {
   CARD_BACKGROUND_METADATA_KEY,
   CARD_BACKGROUND_PRESETS,
@@ -95,6 +96,7 @@ function HistoryEditorWindow() {
   const [item, setItem] = useState(null);
   const [contentDraft, setContentDraft] = useState('');
   const [noteDraft, setNoteDraft] = useState('');
+  const [manualTagInput, setManualTagInput] = useState('');
   const [backgroundId, setBackgroundId] = useState('default');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -124,6 +126,10 @@ function HistoryEditorWindow() {
   const isImageItem = item?.type_ === 'image';
   const isFileItem = item?.type_ === 'file';
   const canEditContent = Boolean(item && !isImageItem && !isFileItem);
+  const manualUserTags = useMemo(() => {
+    if (!item) return [];
+    return getTags(item.tags).filter((tag) => parseSystemTag(tag).kind === 'user');
+  }, [item]);
 
   const activeBackgroundPreset = useMemo(
     () => getCardBackgroundPreset(backgroundId),
@@ -478,6 +484,90 @@ function HistoryEditorWindow() {
     }, 900);
   }, []);
 
+  const handleAddManualTag = useCallback(async () => {
+    const normalizedTag = typeof manualTagInput === 'string' ? manualTagInput.trim() : '';
+    if (!normalizedTag || !item || !itemId) return;
+
+    if (hasReservedTagPrefix(normalizedTag)) {
+      setSaveState('error');
+      setSaveError(t('multiSelect.addTagReservedPrefix'));
+      return;
+    }
+
+    setSaveState('saving');
+    setSaveError('');
+
+    try {
+      const latest = await invoke('get_item_by_id', { id: itemId });
+      if (!latest) {
+        throw new Error(t('historyEditor.itemNotFound'));
+      }
+
+      const existingTags = getTags(latest.tags);
+      if (existingTags.includes(normalizedTag)) {
+        setSaveState('error');
+        setSaveError(t('historyEditor.tagExists'));
+        return;
+      }
+
+      const updatedItem = {
+        ...latest,
+        tags: JSON.stringify([...existingTags, normalizedTag]),
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+
+      await invoke('update_item', { item: updatedItem });
+      setItem(updatedItem);
+      setManualTagInput('');
+      await emit('clipboard-changed').catch(() => {});
+      markSaved();
+    } catch (error) {
+      const message = parseErrorMessage(error);
+      setSaveState('error');
+      setSaveError(message);
+      console.error('history editor add tag failed:', error);
+    }
+  }, [item, itemId, manualTagInput, markSaved, t]);
+
+  const handleRemoveManualTag = useCallback(async (tagToRemove) => {
+    const normalizedTag = typeof tagToRemove === 'string' ? tagToRemove.trim() : '';
+    if (!normalizedTag || !item || !itemId) return;
+
+    setSaveState('saving');
+    setSaveError('');
+
+    try {
+      const latest = await invoke('get_item_by_id', { id: itemId });
+      if (!latest) {
+        throw new Error(t('historyEditor.itemNotFound'));
+      }
+
+      const existingTags = getTags(latest.tags);
+      const nextTags = existingTags.filter((tag) => tag !== normalizedTag);
+      if (nextTags.length === existingTags.length) {
+        setSaveState('error');
+        setSaveError(t('historyEditor.tagNotFound'));
+        return;
+      }
+
+      const updatedItem = {
+        ...latest,
+        tags: JSON.stringify(nextTags),
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+
+      await invoke('update_item', { item: updatedItem });
+      setItem(updatedItem);
+      await emit('clipboard-changed').catch(() => {});
+      markSaved();
+    } catch (error) {
+      const message = parseErrorMessage(error);
+      setSaveState('error');
+      setSaveError(message);
+      console.error('history editor remove tag failed:', error);
+    }
+  }, [item, itemId, markSaved, t]);
+
   const saveStatusText = useMemo(() => {
     if (saveState === 'saving') return t('historyEditor.statusSaving');
     if (saveState === 'saved') return t('historyEditor.statusSaved');
@@ -490,15 +580,15 @@ function HistoryEditorWindow() {
   return (
     <div className="history-editor-shell" style={panelStyle}>
       <header className="history-editor-header" data-tauri-drag-region onWheel={handleHeaderWheel}>
-        <div className="history-editor-header-left">
+        <div className="history-editor-header-left" data-tauri-drag-region>
           <span className="history-editor-title">{t('historyEditor.title')}</span>
         </div>
         {showGlassIndicator && (
-          <div className="history-editor-glass-indicator" data-tauri-drag-region="false">
+          <div className="history-editor-glass-indicator" data-tauri-drag-region>
             {Math.round(glassOpacity * 100)}%
           </div>
         )}
-        <div className="history-editor-header-actions" data-tauri-drag-region="false">
+        <div className="history-editor-header-actions" data-tauri-drag-region>
           <div
             className={`history-editor-color-panel-wrap ${showColorPanel ? 'open' : ''}`}
             ref={colorPanelRef}
@@ -603,6 +693,57 @@ function HistoryEditorWindow() {
                 placeholder={t('edit.notePlaceholder')}
                 rows={2}
               />
+            </section>
+
+            <section className="history-editor-section tags" data-tauri-drag-region="false">
+              <div className="history-editor-tags-list">
+                {manualUserTags.map((tag, index) => (
+                  <span key={`${tag}-${index}`} className="history-editor-tag-chip">
+                    <span className="history-editor-tag-chip-text">{tag}</span>
+                    <button
+                      type="button"
+                      className="history-editor-tag-chip-remove"
+                      onClick={() => {
+                        void handleRemoveManualTag(tag);
+                      }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                      title={t('historyEditor.removeTag')}
+                      data-tauri-drag-region="false"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="history-editor-tag-input-row">
+                <input
+                  type="text"
+                  className="history-editor-tag-input"
+                  value={manualTagInput}
+                  onChange={(event) => setManualTagInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      void handleAddManualTag();
+                    }
+                  }}
+                  placeholder={t('historyEditor.tagPlaceholder')}
+                  data-tauri-drag-region="false"
+                />
+                <button
+                  type="button"
+                  className="history-editor-tag-add-btn"
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={() => {
+                    void handleAddManualTag();
+                  }}
+                  disabled={!manualTagInput.trim()}
+                  title={t('historyEditor.addTag')}
+                  data-tauri-drag-region="false"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
             </section>
           </>
         )}

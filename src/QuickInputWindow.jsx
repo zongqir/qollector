@@ -27,12 +27,19 @@ const GLASS_MIN = 0.15;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
 const DRAFT_KEY = 'qollect-quick-input-draft-v1';
+const NOTE_COLOR_KEY = 'qollect-quick-note-color-v1';
 
 function resolveEffectiveTheme(themeMode) {
   if (themeMode === 'dark') return 'dark';
   if (themeMode === 'light') return 'light';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
+
+const clampGlassOpacity = (value) => Math.round(Math.min(Math.max(value, GLASS_MIN), GLASS_MAX) * 100) / 100;
+
+const normalizeNoteColorId = (value) => (
+  NOTE_COLORS.some(color => color.id === value) ? value : 'default'
+);
 
 function QuickInputWindow() {
   const { t } = useTranslation();
@@ -45,22 +52,32 @@ function QuickInputWindow() {
 
   const [content, setContent] = useState('');
   const [isPinned, setIsPinned] = useState(true);
-  const [noteColor, setNoteColor] = useState('default');
+  const [noteColor, setNoteColor] = useState(() => {
+    try {
+      return normalizeNoteColorId(localStorage.getItem(NOTE_COLOR_KEY));
+    } catch {
+      return 'default';
+    }
+  });
   const [saving, setSaving] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
   const [showWorkbenchCta, setShowWorkbenchCta] = useState(false);
   const [showColorPanel, setShowColorPanel] = useState(false);
 
   const [glassOpacity, setGlassOpacity] = useState(() => {
-    const saved = localStorage.getItem(GLASS_KEY);
-    return saved ? parseFloat(saved) : GLASS_DEFAULT;
+    try {
+      const saved = Number.parseFloat(localStorage.getItem(GLASS_KEY) || '');
+      return Number.isFinite(saved) ? clampGlassOpacity(saved) : GLASS_DEFAULT;
+    } catch {
+      return GLASS_DEFAULT;
+    }
   });
   const [showGlassIndicator, setShowGlassIndicator] = useState(false);
   const glassTimerRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--glass-opacity', glassOpacity);
-  }, []);
+  }, [glassOpacity]);
 
   useEffect(() => {
     const draft = localStorage.getItem(DRAFT_KEY);
@@ -76,6 +93,14 @@ function QuickInputWindow() {
     }
     localStorage.removeItem(DRAFT_KEY);
   }, [content]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTE_COLOR_KEY, noteColor);
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [noteColor]);
 
   useEffect(() => {
     void emit(QUICK_INPUT_WINDOW_STATE_EVENT, { open: true });
@@ -99,19 +124,30 @@ function QuickInputWindow() {
     }
   }, [appWindow, saving]);
 
-  const handleHeaderWheel = useCallback((e) => {
-    e.preventDefault();
-    setGlassOpacity(prev => {
-      const delta = e.deltaY > 0 ? -GLASS_STEP : GLASS_STEP;
-      const next = Math.round(Math.min(Math.max(prev + delta, GLASS_MIN), GLASS_MAX) * 100) / 100;
-      document.documentElement.style.setProperty('--glass-opacity', next);
-      localStorage.setItem(GLASS_KEY, next);
+  const adjustGlassOpacity = useCallback((delta) => {
+    setGlassOpacity((prev) => {
+      const next = clampGlassOpacity(prev + delta);
+      try {
+        localStorage.setItem(GLASS_KEY, String(next));
+      } catch {
+        // Ignore storage failures.
+      }
       return next;
     });
     setShowGlassIndicator(true);
     clearTimeout(glassTimerRef.current);
     glassTimerRef.current = setTimeout(() => setShowGlassIndicator(false), 800);
   }, []);
+
+  const handleWindowWheel = useCallback((event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('.quick-window-textarea')) {
+      return;
+    }
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -GLASS_STEP : GLASS_STEP;
+    adjustGlassOpacity(delta);
+  }, [adjustGlassOpacity]);
 
   useEffect(() => {
     let unmounted = false;
@@ -251,13 +287,13 @@ function QuickInputWindow() {
   const panelStyle = { '--quick-add-bg': activeColor.bg };
 
   return (
-    <div className="quick-window-shell" style={panelStyle}>
-      <header className="quick-window-header" data-tauri-drag-region onWheel={handleHeaderWheel}>
-        <div className="quick-window-header-left">
-          <span className="quick-window-tip">{t('editModal.quickAddTip')}</span>
+    <div className="quick-window-shell" style={panelStyle} onWheel={handleWindowWheel}>
+      <header className="quick-window-header" data-tauri-drag-region>
+        <div className="quick-window-header-left" data-tauri-drag-region>
+          <span className="quick-window-tip" data-tauri-drag-region>{t('editModal.quickAddTip')}</span>
         </div>
         {showGlassIndicator && (
-          <div className="glass-indicator">
+          <div className="glass-indicator" data-tauri-drag-region>
             <div className="glass-indicator-track">
               <div
                 className="glass-indicator-fill"
@@ -267,7 +303,7 @@ function QuickInputWindow() {
             <span className="glass-indicator-value">{Math.round(glassOpacity * 100)}%</span>
           </div>
         )}
-        <div className="quick-window-actions" data-tauri-drag-region="false">
+        <div className="quick-window-actions" data-tauri-drag-region>
           <div
             className={`quick-window-color-panel-wrap ${showColorPanel ? 'open' : ''}`}
             ref={colorPanelRef}

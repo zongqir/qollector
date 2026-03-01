@@ -48,6 +48,7 @@ body {
   flex-direction: column;
   min-width: 0;
   flex: 1;
+  pointer-events: none;
 }
 
 .history-editor-title {
@@ -55,6 +56,7 @@ body {
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.15;
+  pointer-events: none;
 }
 
 .history-editor-header-actions {
@@ -71,6 +73,7 @@ body {
   border: 1px solid var(--border-light);
   background: var(--history-editor-header-bg);
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .history-editor-icon-btn {
@@ -153,17 +156,17 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   padding: 12px 12px 14px;
   overflow: auto;
 }
 
-.history-editor-body.content-heavy .history-editor-section:not(.note) {
+.history-editor-body.content-heavy .history-editor-section:not(.note):not(.tags) {
   flex: 1 1 auto;
 }
 
 .history-editor-body.content-heavy .history-editor-section.note {
-  flex: 0 0 88px;
+  flex: 0 0 72px;
 }
 
 .history-editor-body.note-focus .history-editor-section.image {
@@ -171,7 +174,7 @@ body {
 }
 
 .history-editor-body.note-focus .history-editor-section.note {
-  flex: 0 0 92px;
+  flex: 0 0 76px;
 }
 
 .history-editor-section {
@@ -187,7 +190,13 @@ body {
 
 .history-editor-section.note {
   flex: 1;
-  margin-top: 2px;
+  margin-top: 0;
+}
+
+.history-editor-section.tags {
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-top: 0;
 }
 
 .history-editor-textarea {
@@ -214,12 +223,117 @@ body {
 }
 
 .history-editor-textarea.note {
-  min-height: 58px;
+  min-height: 46px;
   flex: 1;
   border-radius: 8px;
   border-color: transparent;
   background: var(--history-editor-muted-bg);
   box-shadow: none;
+  padding: 7px 10px;
+  line-height: 1.45;
+}
+
+.history-editor-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.history-editor-tags-list:empty {
+  display: none;
+}
+
+.history-editor-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 85%, transparent);
+  background: color-mix(in srgb, var(--history-editor-muted-bg) 86%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-editor-tag-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-editor-tag-chip-remove {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.history-editor-tag-chip-remove:hover {
+  color: var(--state-error-fg);
+  background: color-mix(in srgb, var(--state-error-bg) 82%, transparent);
+}
+
+.history-editor-tag-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-editor-tag-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-light) 92%, transparent);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 0 10px;
+  outline: none;
+}
+
+.history-editor-tag-input:focus {
+  border-color: var(--history-editor-accent);
+}
+
+.history-editor-tag-add-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-light) 90%, transparent);
+  color: var(--accent-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+
+.history-editor-tag-add-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-light) 100%, transparent);
+}
+
+.history-editor-tag-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .history-editor-image-stage {
