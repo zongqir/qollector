@@ -4,9 +4,6 @@ use serde::{Deserialize, Serialize};
 
 type HmacSha256 = Hmac<Sha256>;
 
-/// Shared secret for HMAC signing (must match Worker env var).
-const HMAC_SECRET: &str = "qollect-license-hmac-secret-v1";
-
 /// License server base URL.
 const LICENSE_SERVER_URL: &str = "https://license.qollect.com";
 
@@ -44,7 +41,9 @@ pub struct DeactivateResponse {
 
 fn compute_signature(license_key: &str, device_id: &str, timestamp: i64) -> String {
     let payload = format!("{}{}{}", license_key, device_id, timestamp);
-    let mut mac = HmacSha256::new_from_slice(HMAC_SECRET.as_bytes())
+    // Do not ship a global shared secret in client binaries.
+    // Signature key is derived per-license to avoid single-point key leakage.
+    let mut mac = HmacSha256::new_from_slice(license_key.as_bytes())
         .expect("HMAC can take key of any size");
     mac.update(payload.as_bytes());
     let result = mac.finalize();

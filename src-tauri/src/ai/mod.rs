@@ -408,19 +408,7 @@ impl AIService {
             self.config.current_provider.base_url()
         );
 
-        println!("=== AI Request Debug ===");
-        println!("URL: {}", url);
-        println!("Model: {}", model);
-        println!("Language: {}", language);
-        println!(
-            "API Key (first 10 chars): {}",
-            &api_key[..10.min(api_key.len())]
-        );
-        println!("Prompt length: {}", prompt.len());
-        println!(
-            "Request body: {}",
-            serde_json::to_string_pretty(&request).unwrap_or_default()
-        );
+        println!("[AI] request: model={}, language={}, prompt_len={}", model, language, prompt.len());
 
         let response = self
             .client
@@ -432,17 +420,16 @@ impl AIService {
             .await?;
 
         let status = response.status();
-        println!("=== AI Response Debug ===");
-        println!("Status: {}", status);
+        println!("[AI] response status: {}", status);
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            println!("Error response: {}", error_text);
+            eprintln!("[AI] request failed with status {}", status);
             return Err(AIError::ApiError(error_text));
         }
 
         let response_text = response.text().await?;
-        println!("Response body: {}", response_text);
+        println!("[AI] response size: {} bytes", response_text.len());
 
         // First try to parse as error response
         if let Ok(error_response) = serde_json::from_str::<ErrorResponse>(&response_text) {
@@ -461,7 +448,7 @@ impl AIService {
 
         if let Some(choice) = chat_response.choices.first() {
             let raw_text = choice.message.content.trim();
-            println!("AI generated text: {}", raw_text);
+            println!("[AI] generated response length: {}", raw_text.len());
 
             let mut lines = raw_text.lines();
             let first_line = lines.next().unwrap_or("").trim();
@@ -493,10 +480,7 @@ impl AIService {
                 .take(MAX_AI_TAGS) // Keep order, but hard-cap to avoid runaway output
                 .collect();
 
-            println!(
-                "Parsed tags: {:?}, code_language: {:?}",
-                tags, code_language
-            );
+            println!("[AI] parsed tags count={}, code_language={:?}", tags.len(), code_language);
             Ok((tags, code_language))
         } else {
             Ok((Vec::new(), None))
@@ -675,7 +659,7 @@ impl AIService {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            println!("[Timeline AI] Error response: {}", error_text);
+            eprintln!("[Timeline AI] request failed with status {}", status);
             return Err(AIError::ApiError(error_text));
         }
 

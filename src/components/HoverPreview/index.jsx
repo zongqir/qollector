@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { Copy, ExternalLink, Star, Trash2 } from 'lucide-react';
+import { Copy, Expand, Star, Trash2 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { formatDate } from '../../utils/formatters';
 import { getSourceApp } from '../../utils/tagHelpers';
@@ -309,12 +309,12 @@ function HoverPreviewInner() {
           </button>
           {item.type_ !== 'file' && (
             <button
-              className="hover-preview-action-btn"
-              onClick={handleOpenWindowClick}
-              title={t('item.openInNewWindow')}
-            >
-              <ExternalLink size={16} />
-            </button>
+            className="hover-preview-action-btn"
+            onClick={handleOpenWindowClick}
+            title={t('item.openInNewWindow')}
+          >
+            <Expand size={16} />
+          </button>
           )}
           <button
             className={`hover-preview-action-btn delete ${showDeleteConfirm ? 'confirm' : ''}`}

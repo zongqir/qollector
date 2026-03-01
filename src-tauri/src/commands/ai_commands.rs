@@ -1,7 +1,6 @@
 use crate::ai::{AIConfig, AIProvider, AIService};
 use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
-use crate::license::config::LicenseStatus;
 use crate::repository::config_repo::ConfigRepository;
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -46,7 +45,7 @@ pub async fn update_ai_config(
 #[tauri::command]
 pub async fn generate_ai_tags(
     state: State<'_, AIState>,
-    license_state: State<'_, LicenseState>,
+    _license_state: State<'_, LicenseState>,
     content: String,
 ) -> Result<(Vec<String>, Option<String>), String> {
     // License gate - temporarily disabled for beta
@@ -150,7 +149,7 @@ pub async fn fetch_remote_models(base_url: String, api_key: String) -> Result<Ve
 #[tauri::command]
 pub async fn generate_timeline_summary(
     state: State<'_, AIState>,
-    license_state: State<'_, LicenseState>,
+    _license_state: State<'_, LicenseState>,
     items: Vec<crate::core::models::ClipboardItem>,
 ) -> Result<String, String> {
     // License gate - temporarily disabled for beta

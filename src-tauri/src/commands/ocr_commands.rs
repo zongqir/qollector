@@ -1,6 +1,5 @@
 use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
-use crate::license::config::LicenseStatus;
 use crate::ocr::{OcrConfig, OcrService};
 use crate::repository::config_repo::ConfigRepository;
 use std::sync::Arc;
@@ -61,10 +60,6 @@ pub async fn get_ocr_config(state: State<'_, OcrState>) -> Result<OcrConfig, Str
 
     if let Some(config) = in_memory_config {
         println!("返回已保存的配置: {:?}", config.current_provider);
-        println!(
-            "  API Key 长度: {}",
-            config.get_current_api_key().map(|k| k.len()).unwrap_or(0)
-        );
         return Ok(config);
     }
 
@@ -91,12 +86,6 @@ pub async fn update_ocr_config(
     println!("收到 OCR 配置更新请求:");
     println!("  enabled: {}", config.enabled);
     println!("  provider: {:?}", config.current_provider);
-    println!(
-        "  api_key: {:?}",
-        config
-            .get_current_api_key()
-            .map(|k| format!("{}...", &k[..10.min(k.len())]))
-    );
     println!("  language: {}", config.language);
     println!("  auto_ocr: {}", config.auto_ocr);
 
@@ -134,7 +123,7 @@ pub async fn update_ocr_config(
 pub async fn recognize_image(
     image_path: String,
     state: State<'_, OcrState>,
-    license_state: State<'_, LicenseState>,
+    _license_state: State<'_, LicenseState>,
 ) -> Result<String, String> {
     // License gate - temporarily disabled for beta
     // {
@@ -165,7 +154,7 @@ pub async fn recognize_and_update(
     item_id: String,
     image_path: String,
     state: State<'_, OcrState>,
-    license_state: State<'_, LicenseState>,
+    _license_state: State<'_, LicenseState>,
     manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
     // License gate - temporarily disabled for beta

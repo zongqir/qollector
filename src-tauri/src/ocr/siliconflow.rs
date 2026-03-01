@@ -135,7 +135,7 @@ impl SiliconFlowOcr {
 
         if !status.is_success() {
             let error_text = response.text().await?;
-            println!("API 错误响应: {}", error_text);
+            eprintln!("硅基流动 OCR 请求失败，状态: {}", status);
             return Err(OcrError::ApiError(format!(
                 "硅基流动 API 错误 ({}): {}",
                 status, error_text
@@ -143,14 +143,14 @@ impl SiliconFlowOcr {
         }
 
         let response_text = response.text().await?;
-        println!("API 响应内容: {}", response_text);
+        println!("硅基流动 OCR 响应长度: {} bytes", response_text.len());
 
         let ocr_response: OcrResponse = serde_json::from_str(&response_text)
             .map_err(|e| OcrError::ApiError(format!("解析响应失败: {}", e)))?;
 
         if let Some(choice) = ocr_response.choices.first() {
             let text = choice.message.content.trim().to_string();
-            println!("OCR 识别结果: {}", text);
+            println!("OCR 识别完成，文本长度: {}", text.len());
             Ok(OcrResult::new(text, "硅基流动".to_string()))
         } else {
             Err(OcrError::ApiError("硅基流动未返回结果".to_string()))
@@ -177,7 +177,6 @@ impl OcrProvider for SiliconFlowOcr {
     async fn is_available(&self) -> bool {
         let available = !self.api_key.is_empty();
         println!("硅基流动 OCR 可用性检查: {}", available);
-        println!("  API Key 长度: {}", self.api_key.len());
         println!("  Base URL: {}", self.base_url);
         println!("  Model: {}", self.model);
         available
