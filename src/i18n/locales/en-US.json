@@ -974,6 +974,7 @@
     "stepOf": "{{current}} / {{total}}"
   },
   "history": {
+    "backToTop": "Back to latest",
     "groups": {
       "today": "Today",
       "yesterday": "Yesterday",

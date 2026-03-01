@@ -2656,6 +2656,46 @@
   z-index: 0;
 }
 
+.history-jump-top-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 31px;
+  height: 31px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 22;
+  box-shadow:
+    0 8px 20px color-mix(in srgb, var(--shadow-lg) 54%, transparent),
+    0 2px 6px color-mix(in srgb, var(--shadow-sm) 75%, transparent);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.history-jump-top-btn:hover {
+  transform: translateY(-1px);
+  color: var(--accent-color);
+  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 72%, var(--surface-strong) 28%);
+  box-shadow:
+    0 10px 22px color-mix(in srgb, var(--shadow-lg) 58%, transparent),
+    0 3px 8px color-mix(in srgb, var(--shadow-sm) 78%, transparent);
+}
+
+.history-jump-top-btn:active {
+  transform: translateY(0);
+}
+
 .history-stream-scroller {
   padding: 8px 0 7px;
 }
@@ -3083,6 +3123,18 @@
 
 .app.mini-mode .history-stream-scroller {
   padding: 5px 0;
+}
+
+.app.mini-mode .history-jump-top-btn {
+  right: 9px;
+  bottom: 10px;
+  width: 27px;
+  height: 27px;
+}
+
+.app.mini-mode .history-jump-top-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 .app.mini-mode .history-stream-row {

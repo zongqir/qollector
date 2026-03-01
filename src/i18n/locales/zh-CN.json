@@ -959,6 +959,7 @@
     "stepOf": "{{current}} / {{total}}"
   },
   "history": {
+    "backToTop": "回到最新",
     "groups": {
       "today": "今天",
       "yesterday": "昨天",

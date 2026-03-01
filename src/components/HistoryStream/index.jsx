@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ArrowUp } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
@@ -885,7 +886,18 @@ function HistoryStream({ style }) {
     setVisibleRangeStartIndex(nextStart);
   }, []);
 
+  const handleJumpToLatest = useCallback(() => {
+    virtuosoRef.current?.scrollToIndex?.({
+      index: 0,
+      align: 'start',
+      behavior: 'smooth',
+    });
+    setFocusedIndex(0);
+  }, [setFocusedIndex]);
+
+  const selectedCount = selectedItemIds.length;
   const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
+  const showJumpToLatest = filteredItems.length > 0 && visibleRangeStartIndex > 6 && selectedCount === 0;
   const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
 
   const buildRowViewModel = useCallback((index) => {
@@ -1170,7 +1182,6 @@ function HistoryStream({ style }) {
     return () => window.removeEventListener('keydown', handleQuickCompareShortcut);
   }, [selectedItemIds.length, filteredItems, handleQuickCompareTopVisible]);
 
-  const selectedCount = selectedItemIds.length;
   const multiSelectBarProps = useMemo(() => ({
     selectedCount,
     showBatchTagEditor,
@@ -1344,6 +1355,17 @@ function HistoryStream({ style }) {
             rangeChanged={handleRangeChanged}
             increaseViewportBy={{ top: 200, bottom: 400 }}
           />
+        )}
+        {showJumpToLatest && (
+          <button
+            type="button"
+            className="history-jump-top-btn"
+            onClick={handleJumpToLatest}
+            title={t('history.backToTop')}
+            aria-label={t('history.backToTop')}
+          >
+            <ArrowUp size={14} />
+          </button>
         )}
       </div>
 

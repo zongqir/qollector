@@ -130,7 +130,7 @@ body {
   width: 17px;
   height: 17px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--dot-color) 68%, #ffffff 32%);
+  border: 1px solid color-mix(in srgb, var(--dot-color) 68%, var(--bg-card) 32%);
   background: var(--dot-color);
   cursor: pointer;
   position: relative;
@@ -146,7 +146,7 @@ body {
   position: absolute;
   inset: -3px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--history-editor-accent) 70%, #ffffff 30%);
+  border: 1px solid color-mix(in srgb, var(--history-editor-accent) 70%, var(--bg-card) 30%);
 }
 
 .history-editor-body {
@@ -194,7 +194,7 @@ body {
   width: 100%;
   border: 1px solid color-mix(in srgb, var(--border-light) 90%, transparent);
   border-radius: 10px;
-  background: rgba(var(--bg-card-rgb), 1);
+  background: var(--bg-card);
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.55;

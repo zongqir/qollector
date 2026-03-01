@@ -366,23 +366,26 @@ function SearchBar({
           clearActiveText={t('search.savedViews.clearActive')}
         />
 
-        <div className="type-filter-group">
-          {typeOptions.map(({ key, icon }) => (
-            <button
-              key={key}
-              onClick={() => onTypeChange(key)}
-              className={`type-filter-btn ${selectedType === key ? 'active' : ''}`}
-              title={t(`search.typeFilter.${key}`)}
-              aria-label={t(`search.typeFilter.${key}`)}
-              aria-pressed={selectedType === key}
-            >
-              {icon}
-            </button>
-          ))}
-        </div>
+        {!isMiniMode && (
+          <div className="type-filter-group">
+            {typeOptions.map(({ key, icon }) => (
+              <button
+                key={key}
+                onClick={() => onTypeChange(key)}
+                className={`type-filter-btn ${selectedType === key ? 'active' : ''}`}
+                title={t(`search.typeFilter.${key}`)}
+                aria-label={t(`search.typeFilter.${key}`)}
+                aria-pressed={selectedType === key}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+        )}
 
         <TypeFilterControl
           wrapperRef={typeWrapperRef}
+          wrapperClassName={isMiniMode ? 'mini-type-filter' : ''}
           isOpen={showTypeFilter}
           onToggle={toggleTypeFilter}
           onClose={closeTypeFilter}
