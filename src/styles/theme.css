@@ -9,11 +9,11 @@
   --bg-card-rgb: 255, 255, 255;
 
   --bg-primary: rgba(var(--bg-primary-rgb), var(--glass-opacity));
-  --bg-secondary: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.58));
-  --bg-card: rgba(var(--bg-card-rgb), calc(var(--glass-opacity) * 0.55));
+  --bg-secondary: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.88));
+  --bg-card: rgba(var(--bg-card-rgb), calc(var(--glass-opacity) * 0.92));
   --bg-card-hover: rgba(var(--bg-card-rgb), calc(var(--glass-opacity) * 0.9));
   --bg-input: rgba(0, 0, 0, 0.03);
-  --bg-toolbar: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.45));
+  --bg-toolbar: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.78));
 
   /* macOS 系统色 */
   --accent-color: #007aff;
@@ -216,9 +216,9 @@
   --widget-breathe-shadow-mid: rgba(0, 0, 0, 0.25);
 
   /* Scheme C surface tokens */
-  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.9));
-  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.58));
-  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 1.12));
+  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.98));
+  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.88));
+  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 1.0));
   --surface-border-strong: rgba(0, 0, 0, 0.14);
   --surface-border-soft: rgba(0, 0, 0, 0.08);
   --surface-glow: rgba(255, 255, 255, 0.38);
@@ -237,11 +237,11 @@
   --bg-card-rgb: 44, 44, 46;
 
   --bg-primary: rgba(var(--bg-primary-rgb), calc(var(--glass-opacity) * 0.9));
-  --bg-secondary: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.58));
-  --bg-card: rgba(var(--bg-card-rgb), calc(var(--glass-opacity) * 0.5));
+  --bg-secondary: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.84));
+  --bg-card: rgba(var(--bg-card-rgb), calc(var(--glass-opacity) * 0.88));
   --bg-card-hover: rgba(58, 58, 60, calc(var(--glass-opacity) * 0.72));
   --bg-input: rgba(255, 255, 255, 0.05);
-  --bg-toolbar: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.45));
+  --bg-toolbar: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.74));
 
   /* macOS 系统色 - 暗色 */
   --accent-color: #0a84ff;
@@ -396,9 +396,9 @@
   --state-info-fg-strong: #9de8f8;
 
   /* Scheme C surface tokens */
-  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.76));
-  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.56));
-  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.96));
+  --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.94));
+  --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.82));
+  --surface-strong: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 1.0));
   --surface-border-strong: rgba(255, 255, 255, 0.17);
   --surface-border-soft: rgba(255, 255, 255, 0.09);
   --surface-glow: rgba(255, 255, 255, 0.2);

@@ -254,9 +254,6 @@ function HistoryStream({ style }) {
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
   const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
-  const setHoverPreview = useAppStore(s => s.setHoverPreview);
-  const clearHoverPreview = useAppStore(s => s.clearHoverPreview);
-  const hoverPreviewItem = useAppStore(s => s.hoverPreviewItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
@@ -281,6 +278,8 @@ function HistoryStream({ style }) {
   const [timeTick, setTimeTick] = useState(() => Date.now());
   const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
   const [compareFeedback, setCompareFeedback] = useState(null);
+  const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
+  const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
 
   const showCompareFeedback = useCallback((type, text) => {
     setCompareFeedback({ type, text });
@@ -484,6 +483,16 @@ function HistoryStream({ style }) {
 
     return result;
   }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange, t, i18n.language]);
+
+  useEffect(() => {
+    if (!shouldUseHoverPreview) {
+      clearExpandedPreview();
+      return;
+    }
+    if (!expandedPreviewItemId) return;
+    if (filteredItems.some(candidate => candidate.id === expandedPreviewItemId)) return;
+    clearExpandedPreview();
+  }, [shouldUseHoverPreview, expandedPreviewItemId, filteredItems, clearExpandedPreview]);
 
   const searchTerms = useMemo(() => tokenizeSearchQuery(debouncedSearchQuery), [debouncedSearchQuery]);
 
@@ -824,7 +833,7 @@ function HistoryStream({ style }) {
     previewItemId,
     focusedIndex,
     shouldUseHoverPreview,
-    hoverPreviewItem,
+    expandedPreviewItemId,
     selectionAnchorIndexRef,
     supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
     setSelectedItemIds,
@@ -832,8 +841,8 @@ function HistoryStream({ style }) {
     setPanelMode,
     toggleSelectItem,
     clearSelection,
-    setHoverPreview,
-    clearHoverPreview,
+    setExpandedPreviewItemId,
+    clearExpandedPreview,
     handleCopyAndAutoPaste,
     handleCopy,
     switchToCollection,
@@ -844,11 +853,11 @@ function HistoryStream({ style }) {
     focusedIndex,
     setFocusedIndex,
     shouldUseHoverPreview,
-    setHoverPreview,
+    setExpandedPreviewItemId,
     setPanelMode,
     handleCopy,
     handleCopyAndAutoPaste,
-    clearHoverPreview,
+    clearExpandedPreview,
     selectedItemIds,
     historyTagShortcutEnabled,
     panelMode,
@@ -912,6 +921,7 @@ function HistoryStream({ style }) {
       groupCount: historyGrouping.countByGroup[groupKey] || 0,
       searchExplain: searchExplainById.get(item.id) || null,
       isSelected: panelMode === 'preview' && previewItem?.id === item.id,
+      isExpandedPreview: shouldUseHoverPreview && expandedPreviewItemId === item.id,
       isMultiSelected: selectedItemIdSet.has(item.id),
       isFocused: focusedIndex === index,
     };
@@ -921,6 +931,8 @@ function HistoryStream({ style }) {
     searchExplainById,
     panelMode,
     previewItem?.id,
+    shouldUseHoverPreview,
+    expandedPreviewItemId,
     selectedItemIdSet,
     focusedIndex,
   ]);
@@ -940,6 +952,8 @@ function HistoryStream({ style }) {
     onRevealInFolder: handleRevealInFolder,
     onSetCardBackground: setCardBackground,
     onTagClick: handleTagClick,
+    shouldUseHoverPreview,
+    onCloseInlinePreview: clearExpandedPreview,
   }), [
     rowGap,
     t,
@@ -954,6 +968,8 @@ function HistoryStream({ style }) {
     handleRevealInFolder,
     setCardBackground,
     handleTagClick,
+    shouldUseHoverPreview,
+    clearExpandedPreview,
   ]);
 
   const renderVirtualRow = useCallback((index) => {

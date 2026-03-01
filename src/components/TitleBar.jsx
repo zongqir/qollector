@@ -20,7 +20,7 @@ import useAppStore from '../store/useAppStore';
 
 const GLASS_STORAGE_KEY = 'qollect-glass-opacity';
 const GLASS_DEFAULT = 1.0;
-const GLASS_MIN = 0.10;
+const GLASS_MIN = 0.85;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
 const DENSITY_STORAGE_KEY = 'qollect-density-mode';
@@ -29,6 +29,10 @@ const DENSITY_COZY = 'cozy';
 
 function applyGlassOpacity(value) {
   document.documentElement.style.setProperty('--glass-opacity', value);
+}
+
+function clampGlassOpacity(value) {
+  return Math.round(Math.min(Math.max(value, GLASS_MIN), GLASS_MAX) * 100) / 100;
 }
 
 function TitleBar({
@@ -44,8 +48,8 @@ function TitleBar({
   const panelMode = useAppStore(s => s.panelMode);
 
   const [glassOpacity, setGlassOpacity] = useState(() => {
-    const saved = localStorage.getItem(GLASS_STORAGE_KEY);
-    return saved ? parseFloat(saved) : GLASS_DEFAULT;
+    const raw = Number.parseFloat(localStorage.getItem(GLASS_STORAGE_KEY) || '');
+    return Number.isFinite(raw) ? clampGlassOpacity(raw) : GLASS_DEFAULT;
   });
   const [showIndicator, setShowIndicator] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -57,7 +61,8 @@ function TitleBar({
 
   useEffect(() => {
     applyGlassOpacity(glassOpacity);
-  }, []);
+    localStorage.setItem(GLASS_STORAGE_KEY, String(glassOpacity));
+  }, [glassOpacity]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -145,10 +150,7 @@ function TitleBar({
     e.preventDefault();
     setGlassOpacity(prev => {
       const delta = e.deltaY > 0 ? -GLASS_STEP : GLASS_STEP;
-      const next = Math.round(Math.min(Math.max(prev + delta, GLASS_MIN), GLASS_MAX) * 100) / 100;
-      applyGlassOpacity(next);
-      localStorage.setItem(GLASS_STORAGE_KEY, next);
-      return next;
+      return clampGlassOpacity(prev + delta);
     });
     setShowIndicator(true);
     clearTimeout(hideTimerRef.current);

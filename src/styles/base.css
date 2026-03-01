@@ -140,7 +140,7 @@ body {
   font-size: 12px;
   line-height: 1.35;
   box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow-md) 66%, transparent);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
   animation: appFeedbackIn var(--motion-base) var(--ease-standard);
 }
 

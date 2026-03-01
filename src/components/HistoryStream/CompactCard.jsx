@@ -41,6 +41,7 @@ function CompactCard({
   isSelected,
   isMultiSelected,
   isFocused,
+  isExpandedPreview,
   isCopied,
   timeTick,
   searchExplain,
@@ -99,6 +100,7 @@ function CompactCard({
   const cardClasses = [
     'compact-card',
     itemTypeClass,
+    isExpandedPreview && 'expanded-inline',
     hasCustomCardBackground && 'custom-bg',
     item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',

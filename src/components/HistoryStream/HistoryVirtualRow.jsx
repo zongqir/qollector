@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import CompactCard from './CompactCard';
+import InlinePreviewPanel from './InlinePreviewPanel';
 
 function HistoryVirtualRow({
   item,
@@ -11,6 +12,8 @@ function HistoryVirtualRow({
   isSelected,
   isMultiSelected,
   isFocused,
+  isExpandedPreview,
+  shouldUseHoverPreview,
   rowGap,
   t,
   copiedItemId,
@@ -27,7 +30,10 @@ function HistoryVirtualRow({
   onSetCardBackground,
   onTagClick,
   supportsNativeExternalDrag,
+  onCloseInlinePreview,
 }) {
+  const cardSelected = isSelected || isExpandedPreview;
+
   return (
     <div
       className={`history-stream-row ${showGroupHeader ? 'group-start' : ''}`}
@@ -62,9 +68,10 @@ function HistoryVirtualRow({
       )}
       <CompactCard
         item={item}
-        isSelected={isSelected}
+        isSelected={cardSelected}
         isMultiSelected={isMultiSelected}
         isFocused={isFocused}
+        isExpandedPreview={isExpandedPreview}
         isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
         timeTick={timeTick}
         searchExplain={searchExplain}
@@ -78,6 +85,9 @@ function HistoryVirtualRow({
         onSetCardBackground={onSetCardBackground}
         onTagClick={onTagClick}
       />
+      {shouldUseHoverPreview && isExpandedPreview && (
+        <InlinePreviewPanel item={item} onRequestClose={() => onCloseInlinePreview?.(item.id)} />
+      )}
     </div>
   );
 }

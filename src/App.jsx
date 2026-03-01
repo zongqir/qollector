@@ -24,7 +24,6 @@ import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
-import HoverPreview from './components/HoverPreview';
 import GuidedTour from './components/GuidedTour/GuidedTour';
 import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 
@@ -167,7 +166,6 @@ function App() {
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
   const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
-  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
   const showHistoryStream = isMiniMode || historyStreamEnabled || !collectionPanelEnabled;
 
   // Store actions
@@ -880,7 +878,6 @@ function App() {
           </>
         )}
       </div>
-      {shouldUseHoverPreview && <HoverPreview />}
 
       {tourActive && <GuidedTour />}
 

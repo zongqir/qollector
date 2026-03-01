@@ -5,11 +5,11 @@ export default function useHistoryKeyboardNavigation({
   focusedIndex,
   setFocusedIndex,
   shouldUseHoverPreview,
-  setHoverPreview,
+  setExpandedPreviewItemId,
   setPanelMode,
   handleCopy,
   handleCopyAndAutoPaste,
-  clearHoverPreview,
+  clearExpandedPreview,
   selectedItemIds,
   historyTagShortcutEnabled,
   panelMode,
@@ -39,16 +39,12 @@ export default function useHistoryKeyboardNavigation({
     if (!nextItem) return;
 
     if (shouldUseHoverPreview) {
-      const el = document.querySelector(`[data-item-id="${nextItem.id}"]`);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setHoverPreview(nextItem, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
-      }
+      setExpandedPreviewItemId(nextItem.id);
       return;
     }
 
     setPanelMode('preview', nextItem);
-  }, [filteredItems, focusedIndex, setFocusedIndex, shouldUseHoverPreview, setHoverPreview, setPanelMode, virtuosoRef]);
+  }, [filteredItems, focusedIndex, setFocusedIndex, shouldUseHoverPreview, setExpandedPreviewItemId, setPanelMode, virtuosoRef]);
 
   const submitFocusedSelection = useCallback(() => {
     if (focusedIndex < 0 || focusedIndex >= filteredItems.length) return false;
@@ -86,15 +82,15 @@ export default function useHistoryKeyboardNavigation({
 
   useEffect(() => {
     if (!shouldUseHoverPreview) {
-      clearHoverPreview();
+      clearExpandedPreview();
     }
-  }, [shouldUseHoverPreview, clearHoverPreview]);
+  }, [shouldUseHoverPreview, clearExpandedPreview]);
 
   useEffect(() => {
     if (selectedItemIds.length > 0) {
-      clearHoverPreview();
+      clearExpandedPreview();
     }
-  }, [selectedItemIds.length, clearHoverPreview]);
+  }, [selectedItemIds.length, clearExpandedPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -174,6 +170,9 @@ export default function useHistoryKeyboardNavigation({
       } else if (e.key === 'Escape') {
         clearSelection();
         setFocusedIndex(-1);
+        if (shouldUseHoverPreview) {
+          clearExpandedPreview();
+        }
       }
     };
 
@@ -198,6 +197,8 @@ export default function useHistoryKeyboardNavigation({
     historyGrouping,
     selectionAnchorIndexRef,
     virtuosoRef,
+    shouldUseHoverPreview,
+    clearExpandedPreview,
   ]);
 
   return {

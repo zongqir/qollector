@@ -85,7 +85,7 @@
   border-radius: 8px;
   background: linear-gradient(90deg, var(--hint-item-bg), transparent 82%);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   letter-spacing: 0.01em;
   position: relative;
@@ -198,6 +198,168 @@
   min-width: 0;
 }
 
+/* Inline preview under history row card, visually merged as one expanded card */
+.history-inline-preview {
+  margin-top: 0;
+  border: 1px solid var(--border-light);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: color-mix(in srgb, var(--bg-card) 97%, white 3%);
+  box-shadow:
+    0 8px 20px color-mix(in srgb, var(--shadow-md) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 20%, transparent);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 280px;
+  contain: layout paint;
+}
+
+.history-inline-preview.mini {
+  max-height: 236px;
+}
+
+.history-inline-preview-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.history-inline-preview-action-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--border-btn);
+  background: var(--btn-bg);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.history-inline-preview-action-btn:hover {
+  background: var(--btn-hover-bg);
+  color: var(--text-primary);
+}
+
+.history-inline-preview-action-btn.copied {
+  background: var(--state-success-fg);
+  color: var(--text-on-accent);
+  border-color: var(--state-success-fg);
+}
+
+.history-inline-preview-action-btn.delete:hover {
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  border-color: var(--state-error-border);
+}
+
+.history-inline-preview-action-btn.delete.confirm {
+  background: var(--state-error-fg);
+  color: var(--text-on-accent);
+  border-color: var(--state-error-fg);
+}
+
+.history-inline-preview-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px;
+  max-height: 220px;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.history-inline-preview.mini .history-inline-preview-content {
+  padding: 8px 10px;
+  max-height: 170px;
+}
+
+.history-inline-preview-toolbar {
+  min-height: 34px;
+  border-top: 1px solid var(--border-light);
+  background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+}
+
+.history-inline-preview-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.history-inline-preview-text,
+.history-inline-preview-image,
+.history-inline-preview-files {
+  outline: none;
+}
+
+.history-inline-preview-text {
+  font-size: 14px;
+  line-height: 1.62;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.history-inline-preview-image img {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  display: block;
+  object-fit: contain;
+}
+
+.history-inline-preview-ocr {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-light);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.history-inline-preview-files {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.history-inline-preview-file-item {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.history-inline-preview-more {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
 /* ========== macOS 椋庢牸绱у噾鍗＄墖 ========== */
 .compact-card {
   background: var(--compact-card-bg, var(--bg-card));
@@ -211,6 +373,24 @@
   transition: none;
   border: 1px solid transparent;
   position: relative;
+}
+
+.compact-card.expanded-inline {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: var(--border-light);
+  padding-bottom: 8px;
+  box-shadow: none;
+}
+
+.compact-card.expanded-inline .compact-card-header {
+  margin-bottom: 0;
+}
+
+.compact-card.expanded-inline .compact-card-search-context,
+.compact-card.expanded-inline .compact-card-body,
+.compact-card.expanded-inline .compact-card-tags {
+  display: none;
 }
 
 .compact-card:has(.compact-card-color-picker) {
@@ -498,7 +678,7 @@
   border: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
   background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
   box-shadow: 0 10px 24px color-mix(in srgb, var(--shadow-sm) 72%, transparent);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
 }
 
 .multi-select-feedback {
@@ -636,7 +816,7 @@
   margin-bottom: 5px;
   min-width: 0;
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .compact-card-header svg {
@@ -864,7 +1044,7 @@
 }
 
 .compact-card-text {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.56;
   font-weight: 400;
   color: var(--text-primary);
@@ -910,7 +1090,7 @@
 .compact-link-title {
   max-width: 100%;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -920,7 +1100,7 @@
 
 .compact-link-domain {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
   opacity: 0.9;
   white-space: nowrap;
@@ -929,7 +1109,7 @@
 
 .compact-link-path {
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -959,7 +1139,7 @@
 }
 
 .compact-tag {
-  font-size: 10px;
+  font-size: 11px;
   padding: 2px 7px;
   border-radius: 6px;
   background: var(--accent-bg-soft);
@@ -2561,7 +2741,7 @@
 .app.mini-mode .history-stream-helper-text {
   margin: 0 8px 6px;
   padding: 5px 8px 5px 18px;
-  font-size: 10px;
+  font-size: 11px;
   border-radius: 7px;
 }
 
@@ -2776,7 +2956,7 @@
 
 .compact-card-header {
   margin-bottom: 6px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -2793,7 +2973,7 @@
 }
 
 .compact-card-text {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.58;
   color: color-mix(in srgb, var(--text-primary) 96%, transparent);
 }
@@ -2817,7 +2997,7 @@
 .compact-tag {
   border-radius: 999px;
   padding: 1px 7px;
-  font-size: 10px;
+  font-size: 11px;
   border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
   background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
 }
@@ -2849,8 +3029,8 @@
 .multi-select-bar {
   border-top: 1px solid color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
   background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   padding: 9px 12px;
 }
 
@@ -2876,8 +3056,8 @@
 .multi-select-feedback {
   border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
   background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .resize-handle {

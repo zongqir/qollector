@@ -36,7 +36,7 @@ export default function useHistoryRowInteractions({
   previewItemId,
   focusedIndex,
   shouldUseHoverPreview,
-  hoverPreviewItem,
+  expandedPreviewItemId,
   selectionAnchorIndexRef,
   supportsNativeExternalDrag,
   setSelectedItemIds,
@@ -44,8 +44,8 @@ export default function useHistoryRowInteractions({
   setPanelMode,
   toggleSelectItem,
   clearSelection,
-  setHoverPreview,
-  clearHoverPreview,
+  setExpandedPreviewItemId,
+  clearExpandedPreview,
   handleCopyAndAutoPaste,
   handleCopy,
   switchToCollection,
@@ -109,14 +109,12 @@ export default function useHistoryRowInteractions({
     }
 
     if (shouldUseHoverPreview) {
-      if (hoverPreviewItem?.id === item.id) {
-        clearHoverPreview();
+      if (expandedPreviewItemId === item.id) {
+        clearExpandedPreview();
         return;
       }
       clickTimerRef.current = setTimeout(() => {
-        const el = document.querySelector(`[data-item-id="${item.id}"]`);
-        const rect = el ? el.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
-        setHoverPreview(item, { top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+        setExpandedPreviewItemId(item.id);
         clickTimerRef.current = null;
       }, 250);
       return;
@@ -138,9 +136,9 @@ export default function useHistoryRowInteractions({
     toggleSelectItem,
     clearSelection,
     shouldUseHoverPreview,
-    hoverPreviewItem,
-    clearHoverPreview,
-    setHoverPreview,
+    expandedPreviewItemId,
+    clearExpandedPreview,
+    setExpandedPreviewItemId,
     setPanelMode,
   ]);
 
@@ -152,13 +150,13 @@ export default function useHistoryRowInteractions({
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    clearHoverPreview();
+    clearExpandedPreview();
     if (item.type_ === 'image' || item.type_ === 'file') {
       handleCopy(item, 'history');
     } else {
       handleCopyAndAutoPaste(item, 'history');
     }
-  }, [handleCopyAndAutoPaste, handleCopy, clearHoverPreview]);
+  }, [handleCopyAndAutoPaste, handleCopy, clearExpandedPreview]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     if (!supportsNativeExternalDrag) return;
@@ -203,13 +201,13 @@ export default function useHistoryRowInteractions({
       return;
     }
     if (shouldUseHoverPreview) {
-      clearHoverPreview();
+      clearExpandedPreview();
       return;
     }
     if (panelMode === 'preview') {
       switchToCollection();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearHoverPreview]);
+  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearExpandedPreview]);
 
   return {
     handleCardClick,
