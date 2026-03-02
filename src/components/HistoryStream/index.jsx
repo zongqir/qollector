@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo, useCallback, useState, forwardRef } from 'r
 import { useTranslation } from 'react-i18next';
 import { ArrowUp } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
+import { invoke } from '@tauri-apps/api/core';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import HistoryVirtualRow from './HistoryVirtualRow';
@@ -191,6 +192,8 @@ function HistoryStream({ style }) {
   const hasTopTrackerInitRef = useRef(false);
   const prevTopItemIdRef = useRef(null);
   const compareFeedbackTimerRef = useRef(null);
+  const quickAddFeedbackTimerRef = useRef(null);
+  const addFromSearchButtonRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -284,6 +287,9 @@ function HistoryStream({ style }) {
   const [timeTick, setTimeTick] = useState(() => Date.now());
   const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
   const [compareFeedback, setCompareFeedback] = useState(null);
+  const [quickAddFeedback, setQuickAddFeedback] = useState(null);
+  const [quickAddPending, setQuickAddPending] = useState(false);
+  const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
   const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
 
@@ -298,6 +304,30 @@ function HistoryStream({ style }) {
     }, 1800);
   }, []);
 
+  const clearQuickAddFeedbackTimer = useCallback(() => {
+    if (!quickAddFeedbackTimerRef.current) return;
+    clearTimeout(quickAddFeedbackTimerRef.current);
+    quickAddFeedbackTimerRef.current = null;
+  }, []);
+
+  const showQuickAddFeedback = useCallback((payload, duration = 2200) => {
+    clearQuickAddFeedbackTimer();
+    setQuickAddFeedback(payload);
+    if (duration <= 0) return;
+    quickAddFeedbackTimerRef.current = setTimeout(() => {
+      setQuickAddFeedback(null);
+      quickAddFeedbackTimerRef.current = null;
+    }, duration);
+  }, [clearQuickAddFeedbackTimer]);
+
+  const focusSearchInput = useCallback(() => {
+    const input = document.getElementById('history-search-input');
+    if (!input) return;
+    input.focus();
+    const length = input.value?.length ?? 0;
+    input.setSelectionRange?.(length, length);
+  }, []);
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setTimeTick(Date.now());
@@ -309,6 +339,10 @@ function HistoryStream({ style }) {
     if (compareFeedbackTimerRef.current) {
       clearTimeout(compareFeedbackTimerRef.current);
       compareFeedbackTimerRef.current = null;
+    }
+    if (quickAddFeedbackTimerRef.current) {
+      clearTimeout(quickAddFeedbackTimerRef.current);
+      quickAddFeedbackTimerRef.current = null;
     }
   }, []);
 
@@ -841,6 +875,138 @@ function HistoryStream({ style }) {
     applySavedFilterView(recentUsableSavedView.id);
   }, [recentUsableSavedView, applySavedFilterView]);
 
+  const addFromSearchQuery = useMemo(
+    () => debouncedSearchQuery.trim(),
+    [debouncedSearchQuery],
+  );
+
+  const canAddFromSearch = emptyDiagnostic.mode === 'search-empty'
+    && addFromSearchQuery.length > 0
+    && searchQuery.trim() === addFromSearchQuery;
+
+  const focusAddFromSearchButton = useCallback(() => {
+    if (!canAddFromSearch) return false;
+    addFromSearchButtonRef.current?.focus();
+    return Boolean(addFromSearchButtonRef.current);
+  }, [canAddFromSearch]);
+
+  const addSearchQueryToWorkbench = useCallback(async () => {
+    const content = addFromSearchQuery.trim();
+    if (!content || quickAddPending) return;
+
+    setQuickAddPending(true);
+    clearQuickAddFeedbackTimer();
+    try {
+      const pinnedCountBefore = items.filter(item => item.is_pinned).length;
+      await invoke('add_clipboard_item_manual', {
+        content,
+        contentType: 'text',
+        source: t('quickInput.source'),
+        autoFavorite: false,
+      });
+
+      const recentItems = await invoke('get_recent_items', { limit: 1 });
+      const latestItem = Array.isArray(recentItems) ? recentItems[0] : null;
+      if (!latestItem?.id) {
+        throw new Error('new item missing id');
+      }
+
+      await invoke('pin_item', { id: latestItem.id, maxPinned: maxPinnedItems });
+      await loadItems();
+
+      setSearchQuery('');
+      setFocusedIndex(-1);
+
+      showQuickAddFeedback({
+        type: 'success',
+        message: t('search.empty.addedToWorkbench'),
+        detail: pinnedCountBefore >= maxPinnedItems
+          ? t('error.pinLimitReached', { max: maxPinnedItems })
+          : '',
+        itemId: latestItem.id,
+        undoable: true,
+      }, 5000);
+
+      requestAnimationFrame(() => {
+        focusSearchInput();
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || '');
+      showQuickAddFeedback({
+        type: 'error',
+        message: t('quickInput.failed', { error: message || t('item.unknown') }),
+        detail: '',
+        itemId: null,
+        undoable: false,
+      }, 2600);
+    } finally {
+      setQuickAddPending(false);
+    }
+  }, [
+    addFromSearchQuery,
+    clearQuickAddFeedbackTimer,
+    focusSearchInput,
+    items,
+    loadItems,
+    maxPinnedItems,
+    quickAddPending,
+    setFocusedIndex,
+    setSearchQuery,
+    showQuickAddFeedback,
+    t,
+  ]);
+
+  const quickAddUndoItemId = quickAddFeedback?.itemId || null;
+
+  const handleUndoAddFromSearch = useCallback(async () => {
+    const itemId = quickAddUndoItemId;
+    if (!itemId || quickAddUndoPending) return;
+
+    setQuickAddUndoPending(true);
+    clearQuickAddFeedbackTimer();
+    try {
+      await invoke('delete_item', { id: itemId });
+      await loadItems();
+      showQuickAddFeedback({
+        type: 'info',
+        message: t('search.empty.undoAddSuccess'),
+        detail: '',
+        itemId: null,
+        undoable: false,
+      }, 1800);
+      requestAnimationFrame(() => {
+        focusSearchInput();
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || '');
+      showQuickAddFeedback({
+        type: 'error',
+        message: t('search.empty.undoAddFailed', { error: message || t('item.unknown') }),
+        detail: '',
+        itemId: null,
+        undoable: false,
+      }, 2600);
+    } finally {
+      setQuickAddUndoPending(false);
+    }
+  }, [
+    clearQuickAddFeedbackTimer,
+    focusSearchInput,
+    loadItems,
+    quickAddUndoItemId,
+    quickAddUndoPending,
+    showQuickAddFeedback,
+    t,
+  ]);
+
+  const handleAddFromSearchActionKeyDown = useCallback((event) => {
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      event.stopPropagation();
+      focusSearchInput();
+    }
+  }, [focusSearchInput]);
+
   const {
     showBatchTagEditor,
     batchTagEditorRef,
@@ -1004,6 +1170,7 @@ function HistoryStream({ style }) {
     selectionAnchorIndexRef,
     historyGrouping,
     virtuosoRef,
+    onSearchArrowDownNoResults: focusAddFromSearchButton,
   });
 
   const rowGap = isMiniMode ? 3 : 4;
@@ -1451,6 +1618,23 @@ function HistoryStream({ style }) {
               {emptyDiagnostic.description && (
                 <div className="empty-detail">{emptyDiagnostic.description}</div>
               )}
+              {canAddFromSearch && (
+                <div className="empty-actions-row">
+                  <button
+                    ref={addFromSearchButtonRef}
+                    type="button"
+                    className="empty-action-btn"
+                    onClick={addSearchQueryToWorkbench}
+                    onKeyDown={handleAddFromSearchActionKeyDown}
+                    disabled={quickAddPending}
+                    aria-label={t('search.empty.addFromSearch', { query: addFromSearchQuery })}
+                  >
+                    {quickAddPending
+                      ? t('search.empty.addFromSearchPending')
+                      : t('search.empty.addFromSearch', { query: addFromSearchQuery })}
+                  </button>
+                </div>
+              )}
               {emptyDiagnostic.mode === 'first-use' && (
                 <div className="empty-actions-row">
                   <button
@@ -1526,6 +1710,28 @@ function HistoryStream({ style }) {
           >
             <ArrowUp size={14} />
           </button>
+        )}
+        {quickAddFeedback && (
+          <div className="history-inline-feedback" role="status" aria-live="polite">
+            <div className={`history-inline-feedback-card ${quickAddFeedback.type || 'info'}`}>
+              <div className="history-inline-feedback-text">
+                <div className="history-inline-feedback-message">{quickAddFeedback.message}</div>
+                {quickAddFeedback.detail && (
+                  <div className="history-inline-feedback-detail">{quickAddFeedback.detail}</div>
+                )}
+              </div>
+              {quickAddFeedback.undoable && (
+                <button
+                  type="button"
+                  className="history-inline-feedback-undo"
+                  onClick={handleUndoAddFromSearch}
+                  disabled={quickAddUndoPending}
+                >
+                  {quickAddUndoPending ? t('app.loading') : t('collection.undo')}
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

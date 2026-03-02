@@ -23,6 +23,7 @@ export default function useHistoryKeyboardNavigation({
   historyGrouping,
   virtuosoRef,
   searchInputId = 'history-search-input',
+  onSearchArrowDownNoResults,
 }) {
   const moveFocusedSelection = useCallback((dir) => {
     const total = filteredItems.length;
@@ -62,6 +63,13 @@ export default function useHistoryKeyboardNavigation({
     if (e.nativeEvent?.isComposing || e.isComposing) return;
 
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (e.key === 'ArrowDown' && filteredItems.length === 0) {
+        const handled = onSearchArrowDownNoResults?.();
+        if (handled) {
+          e.preventDefault();
+          return;
+        }
+      }
       e.preventDefault();
       moveFocusedSelection(e.key === 'ArrowDown' ? 1 : -1);
       return;
@@ -70,7 +78,7 @@ export default function useHistoryKeyboardNavigation({
     if (e.key === 'Enter' && submitFocusedSelection()) {
       e.preventDefault();
     }
-  }, [moveFocusedSelection, submitFocusedSelection]);
+  }, [filteredItems.length, moveFocusedSelection, onSearchArrowDownNoResults, submitFocusedSelection]);
 
   const focusSearchInput = useCallback(() => {
     const input = document.getElementById(searchInputId);

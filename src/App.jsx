@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { invoke } from '@tauri-apps/api/core';
@@ -26,6 +27,7 @@ import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
 import GuidedTour from './components/GuidedTour/GuidedTour';
 import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
+import releaseNotes from './data/release-notes.json';
 
 console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
 
@@ -52,6 +54,21 @@ const VIEW_MODE_RESTORE = 'restore';
 const LAYOUT_PRESET_DEFAULT_WIDTHS = {
   [LAYOUT_PRESET_FLOW]: 360,
   [LAYOUT_PRESET_DETAIL]: 340,
+};
+const RELEASE_NOTES_SEEN_VERSION_KEY = 'qollect-release-notes-seen-version';
+const RELEASE_NOTES_FALLBACK_URL = 'https://qollect.zongqir.com/changelog';
+
+const normalizeVersion = (version) => String(version || '').trim().replace(/^v/i, '');
+
+const getReleaseNotesLocale = (language) => (
+  String(language || '').toLowerCase().startsWith('zh') ? 'zh-CN' : 'en-US'
+);
+
+const getReleaseNotesForVersion = (version) => {
+  const normalizedVersion = normalizeVersion(version);
+  if (!normalizedVersion) return null;
+  const releaseList = Array.isArray(releaseNotes?.releases) ? releaseNotes.releases : [];
+  return releaseList.find((entry) => normalizeVersion(entry?.version) === normalizedVersion) || null;
 };
 
 const isValidLayoutPreset = (preset) => (
@@ -120,7 +137,7 @@ const persistLayoutPresetWidths = (widths) => {
 function App() {
   console.log('[Perf:App] App() function called at', performance.now().toFixed(1), 'ms');
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const appFeedbackTimerRef = useRef(null);
 
   // Beta expiry state
@@ -133,6 +150,7 @@ function App() {
   const [updateProgress, setUpdateProgress] = useState(null); // null | number (0-100) | 'ready'
   const [updateError, setUpdateError] = useState(null);
   const [updateChecking, setUpdateChecking] = useState(false);
+  const [releaseNotesModal, setReleaseNotesModal] = useState(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [isQuickInputOpen, setIsQuickInputOpen] = useState(false);
 
@@ -263,6 +281,90 @@ function App() {
       unlistenBetaExpired.then(unlisten => unlisten());
     };
   }, []);
+
+  const dismissReleaseNotesModal = useCallback((version) => {
+    const normalizedVersion = normalizeVersion(version);
+    if (normalizedVersion) {
+      try {
+        localStorage.setItem(RELEASE_NOTES_SEEN_VERSION_KEY, normalizedVersion);
+      } catch (error) {
+        console.warn('[ReleaseNotes] failed to persist seen version:', error);
+      }
+    }
+    setReleaseNotesModal(null);
+  }, []);
+
+  const openReleaseNotesChangelog = useCallback(async (url) => {
+    if (!url) return;
+    try {
+      await invoke('open_url', { url });
+    } catch (error) {
+      console.warn('[ReleaseNotes] failed to open changelog url:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveCurrentVersionNotes = async () => {
+      try {
+        const currentVersion = normalizeVersion(await getVersion());
+        if (!currentVersion) return;
+
+        let seenVersion = '';
+        try {
+          seenVersion = normalizeVersion(localStorage.getItem(RELEASE_NOTES_SEEN_VERSION_KEY) || '');
+        } catch (error) {
+          console.warn('[ReleaseNotes] failed to read seen version:', error);
+        }
+        if (seenVersion === currentVersion) return;
+
+        const locale = getReleaseNotesLocale(i18n.language);
+        const releaseEntry = getReleaseNotesForVersion(currentVersion);
+        const fallbackSummary = i18n.t('update.releaseNotes.fallbackSummary', { version: currentVersion });
+
+        if (!releaseEntry) {
+          if (!cancelled) {
+            setReleaseNotesModal({
+              version: currentVersion,
+              summary: fallbackSummary,
+              highlights: [],
+              changelogUrl: releaseNotes?.changelogUrl || RELEASE_NOTES_FALLBACK_URL,
+            });
+          }
+          return;
+        }
+
+        const localizedSummary = releaseEntry.summary?.[locale]
+          || releaseEntry.summary?.['en-US']
+          || releaseEntry.summary?.['zh-CN']
+          || fallbackSummary;
+        const localizedHighlights = releaseEntry.highlights?.[locale]
+          || releaseEntry.highlights?.['en-US']
+          || releaseEntry.highlights?.['zh-CN']
+          || [];
+
+        if (!cancelled) {
+          setReleaseNotesModal({
+            version: currentVersion,
+            summary: localizedSummary,
+            highlights: Array.isArray(localizedHighlights)
+              ? localizedHighlights.filter((item) => typeof item === 'string' && item.trim().length > 0)
+              : [],
+            changelogUrl: releaseEntry.changelogUrl || releaseNotes?.changelogUrl || RELEASE_NOTES_FALLBACK_URL,
+          });
+        }
+      } catch (error) {
+        console.warn('[ReleaseNotes] failed to resolve notes:', error);
+      }
+    };
+
+    resolveCurrentVersionNotes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [i18n.language]);
 
   // Update check logic
   const checkForUpdate = useCallback(async (silent = false) => {
@@ -608,40 +710,58 @@ function App() {
       .then(() => performViewModeSwitch(mode));
   }, [performViewModeSwitch]);
 
+  const syncQuickInputState = useCallback(async () => {
+    try {
+      const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
+      const nextState = Boolean(existing);
+      setIsQuickInputOpen(nextState);
+      return nextState;
+    } catch {
+      setIsQuickInputOpen(false);
+      return false;
+    }
+  }, []);
+
   const handleOpenQuickInput = useCallback(() => {
     openQuickInputWindow(t)
-      .then(() => setIsQuickInputOpen(true))
+      .then(() => {
+        void syncQuickInputState();
+      })
       .catch((error) => {
-        setIsQuickInputOpen(false);
+        void syncQuickInputState();
         console.error(t('quickInput.failed', { error }));
       });
-  }, [t]);
+  }, [syncQuickInputState, t]);
 
   useEffect(() => {
     let cancelled = false;
-    const syncQuickInputState = async () => {
-      try {
-        const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
-        if (!cancelled) {
-          setIsQuickInputOpen(Boolean(existing));
-        }
-      } catch {
-        if (!cancelled) {
-          setIsQuickInputOpen(false);
-        }
-      }
+    const syncIfMounted = async () => {
+      if (cancelled) return;
+      await syncQuickInputState();
     };
 
-    void syncQuickInputState();
-    const unlistenPromise = listen(QUICK_INPUT_WINDOW_STATE_EVENT, (event) => {
-      setIsQuickInputOpen(Boolean(event?.payload?.open));
+    void syncIfMounted();
+    const unlistenPromise = listen(QUICK_INPUT_WINDOW_STATE_EVENT, () => {
+      void syncIfMounted();
     });
 
     return () => {
       cancelled = true;
       unlistenPromise.then(unlisten => unlisten());
     };
-  }, []);
+  }, [syncQuickInputState]);
+
+  useEffect(() => {
+    if (!isQuickInputOpen) return undefined;
+
+    const timer = window.setInterval(() => {
+      void syncQuickInputState();
+    }, 1200);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [isQuickInputOpen, syncQuickInputState]);
 
   useEffect(() => {
     const unlistenPromise = listen(QUICK_INPUT_OPEN_WORKBENCH_EVENT, async () => {
@@ -884,6 +1004,65 @@ function App() {
       {appFeedback && (
         <div className={`app-feedback-toast ${appFeedback.type}`} role="status" aria-live="polite">
           {appFeedback.text}
+        </div>
+      )}
+
+      {releaseNotesModal && (
+        <div
+          className="release-notes-overlay"
+          onClick={() => dismissReleaseNotesModal(releaseNotesModal.version)}
+        >
+          <div
+            className="release-notes-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="release-notes-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="release-notes-header">
+              <h3 id="release-notes-title">
+                {t('update.releaseNotes.title', { version: releaseNotesModal.version })}
+              </h3>
+              <button
+                type="button"
+                className="release-notes-close"
+                onClick={() => dismissReleaseNotesModal(releaseNotesModal.version)}
+                aria-label={t('common.close')}
+              >
+                ×
+              </button>
+            </div>
+            <div className="release-notes-body">
+              {releaseNotesModal.summary && (
+                <p className="release-notes-summary">{releaseNotesModal.summary}</p>
+              )}
+              {Array.isArray(releaseNotesModal.highlights) && releaseNotesModal.highlights.length > 0 ? (
+                <ul className="release-notes-list">
+                  {releaseNotesModal.highlights.map((item, index) => (
+                    <li key={`${index}-${item}`}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="release-notes-empty">{t('update.releaseNotes.empty')}</p>
+              )}
+            </div>
+            <div className="release-notes-actions">
+              <button
+                type="button"
+                className="release-notes-btn secondary"
+                onClick={() => openReleaseNotesChangelog(releaseNotesModal.changelogUrl)}
+              >
+                {t('update.releaseNotes.viewFull')}
+              </button>
+              <button
+                type="button"
+                className="release-notes-btn primary"
+                onClick={() => dismissReleaseNotesModal(releaseNotesModal.version)}
+              >
+                {t('update.releaseNotes.gotIt')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

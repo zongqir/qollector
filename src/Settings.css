@@ -1220,6 +1220,25 @@
   color: #ff3b30;
 }
 
+.setting-status-emphasis {
+  margin-top: 2px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  display: inline-block;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.setting-status.success.setting-status-emphasis {
+  background: color-mix(in srgb, #34c759 14%, transparent);
+  border-color: color-mix(in srgb, #34c759 30%, transparent);
+}
+
+.setting-status.error.setting-status-emphasis {
+  background: color-mix(in srgb, #ff3b30 11%, transparent);
+  border-color: color-mix(in srgb, #ff3b30 26%, transparent);
+}
+
 .setting-status-pill {
   display: inline-flex;
   align-items: center;

@@ -1,0 +1,26 @@
+{
+  "changelogUrl": "https://qollect.zongqir.com/changelog",
+  "releases": [
+    {
+      "version": "0.2.4",
+      "publishedAt": "2026-03-02",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-4",
+      "summary": {
+        "zh-CN": "优化右键菜单与窗口交互，日常操作更顺手。",
+        "en-US": "Refined context-menu and window interactions for smoother daily workflows."
+      },
+      "highlights": {
+        "zh-CN": [
+          "新增并优化右键菜单设计，常用操作更直观",
+          "增加窗口置顶能力，便于跨应用快速粘贴",
+          "改进快速预览与面板交互，提升整体易用性"
+        ],
+        "en-US": [
+          "Redesigned and refined the context menu for clearer common actions.",
+          "Added always-on-top support for faster cross-app copy/paste workflows.",
+          "Improved quick preview and panel interactions for better usability."
+        ]
+      }
+    }
+  ]
+}

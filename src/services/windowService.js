@@ -146,15 +146,32 @@ export const openQuickInputWindow = async (t) => {
     skipTaskbar: false,
   });
 
-  webview.once('tauri://created', async () => {
-    await focusWindowSafely(webview);
-  });
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      callback(value);
+    };
 
-  webview.once('tauri://error', (e) => {
-    console.error(t('quickInput.failed', { error: e }));
-  });
+    webview.once('tauri://created', async () => {
+      await focusWindowSafely(webview);
+      settle(resolve, webview);
+    });
 
-  return webview;
+    webview.once('tauri://error', (e) => {
+      console.error(t('quickInput.failed', { error: e }));
+      const message = typeof e === 'string'
+        ? e
+        : String(e?.payload ?? e);
+      settle(reject, new Error(message));
+    });
+
+    window.setTimeout(() => {
+      // In rare cases the created event may be missed; fallback to current handle.
+      settle(resolve, webview);
+    }, 1600);
+  });
 };
 
 const HISTORY_EDITOR_WINDOW_PREFIX = 'history-editor-';

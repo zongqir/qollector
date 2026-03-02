@@ -13,10 +13,15 @@ $OUTPUT_DIR = "release-artifacts"
 $GITHUB_REPO = "zongqir/qollect"
 $R2_BUCKET = "qollect"
 $R2_PUBLIC_URL = "https://dl.135070.xyz"
+$RELEASE_NOTES_PATH = "src\data\release-notes.json"
 
 function Write-Step($msg) { Write-Host "`n>> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "   $msg" -ForegroundColor Green }
 function Write-Warn($msg) { Write-Host "   $msg" -ForegroundColor Yellow }
+function Normalize-Version([string]$rawVersion) {
+    if ([string]::IsNullOrWhiteSpace($rawVersion)) { return "" }
+    return ($rawVersion.Trim() -replace '^[vV]', '')
+}
 
 # ===== Step 1: Ensure signing key exists =====
 if (!(Test-Path $PRIVATE_KEY_PATH)) {
@@ -51,6 +56,83 @@ if ((!$currentPubkey -or $currentPubkey -eq "") -and (Test-Path $PUBLIC_KEY_PATH
 
 $version = $conf.version
 Write-Ok "Version: $version"
+
+$releaseNotesForUpdater = "Release v$version"
+$releaseNotesForGitHub = "Release v$version"
+$releaseNotesZh = $null
+$releaseNotesEn = $null
+$releaseChangelogUrl = $null
+
+if (Test-Path $RELEASE_NOTES_PATH) {
+    try {
+        $notesData = Get-Content $RELEASE_NOTES_PATH -Raw | ConvertFrom-Json -Depth 20
+        $normalizedVersion = Normalize-Version $version
+        $releaseNote = $notesData.releases |
+            Where-Object { (Normalize-Version $_.version) -eq $normalizedVersion } |
+            Select-Object -First 1
+
+        if ($releaseNote) {
+            $summaryZh = $releaseNote.summary.'zh-CN'
+            $summaryEn = $releaseNote.summary.'en-US'
+            $highlightsZh = @($releaseNote.highlights.'zh-CN') | Where-Object { $_ -and $_.Trim() -ne "" }
+            $highlightsEn = @($releaseNote.highlights.'en-US') | Where-Object { $_ -and $_.Trim() -ne "" }
+
+            if ($highlightsZh.Count -gt 0) {
+                $releaseNotesZh = ($highlightsZh | ForEach-Object { "- $_" }) -join "`n"
+            } elseif ($summaryZh) {
+                $releaseNotesZh = $summaryZh
+            }
+
+            if ($highlightsEn.Count -gt 0) {
+                $releaseNotesEn = ($highlightsEn | ForEach-Object { "- $_" }) -join "`n"
+            } elseif ($summaryEn) {
+                $releaseNotesEn = $summaryEn
+            }
+
+            $releaseNotesForUpdater = if ($releaseNotesEn) { $releaseNotesEn } elseif ($releaseNotesZh) { $releaseNotesZh } else { $releaseNotesForUpdater }
+
+            $releaseChangelogUrl = if ($releaseNote.changelogUrl) { $releaseNote.changelogUrl } elseif ($notesData.changelogUrl) { $notesData.changelogUrl } else { $null }
+
+            $githubLines = @()
+            if ($summaryEn) {
+                $githubLines += "## What's New"
+                $githubLines += ""
+                $githubLines += $summaryEn
+                if ($highlightsEn.Count -gt 0) {
+                    $githubLines += ""
+                    $githubLines += ($highlightsEn | ForEach-Object { "- $_" })
+                }
+                $githubLines += ""
+            }
+            if ($summaryZh) {
+                $githubLines += "## 更新内容"
+                $githubLines += ""
+                $githubLines += $summaryZh
+                if ($highlightsZh.Count -gt 0) {
+                    $githubLines += ""
+                    $githubLines += ($highlightsZh | ForEach-Object { "- $_" })
+                }
+                $githubLines += ""
+            }
+            if ($releaseChangelogUrl) {
+                $githubLines += "[Full Changelog]($releaseChangelogUrl)"
+            }
+
+            $releaseNotesForGitHub = (($githubLines -join "`n").Trim())
+            if ([string]::IsNullOrWhiteSpace($releaseNotesForGitHub)) {
+                $releaseNotesForGitHub = $releaseNotesForUpdater
+            }
+
+            Write-Ok "Loaded release notes from $RELEASE_NOTES_PATH"
+        } else {
+            Write-Warn "No entry for version $version in $RELEASE_NOTES_PATH, fallback to default notes"
+        }
+    } catch {
+        Write-Warn "Failed to parse $RELEASE_NOTES_PATH, fallback to default notes"
+    }
+} else {
+    Write-Warn "Release notes file not found: $RELEASE_NOTES_PATH"
+}
 
 # ===== Step 3: Load signing key =====
 Write-Step "Loading signing key"
@@ -94,7 +176,10 @@ $sigContent = (Get-Content $sig.FullName -Raw).Trim()
 
 $latestJson = @{
     version   = "v$version"
-    notes     = "Release v$version"
+    notes     = $releaseNotesForUpdater
+    notes_zh  = if ($releaseNotesZh) { $releaseNotesZh } else { $releaseNotesForUpdater }
+    notes_en  = if ($releaseNotesEn) { $releaseNotesEn } else { $releaseNotesForUpdater }
+    changelog_url = $releaseChangelogUrl
     pub_date  = $releaseDate
     platforms = @{
         "windows-x86_64" = @{
@@ -114,7 +199,7 @@ Write-Step "Uploading to GitHub Release v$version"
 if (!(Get-Command gh -ErrorAction SilentlyContinue)) {
     Write-Warn "gh CLI not found. Install from https://cli.github.com"
     Write-Warn "Then run manually:"
-    Write-Host "   gh release create v$version $OUTPUT_DIR\* --repo $GITHUB_REPO --title `"v$version`" --notes `"Release v$version`"" -ForegroundColor DarkGray
+    Write-Host "   gh release create v$version $OUTPUT_DIR\* --repo $GITHUB_REPO --title `"v$version`" --notes-file <notes.txt>" -ForegroundColor DarkGray
     exit 0
 }
 
@@ -128,7 +213,7 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 $files = Get-ChildItem "$OUTPUT_DIR\*" | ForEach-Object { $_.FullName }
-gh release create "v$version" @files --repo $GITHUB_REPO --title "v$version" --notes "Release v$version"
+gh release create "v$version" @files --repo $GITHUB_REPO --title "v$version" --notes $releaseNotesForGitHub
 if ($LASTEXITCODE -ne 0) { throw "GitHub release upload failed" }
 
 Write-Ok "Release v$version published!"

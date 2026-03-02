@@ -82,6 +82,11 @@
       "tryOtherKeywords": "Try different keywords or reduce conditions",
       "filteredAfterSearch": "Search matched, but filters removed all results",
       "filteredNoMatch": "Current filters returned no results",
+      "addFromSearch": "Add \"{{query}}\" to Workbench",
+      "addFromSearchPending": "Adding...",
+      "addedToWorkbench": "Added to Workbench",
+      "undoAddSuccess": "Undid the latest add",
+      "undoAddFailed": "Undo failed: {{error}}",
       "firstUseTitle": "Your history is empty",
       "firstUseDescription": "Start by adding a quick note, or replay the guide to learn the main workflow.",
       "startQuickCapture": "Quick Add",
@@ -312,6 +317,8 @@
       "maxPinnedItems": "Max workbench items",
       "maxPinnedItemsHint": "Range 1-100, default 10. Oldest item is removed when limit is exceeded",
       "maxPinnedItemsWarning": "⚠️ More than 20 items can make the workbench crowded — keep it lean",
+      "maxPinnedItemsApplied": "Workbench limit updated to {{count}}",
+      "maxPinnedItemsSaveFailed": "Failed to save workbench limit. Please try again.",
       "theme": "Appearance",
       "themeSystem": "System",
       "themeLight": "Light",
@@ -929,7 +936,14 @@
     "failed": "Update failed: {{error}}",
     "checkNow": "Check for Updates",
     "upToDate": "You're up to date",
-    "checking": "Checking..."
+    "checking": "Checking...",
+    "releaseNotes": {
+      "title": "What's New in v{{version}}",
+      "fallbackSummary": "Updated to v{{version}}. Check the full changelog for details.",
+      "viewFull": "View full changelog",
+      "gotIt": "Got it",
+      "empty": "This release includes usability improvements and bug fixes."
+    }
   },
   "license": {
     "title": "License",

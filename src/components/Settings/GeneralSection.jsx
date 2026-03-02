@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { applyAccentColor } from '../../hooks/useTheme';
 import useAppStore from '../../store/useAppStore';
@@ -36,7 +37,27 @@ function GeneralSection({
   onThemeModeChange,
   getWheelNextNumber,
 }) {
+  const [maxPinnedFeedback, setMaxPinnedFeedback] = useState(null);
+  const maxPinnedFeedbackTimerRef = useRef(null);
   const supportsAutoPasteOnDoubleClick = detectClientPlatform() === 'windows';
+
+  useEffect(() => () => {
+    if (maxPinnedFeedbackTimerRef.current) {
+      clearTimeout(maxPinnedFeedbackTimerRef.current);
+    }
+  }, []);
+
+  const showMaxPinnedFeedback = (feedback, durationMs = 1800) => {
+    setMaxPinnedFeedback(feedback);
+    if (maxPinnedFeedbackTimerRef.current) {
+      clearTimeout(maxPinnedFeedbackTimerRef.current);
+    }
+    if (durationMs > 0) {
+      maxPinnedFeedbackTimerRef.current = setTimeout(() => {
+        setMaxPinnedFeedback(null);
+      }, durationMs);
+    }
+  };
 
   return (
     <div className="settings-content">
@@ -127,15 +148,25 @@ function GeneralSection({
             type="number"
             value={generalConfig.max_pinned_items}
             onChange={async (e) => {
-              let value = parseInt(e.target.value) || 10;
+              const currentValue = generalConfig.max_pinned_items ?? 10;
+              let value = parseInt(e.target.value, 10) || 10;
               if (value < 1) value = 1;
               if (value > 100) value = 100;
+              if (value === currentValue) return;
               const updated = { ...generalConfig, max_pinned_items: value };
               setGeneralConfig(updated);
               try {
                 await invoke('update_general_config', { config: updated });
+                showMaxPinnedFeedback({
+                  type: 'success',
+                  message: t('settings.general.maxPinnedItemsApplied', { count: value }),
+                });
               } catch (error) {
                 console.error('Failed to save max pinned items config:', error);
+                showMaxPinnedFeedback({
+                  type: 'error',
+                  message: t('settings.general.maxPinnedItemsSaveFailed'),
+                }, 2600);
               }
             }}
             onWheel={async (e) => {
@@ -154,8 +185,16 @@ function GeneralSection({
               setGeneralConfig(updated);
               try {
                 await invoke('update_general_config', { config: updated });
+                showMaxPinnedFeedback({
+                  type: 'success',
+                  message: t('settings.general.maxPinnedItemsApplied', { count: value }),
+                });
               } catch (error) {
                 console.error('Failed to save max pinned items config:', error);
+                showMaxPinnedFeedback({
+                  type: 'error',
+                  message: t('settings.general.maxPinnedItemsSaveFailed'),
+                }, 2600);
               }
             }}
             min="1"
@@ -164,6 +203,14 @@ function GeneralSection({
           />
         </div>
       </div>
+      {maxPinnedFeedback && (
+        <small
+          className={`setting-status setting-status-emphasis ${maxPinnedFeedback.type === 'error' ? 'error' : 'success'}`}
+          role={maxPinnedFeedback.type === 'error' ? 'alert' : 'status'}
+        >
+          {maxPinnedFeedback.message}
+        </small>
+      )}
       {generalConfig.max_pinned_items > 20 && (
         <small className="setting-hint">
           <span className="setting-warning">

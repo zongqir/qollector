@@ -175,6 +175,93 @@
   box-shadow: 0 0 0 2px var(--accent-medium);
 }
 
+.history-inline-feedback {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.history-inline-feedback-card {
+  pointer-events: auto;
+  max-width: min(560px, 100%);
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: color-mix(in srgb, var(--surface-strong) 90%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--shadow-lg) 65%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+}
+
+.history-inline-feedback-card.success {
+  border-color: var(--state-success-border);
+  background: color-mix(in srgb, var(--state-success-bg) 90%, var(--surface-strong) 10%);
+  color: var(--state-success-fg);
+}
+
+.history-inline-feedback-card.error {
+  border-color: var(--state-error-border);
+  background: color-mix(in srgb, var(--state-error-bg) 90%, var(--surface-strong) 10%);
+  color: var(--state-error-fg);
+}
+
+.history-inline-feedback-card.info {
+  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
+  background: color-mix(in srgb, var(--accent-bg-soft) 76%, var(--surface-strong) 24%);
+  color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
+}
+
+.history-inline-feedback-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.history-inline-feedback-message {
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-inline-feedback-detail {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-inline-feedback-undo {
+  border: none;
+  border-radius: 7px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 70%, transparent);
+  cursor: pointer;
+}
+
+.history-inline-feedback-undo:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-medium) 72%, transparent);
+}
+
+.history-inline-feedback-undo:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
 .history-stream-virtuoso {
   height: 100%;
 }

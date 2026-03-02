@@ -91,6 +91,11 @@
       "filterDate": "日期：{{range}}",
       "firstUseTitle": "还没有历史记录",
       "firstUseDescription": "先通过快速录入添加第一条内容，或重看引导了解核心流程。",
+      "addFromSearch": "添加“{{query}}”到工作台",
+      "addFromSearchPending": "正在添加...",
+      "addedToWorkbench": "已添加到工作台",
+      "undoAddSuccess": "已撤销刚刚添加的内容",
+      "undoAddFailed": "撤销失败: {{error}}",
       "startQuickCapture": "快速录入",
       "replayGuide": "重播引导",
       "restoreRecentView": "恢复最近可用视图",
@@ -297,6 +302,8 @@
       "maxPinnedItems": "工作台最多放几条",
       "maxPinnedItemsHint": "范围 1-100，默认 10 条。超出时最早放入的会自动移出",
       "maxPinnedItemsWarning": "⚠️ 超过 20 条会让工作台变拥挤，建议保持精简",
+      "maxPinnedItemsApplied": "工作台上限已更新为 {{count}} 条",
+      "maxPinnedItemsSaveFailed": "工作台上限保存失败，请稍后重试",
       "theme": "外观主题",
       "themeSystem": "跟随系统",
       "themeLight": "浅色",
@@ -914,7 +921,14 @@
     "failed": "更新失败: {{error}}",
     "checkNow": "检查更新",
     "upToDate": "已是最新版本",
-    "checking": "正在检查..."
+    "checking": "正在检查...",
+    "releaseNotes": {
+      "title": "v{{version}} 本次更新",
+      "fallbackSummary": "已升级到 v{{version}}，详细变化请查看完整更新日志。",
+      "viewFull": "查看完整更新日志",
+      "gotIt": "我知道了",
+      "empty": "本次更新包含体验优化与问题修复。"
+    }
   },
   "license": {
     "title": "许可证",

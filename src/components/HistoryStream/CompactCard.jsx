@@ -56,6 +56,7 @@ function CompactCard({
   onTagClick,
 }) {
   const { t, i18n } = useTranslation();
+  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const timelineColor = getTimelineColor(item.updated_at);
@@ -287,8 +288,8 @@ function CompactCard({
               type="button"
               className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
-              title={t('item.pin', { max: 10 })}
-              aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: 10 })}
+              title={t('item.pin', { max: maxPinnedItems || 10 })}
+              aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
             >
               <Inbox size={10} />
             </button>

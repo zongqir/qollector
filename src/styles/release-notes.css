@@ -1,0 +1,211 @@
+.release-notes-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10024;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--shadow-overlay) 82%, transparent);
+  backdrop-filter: blur(6px);
+  animation: releaseNotesOverlayIn var(--motion-base) var(--ease-standard);
+}
+
+.release-notes-modal {
+  width: min(620px, 100%);
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-strong) 78%, transparent);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--surface-strong) 94%, var(--accent-bg-soft) 6%) 0%,
+      color-mix(in srgb, var(--surface-elevated) 96%, transparent) 100%
+    );
+  box-shadow:
+    0 24px 48px color-mix(in srgb, var(--shadow-overlay) 62%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 45%, transparent);
+  animation: releaseNotesModalIn var(--motion-pop) var(--ease-emphasized);
+  overflow: hidden;
+}
+
+.release-notes-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+}
+
+.release-notes-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.release-notes-close {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-muted) 92%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard);
+}
+
+.release-notes-close:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-border-strong) 80%, transparent);
+  background: color-mix(in srgb, var(--accent-bg-soft) 65%, var(--surface-muted) 35%);
+}
+
+.release-notes-body {
+  padding: 16px 18px 6px;
+}
+
+.release-notes-summary {
+  margin: 0 0 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.release-notes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.release-notes-list li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.release-notes-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-border-strong) 88%, transparent);
+}
+
+.release-notes-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.release-notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+.release-notes-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard);
+}
+
+.release-notes-btn.primary {
+  color: var(--text-on-accent);
+  border-color: color-mix(in srgb, var(--accent-border-strong) 88%, transparent);
+  background: color-mix(in srgb, var(--accent-bg-soft) 38%, var(--accent-border-strong) 62%);
+}
+
+.release-notes-btn.primary:hover {
+  background: color-mix(in srgb, var(--accent-bg-soft) 24%, var(--accent-border-strong) 76%);
+}
+
+.release-notes-btn.secondary {
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 92%, transparent);
+}
+
+.release-notes-btn.secondary:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-border-strong) 72%, transparent);
+  background: color-mix(in srgb, var(--accent-bg-soft) 56%, var(--surface-muted) 44%);
+}
+
+@keyframes releaseNotesOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes releaseNotesModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 560px) {
+  .release-notes-overlay {
+    padding: 14px;
+  }
+
+  .release-notes-modal {
+    border-radius: 14px;
+  }
+
+  .release-notes-header,
+  .release-notes-body,
+  .release-notes-actions {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .release-notes-actions {
+    flex-direction: column-reverse;
+  }
+
+  .release-notes-btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release-notes-overlay,
+  .release-notes-modal,
+  .release-notes-btn,
+  .release-notes-close {
+    animation: none !important;
+    transition-duration: var(--motion-reduced) !important;
+    transform: none !important;
+  }
+}
