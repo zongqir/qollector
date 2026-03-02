@@ -1,5 +1,5 @@
 use crate::core::clipboard_manager::ClipboardManager;
-use crate::core::models::ClipboardItem;
+use crate::core::models::{ClipboardItem, SearchFilters};
 use crate::window_lifecycle::{
     hide_main_window_with_release, hide_main_window_without_release, MAIN_WINDOW_LABEL,
 };
@@ -125,9 +125,14 @@ pub async fn search_items(
     manager: State<'_, Arc<ClipboardManager>>,
     query: String,
     limit: Option<i32>,
+    filters: Option<SearchFilters>,
 ) -> Result<Vec<ClipboardItem>, String> {
     manager
-        .search_items(&query, limit.unwrap_or(200) as usize)
+        .search_items_with_filters(
+            &query,
+            filters.unwrap_or_default(),
+            limit.unwrap_or(200) as usize,
+        )
         .await
         .map_err(|e| e.to_string())
 }

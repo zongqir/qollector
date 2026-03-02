@@ -170,6 +170,10 @@ else { New-Item -ItemType Directory -Path $OUTPUT_DIR | Out-Null }
 
 Copy-Item $installer.FullName "$OUTPUT_DIR\" -Force
 Copy-Item $sig.FullName "$OUTPUT_DIR\" -Force
+if (Test-Path $RELEASE_NOTES_PATH) {
+    Copy-Item $RELEASE_NOTES_PATH "$OUTPUT_DIR\release-notes.json" -Force
+    Write-Ok "release-notes.json copied"
+}
 
 $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
 $sigContent = (Get-Content $sig.FullName -Raw).Trim()
@@ -241,6 +245,13 @@ if (!(Get-Command wrangler -ErrorAction SilentlyContinue)) {
     wrangler r2 object put "$R2_BUCKET/latest.json" --file "$OUTPUT_DIR\latest.json" --content-type "application/json" --remote
     if ($LASTEXITCODE -ne 0) { Write-Warn "R2 upload latest.json failed" }
     else { Write-Ok "Uploaded latest.json to R2" }
+
+    # Upload release notes index for website changelog rendering
+    if (Test-Path "$OUTPUT_DIR\release-notes.json") {
+        wrangler r2 object put "$R2_BUCKET/release-notes.json" --file "$OUTPUT_DIR\release-notes.json" --content-type "application/json" --remote
+        if ($LASTEXITCODE -ne 0) { Write-Warn "R2 upload release-notes.json failed" }
+        else { Write-Ok "Uploaded release-notes.json to R2" }
+    }
 
     Write-Ok "R2 upload complete: $R2_PUBLIC_URL/latest.json"
 }

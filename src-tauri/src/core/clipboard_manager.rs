@@ -1403,8 +1403,18 @@ impl ClipboardManager {
         query: &str,
         limit: usize,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        self.search_items_with_filters(query, crate::core::models::SearchFilters::default(), limit)
+            .await
+    }
+
+    /// Search clipboard items with explicit filters.
+    pub async fn search_items_with_filters(
+        &self,
+        query: &str,
+        filters: crate::core::models::SearchFilters,
+        limit: usize,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
-        let filters = crate::core::models::SearchFilters::default();
         repo.search(query, &filters, limit as i32).await
     }
 

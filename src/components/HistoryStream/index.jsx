@@ -357,13 +357,17 @@ function HistoryStream({ style }) {
 
   useEffect(() => {
     const query = debouncedSearchQuery.trim();
-    if (!query) {
+    const shouldQueryBackend = query.length > 0 || showFavoritesOnly;
+    if (!shouldQueryBackend) {
       setBackendSearchResults(null);
+      setIsSearching(false);
       return;
     }
     let cancelled = false;
     setIsSearching(true);
-    searchItems(query, 200)
+    const filters = showFavoritesOnly ? { is_favorite: true } : undefined;
+    const limit = query.length > 0 ? 240 : 1000;
+    searchItems(query, limit, filters)
       .then((results) => {
         if (!cancelled) setBackendSearchResults(results);
       })
@@ -375,7 +379,7 @@ function HistoryStream({ style }) {
         if (!cancelled) setIsSearching(false);
       });
     return () => { cancelled = true; };
-  }, [debouncedSearchQuery, itemsRevision]);
+  }, [debouncedSearchQuery, showFavoritesOnly, itemsRevision]);
 
   const allTags = useMemo(() => {
     const userTags = new Set();
@@ -468,9 +472,10 @@ function HistoryStream({ style }) {
     let scannedChars = 0;
     const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
     const hasSearch = normalizedQuery.length > 0;
+    const shouldUseBackendBase = (hasSearch || showFavoritesOnly) && backendSearchResults != null;
 
-    // When searching, use backend FTS results as base; otherwise use loaded items
-    const baseItems = (hasSearch && backendSearchResults) ? backendSearchResults : items;
+    // Search/favorites can exceed local memory window, so use backend results as filter base.
+    const baseItems = shouldUseBackendBase ? backendSearchResults : items;
 
     let result = baseItems.filter(item => {
       scannedItems += 1;
@@ -518,7 +523,7 @@ function HistoryStream({ style }) {
       selectedType,
       showFavoritesOnly,
       showPinnedOnly,
-      backendSearch: hasSearch && backendSearchResults != null,
+      backendSearch: shouldUseBackendBase,
     };
 
     return result;

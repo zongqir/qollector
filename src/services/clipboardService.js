@@ -36,6 +36,6 @@ export const getHistoryGroupCounts = async (startToday, startYesterday, startLas
   return invoke('get_history_group_counts', { startToday, startYesterday, startLast7 });
 };
 
-export const searchItems = async (query, limit = 200) => {
-  return invoke('search_items', { query, limit });
+export const searchItems = async (query, limit = 200, filters = undefined) => {
+  return invoke('search_items', { query, limit, filters });
 };
