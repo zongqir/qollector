@@ -940,7 +940,7 @@ function App() {
                 onClick={downloadAndInstall}
                 style={{ background: '#fff', color: '#3b82f6', border: 'none', borderRadius: 6, padding: '4px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
               >
-                {t('update.downloading').replace('...', '')}
+                {t('update.downloadNow')}
               </button>
             </>
           )}

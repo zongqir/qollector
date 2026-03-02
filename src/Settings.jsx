@@ -1705,7 +1705,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                       className="save-btn"
                       style={{ fontSize: 13 }}
                     >
-                      {t('update.downloading').replace('...', '')}
+                      {t('update.downloadNow')}
                     </button>
                   </div>
                 )}

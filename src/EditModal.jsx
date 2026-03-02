@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
-import { X, Check, Plus, Pin, PinOff } from 'lucide-react';
+import { X, Check, Plus, Pin, PinOff, Tag } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './EditModal.css';
 
@@ -20,10 +20,16 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const [note, setNote] = useState('');
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState('');
+  const [isTagInputFocused, setIsTagInputFocused] = useState(false);
+  const [activeTagSuggestionIndex, setActiveTagSuggestionIndex] = useState(-1);
+  const [showContentEditor, setShowContentEditor] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
   const [noteColor, setNoteColor] = useState('default');
   const textareaRef = useRef(null);
+  const tagSuggestionsRef = useRef(null);
+  const contentEditorRef = useRef(null);
+  const items = useAppStore(s => s.items);
 
   // 拖拽状态
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -87,14 +93,120 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
       setNote('');
       setTags([]);
     }
+    setShowContentEditor(false);
+    setNewTag('');
+    setIsTagInputFocused(false);
+    setActiveTagSuggestionIndex(-1);
   }, [item, mode]);
 
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag('');
+  useEffect(() => {
+    if (!showContentEditor) return;
+    const timer = setTimeout(() => {
+      contentEditorRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [showContentEditor]);
+
+  const rankedUserTags = useMemo(() => {
+    const statsByTag = new Map();
+    items.forEach((candidate) => {
+      const rankTimestamp = Math.max(candidate.updated_at || 0, candidate.created_at || 0);
+      let parsedTags = [];
+      try {
+        parsedTags = candidate.tags ? JSON.parse(candidate.tags) : [];
+      } catch {
+        parsedTags = [];
+      }
+      const uniqueUserTags = new Set(
+        parsedTags.filter(tag => typeof tag === 'string' && !tag.startsWith('AI:')),
+      );
+      uniqueUserTags.forEach((tag) => {
+        const normalized = tag.trim();
+        if (!normalized) return;
+        const existing = statsByTag.get(normalized);
+        if (existing) {
+          existing.count += 1;
+          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
+          return;
+        }
+        statsByTag.set(normalized, { tag: normalized, count: 1, lastUsedAt: rankTimestamp });
+      });
+    });
+    return Array.from(statsByTag.values())
+      .sort((a, b) => (
+        b.count - a.count
+        || b.lastUsedAt - a.lastUsedAt
+        || a.tag.localeCompare(b.tag)
+      ))
+      .map(stat => stat.tag);
+  }, [items]);
+
+  const filteredTagSuggestions = useMemo(() => {
+    const normalizedQuery = newTag.trim().toLowerCase();
+    const existingTags = new Set(tags.map(tag => String(tag).trim().toLowerCase()));
+    const availableTags = rankedUserTags.filter(tag => !existingTags.has(tag.toLowerCase()));
+
+    if (!normalizedQuery) return availableTags.slice(0, 8);
+
+    const prefixMatches = [];
+    const partialMatches = [];
+    availableTags.forEach((tag) => {
+      const lowered = tag.toLowerCase();
+      if (!lowered.includes(normalizedQuery)) return;
+      if (lowered.startsWith(normalizedQuery)) {
+        prefixMatches.push(tag);
+      } else {
+        partialMatches.push(tag);
+      }
+    });
+    return [...prefixMatches, ...partialMatches].slice(0, 8);
+  }, [newTag, tags, rankedUserTags]);
+
+  const activeTagSuggestion = activeTagSuggestionIndex >= 0
+    ? filteredTagSuggestions[activeTagSuggestionIndex] || null
+    : null;
+
+  useEffect(() => {
+    if (!isTagInputFocused || filteredTagSuggestions.length === 0) {
+      setActiveTagSuggestionIndex(-1);
+      return;
     }
-  };
+    setActiveTagSuggestionIndex((current) => (
+      current >= filteredTagSuggestions.length ? filteredTagSuggestions.length - 1 : current
+    ));
+  }, [isTagInputFocused, filteredTagSuggestions.length]);
+
+  useEffect(() => {
+    if (!isTagInputFocused || activeTagSuggestionIndex < 0) return;
+    const activeItem = tagSuggestionsRef.current?.querySelector(
+      `[data-suggestion-index="${activeTagSuggestionIndex}"]`,
+    );
+    activeItem?.scrollIntoView?.({ block: 'nearest' });
+  }, [isTagInputFocused, activeTagSuggestionIndex]);
+
+  const commitTag = useCallback((value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return false;
+
+    const exists = tags.some(tag => String(tag).trim().toLowerCase() === normalized.toLowerCase());
+    if (exists) return false;
+
+    setTags(prev => [...prev, normalized]);
+    setNewTag('');
+    setActiveTagSuggestionIndex(-1);
+    return true;
+  }, [tags]);
+
+  const handleAddTag = useCallback(() => {
+    if (activeTagSuggestion) {
+      commitTag(activeTagSuggestion);
+      return;
+    }
+    commitTag(newTag);
+  }, [activeTagSuggestion, commitTag, newTag]);
 
   const handleRemoveTag = (tagToRemove) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
@@ -139,15 +251,46 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
     }
   };
 
-  const handleTagKeyDown = (e) => {
+  const handleTagKeyDown = useCallback((e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (filteredTagSuggestions.length === 0) return;
+      e.preventDefault();
+      setActiveTagSuggestionIndex((current) => {
+        if (e.key === 'ArrowDown') {
+          if (current < 0) return 0;
+          return Math.min(current + 1, filteredTagSuggestions.length - 1);
+        }
+        if (current < 0) return filteredTagSuggestions.length - 1;
+        return Math.max(current - 1, 0);
+      });
+      return;
+    }
+
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleAddTag();
+      if (activeTagSuggestion) {
+        commitTag(activeTagSuggestion);
+        return;
+      }
+      commitTag(newTag);
+      return;
     }
-  };
+
+    if (e.key === 'Escape' && activeTagSuggestionIndex >= 0) {
+      e.preventDefault();
+      setActiveTagSuggestionIndex(-1);
+    }
+  }, [
+    filteredTagSuggestions.length,
+    activeTagSuggestion,
+    activeTagSuggestionIndex,
+    commitTag,
+    newTag,
+  ]);
 
   const isNewMode = mode === 'new';
   const canEdit = isNewMode || (item && item.type_ !== 'image');
+  const contentPreview = (typeof content === 'string' ? content : '').trim();
 
   if (isNewMode) {
     const currentColor = NOTE_COLORS.find(c => c.id === noteColor) || NOTE_COLORS[0];
@@ -239,64 +382,69 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
 
   return (
     <div className="edit-modal-overlay" onClick={onCancel}>
-      <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={`edit-modal ${showContentEditor ? 'content-expanded' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="edit-modal-header">
           <h3>{isNewMode ? t('editModal.newTitle') : t('editModal.editTitle')}</h3>
           <button onClick={onCancel} className="edit-modal-close"><X size={20} /></button>
         </div>
 
         <div className="edit-modal-body">
-          {/* 内容输入 */}
-          {canEdit && (
-            <div className="edit-modal-field">
-              <label className="edit-modal-label">{t('editModal.content')}</label>
-              <textarea
-                className="edit-modal-textarea edit-modal-textarea-content"
-                placeholder={t('editModal.contentPlaceholder')}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                onKeyDown={handleKeyDown}
-                autoFocus
-                rows={10}
-              />
-            </div>
-          )}
-
-          {/* 备注和标签在一行 */}
-          <div className="edit-modal-row">
-            {/* 备注输入 */}
-            <div className="edit-modal-field edit-modal-field-note">
-              <label className="edit-modal-label">{t('editModal.note')}</label>
-              <input
-                type="text"
-                className="edit-modal-input"
-                placeholder={t('editModal.notePlaceholder')}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-
-            {/* 标签管理 */}
-            <div className="edit-modal-field edit-modal-field-tags">
-              <label className="edit-modal-label">{t('editModal.tags')}</label>
-              <div className="edit-modal-tag-input-wrapper">
-                <input
-                  type="text"
-                  className="edit-modal-tag-input"
-                  placeholder={t('editModal.addTagPlaceholder')}
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                />
-                <button onClick={handleAddTag} className="edit-modal-tag-add-btn">
-                  +
-                </button>
-              </div>
-            </div>
+          <div className="edit-modal-field edit-modal-field-note-primary">
+            <label className="edit-modal-label">{t('editModal.note')}</label>
+            <textarea
+              className="edit-modal-textarea edit-modal-textarea-note"
+              placeholder={t('editModal.notePlaceholder')}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              rows={6}
+            />
+            <div className="edit-modal-field-hint">{t('editModal.notePrimaryHint')}</div>
           </div>
 
-          {/* 已有标签显示 */}
+          <div className="edit-modal-field edit-modal-field-tags">
+            <label className="edit-modal-label">{t('editModal.tags')}</label>
+            <div className="edit-modal-tag-input-wrapper">
+              <input
+                type="text"
+                className="edit-modal-tag-input"
+                placeholder={t('editModal.addTagPlaceholder')}
+                value={newTag}
+                onChange={(e) => {
+                  setNewTag(e.target.value);
+                  setActiveTagSuggestionIndex(-1);
+                }}
+                onKeyDown={handleTagKeyDown}
+                onFocus={() => setIsTagInputFocused(true)}
+                onBlur={() => {
+                  setTimeout(() => setIsTagInputFocused(false), 120);
+                }}
+              />
+              <button onClick={handleAddTag} className="edit-modal-tag-add-btn">
+                +
+              </button>
+            </div>
+            {isTagInputFocused && filteredTagSuggestions.length > 0 && (
+              <div className="edit-modal-tag-suggestions" ref={tagSuggestionsRef}>
+                {filteredTagSuggestions.map((tag, index) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    data-suggestion-index={index}
+                    className={`edit-modal-tag-suggestion-item ${activeTagSuggestionIndex === index ? 'active' : ''}`}
+                    onMouseEnter={() => setActiveTagSuggestionIndex(index)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => commitTag(tag)}
+                  >
+                    <Tag size={12} className="edit-modal-tag-suggestion-icon" />
+                    <span>{tag}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {tags.length > 0 && (
             <div className="edit-modal-tags">
               {tags.map((tag, index) => (
@@ -312,6 +460,36 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
               ))}
             </div>
           )}
+
+          {canEdit && (
+            <div ref={contentEditorRef} className="edit-modal-field edit-modal-field-content-secondary">
+              <div className="edit-modal-content-toggle-row">
+                <label className="edit-modal-label">{t('editModal.contentOptional')}</label>
+                <button
+                  type="button"
+                  className="edit-modal-content-toggle-btn"
+                  onClick={() => setShowContentEditor(prev => !prev)}
+                >
+                  {showContentEditor ? t('editModal.collapseContentEditor') : t('editModal.expandContentEditor')}
+                </button>
+              </div>
+
+              {!showContentEditor ? (
+                <div className="edit-modal-content-preview">
+                  {contentPreview || t('editModal.contentSecondaryHint')}
+                </div>
+              ) : (
+                <textarea
+                  className="edit-modal-textarea edit-modal-textarea-content"
+                  placeholder={t('editModal.contentPlaceholder')}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={8}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         <div className="edit-modal-footer">
@@ -325,7 +503,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
               {t('edit.cancel')}
             </button>
             <button onClick={handleSave} className="edit-modal-btn submit">
-              {t('edit.save')}
+              {t('editModal.savePrimary')}
             </button>
           </div>
         </div>

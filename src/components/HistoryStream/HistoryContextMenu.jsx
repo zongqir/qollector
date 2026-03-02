@@ -109,7 +109,7 @@ function HistoryContextMenu({
       { type: 'separator' },
       { key: 'favorite', label: item.is_favorite ? t('item.unfavorite') : t('item.favorite'), icon: Star },
       { key: 'pin', label: item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems }), icon: Inbox },
-      { key: 'editNote', label: item.user_note ? t('item.editNote') : t('item.addNote'), icon: Pencil },
+      { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
       { type: 'separator' },
       canOpenInNewWindow ? { key: 'openInNewWindow', label: t('item.openInNewWindow'), icon: ExternalLink } : null,
       canOpenItem
