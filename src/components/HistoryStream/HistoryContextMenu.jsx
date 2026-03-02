@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  CheckSquare,
   ClipboardPaste,
   Copy,
   ExternalLink,
@@ -103,6 +104,7 @@ function HistoryContextMenu({
     return normalizeMenuEntries([
       { key: 'copy', label: t('item.copy'), icon: Copy, shortcut: `${modifierKey}+C` },
       { key: 'copyPlainText', label: t('item.copyPlainText'), icon: FileText },
+      { key: 'multiSelect', label: t('history.contextMenu.multiSelect'), icon: CheckSquare },
       canQuickPaste
         ? { key: 'quickPaste', label: t('history.contextMenu.quickPaste'), icon: ClipboardPaste, shortcut: 'Enter' }
         : null,

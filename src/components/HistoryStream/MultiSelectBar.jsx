@@ -17,6 +17,7 @@ function MultiSelectBar({
   batchFlagPending,
   batchAiRunningTask,
   onDeleteSelected,
+  onClearSelection,
   batchTagEditorRef,
   batchTagInput,
   onBatchTagInputChange,
@@ -36,6 +37,7 @@ function MultiSelectBar({
 }) {
   const { t } = useTranslation();
   const activeFeedback = compareFeedback || batchTagFeedback || batchAiFeedback;
+  const ACTION_ICON_SIZE = 16;
 
   return (
     <div
@@ -43,9 +45,14 @@ function MultiSelectBar({
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <span className="multi-select-count">
-        {t('multiSelect.selected', { count: selectedCount })}
-      </span>
+      <div className="multi-select-meta">
+        <span className="multi-select-count">
+          {t('multiSelect.selected', { count: selectedCount })}
+        </span>
+        <span className="multi-select-hint">
+          {t('multiSelect.selectHint')}
+        </span>
+      </div>
       <div className="multi-select-actions">
         <button
           className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
@@ -55,7 +62,7 @@ function MultiSelectBar({
           }}
           title={t('multiSelect.addTag')}
         >
-          <Tag size={14} />
+          <Tag size={ACTION_ICON_SIZE} />
           <span>{t('multiSelect.addTag')}</span>
         </button>
         <button
@@ -67,7 +74,7 @@ function MultiSelectBar({
           disabled={batchFlagPending || batchAiRunningTask != null}
           title={allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}
         >
-          <Star size={14} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
+          <Star size={ACTION_ICON_SIZE} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
           <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
         </button>
         <button
@@ -79,7 +86,7 @@ function MultiSelectBar({
           disabled={batchFlagPending || batchAiRunningTask != null}
           title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
         >
-          <Inbox size={14} />
+          <Inbox size={ACTION_ICON_SIZE} />
           <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
         </button>
         <button
@@ -90,7 +97,7 @@ function MultiSelectBar({
           }}
           title={t('multiSelect.mergeCopy')}
         >
-          <Copy size={14} />
+          <Copy size={ACTION_ICON_SIZE} />
           <span>{t('multiSelect.mergeCopy')}</span>
         </button>
         <button
@@ -102,7 +109,7 @@ function MultiSelectBar({
           disabled={!canCompareSelected}
           title={t('multiSelect.compare')}
         >
-          <Columns2 size={14} />
+          <Columns2 size={ACTION_ICON_SIZE} />
           <span>{t('multiSelect.compare')}</span>
         </button>
         {canRunBatchAi && (
@@ -116,7 +123,7 @@ function MultiSelectBar({
               disabled={batchFlagPending || batchAiRunningTask != null}
               title={t('multiSelect.batchSummarize')}
             >
-              <Bot size={14} />
+              <Bot size={ACTION_ICON_SIZE} />
               <span>{t('multiSelect.batchSummarize')}</span>
             </button>
             <button
@@ -128,7 +135,7 @@ function MultiSelectBar({
               disabled={batchFlagPending || batchAiRunningTask != null}
               title={t('multiSelect.batchRewrite')}
             >
-              <Wand2 size={14} />
+              <Wand2 size={ACTION_ICON_SIZE} />
               <span>{t('multiSelect.batchRewrite')}</span>
             </button>
           </>
@@ -141,8 +148,19 @@ function MultiSelectBar({
           }}
           title={t('multiSelect.delete')}
         >
-          <Trash2 size={14} />
+          <Trash2 size={ACTION_ICON_SIZE} />
           <span>{t('multiSelect.delete')}</span>
+        </button>
+        <button
+          className="multi-select-btn clear"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClearSelection?.();
+          }}
+          title={t('multiSelect.clearSelection')}
+        >
+          <X size={ACTION_ICON_SIZE} />
+          <span>{t('multiSelect.clearSelection')}</span>
         </button>
       </div>
       {showBatchTagEditor && (

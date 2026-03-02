@@ -99,7 +99,11 @@ export default function useHistoryRowInteractions({
     }
 
     if (selectedItemIds.length > 0) {
-      clearSelection();
+      e.preventDefault();
+      toggleSelectItem(item.id);
+      setFocusedIndex(index);
+      selectionAnchorIndexRef.current = index;
+      return;
     }
 
     selectionAnchorIndexRef.current = index;

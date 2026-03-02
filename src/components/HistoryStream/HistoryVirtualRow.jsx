@@ -11,6 +11,7 @@ function HistoryVirtualRow({
   searchExplain,
   isSelected,
   isMultiSelected,
+  isSelectionMode,
   isFocused,
   isExpandedPreview,
   shouldUseHoverPreview,
@@ -30,6 +31,7 @@ function HistoryVirtualRow({
   onRevealInFolder,
   onSetCardBackground,
   onTagClick,
+  onToggleMultiSelect,
   supportsNativeExternalDrag,
   onCloseInlinePreview,
 }) {
@@ -71,6 +73,7 @@ function HistoryVirtualRow({
         item={item}
         isSelected={cardSelected}
         isMultiSelected={isMultiSelected}
+        isSelectionMode={isSelectionMode}
         isFocused={isFocused}
         isExpandedPreview={isExpandedPreview}
         isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
@@ -85,6 +88,7 @@ function HistoryVirtualRow({
         onRevealInFolder={onRevealInFolder}
         onSetCardBackground={onSetCardBackground}
         onTagClick={onTagClick}
+        onToggleMultiSelect={() => onToggleMultiSelect?.(item, index)}
       />
       {shouldUseHoverPreview && isExpandedPreview && (
         <InlinePreviewPanel item={item} onRequestClose={() => onCloseInlinePreview?.(item.id)} />

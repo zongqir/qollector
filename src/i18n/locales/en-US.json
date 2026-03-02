@@ -696,6 +696,9 @@
   },
   "multiSelect": {
     "selected": "{{count}} selected",
+    "selectHint": "Tip: use the card checkbox, or hold Ctrl/Cmd and click to keep selecting",
+    "selectItem": "Select item",
+    "unselectItem": "Unselect item",
     "addTag": "Add Tag",
     "addTagPlaceholder": "Enter tag name...",
     "addTagHint": "Press Enter to apply tag. Use Up/Down to choose suggestions.",
@@ -1004,7 +1007,8 @@
     "backToTop": "Back to latest",
     "contextMenu": {
       "ariaLabel": "History item actions menu",
-      "quickPaste": "Copy and quick paste"
+      "quickPaste": "Copy and quick paste",
+      "multiSelect": "Enter multi-select mode"
     },
     "groups": {
       "today": "Today",

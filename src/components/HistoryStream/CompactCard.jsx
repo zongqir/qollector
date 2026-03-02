@@ -40,6 +40,7 @@ function CompactCard({
   item,
   isSelected,
   isMultiSelected,
+  isSelectionMode,
   isFocused,
   isExpandedPreview,
   isCopied,
@@ -54,6 +55,7 @@ function CompactCard({
   onRevealInFolder,
   onSetCardBackground,
   onTagClick,
+  onToggleMultiSelect,
 }) {
   const { t, i18n } = useTranslation();
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
@@ -203,6 +205,28 @@ function CompactCard({
       onDragStart={(e) => onDragStart && onDragStart(item, e)}
     >
       <div className="compact-card-header">
+        {isSelectionMode && (
+          <button
+            type="button"
+            className={`compact-card-select-toggle ${isMultiSelected ? 'checked' : ''}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleMultiSelect?.();
+            }}
+            title={isMultiSelected ? t('multiSelect.unselectItem') : t('multiSelect.selectItem')}
+            aria-label={isMultiSelected ? t('multiSelect.unselectItem') : t('multiSelect.selectItem')}
+            aria-pressed={isMultiSelected}
+          >
+            <span className="compact-card-select-indicator">
+              {isMultiSelected ? <Check size={10} /> : null}
+            </span>
+          </button>
+        )}
         <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
         <span className="compact-card-time">
           {timeLabel}

@@ -650,6 +650,21 @@
   white-space: nowrap;
 }
 
+.multi-select-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.multi-select-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .multi-select-actions {
   display: flex;
   gap: 6px;
@@ -661,7 +676,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
+  padding: 6px 11px;
   border: 1px solid var(--border-btn);
   border-radius: 6px;
   background: var(--btn-bg);
@@ -670,6 +685,7 @@
   line-height: 1;
   cursor: pointer;
   transition: all var(--motion-fast) var(--ease-standard);
+  min-height: 34px;
 }
 
 .multi-select-btn:hover:not(:disabled) {
@@ -722,6 +738,15 @@
   background: var(--state-error-bg);
 }
 
+.multi-select-btn.clear {
+  border-color: var(--border-btn);
+}
+
+.multi-select-btn.clear:hover:not(:disabled) {
+  color: var(--accent-color);
+  border-color: var(--accent-border-soft);
+}
+
 @container (max-width: 860px) {
   .multi-select-actions {
     flex-wrap: nowrap;
@@ -736,8 +761,8 @@
   }
 
   .multi-select-btn {
-    min-width: 28px;
-    padding: 5px 6px;
+    min-width: 34px;
+    padding: 6px 7px;
     justify-content: center;
     gap: 0;
   }
@@ -917,6 +942,10 @@
     flex-shrink: 0;
   }
 
+  .multi-select-hint {
+    display: none;
+  }
+
   .multi-select-actions {
     width: auto;
     flex: 1;
@@ -1013,6 +1042,44 @@
 .compact-card-header svg {
   flex-shrink: 0;
   opacity: 0.6;
+}
+
+.compact-card-select-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--border-btn) 85%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
+  color: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--motion-fast) var(--ease-standard);
+}
+
+.compact-card-select-toggle:hover {
+  border-color: color-mix(in srgb, var(--selection-border) 85%, transparent);
+  background: color-mix(in srgb, var(--selection-bg-strong) 38%, transparent);
+}
+
+.compact-card-select-toggle.checked {
+  color: var(--selection-contrast);
+  border-color: color-mix(in srgb, var(--selection-border) 92%, transparent);
+  background: color-mix(in srgb, var(--selection-bg-strong) 92%, transparent);
+}
+
+.compact-card-select-toggle svg {
+  opacity: 1;
+}
+
+.compact-card-select-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .compact-card-time {
@@ -3233,8 +3300,8 @@
 }
 
 .multi-select-btn {
-  min-height: 30px;
-  padding: 5px 10px;
+  min-height: 34px;
+  padding: 6px 11px;
   border-radius: 8px;
   border-color: color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
   background: color-mix(in srgb, var(--surface-muted) 80%, transparent);

@@ -681,6 +681,9 @@
   },
   "multiSelect": {
     "selected": "已选 {{count}} 项",
+    "selectHint": "提示：点击卡片左上角复选框，或按住 Ctrl/Cmd 点击继续多选",
+    "selectItem": "选择此项",
+    "unselectItem": "取消选择此项",
     "addTag": "添加标签",
     "addTagPlaceholder": "输入标签名...",
     "addTagHint": "按 Enter 应用标签，按上下方向键选择建议",
@@ -989,7 +992,8 @@
     "backToTop": "回到最新",
     "contextMenu": {
       "ariaLabel": "历史条目操作菜单",
-      "quickPaste": "复制并尝试快速粘贴"
+      "quickPaste": "复制并尝试快速粘贴",
+      "multiSelect": "进入多选模式"
     },
     "groups": {
       "today": "今天",

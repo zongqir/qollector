@@ -611,6 +611,19 @@ function HistoryStream({ style }) {
           await handleCopyAndAutoPaste(currentItem, 'history');
           closeContextMenu();
           return;
+        case 'multiSelect': {
+          const nextSelected = selectedItemIds.includes(currentItem.id)
+            ? selectedItemIds
+            : [...selectedItemIds, currentItem.id];
+          setSelectedItemIds(nextSelected);
+          const contextIndex = filteredItems.findIndex(candidate => candidate.id === currentItem.id);
+          if (contextIndex >= 0) {
+            setFocusedIndex(contextIndex);
+            selectionAnchorIndexRef.current = contextIndex;
+          }
+          closeContextMenu();
+          return;
+        }
         case 'favorite':
           await toggleFavorite(currentItem);
           closeContextMenu();
@@ -650,8 +663,11 @@ function HistoryStream({ style }) {
   }, [
     contextMenuState,
     filteredItems,
+    selectedItemIds,
     copySelectedItemsMerged,
     clearSelection,
+    setSelectedItemIds,
+    setFocusedIndex,
     armDeleteConfirm,
     deleteSelectedItems,
     handleCopy,
@@ -1228,6 +1244,7 @@ function HistoryStream({ style }) {
       searchExplain: searchExplainById.get(item.id) || null,
       isSelected: panelMode === 'preview' && previewItem?.id === item.id,
       isExpandedPreview: shouldUseHoverPreview && expandedPreviewItemId === item.id,
+      isSelectionMode: selectedCount > 0,
       isMultiSelected: selectedItemIdSet.has(item.id),
       isFocused: focusedIndex === index,
     };
@@ -1239,9 +1256,19 @@ function HistoryStream({ style }) {
     previewItem?.id,
     shouldUseHoverPreview,
     expandedPreviewItemId,
+    selectedCount,
     selectedItemIdSet,
     focusedIndex,
   ]);
+
+  const handleToggleMultiSelect = useCallback((item, index) => {
+    if (!item?.id) return;
+    toggleSelectItem(item.id);
+    if (typeof index === 'number' && Number.isFinite(index)) {
+      setFocusedIndex(index);
+      selectionAnchorIndexRef.current = index;
+    }
+  }, [toggleSelectItem, setFocusedIndex]);
 
   const rowCommonProps = useMemo(() => ({
     rowGap,
@@ -1258,6 +1285,7 @@ function HistoryStream({ style }) {
     onRevealInFolder: handleRevealInFolder,
     onSetCardBackground: setCardBackground,
     onTagClick: handleTagClick,
+    onToggleMultiSelect: handleToggleMultiSelect,
     shouldUseHoverPreview,
     onCloseInlinePreview: clearExpandedPreview,
     onCardContextMenu: handleCardContextMenu,
@@ -1275,6 +1303,7 @@ function HistoryStream({ style }) {
     handleRevealInFolder,
     setCardBackground,
     handleTagClick,
+    handleToggleMultiSelect,
     shouldUseHoverPreview,
     clearExpandedPreview,
     handleCardContextMenu,
@@ -1522,6 +1551,7 @@ function HistoryStream({ style }) {
     batchFlagPending,
     batchAiRunningTask,
     onDeleteSelected: deleteSelectedItems,
+    onClearSelection: clearSelection,
     batchTagEditorRef,
     batchTagInput,
     onBatchTagInputChange: handleBatchTagInputChange,
@@ -1554,6 +1584,7 @@ function HistoryStream({ style }) {
     batchFlagPending,
     batchAiRunningTask,
     deleteSelectedItems,
+    clearSelection,
     batchTagEditorRef,
     batchTagInput,
     handleBatchTagInputChange,
