@@ -60,7 +60,7 @@
         "resizable": true,
         "fullscreen": false,
         "visible": false,
-        "devtools": false,
+        "devtools": true,
         "decorations": false,
         "transparent": true,
         "backgroundColor": "#00000000",
