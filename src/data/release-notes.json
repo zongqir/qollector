@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.2.5",
+      "publishedAt": "2026-03-03",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-5",
+      "summary": {
+        "zh-CN": "新增历史右键菜单与升级提示板，并优化工作区检索链路与编辑体验。",
+        "en-US": "Added a richer history context menu and in-app release notes, with better workspace search/favorites coverage and editing flow."
+      },
+      "highlights": {
+        "zh-CN": [
+          "新增历史卡片右键菜单，支持复制/纯文本复制、置顶、编辑备注标签、删除等快捷操作。",
+          "多选场景加入右键批量动作（合并复制、批量删除二次确认），批处理效率更高。",
+          "新增版本更新提示板：升级后自动展示本次更新，并可一键跳转完整更新日志。",
+          "优化编辑弹窗交互与视觉细节，快速新增、保存反馈与操作路径更顺滑。",
+          "优化工作区数据检索：搜索与收藏筛选走后端过滤，低内存窗口下结果更完整、更稳定。"
+        ],
+        "en-US": [
+          "Added a context menu for history cards with quick actions for copy/copy as plain text, pin, note/tag editing, and delete.",
+          "Extended right-click support to multi-select actions, including merged copy and guarded batch delete confirmation.",
+          "Introduced an in-app What's New panel that appears after upgrades and links directly to the full changelog.",
+          "Refined edit modal interactions and visual details to make quick add, save feedback, and editing flows smoother.",
+          "Improved workspace retrieval: search and favorites now use backend filtering for more complete and stable results under low-memory windows."
+        ]
+      }
+    },
+    {
       "version": "0.2.4",
       "publishedAt": "2026-03-02",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-4",
