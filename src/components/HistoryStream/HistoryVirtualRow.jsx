@@ -21,6 +21,7 @@ function HistoryVirtualRow({
   timeTick,
   onCardClick,
   onCardDoubleClick,
+  onCardContextMenu,
   onDragStart,
   onStartExternalDrag,
   onTogglePin,
@@ -54,9 +55,9 @@ function HistoryVirtualRow({
         onCardClick(item, index, e);
       }}
       onContextMenu={(e) => {
-        if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
         e.preventDefault();
         e.stopPropagation();
+        onCardContextMenu?.(item, index, e);
       }}
       onDoubleClick={(e) => onCardDoubleClick(item, e)}
     >

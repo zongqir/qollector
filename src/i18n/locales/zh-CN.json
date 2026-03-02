@@ -965,6 +965,10 @@
   },
   "history": {
     "backToTop": "回到最新",
+    "contextMenu": {
+      "ariaLabel": "历史条目操作菜单",
+      "quickPaste": "复制并尝试快速粘贴"
+    },
     "groups": {
       "today": "今天",
       "yesterday": "昨天",

@@ -198,6 +198,110 @@
   min-width: 0;
 }
 
+.history-context-menu {
+  position: fixed;
+  z-index: 1200;
+  width: 220px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 5px;
+  background: color-mix(in srgb, var(--surface-strong) 96%, transparent);
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--shadow-xl) 76%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 30%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.history-context-menu-header {
+  min-height: 22px;
+  padding: 3px 8px 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
+  margin: 1px 2px 4px;
+}
+
+.history-context-menu-item {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: left;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard);
+}
+
+.history-context-menu-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.history-context-menu-icon {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+}
+
+.history-context-menu-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-context-menu-shortcut {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+
+.history-context-menu-item:hover {
+  background: color-mix(in srgb, var(--accent-light) 44%, transparent);
+  border-color: color-mix(in srgb, var(--accent-color) 24%, transparent);
+  color: var(--text-primary);
+}
+
+.history-context-menu-item:hover .history-context-menu-icon {
+  color: color-mix(in srgb, var(--text-primary) 86%, transparent);
+}
+
+.history-context-menu-item.danger {
+  color: var(--state-error-fg);
+}
+
+.history-context-menu-item.danger .history-context-menu-icon,
+.history-context-menu-item.danger .history-context-menu-shortcut {
+  color: color-mix(in srgb, var(--state-error-fg) 84%, transparent);
+}
+
+.history-context-menu-item.danger:hover {
+  background: var(--state-error-bg);
+  border-color: var(--state-error-border);
+}
+
+.history-context-menu-item.confirm {
+  background: color-mix(in srgb, var(--state-error-bg) 70%, transparent);
+  border-color: var(--state-error-border);
+}
+
+.history-context-menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+}
+
 /* Inline preview under history row card, visually merged as one expanded card */
 .history-inline-preview {
   margin-top: 0;

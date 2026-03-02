@@ -980,6 +980,10 @@
   },
   "history": {
     "backToTop": "Back to latest",
+    "contextMenu": {
+      "ariaLabel": "History item actions menu",
+      "quickPaste": "Copy and quick paste"
+    },
     "groups": {
       "today": "Today",
       "yesterday": "Yesterday",

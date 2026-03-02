@@ -5,14 +5,17 @@ import { Virtuoso } from 'react-virtuoso';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
 import HistoryVirtualRow from './HistoryVirtualRow';
+import HistoryContextMenu from './HistoryContextMenu';
 import MultiSelectBar from './MultiSelectBar';
 import useHistoryEmptyDiagnostic from './hooks/useHistoryEmptyDiagnostic';
 import useHistoryBatchActions from './hooks/useHistoryBatchActions';
+import useHistoryContextMenu from './hooks/useHistoryContextMenu';
 import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { getHistoryGroupCounts, searchItems } from '../../services/clipboardService';
+import { openHistoryEditorWindow } from '../../services/windowService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -238,6 +241,7 @@ function HistoryStream({ style }) {
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const switchToCollection = useAppStore(s => s.switchToCollection);
   const loadMore = useAppStore(s => s.loadMore);
   const loadItems = useAppStore(s => s.loadItems);
@@ -254,6 +258,8 @@ function HistoryStream({ style }) {
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
   const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
+  const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
+  const deleteItem = useAppStore(s => s.deleteItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
@@ -493,6 +499,134 @@ function HistoryStream({ style }) {
     if (filteredItems.some(candidate => candidate.id === expandedPreviewItemId)) return;
     clearExpandedPreview();
   }, [shouldUseHoverPreview, expandedPreviewItemId, filteredItems, clearExpandedPreview]);
+
+  const {
+    historyRootRef,
+    contextMenuRef,
+    contextMenuState,
+    openContextMenu,
+    closeContextMenu,
+    armDeleteConfirm,
+  } = useHistoryContextMenu({
+    filteredItems,
+    selectedItemIds,
+    selectionAnchorIndexRef,
+    setSelectedItemIds,
+    setFocusedIndex,
+  });
+
+  const handleCardContextMenu = useCallback((item, index, event) => {
+    openContextMenu(item, index, event);
+  }, [openContextMenu]);
+
+  const handleContextMenuAction = useCallback(async (actionKey) => {
+    const currentItem = contextMenuState?.item;
+    if (!currentItem) return;
+
+    const toPlainText = (item) => {
+      if (!item) return '';
+      if (item.type_ === 'image') {
+        return normalizeText(item.ocr_text || item.content);
+      }
+      return normalizeText(item.content);
+    };
+
+    try {
+      if (contextMenuState?.isMulti) {
+        switch (actionKey) {
+          case 'copyMerged':
+            await copySelectedItemsMerged(filteredItems);
+            closeContextMenu();
+            return;
+          case 'clearSelection':
+            clearSelection();
+            closeContextMenu();
+            return;
+          case 'deleteSelected':
+            if (!armDeleteConfirm('deleteSelected')) return;
+            await deleteSelectedItems();
+            closeContextMenu();
+            return;
+          default:
+            closeContextMenu();
+            return;
+        }
+      }
+
+      switch (actionKey) {
+        case 'copy':
+          await handleCopy(currentItem, 'history');
+          closeContextMenu();
+          return;
+        case 'copyPlainText': {
+          const plainText = toPlainText(currentItem);
+          if (plainText) {
+            await handleCopyPlainText(plainText, 'history');
+          } else {
+            await handleCopy(currentItem, 'history');
+          }
+          closeContextMenu();
+          return;
+        }
+        case 'quickPaste':
+          await handleCopyAndAutoPaste(currentItem, 'history');
+          closeContextMenu();
+          return;
+        case 'favorite':
+          await toggleFavorite(currentItem);
+          closeContextMenu();
+          return;
+        case 'pin':
+          await togglePin(currentItem);
+          closeContextMenu();
+          return;
+        case 'editNote':
+          openEditModal(currentItem);
+          closeContextMenu();
+          return;
+        case 'openInNewWindow':
+          await openHistoryEditorWindow(currentItem.id, t);
+          closeContextMenu();
+          return;
+        case 'open':
+          await handleOpenItem(currentItem);
+          closeContextMenu();
+          return;
+        case 'reveal':
+          await handleRevealInFolder(currentItem);
+          closeContextMenu();
+          return;
+        case 'delete':
+          if (!armDeleteConfirm('delete')) return;
+          await deleteItem(currentItem);
+          closeContextMenu();
+          return;
+        default:
+          closeContextMenu();
+      }
+    } catch (error) {
+      console.error('[HistoryContextMenu] action failed:', actionKey, error);
+      closeContextMenu();
+    }
+  }, [
+    contextMenuState,
+    filteredItems,
+    copySelectedItemsMerged,
+    clearSelection,
+    armDeleteConfirm,
+    deleteSelectedItems,
+    handleCopy,
+    handleCopyPlainText,
+    handleCopyAndAutoPaste,
+    toggleFavorite,
+    togglePin,
+    openEditModal,
+    t,
+    handleOpenItem,
+    handleRevealInFolder,
+    deleteItem,
+    closeContextMenu,
+  ]);
 
   const searchTerms = useMemo(() => tokenizeSearchQuery(debouncedSearchQuery), [debouncedSearchQuery]);
 
@@ -954,6 +1088,7 @@ function HistoryStream({ style }) {
     onTagClick: handleTagClick,
     shouldUseHoverPreview,
     onCloseInlinePreview: clearExpandedPreview,
+    onCardContextMenu: handleCardContextMenu,
   }), [
     rowGap,
     t,
@@ -970,6 +1105,7 @@ function HistoryStream({ style }) {
     handleTagClick,
     shouldUseHoverPreview,
     clearExpandedPreview,
+    handleCardContextMenu,
   ]);
 
   const renderVirtualRow = useCallback((index) => {
@@ -1264,8 +1400,16 @@ function HistoryStream({ style }) {
     batchAiFeedback,
   ]);
 
+  const handleHistoryStreamClick = useCallback(() => {
+    if (contextMenuState) {
+      closeContextMenu();
+      return;
+    }
+    handleStreamClick();
+  }, [contextMenuState, closeContextMenu, handleStreamClick]);
+
   return (
-    <div className="history-stream" style={style} onClick={handleStreamClick}>
+    <div ref={historyRootRef} className="history-stream" style={style} onClick={handleHistoryStreamClick}>
       <SearchBar {...searchBarProps} />
 
       <div className="history-stream-content">
@@ -1384,6 +1528,15 @@ function HistoryStream({ style }) {
           </button>
         )}
       </div>
+
+      <HistoryContextMenu
+        state={contextMenuState}
+        menuRef={contextMenuRef}
+        t={t}
+        maxPinnedItems={maxPinnedItems}
+        enableQuickPaste={autoPasteOnDoubleClick}
+        onAction={handleContextMenuAction}
+      />
 
       {showFavoritesOnly && (
         <div className="history-stream-helper-text">
