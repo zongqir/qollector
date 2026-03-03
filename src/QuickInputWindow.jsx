@@ -23,7 +23,7 @@ const NOTE_COLORS = [
 
 const GLASS_KEY = 'qollect-quick-glass-opacity';
 const GLASS_DEFAULT = 1.0;
-const GLASS_MIN = 0.85;
+const GLASS_MIN = 0.3;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
 const DRAFT_KEY = 'qollect-quick-input-draft-v1';

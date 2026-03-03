@@ -17,7 +17,7 @@ import {
 const SAVE_DEBOUNCE_MS = 750;
 const GLASS_OPACITY_KEY = 'qollect-history-editor-glass-opacity';
 const GLASS_DEFAULT = 1.0;
-const GLASS_MIN = 0.85;
+const GLASS_MIN = 0.3;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
 const LAST_BACKGROUND_KEY = 'qollect-history-editor-last-background';
