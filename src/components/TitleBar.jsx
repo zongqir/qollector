@@ -42,6 +42,7 @@ function TitleBar({
   onOpenQuickInput,
   onStartSmartCopy,
   smartCopyRunning = false,
+  showSmartCopyEntry = false,
   isQuickInputOpen = false,
   isMiniMode,
   currentViewMode,
@@ -270,15 +271,17 @@ function TitleBar({
       </div>
       <div className="titlebar-buttons" data-tauri-drag-region="false">
         <div className="titlebar-btn-group titlebar-btn-group-capture">
-          <button
-            onClick={onStartSmartCopy}
-            className={`titlebar-btn smart-copy-btn ${smartCopyRunning ? 'active' : ''}`}
-            title={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
-            aria-label={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
-            disabled={smartCopyRunning}
-          >
-            <ScanText size={15} />
-          </button>
+          {showSmartCopyEntry && (
+            <button
+              onClick={onStartSmartCopy}
+              className={`titlebar-btn smart-copy-btn ${smartCopyRunning ? 'active' : ''}`}
+              title={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
+              aria-label={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
+              disabled={smartCopyRunning}
+            >
+              <ScanText size={15} />
+            </button>
+          )}
           <button
             onClick={onOpenQuickInput}
             className={`titlebar-btn quick-add-btn ${isQuickInputOpen ? 'active' : ''}`}

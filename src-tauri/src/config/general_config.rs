@@ -61,6 +61,9 @@ pub struct GeneralConfig {
     /// Enable the floating widget window.
     #[serde(default)]
     pub widget_enabled: bool,
+    /// Show smart-copy entry button in title bar.
+    #[serde(default)]
+    pub smart_copy_entry_enabled: bool,
     /// Accent color preset name (blue/purple/pink/red/orange/yellow/green/graphite).
     #[serde(default = "default_accent_color")]
     pub accent_color: String,
@@ -149,6 +152,7 @@ impl Default for GeneralConfig {
             autostart_enabled: false,
             low_memory_mode_enabled: default_low_memory_mode_enabled(),
             widget_enabled: false,
+            smart_copy_entry_enabled: false,
             accent_color: default_accent_color(),
         }
     }

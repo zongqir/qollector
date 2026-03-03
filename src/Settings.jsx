@@ -46,6 +46,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     startup_favorites_view_enabled: false,
     autostart_enabled: false,
     low_memory_mode_enabled: false,
+    smart_copy_entry_enabled: false,
   });
   const [lockHasPassword, setLockHasPassword] = useState(false);
   const [lockOldPassword, setLockOldPassword] = useState('');

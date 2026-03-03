@@ -182,6 +182,7 @@ function App() {
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
   const widgetEnabled = useAppStore(s => s.widgetEnabled);
+  const smartCopyEntryEnabled = useAppStore(s => s.smartCopyEntryEnabled);
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
@@ -1032,6 +1033,7 @@ function App() {
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
         onStartSmartCopy={handleStartSmartCopy}
         smartCopyRunning={smartCopyRunning}
+        showSmartCopyEntry={smartCopyEntryEnabled}
         onOpenQuickInput={handleOpenQuickInput}
         isQuickInputOpen={isQuickInputOpen}
         isMiniMode={isMiniMode}

@@ -446,6 +446,7 @@ const useAppStore = create((set, get) => ({
   autoPasteOnDoubleClick: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,
+  smartCopyEntryEnabled: false,
   historyTagShortcutEnabled: true,
   autoCleanupEnabled: true,
   cleanupMaxItems: 50000,
@@ -908,6 +909,7 @@ const useAppStore = create((set, get) => ({
         autoPasteOnDoubleClick: SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK
           && (generalConfig.auto_paste_on_double_click || false),
         widgetEnabled: generalConfig.widget_enabled || false,
+        smartCopyEntryEnabled: Boolean(generalConfig.smart_copy_entry_enabled),
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
         autoCleanupEnabled: generalConfig.auto_cleanup_enabled !== false,
         cleanupMaxItems: Math.max(100, Number(generalConfig.cleanup_max_items || 50000)),
