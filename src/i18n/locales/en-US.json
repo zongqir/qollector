@@ -897,8 +897,8 @@
     "show": "Show Window",
     "hide": "Hide Window",
     "settings": "Settings",
-    "pause": "Pause Monitoring",
-    "resume": "Resume Monitoring",
+    "pause": "Pause Recording",
+    "resume": "Resume Recording",
     "quit": "Quit"
   },
   "share": {

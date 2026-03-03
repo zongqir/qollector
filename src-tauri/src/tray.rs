@@ -84,16 +84,16 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
         }
         "pause" => {
             if is_zh {
-                "暂停监听"
+                "暂停记录"
             } else {
-                "Pause Monitoring"
+                "Pause Recording"
             }
         }
         "resume" => {
             if is_zh {
-                "恢复监听"
+                "继续记录"
             } else {
-                "Resume Monitoring"
+                "Resume Recording"
             }
         }
         "quit" => {
@@ -112,9 +112,9 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
         }
         "tooltip_paused" => {
             if is_zh {
-                "Qollect (已暂停)"
+                "Qollect (记录已暂停)"
             } else {
-                "Qollect (Paused)"
+                "Qollect (Recording Paused)"
             }
         }
         _ => key,

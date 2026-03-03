@@ -882,8 +882,8 @@
     "show": "显示主窗口",
     "hide": "隐藏主窗口",
     "settings": "设置",
-    "pause": "暂停监听",
-    "resume": "恢复监听",
+    "pause": "暂停记录",
+    "resume": "继续记录",
     "quit": "退出"
   },
   "share": {
