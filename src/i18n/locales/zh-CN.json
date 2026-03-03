@@ -13,6 +13,7 @@
     "restore": "还原",
     "close": "关闭",
     "quickAdd": "快速输入",
+    "smartCopy": "截图识别复制",
     "miniMode": "迷你模式",
     "exitMini": "退出迷你模式",
     "modeMini": "迷你模式",
@@ -1036,6 +1037,15 @@
       "right": "已切换到面板模式",
       "all": "已切换到全览模式"
     }
+  },
+  "smartCopy": {
+    "captureStarted": "请框选要提取文字的区域",
+    "processing": "正在识别截图文字...",
+    "timeout": "未检测到新的截图，请重试",
+    "ocrUnavailable": "OCR 服务未初始化，请先在设置里启用 OCR",
+    "emptyText": "截图中未识别到文字",
+    "unsupportedPlatform": "当前平台暂不支持系统截图入口",
+    "failed": "智能复制失败: {{error}}"
   },
   "shortcutHelp": {
     "title": "快捷键帮助",

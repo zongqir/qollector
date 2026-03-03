@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import {
   SquarePen,
+  Search,
   Minus,
   Square,
   SquareSquare,
@@ -39,6 +40,8 @@ function TitleBar({
   isAlwaysOnTop,
   onToggleAlwaysOnTop,
   onOpenQuickInput,
+  onStartSmartCopy,
+  smartCopyRunning = false,
   isQuickInputOpen = false,
   isMiniMode,
   currentViewMode,
@@ -267,6 +270,15 @@ function TitleBar({
       </div>
       <div className="titlebar-buttons" data-tauri-drag-region="false">
         <div className="titlebar-btn-group titlebar-btn-group-capture">
+          <button
+            onClick={onStartSmartCopy}
+            className={`titlebar-btn smart-copy-btn ${smartCopyRunning ? 'active' : ''}`}
+            title={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
+            aria-label={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
+            disabled={smartCopyRunning}
+          >
+            <Search size={15} />
+          </button>
           <button
             onClick={onOpenQuickInput}
             className={`titlebar-btn quick-add-btn ${isQuickInputOpen ? 'active' : ''}`}

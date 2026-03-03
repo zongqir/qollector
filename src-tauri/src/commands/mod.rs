@@ -12,4 +12,5 @@ pub mod native_drag_commands;
 pub mod ocr_commands;
 pub mod prompt_commands;
 pub mod share_commands;
+pub mod smart_copy_commands;
 pub mod sync_commands;

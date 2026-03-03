@@ -13,6 +13,7 @@
     "restore": "Restore",
     "close": "Close",
     "quickAdd": "Quick Input",
+    "smartCopy": "Smart Copy OCR",
     "miniMode": "Mini Mode",
     "exitMini": "Exit Mini Mode",
     "modeMini": "Mini",
@@ -224,6 +225,15 @@
       "right": "Switched to Panel mode",
       "all": "Switched to Overview mode"
     }
+  },
+  "smartCopy": {
+    "captureStarted": "Select the area that contains text",
+    "processing": "Recognizing text from screenshot...",
+    "timeout": "No new screenshot detected. Please try again.",
+    "ocrUnavailable": "OCR service is not initialized. Enable OCR in Settings first.",
+    "emptyText": "No text was recognized from this screenshot",
+    "unsupportedPlatform": "System screenshot entry is not supported on this platform",
+    "failed": "Smart copy failed: {{error}}"
   },
   "edit": {
     "content": "Content:",

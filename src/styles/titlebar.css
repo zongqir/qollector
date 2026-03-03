@@ -482,6 +482,26 @@
   color: var(--text-secondary);
 }
 
+.titlebar-btn.smart-copy-btn {
+  color: var(--text-secondary);
+}
+
+.titlebar-btn.smart-copy-btn:hover:not(:disabled) {
+  color: var(--state-success-fg);
+  background: color-mix(in srgb, var(--state-success-bg) 88%, transparent);
+}
+
+.titlebar-btn.smart-copy-btn.active,
+.titlebar-btn.smart-copy-btn:disabled {
+  color: var(--state-success-fg);
+  background: color-mix(in srgb, var(--state-success-bg) 96%, transparent);
+  cursor: wait;
+}
+
+.titlebar-btn.smart-copy-btn:disabled {
+  transform: none;
+}
+
 .titlebar-btn.quick-add-btn.active {
   color: var(--accent-color);
   background: color-mix(in srgb, var(--accent-light) 90%, transparent);
@@ -669,6 +689,7 @@
 }
 
 .app.mini-mode .titlebar-btn.quick-add-btn,
+.app.mini-mode .titlebar-btn.smart-copy-btn,
 .app.mini-mode .titlebar-btn.history-btn,
 .app.mini-mode .titlebar-btn.panel-btn,
 .app.mini-mode .titlebar-btn.layout-menu-btn,
