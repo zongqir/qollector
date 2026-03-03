@@ -363,7 +363,17 @@
       "cleanupMaxItems": "Max items to keep",
       "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
       "cleanupMaxAgeDays": "Max days to keep",
-      "cleanupMaxAgeDaysHint": "Records older than this are cleaned up automatically"
+      "cleanupMaxAgeDaysHint": "Records older than this are cleaned up automatically",
+      "startupDefaultView": "Startup default view",
+      "startupDefaultViewAll": "History stream",
+      "startupDefaultViewFavorites": "Favorites",
+      "startupDefaultViewHint": "Choose whether to open full history or favorites first at launch",
+      "startupDefaultViewSaveFailed": "Failed to save startup default view. Please try again.",
+      "calmPresetTitle": "Calm preset",
+      "calmPresetHint": "If you mainly care about favorites, enable this preset: auto-clean keeps only 7 days or 1000 items.",
+      "calmPresetAction": "Enable calm preset",
+      "calmPresetApplied": "Calm preset enabled (7 days / 1000 items)",
+      "calmPresetApplyFailed": "Failed to save calm preset. Please try again."
     },
     "mcp": {
       "enabled": "Enable MCP Service",
@@ -1006,6 +1016,9 @@
   },
   "history": {
     "backToTop": "Back to latest",
+    "autoCleanupNoticeEnabled": "Auto-clean active: keep {{days}} days or {{items}} items",
+    "autoCleanupNoticeDisabled": "Auto-clean is off. You can enable a short retention window in Settings.",
+    "autoCleanupAdjust": "Adjust in Settings",
     "contextMenu": {
       "ariaLabel": "History item actions menu",
       "quickPaste": "Copy and quick paste",

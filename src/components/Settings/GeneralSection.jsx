@@ -38,12 +38,17 @@ function GeneralSection({
   getWheelNextNumber,
 }) {
   const [maxPinnedFeedback, setMaxPinnedFeedback] = useState(null);
+  const [startupViewFeedback, setStartupViewFeedback] = useState(null);
   const maxPinnedFeedbackTimerRef = useRef(null);
+  const startupViewFeedbackTimerRef = useRef(null);
   const supportsAutoPasteOnDoubleClick = detectClientPlatform() === 'windows';
 
   useEffect(() => () => {
     if (maxPinnedFeedbackTimerRef.current) {
       clearTimeout(maxPinnedFeedbackTimerRef.current);
+    }
+    if (startupViewFeedbackTimerRef.current) {
+      clearTimeout(startupViewFeedbackTimerRef.current);
     }
   }, []);
 
@@ -55,6 +60,18 @@ function GeneralSection({
     if (durationMs > 0) {
       maxPinnedFeedbackTimerRef.current = setTimeout(() => {
         setMaxPinnedFeedback(null);
+      }, durationMs);
+    }
+  };
+
+  const showStartupViewFeedback = (feedback, durationMs = 1800) => {
+    setStartupViewFeedback(feedback);
+    if (startupViewFeedbackTimerRef.current) {
+      clearTimeout(startupViewFeedbackTimerRef.current);
+    }
+    if (durationMs > 0) {
+      startupViewFeedbackTimerRef.current = setTimeout(() => {
+        setStartupViewFeedback(null);
       }, durationMs);
     }
   };
@@ -202,6 +219,78 @@ function GeneralSection({
             className="setting-input-small setting-input-count"
           />
         </div>
+        <div className="sg-row">
+          <span>{t('settings.general.startupDefaultView')}</span>
+          <select
+            value={generalConfig.startup_favorites_view_enabled ? 'favorites' : 'all'}
+            onChange={async (e) => {
+              const enableFavorites = e.target.value === 'favorites';
+              const updated = {
+                ...generalConfig,
+                startup_favorites_view_enabled: enableFavorites,
+              };
+              setGeneralConfig(updated);
+              useAppStore.setState({ startupFavoritesViewEnabled: enableFavorites });
+              try {
+                await invoke('update_general_config', { config: updated });
+              } catch (error) {
+                console.error('Failed to save startup default view config:', error);
+                showStartupViewFeedback({
+                  type: 'error',
+                  message: t('settings.general.startupDefaultViewSaveFailed'),
+                }, 2600);
+              }
+            }}
+            className="setting-select"
+          >
+            <option value="all">{t('settings.general.startupDefaultViewAll')}</option>
+            <option value="favorites">{t('settings.general.startupDefaultViewFavorites')}</option>
+          </select>
+        </div>
+        <small className="setting-hint setting-hint-inline">
+          {t('settings.general.startupDefaultViewHint')}
+        </small>
+        {generalConfig.startup_favorites_view_enabled && (
+          <div className="sg-row sg-row-stack">
+            <span>{t('settings.general.calmPresetTitle')}</span>
+            <small className="setting-hint setting-hint-inline">
+              {t('settings.general.calmPresetHint')}
+            </small>
+            <button
+              type="button"
+              className="test-btn"
+              onClick={async () => {
+                const updated = {
+                  ...generalConfig,
+                  auto_cleanup_enabled: true,
+                  cleanup_max_age_days: 7,
+                  cleanup_max_items: 1000,
+                };
+                setGeneralConfig(updated);
+                useAppStore.setState({
+                  autoCleanupEnabled: true,
+                  cleanupMaxAgeDays: 7,
+                  cleanupMaxItems: 1000,
+                });
+                try {
+                  await invoke('update_general_config', { config: updated });
+                  showStartupViewFeedback({
+                    type: 'success',
+                    message: t('settings.general.calmPresetApplied'),
+                  });
+                } catch (error) {
+                  console.error('Failed to save calm preset config:', error);
+                  showStartupViewFeedback({
+                    type: 'error',
+                    message: t('settings.general.calmPresetApplyFailed'),
+                  }, 2600);
+                }
+              }}
+            >
+              {t('settings.general.calmPresetAction')}
+            </button>
+          </div>
+        )}
       </div>
       {maxPinnedFeedback && (
         <small
@@ -209,6 +298,14 @@ function GeneralSection({
           role={maxPinnedFeedback.type === 'error' ? 'alert' : 'status'}
         >
           {maxPinnedFeedback.message}
+        </small>
+      )}
+      {startupViewFeedback && (
+        <small
+          className={`setting-status setting-status-emphasis ${startupViewFeedback.type === 'error' ? 'error' : 'success'}`}
+          role={startupViewFeedback.type === 'error' ? 'alert' : 'status'}
+        >
+          {startupViewFeedback.message}
         </small>
       )}
       {generalConfig.max_pinned_items > 20 && (

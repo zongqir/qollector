@@ -447,6 +447,10 @@ const useAppStore = create((set, get) => ({
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,
   historyTagShortcutEnabled: true,
+  autoCleanupEnabled: true,
+  cleanupMaxItems: 50000,
+  cleanupMaxAgeDays: 90,
+  startupFavoritesViewEnabled: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,
@@ -880,7 +884,8 @@ const useAppStore = create((set, get) => ({
     await get().loadItems();
   },
 
-  loadConfigs: async () => {
+  loadConfigs: async (options = {}) => {
+    const applyStartupView = options?.applyStartupView === true;
     try {
       const [aiConfig, ocrConfig, generalConfig, hasLock, licenseInfo] = await Promise.all([
         invoke('get_ai_config'),
@@ -904,6 +909,17 @@ const useAppStore = create((set, get) => ({
           && (generalConfig.auto_paste_on_double_click || false),
         widgetEnabled: generalConfig.widget_enabled || false,
         historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
+        autoCleanupEnabled: generalConfig.auto_cleanup_enabled !== false,
+        cleanupMaxItems: Math.max(100, Number(generalConfig.cleanup_max_items || 50000)),
+        cleanupMaxAgeDays: Math.max(1, Number(generalConfig.cleanup_max_age_days || 90)),
+        startupFavoritesViewEnabled: Boolean(generalConfig.startup_favorites_view_enabled),
+        showFavoritesOnly: (
+          applyStartupView
+          && !state.showFavoritesOnly
+          && !state.showPinnedOnly
+          && !state.activeFilterViewId
+          && Boolean(generalConfig.startup_favorites_view_enabled)
+        ) ? true : state.showFavoritesOnly,
       }));
       if (generalConfig.theme_mode) {
         set({ themeMode: generalConfig.theme_mode });

@@ -1468,6 +1468,49 @@ impl ClipboardRepository {
 
         Ok(targets)
     }
+
+    /// Hard-delete recent unprotected items created after cutoff timestamp.
+    pub async fn cleanup_recent_items_since(
+        &self,
+        cutoff_ts: i64,
+    ) -> Result<Vec<CleanupTarget>, sqlx::Error> {
+        let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
+            r#"SELECT id, type, image_paths FROM clipboard_items
+               WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0
+               AND created_at >= ?
+               ORDER BY created_at ASC"#,
+        )
+        .bind(cutoff_ts)
+        .fetch_all(&self.pool)
+        .await?;
+
+        if rows.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let targets: Vec<CleanupTarget> = rows
+            .iter()
+            .map(|(id, type_, image_paths)| CleanupTarget {
+                id: id.clone(),
+                type_: type_.clone(),
+                image_paths: image_paths.clone(),
+            })
+            .collect();
+
+        for target in &targets {
+            self.delete_fts(&target.id).await;
+            let _ = sqlx::query("DELETE FROM clipboard_raw_formats WHERE item_id = ?")
+                .bind(&target.id)
+                .execute(&self.pool)
+                .await;
+            let _ = sqlx::query("DELETE FROM clipboard_items WHERE id = ?")
+                .bind(&target.id)
+                .execute(&self.pool)
+                .await;
+        }
+
+        Ok(targets)
+    }
 }
 
 #[cfg(test)]

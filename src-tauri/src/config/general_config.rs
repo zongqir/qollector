@@ -49,6 +49,9 @@ pub struct GeneralConfig {
     /// Max age in days for items (1–3650).
     #[serde(default = "default_cleanup_max_age_days")]
     pub cleanup_max_age_days: u32,
+    /// Whether startup should default to favorites-only history view.
+    #[serde(default)]
+    pub startup_favorites_view_enabled: bool,
     /// Enable autostart on system boot.
     #[serde(default)]
     pub autostart_enabled: bool,
@@ -142,6 +145,7 @@ impl Default for GeneralConfig {
             auto_cleanup_enabled: true,
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,
+            startup_favorites_view_enabled: false,
             autostart_enabled: false,
             low_memory_mode_enabled: default_low_memory_mode_enabled(),
             widget_enabled: false,

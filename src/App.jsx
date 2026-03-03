@@ -236,7 +236,7 @@ function App() {
     loadItems();
 
     console.log('[Perf:App] Calling loadConfigs() at', performance.now().toFixed(1), 'ms');
-    loadConfigs();
+    loadConfigs({ applyStartupView: true });
 
     console.log('[Perf:App] Setting up event listeners at', performance.now().toFixed(1), 'ms');
     const unlistenClipboardPromise = listen('clipboard-changed', () => {

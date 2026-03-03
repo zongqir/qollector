@@ -348,7 +348,17 @@
       "cleanupMaxItems": "最多保留条数",
       "cleanupMaxItemsHint": "超过此数量时，最旧的记录会被自动清理",
       "cleanupMaxAgeDays": "最多保留天数",
-      "cleanupMaxAgeDaysHint": "超过此天数的记录会被自动清理"
+      "cleanupMaxAgeDaysHint": "超过此天数的记录会被自动清理",
+      "startupDefaultView": "启动时默认视图",
+      "startupDefaultViewAll": "历史流",
+      "startupDefaultViewFavorites": "收藏",
+      "startupDefaultViewHint": "可按偏好决定启动后先看全部历史，还是先看收藏",
+      "startupDefaultViewSaveFailed": "启动默认视图保存失败，请稍后重试",
+      "calmPresetTitle": "安心预设",
+      "calmPresetHint": "如果你更关注收藏，可一键启用：自动清理保留 7 天或 1000 条，减少历史堆积带来的焦虑",
+      "calmPresetAction": "启用安心预设",
+      "calmPresetApplied": "已启用安心预设（7 天 / 1000 条）",
+      "calmPresetApplyFailed": "安心预设保存失败，请稍后重试"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",
@@ -991,6 +1001,9 @@
   },
   "history": {
     "backToTop": "回到最新",
+    "autoCleanupNoticeEnabled": "当前自动清理：保留 {{days}} 天或 {{items}} 条",
+    "autoCleanupNoticeDisabled": "当前未开启自动清理，可在设置中启用短周期保留",
+    "autoCleanupAdjust": "去设置调整",
     "contextMenu": {
       "ariaLabel": "历史条目操作菜单",
       "quickPaste": "复制并尝试快速粘贴",

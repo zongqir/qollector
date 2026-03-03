@@ -1898,6 +1898,26 @@ impl ClipboardManager {
         Ok(())
     }
 
+    /// Clear recent unprotected history items within the last `days`.
+    /// Protected items (favorites/pinned) are preserved.
+    pub async fn clear_recent_unprotected_days(&self, days: u32) -> Result<usize, String> {
+        let normalized_days = days.max(1);
+        let cutoff = chrono::Utc::now().timestamp() - (normalized_days as i64) * 86400;
+
+        let repo = self.repository.lock().await;
+        let targets = repo
+            .cleanup_recent_items_since(cutoff)
+            .await
+            .map_err(|e| format!("Failed to clear recent items: {}", e))?;
+        drop(repo);
+
+        for target in &targets {
+            Self::cleanup_image_files(&target.type_, target.image_paths.as_deref());
+        }
+
+        Ok(targets.len())
+    }
+
     fn compute_content_hash(content: &ClipboardContent) -> String {
         match content {
             ClipboardContent::Text {
