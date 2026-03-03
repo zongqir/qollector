@@ -39,6 +39,7 @@ function GeneralSection({
 }) {
   const [maxPinnedFeedback, setMaxPinnedFeedback] = useState(null);
   const [startupViewFeedback, setStartupViewFeedback] = useState(null);
+  const [clearRecentDayPending, setClearRecentDayPending] = useState(false);
   const maxPinnedFeedbackTimerRef = useRef(null);
   const startupViewFeedbackTimerRef = useRef(null);
   const supportsAutoPasteOnDoubleClick = detectClientPlatform() === 'windows';
@@ -75,6 +76,11 @@ function GeneralSection({
       }, durationMs);
     }
   };
+
+  const isCalmPresetActive = generalConfig.startup_favorites_view_enabled
+    && generalConfig.auto_cleanup_enabled
+    && Number(generalConfig.cleanup_max_age_days) === 7
+    && Number(generalConfig.cleanup_max_items) === 1000;
 
   return (
     <div className="settings-content">
@@ -256,39 +262,80 @@ function GeneralSection({
             <small className="setting-hint setting-hint-inline">
               {t('settings.general.calmPresetHint')}
             </small>
-            <button
-              type="button"
-              className="test-btn"
-              onClick={async () => {
-                const updated = {
-                  ...generalConfig,
-                  auto_cleanup_enabled: true,
-                  cleanup_max_age_days: 7,
-                  cleanup_max_items: 1000,
-                };
-                setGeneralConfig(updated);
-                useAppStore.setState({
-                  autoCleanupEnabled: true,
-                  cleanupMaxAgeDays: 7,
-                  cleanupMaxItems: 1000,
-                });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                  showStartupViewFeedback({
-                    type: 'success',
-                    message: t('settings.general.calmPresetApplied'),
+            <div className="setting-action-row">
+              <button
+                type="button"
+                className="test-btn"
+                onClick={async () => {
+                  const updated = isCalmPresetActive
+                    ? {
+                      ...generalConfig,
+                      startup_favorites_view_enabled: false,
+                    }
+                    : {
+                      ...generalConfig,
+                      startup_favorites_view_enabled: true,
+                      auto_cleanup_enabled: true,
+                      cleanup_max_age_days: 7,
+                      cleanup_max_items: 1000,
+                    };
+                  setGeneralConfig(updated);
+                  useAppStore.setState({
+                    startupFavoritesViewEnabled: Boolean(updated.startup_favorites_view_enabled),
+                    autoCleanupEnabled: updated.auto_cleanup_enabled !== false,
+                    cleanupMaxAgeDays: Math.max(1, Number(updated.cleanup_max_age_days || 90)),
+                    cleanupMaxItems: Math.max(100, Number(updated.cleanup_max_items || 50000)),
                   });
-                } catch (error) {
-                  console.error('Failed to save calm preset config:', error);
-                  showStartupViewFeedback({
-                    type: 'error',
-                    message: t('settings.general.calmPresetApplyFailed'),
-                  }, 2600);
-                }
-              }}
-            >
-              {t('settings.general.calmPresetAction')}
-            </button>
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                    showStartupViewFeedback({
+                      type: 'success',
+                      message: isCalmPresetActive
+                        ? t('settings.general.calmPresetDisabled')
+                        : t('settings.general.calmPresetApplied'),
+                    });
+                  } catch (error) {
+                    console.error('Failed to save calm preset config:', error);
+                    showStartupViewFeedback({
+                      type: 'error',
+                      message: t('settings.general.calmPresetApplyFailed'),
+                    }, 2600);
+                  }
+                }}
+              >
+                {isCalmPresetActive
+                  ? t('settings.general.calmPresetDisableAction')
+                  : t('settings.general.calmPresetAction')}
+              </button>
+              <button
+                type="button"
+                className="test-btn secondary"
+                disabled={clearRecentDayPending}
+                onClick={async () => {
+                  setClearRecentDayPending(true);
+                  try {
+                    const deleted = await invoke('clear_recent_day_data');
+                    await useAppStore.getState().loadItems();
+                    showStartupViewFeedback({
+                      type: 'success',
+                      message: t('settings.general.clearRecentDaySuccess', { count: deleted }),
+                    });
+                  } catch (error) {
+                    console.error('Failed to clear recent day data:', error);
+                    showStartupViewFeedback({
+                      type: 'error',
+                      message: t('settings.general.clearRecentDayFailed'),
+                    }, 2600);
+                  } finally {
+                    setClearRecentDayPending(false);
+                  }
+                }}
+              >
+                {clearRecentDayPending
+                  ? t('settings.general.clearRecentDayPending')
+                  : t('settings.general.clearRecentDayAction')}
+              </button>
+            </div>
           </div>
         )}
       </div>

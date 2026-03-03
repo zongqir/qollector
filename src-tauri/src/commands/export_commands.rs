@@ -419,3 +419,13 @@ pub async fn clear_all_data(manager: State<'_, Arc<ClipboardManager>>) -> Result
         .await
         .map_err(|e| format!("clear all data failed: {}", e))
 }
+
+#[tauri::command]
+pub async fn clear_recent_day_data(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<usize, String> {
+    manager
+        .clear_recent_unprotected_days(1)
+        .await
+        .map_err(|e| format!("clear recent day data failed: {}", e))
+}

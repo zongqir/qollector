@@ -357,8 +357,14 @@
       "calmPresetTitle": "安心预设",
       "calmPresetHint": "如果你更关注收藏，可一键启用：自动清理保留 7 天或 1000 条，减少历史堆积带来的焦虑",
       "calmPresetAction": "启用安心预设",
+      "calmPresetDisableAction": "关闭安心预设",
       "calmPresetApplied": "已启用安心预设（7 天 / 1000 条）",
-      "calmPresetApplyFailed": "安心预设保存失败，请稍后重试"
+      "calmPresetDisabled": "已关闭安心预设",
+      "calmPresetApplyFailed": "安心预设保存失败，请稍后重试",
+      "clearRecentDayAction": "清理最近一天数据",
+      "clearRecentDayPending": "清理中...",
+      "clearRecentDaySuccess": "已清理最近一天 {{count}} 条记录",
+      "clearRecentDayFailed": "清理最近一天数据失败，请稍后重试"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

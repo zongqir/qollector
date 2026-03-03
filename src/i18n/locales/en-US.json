@@ -372,8 +372,14 @@
       "calmPresetTitle": "Calm preset",
       "calmPresetHint": "If you mainly care about favorites, enable this preset: auto-clean keeps only 7 days or 1000 items.",
       "calmPresetAction": "Enable calm preset",
+      "calmPresetDisableAction": "Disable calm preset",
       "calmPresetApplied": "Calm preset enabled (7 days / 1000 items)",
-      "calmPresetApplyFailed": "Failed to save calm preset. Please try again."
+      "calmPresetDisabled": "Calm preset disabled",
+      "calmPresetApplyFailed": "Failed to save calm preset. Please try again.",
+      "clearRecentDayAction": "Clear last-day data",
+      "clearRecentDayPending": "Clearing...",
+      "clearRecentDaySuccess": "Cleared {{count}} records from the last day",
+      "clearRecentDayFailed": "Failed to clear last-day data. Please try again."
     },
     "mcp": {
       "enabled": "Enable MCP Service",

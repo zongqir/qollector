@@ -770,6 +770,7 @@ fn main() {
             export_data,
             import_data,
             clear_all_data,
+            clear_recent_day_data,
             get_share_config,
             update_share_config,
             get_item_share_data,

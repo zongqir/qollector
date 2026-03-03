@@ -216,6 +216,7 @@ function HistoryStream({ style }) {
   const autoCleanupEnabled = useAppStore(s => s.autoCleanupEnabled);
   const cleanupMaxItems = useAppStore(s => s.cleanupMaxItems);
   const cleanupMaxAgeDays = useAppStore(s => s.cleanupMaxAgeDays);
+  const startupFavoritesViewEnabled = useAppStore(s => s.startupFavoritesViewEnabled);
   const itemsRevision = useAppStore(s => s.itemsRevision);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
@@ -1435,20 +1436,24 @@ function HistoryStream({ style }) {
     clearActiveFilterView,
   ]);
 
-  const shouldShowBottomHelper = showFavoritesOnly || autoCleanupEnabled;
+  const isCalmPresetActive = startupFavoritesViewEnabled
+    && autoCleanupEnabled
+    && Number(cleanupMaxAgeDays) === 7
+    && Number(cleanupMaxItems) === 1000;
+  const shouldShowBottomHelper = showFavoritesOnly || isCalmPresetActive;
   const autoCleanupItemsLabel = useMemo(() => {
     const value = Number(cleanupMaxItems || 0);
     if (!Number.isFinite(value)) return `${cleanupMaxItems || 0}`;
     return value.toLocaleString(i18n.language || undefined);
   }, [cleanupMaxItems, i18n.language]);
   const autoCleanupSummary = useMemo(() => (
-    autoCleanupEnabled
+    isCalmPresetActive
       ? t('history.autoCleanupNoticeEnabled', {
         days: cleanupMaxAgeDays,
         items: autoCleanupItemsLabel,
       })
       : t('history.autoCleanupNoticeDisabled')
-  ), [autoCleanupEnabled, cleanupMaxAgeDays, autoCleanupItemsLabel, t]);
+  ), [isCalmPresetActive, cleanupMaxAgeDays, autoCleanupItemsLabel, t]);
 
   const handleToggleBatchTagEditor = useCallback(() => {
     if (showBatchTagEditor) {
@@ -1804,22 +1809,26 @@ function HistoryStream({ style }) {
       />
 
       {shouldShowBottomHelper && (
-        <div className="history-stream-helper-text history-stream-helper-text-action">
+        <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''}`.trim()}>
           <div className="history-stream-helper-main">
             {showFavoritesOnly && (
               <div className="history-stream-helper-line">
                 {t('collection.longTermStorageHint')}
               </div>
             )}
-            <div className="history-stream-helper-line">{autoCleanupSummary}</div>
+            {isCalmPresetActive && (
+              <div className="history-stream-helper-line">{autoCleanupSummary}</div>
+            )}
           </div>
-          <button
-            type="button"
-            className="history-stream-helper-link"
-            onClick={handleOpenCleanupSettings}
-          >
-            {t('history.autoCleanupAdjust')}
-          </button>
+          {isCalmPresetActive && (
+            <button
+              type="button"
+              className="history-stream-helper-link"
+              onClick={handleOpenCleanupSettings}
+            >
+              {t('history.autoCleanupAdjust')}
+            </button>
+          )}
         </div>
       )}
 

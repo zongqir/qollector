@@ -1194,6 +1194,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.setting-action-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .setting-options-group .setting-inline-row {
   margin-top: 0;
   padding: 10px 14px 6px;
@@ -1641,6 +1649,15 @@
 
   .setting-inline-row > span {
     line-height: 1.3;
+  }
+
+  .setting-action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .setting-action-row .test-btn {
+    width: 100%;
   }
 
   .settings-footer {
