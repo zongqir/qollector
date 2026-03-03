@@ -3,7 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import {
   SquarePen,
-  Search,
+  ScanText,
   Minus,
   Square,
   SquareSquare,
@@ -277,7 +277,7 @@ function TitleBar({
             aria-label={smartCopyRunning ? t('smartCopy.processing') : t('titlebar.smartCopy')}
             disabled={smartCopyRunning}
           >
-            <Search size={15} />
+            <ScanText size={15} />
           </button>
           <button
             onClick={onOpenQuickInput}
