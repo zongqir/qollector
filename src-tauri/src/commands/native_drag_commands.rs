@@ -9,6 +9,8 @@ use crate::platform::drag_out::{DragOutOperation, DragOutRequest, PlatformDragOu
 const DRAG_TEXT_TEMP_DIR_NAME: &str = "qollect_drag_text";
 const DRAG_TEXT_FILE_PREFIX: &str = "qollect";
 const DRAG_TEXT_TTL_SECONDS: u64 = 24 * 60 * 60;
+const MAX_FILENAME_STEM_CHARS: usize = 64;
+const DEFAULT_FILENAME_STEM: &str = "qollect";
 
 fn parse_operation(operation: Option<String>) -> Result<DragOutOperation, String> {
     match operation
@@ -63,6 +65,57 @@ fn resolve_text_extension(language: Option<&str>, content: &str) -> &'static str
     }
 }
 
+fn sanitize_filename_stem(raw: Option<&str>, extension: &str) -> String {
+    let candidate = raw.unwrap_or("").trim();
+
+    let mut stem: String = candidate
+        .chars()
+        .map(|ch| {
+            if ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+            {
+                '_'
+            } else {
+                ch
+            }
+        })
+        .collect();
+
+    stem = stem.split_whitespace().collect::<Vec<_>>().join(" ");
+    stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+    while stem.starts_with('.') {
+        stem.remove(0);
+    }
+
+    let extension_suffix = format!(".{}", extension.to_ascii_lowercase());
+    let lower = stem.to_ascii_lowercase();
+    if lower.ends_with(&extension_suffix) && stem.len() > extension_suffix.len() {
+        let next_len = stem.len() - extension_suffix.len();
+        stem.truncate(next_len);
+        stem = stem.trim_end_matches('.').trim().to_string();
+    }
+
+    stem = stem.chars().take(MAX_FILENAME_STEM_CHARS).collect::<String>();
+    stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+
+    if stem.is_empty() {
+        stem = DRAG_TEXT_FILE_PREFIX.to_string();
+    }
+
+    let reserved = [
+        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
+        "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+    ];
+    if reserved.contains(&stem.to_ascii_lowercase().as_str()) {
+        stem.push_str("_file");
+    }
+
+    if stem.is_empty() {
+        DEFAULT_FILENAME_STEM.to_string()
+    } else {
+        stem
+    }
+}
+
 fn cleanup_expired_drag_text_files(temp_dir: &std::path::Path) {
     let entries = match std::fs::read_dir(temp_dir) {
         Ok(entries) => entries,
@@ -87,27 +140,37 @@ fn cleanup_expired_drag_text_files(temp_dir: &std::path::Path) {
             Err(_) => continue,
         };
         if elapsed.as_secs() > DRAG_TEXT_TTL_SECONDS {
-            let _ = std::fs::remove_file(path);
+            if metadata.is_dir() {
+                let _ = std::fs::remove_dir_all(path);
+            } else {
+                let _ = std::fs::remove_file(path);
+            }
         }
     }
 }
 
-fn create_temp_drag_text_file(content: &str, language: Option<&str>) -> Result<PathBuf, String> {
-    let temp_dir = std::env::temp_dir().join(DRAG_TEXT_TEMP_DIR_NAME);
-    std::fs::create_dir_all(&temp_dir)
+fn create_temp_drag_text_file(
+    content: &str,
+    language: Option<&str>,
+    filename_stem: Option<&str>,
+) -> Result<PathBuf, String> {
+    let temp_root = std::env::temp_dir().join(DRAG_TEXT_TEMP_DIR_NAME);
+    std::fs::create_dir_all(&temp_root)
         .map_err(|error| format!("failed to create drag temp dir: {error}"))?;
-    cleanup_expired_drag_text_files(&temp_dir);
+    cleanup_expired_drag_text_files(&temp_root);
 
     let extension = resolve_text_extension(language, content);
+    let stem = sanitize_filename_stem(filename_stem, extension);
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let file_name = format!(
-        "{prefix}_{timestamp}_{id}.{extension}",
-        prefix = DRAG_TEXT_FILE_PREFIX,
+    let base_name = format!(
+        "{stem}_{timestamp}",
+        stem = stem,
         timestamp = timestamp,
-        id = Uuid::new_v4().simple(),
-        extension = extension,
     );
-    let output_path = temp_dir.join(file_name);
+    let drag_session_dir = temp_root.join(format!("drag_{}", Uuid::new_v4().simple()));
+    std::fs::create_dir_all(&drag_session_dir)
+        .map_err(|error| format!("failed to create drag session dir: {error}"))?;
+    let output_path = drag_session_dir.join(format!("{base_name}.{extension}"));
 
     std::fs::write(&output_path, content)
         .map_err(|error| format!("failed to write drag temp file: {error}"))?;
@@ -146,13 +209,14 @@ pub async fn start_native_text_drag(
     backend: State<'_, Arc<dyn PlatformDragOut>>,
     content: String,
     language: Option<String>,
+    filename_stem: Option<String>,
     operation: Option<String>,
 ) -> Result<(), String> {
     if content.trim().is_empty() {
         return Err("text content is empty".to_string());
     }
 
-    let temp_path = create_temp_drag_text_file(&content, language.as_deref())?;
+    let temp_path = create_temp_drag_text_file(&content, language.as_deref(), filename_stem.as_deref())?;
     let operation = parse_operation(operation)?;
     let request = DragOutRequest {
         paths: vec![temp_path],

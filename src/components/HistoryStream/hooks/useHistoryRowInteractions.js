@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { resolveFilenameStemForItem } from '../../../utils/filenameNaming';
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -176,6 +177,7 @@ export default function useHistoryRowInteractions({
         await invoke('start_native_text_drag', {
           content: item.content,
           language: item.code_language || null,
+          filenameStem: resolveFilenameStemForItem(item),
           operation: 'copy',
         });
         return;

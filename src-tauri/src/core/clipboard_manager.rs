@@ -21,6 +21,7 @@ const APP_NAME: &str = "Qollect";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
+const MAX_AI_FILENAME_STEM_CHARS: usize = 64;
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -502,7 +503,7 @@ impl ClipboardManager {
 
                                 let service = AIService::new(ai_config);
                                 match service.generate_tags(&ocr_text, &language).await {
-                                    Ok((tags, _code_lang)) if !tags.is_empty() => {
+                                    Ok((tags, _code_lang, _title)) if !tags.is_empty() => {
                                         let ai_tags: Vec<String> =
                                             tags.iter().map(|t| format!("AI:{}", t)).collect();
 
@@ -561,8 +562,8 @@ impl ClipboardManager {
 
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
-                            Ok((tags, code_language))
-                                if !tags.is_empty() || code_language.is_some() =>
+                            Ok((tags, code_language, title))
+                                if !tags.is_empty() || code_language.is_some() || title.is_some() =>
                             {
                                 let ai_tags: Vec<String> =
                                     tags.iter().map(|t| format!("AI:{}", t)).collect();
@@ -580,10 +581,18 @@ impl ClipboardManager {
 
                                     item.tags = Some(serde_json::to_string(&all_tags).unwrap());
                                     item.code_language = code_language.clone();
+                                    if let Some(ai_title) = title.as_deref() {
+                                        if let Some(next_metadata) = Self::merge_ai_naming_metadata(
+                                            item.metadata.as_deref(),
+                                            ai_title,
+                                        ) {
+                                            item.metadata = Some(next_metadata);
+                                        }
+                                    }
                                     let _ = repo_lock.update(&item).await;
                                     println!(
-                                        "[AI] tags added: {:?}, code_language: {:?}",
-                                        tags, code_language
+                                        "[AI] tags added: {:?}, code_language: {:?}, title: {:?}",
+                                        tags, code_language, title
                                     );
                                 }
                             }
@@ -680,6 +689,83 @@ impl ClipboardManager {
                 "fetched_at": chrono::Utc::now().timestamp(),
             }),
         );
+        Some(value.to_string())
+    }
+
+    fn sanitize_ai_filename_stem(raw: &str) -> Option<String> {
+        let mut stem: String = raw
+            .trim()
+            .chars()
+            .map(|ch| {
+                if ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+                {
+                    '_'
+                } else {
+                    ch
+                }
+            })
+            .collect();
+
+        stem = stem.split_whitespace().collect::<Vec<_>>().join(" ");
+        stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+        while stem.starts_with('.') {
+            stem.remove(0);
+        }
+
+        if stem.is_empty() {
+            return None;
+        }
+
+        stem = stem.chars().take(MAX_AI_FILENAME_STEM_CHARS).collect::<String>();
+        stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+
+        if stem.is_empty() {
+            return None;
+        }
+
+        let reserved = [
+            "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
+            "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+        ];
+        if reserved.contains(&stem.to_ascii_lowercase().as_str()) {
+            stem.push_str("_file");
+        }
+
+        Some(stem)
+    }
+
+    fn merge_ai_naming_metadata(metadata_json: Option<&str>, title: &str) -> Option<String> {
+        let trimmed_title = title.trim();
+        if trimmed_title.is_empty() {
+            return None;
+        }
+        let filename_stem = Self::sanitize_ai_filename_stem(trimmed_title)?;
+
+        let mut value = metadata_json
+            .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        let object = value.as_object_mut()?;
+        let mut naming = object
+            .get("naming")
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        naming.insert(
+            "title".to_string(),
+            serde_json::Value::String(trimmed_title.to_string()),
+        );
+        naming.insert(
+            "filename_stem".to_string(),
+            serde_json::Value::String(filename_stem),
+        );
+        naming.insert(
+            "source".to_string(),
+            serde_json::Value::String("ai".to_string()),
+        );
+
+        object.insert("naming".to_string(), serde_json::Value::Object(naming));
         Some(value.to_string())
     }
 

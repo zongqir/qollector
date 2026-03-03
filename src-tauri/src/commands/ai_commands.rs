@@ -47,7 +47,7 @@ pub async fn generate_ai_tags(
     state: State<'_, AIState>,
     _license_state: State<'_, LicenseState>,
     content: String,
-) -> Result<(Vec<String>, Option<String>), String> {
+) -> Result<(Vec<String>, Option<String>, Option<String>), String> {
     // License gate - temporarily disabled for beta
     // {
     //     let license = license_state.config.lock();
@@ -59,7 +59,7 @@ pub async fn generate_ai_tags(
     let config = state.config.lock().clone();
 
     if !config.enabled || config.get_current_api_key().is_empty() {
-        return Ok((Vec::new(), None));
+        return Ok((Vec::new(), None, None));
     }
 
     let language = state
@@ -76,7 +76,7 @@ pub async fn generate_ai_tags(
         Ok(result) => Ok(result),
         Err(e) => {
             eprintln!("AI tag generation failed (silent): {}", e);
-            Ok((Vec::new(), None))
+            Ok((Vec::new(), None, None))
         }
     }
 }

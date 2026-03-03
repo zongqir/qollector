@@ -28,13 +28,16 @@ async fn main() {
     println!("Generating tags...\n");
 
     match service.generate_tags(test_content, "en").await {
-        Ok((tags, summary)) => {
+        Ok((tags, language, title)) => {
             println!("Generated tags:");
             for tag in tags {
                 println!("  - {}", tag);
             }
-            if let Some(s) = summary {
-                println!("Summary: {}", s);
+            if let Some(lang) = language {
+                println!("Language: {}", lang);
+            }
+            if let Some(t) = title {
+                println!("Title: {}", t);
             }
         }
         Err(e) => {

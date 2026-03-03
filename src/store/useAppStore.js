@@ -6,7 +6,7 @@ import {
   normalizeCardBackgroundId,
   withCardBackgroundInMetadata,
 } from '../utils/cardBackgrounds';
-import { generateAITagsForItem, autoGenerateAITags as autoGenerateAITagsSvc } from '../services/aiService';
+import { generateAITagsForItem } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
 import { detectAndUpdateCodeLanguage } from '../services/codeDetectionService';
@@ -754,7 +754,7 @@ const useAppStore = create((set, get) => ({
         return;
       }
 
-      const { loading, processedItemIds } = get();
+      const { loading } = get();
       const mergedItems = mergeUniqueById([], result);
 
       console.log('[Perf:Store] Setting items state at', performance.now().toFixed(1), 'ms');
@@ -780,16 +780,8 @@ const useAppStore = create((set, get) => ({
         }));
       });
 
-      if (!loading && get().aiEnabled) {
-        if (requestSeq !== loadItemsRequestSeq) return;
-        console.log('[Perf:Store] Calling autoGenerateAITagsSvc at', performance.now().toFixed(1), 'ms');
-        autoGenerateAITagsSvc(result, processedItemIds, (updater) => {
-          if (requestSeq !== loadItemsRequestSeq) return;
-          const current = get().processedItemIds;
-          const next = typeof updater === 'function' ? updater(current) : updater;
-          set({ processedItemIds: next });
-        });
-      }
+      // AI enrichment for newly-copied items is handled by backend ClipboardManager.
+      // Avoid front-end list scanning auto generation here to prevent duplicate AI requests.
 
       if (loading && requestSeq === loadItemsRequestSeq) {
         console.log('[Perf:Store] Setting loading=false at', performance.now().toFixed(1), 'ms');

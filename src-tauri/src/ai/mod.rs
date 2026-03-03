@@ -1,5 +1,6 @@
 use chrono::{Local, TimeZone, Timelike};
 use std::sync::LazyLock;
+use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
@@ -8,7 +9,8 @@ use thiserror::Error;
 const SYSTEM_PROMPTS_JSON: &str = include_str!("../../prompts/ai_tag_generation.json");
 const TIMELINE_PROMPTS_JSON: &str = include_str!("../../prompts/timeline_summary.json");
 const MAX_AI_TAGS: usize = 20;
-const MAX_AI_TAG_RESPONSE_TOKENS: u32 = 220;
+const MAX_AI_TAG_RESPONSE_TOKENS: u32 = 280;
+const AI_REQUEST_MAX_ATTEMPTS: u32 = 3;
 
 #[derive(Debug, Deserialize)]
 struct SystemPrompts {
@@ -47,6 +49,32 @@ pub fn get_timeline_prompt(language: &str) -> &'static str {
         "zh-CN" | "zh" => &TIMELINE_PROMPTS.zh_cn.system_prompt,
         "en-US" | "en" => &TIMELINE_PROMPTS.en_us.system_prompt,
         _ => &TIMELINE_PROMPTS.zh_cn.system_prompt, // Default to Chinese
+    }
+}
+
+fn strip_prefixed_value<'a>(value: &'a str, prefix: &str) -> Option<&'a str> {
+    let value_bytes = value.as_bytes();
+    let prefix_bytes = prefix.as_bytes();
+
+    if value_bytes.len() < prefix_bytes.len() {
+        return None;
+    }
+
+    // Compare ASCII prefix on raw bytes first. This avoids split_at on a non-char boundary
+    // for lines that do not actually start with this prefix (e.g. "TAGS:回应..." with "TITLE:").
+    if !value_bytes[..prefix_bytes.len()].eq_ignore_ascii_case(prefix_bytes) {
+        return None;
+    }
+
+    Some(value[prefix_bytes.len()..].trim())
+}
+
+fn normalize_optional_text(value: Option<&str>) -> Option<String> {
+    let normalized = value.unwrap_or("").trim();
+    if normalized.is_empty() || normalized.eq_ignore_ascii_case("none") {
+        None
+    } else {
+        Some(normalized.to_string())
     }
 }
 
@@ -349,16 +377,16 @@ impl AIService {
         &self,
         content: &str,
         language: &str,
-    ) -> Result<(Vec<String>, Option<String>), AIError> {
+    ) -> Result<(Vec<String>, Option<String>, Option<String>), AIError> {
         if !self.config.enabled {
-            return Ok((Vec::new(), None));
+            return Ok((Vec::new(), None, None));
         }
 
         let api_key = self.config.get_current_api_key();
 
         // Only try if API key exists.
         if api_key.is_empty() {
-            return Ok((Vec::new(), None));
+            return Ok((Vec::new(), None, None));
         }
 
         // Sanitize and truncate content (考虑 UTF-8 字符边界)
@@ -376,7 +404,7 @@ impl AIService {
         let sanitized = truncated.replace('\0', "").trim().to_string();
 
         if sanitized.is_empty() {
-            return Ok((Vec::new(), None));
+            return Ok((Vec::new(), None, None));
         }
 
         // 获取提示词：优先使用用户自定义，否则使用系统提示词
@@ -410,14 +438,34 @@ impl AIService {
 
         println!("[AI] request: model={}, language={}, prompt_len={}", model, language, prompt.len());
 
-        let response = self
-            .client
-            .post(&url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .await?;
+        let mut attempt = 1;
+        let response = loop {
+            let send_result = self
+                .client
+                .post(&url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .header("Content-Type", "application/json")
+                .json(&request)
+                .send()
+                .await;
+
+            match send_result {
+                Ok(response) => break response,
+                Err(err) => {
+                    if attempt >= AI_REQUEST_MAX_ATTEMPTS {
+                        return Err(AIError::RequestError(err));
+                    }
+
+                    let backoff_ms = 300_u64 * attempt as u64;
+                    eprintln!(
+                        "[AI] request send failed (attempt {}/{}), retry in {}ms: {}",
+                        attempt, AI_REQUEST_MAX_ATTEMPTS, backoff_ms, err
+                    );
+                    tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
+                    attempt += 1;
+                }
+            }
+        };
 
         let status = response.status();
         println!("[AI] response status: {}", status);
@@ -450,23 +498,42 @@ impl AIService {
             let raw_text = choice.message.content.trim();
             println!("[AI] generated response length: {}", raw_text.len());
 
-            let mut lines = raw_text.lines();
-            let first_line = lines.next().unwrap_or("").trim();
+            let normalized_lines: Vec<&str> = raw_text
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty())
+                .collect();
+            let first_line = normalized_lines.first().copied().unwrap_or("");
 
-            // Parse LANG:xxx from first line
-            let code_language = if let Some(lang) = first_line.strip_prefix("LANG:") {
-                let lang = lang.trim().to_lowercase();
-                if lang == "none" || lang.is_empty() {
-                    None
-                } else {
-                    Some(lang)
+            let code_language = normalize_optional_text(strip_prefixed_value(first_line, "LANG:"))
+                .map(|lang| lang.to_lowercase());
+
+            let mut ai_title: Option<String> = None;
+            let mut tag_lines: Vec<String> = Vec::new();
+            for line in normalized_lines.iter().skip(1) {
+                if ai_title.is_none() {
+                    if let Some(title) = normalize_optional_text(strip_prefixed_value(line, "TITLE:")) {
+                        ai_title = Some(title);
+                        continue;
+                    }
                 }
-            } else {
-                None
-            };
 
-            // Remaining lines are tags (second line onward)
-            let tags_text: String = lines.collect::<Vec<&str>>().join("\n");
+                if let Some(tags_part) = strip_prefixed_value(line, "TAGS:") {
+                    if !tags_part.is_empty() {
+                        tag_lines.push(tags_part.to_string());
+                    }
+                    continue;
+                }
+
+                if strip_prefixed_value(line, "LANG:").is_some() {
+                    continue;
+                }
+
+                tag_lines.push((*line).to_string());
+            }
+
+            // Backward compatibility: old prompt uses second line as plain tags without TAGS:.
+            let tags_text: String = tag_lines.join("\n");
             let mut seen = HashSet::new();
             let tags: Vec<String> = tags_text
                 .split(&[',', '\u{ff0c}', '\n'][..])
@@ -475,15 +542,25 @@ impl AIService {
                         .trim_matches(|c| matches!(c, '"' | '\'' | '`' | '*' | '-'))
                         .to_string()
                 })
-                .filter(|s| !s.is_empty() && !s.starts_with("LANG:"))
+                .filter(|s| {
+                    !s.is_empty()
+                        && strip_prefixed_value(s, "LANG:").is_none()
+                        && strip_prefixed_value(s, "TITLE:").is_none()
+                        && strip_prefixed_value(s, "TAGS:").is_none()
+                })
                 .filter(|s| seen.insert(s.to_lowercase()))
                 .take(MAX_AI_TAGS) // Keep order, but hard-cap to avoid runaway output
                 .collect();
 
-            println!("[AI] parsed tags count={}, code_language={:?}", tags.len(), code_language);
-            Ok((tags, code_language))
+            println!(
+                "[AI] parsed tags count={}, code_language={:?}, title={:?}",
+                tags.len(),
+                code_language,
+                ai_title
+            );
+            Ok((tags, code_language, ai_title))
         } else {
-            Ok((Vec::new(), None))
+            Ok((Vec::new(), None, None))
         }
     }
 
