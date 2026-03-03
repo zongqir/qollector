@@ -2,6 +2,37 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.2.6",
+      "publishedAt": "2026-03-03",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-6",
+      "summary": {
+        "zh-CN": "新增可选的截图识别入口，并补齐拖动成文件、多选与小屏编辑增强，整体更稳更顺手。",
+        "en-US": "Added an optional Smart Copy entry plus drag-to-file, multi-select, and small-screen editing enhancements for a cleaner, more reliable workflow."
+      },
+      "highlights": {
+        "zh-CN": [
+          "设置中新增“显示截图识别按钮”开关，默认关闭，主界面更简洁。",
+          "开启后会在设置页给出触发位置提示，明确可从标题栏左侧入口启动。",
+          "截图识别入口图标升级为更直观的扫描样式，降低识别路径理解成本。",
+          "智能复制在 Windows 下改为系统 Native OCR 优先，云端/当前配置作为失败兜底。",
+          "即使云端 OCR 短暂异常，也能优先依赖本地 OCR 保证可用性。",
+          "新增“拖动文字生成文件”能力，可将文本内容直接拖出为文件用于跨应用交付。",
+          "多选流程持续优化，批量操作路径更清晰，组合处理更高效。",
+          "小屏幕下编辑区按钮可用性增强，避免窄窗场景按钮拥挤或难以点击。"
+        ],
+        "en-US": [
+          "Added a \"Show Smart Copy Button\" setting and turned it off by default to keep the main UI cleaner.",
+          "When enabled, Settings now shows a clear hint for where to trigger Smart Copy from the title bar.",
+          "Updated the Smart Copy entry icon to a more intuitive scan-style visual.",
+          "On Windows, Smart Copy now prioritizes native OCR first, with configured/cloud OCR as fallback.",
+          "If cloud OCR is temporarily unavailable, local OCR still keeps Smart Copy usable.",
+          "Added drag-to-file for text so clipboard content can be dragged out directly as a file across apps.",
+          "Further refined multi-select flows with clearer batch actions and more efficient combined operations.",
+          "Improved edit-action buttons on small screens to avoid cramped layouts and preserve tap targets."
+        ]
+      }
+    },
+    {
       "version": "0.2.5",
       "publishedAt": "2026-03-03",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-5",

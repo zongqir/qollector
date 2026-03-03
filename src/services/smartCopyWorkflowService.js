@@ -3,6 +3,7 @@ import { smartCopyFromImagePath, startSystemScreenCapture } from './smartCopySer
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 const DEFAULT_POLL_INTERVAL_MS = 380;
+const DEFAULT_SETTLE_MS = 900;
 const RECENT_ITEMS_LIMIT = 6;
 
 const sleep = (ms) => new Promise((resolve) => {
@@ -42,13 +43,16 @@ export const runSmartCopyCaptureWorkflow = async (options = {}) => {
   const pollIntervalMs = Number.isFinite(options.pollIntervalMs)
     ? options.pollIntervalMs
     : DEFAULT_POLL_INTERVAL_MS;
+  const settleMs = Number.isFinite(options.settleMs) ? options.settleMs : DEFAULT_SETTLE_MS;
   const copyToClipboard = options.copyToClipboard ?? true;
 
   const beforeStartList = await getRecentItemsLight(1).catch(() => []);
   const baselineId = beforeStartList?.[0]?.id || null;
-  const startedAtUnixSec = Math.floor(Date.now() / 1000) - 1;
+  const startedAtUnixSec = Math.floor(Date.now() / 1000);
   const deadlineAt = Date.now() + timeoutMs;
   const checkedIds = new Set();
+  let pendingCandidate = null;
+  let pendingSinceMs = 0;
 
   await startSystemScreenCapture();
 
@@ -65,23 +69,42 @@ export const runSmartCopyCaptureWorkflow = async (options = {}) => {
     }
 
     const candidates = collectNewCandidates(recentItems, baselineId, startedAtUnixSec, checkedIds);
-    for (const candidate of candidates) {
-      checkedIds.add(candidate.id);
-      if (candidate.type_ !== 'image') continue;
+    const nowMs = Date.now();
+    const imageCandidates = candidates
+      .filter((item) => item?.type_ === 'image')
+      .map((item) => ({ item, imagePath: parseImagePath(item) }))
+      .filter(({ imagePath }) => Boolean(imagePath))
+      .sort((left, right) => Number(right.item?.created_at || 0) - Number(left.item?.created_at || 0));
 
-      const imagePath = parseImagePath(candidate);
-      if (!imagePath) continue;
-
-      try {
-        const text = await smartCopyFromImagePath(imagePath, { copyToClipboard });
-        return {
-          itemId: candidate.id,
-          imagePath,
-          text,
-        };
-      } catch (error) {
-        lastError = error;
+    const newest = imageCandidates[0] || null;
+    if (newest) {
+      const newestId = newest.item.id;
+      if (!pendingCandidate || pendingCandidate.item.id !== newestId) {
+        pendingCandidate = newest;
+        pendingSinceMs = nowMs;
       }
+    }
+
+    if (!pendingCandidate) {
+      continue;
+    }
+
+    if ((nowMs - pendingSinceMs) < settleMs) {
+      continue;
+    }
+
+    checkedIds.add(pendingCandidate.item.id);
+    try {
+      const text = await smartCopyFromImagePath(pendingCandidate.imagePath, { copyToClipboard });
+      return {
+        itemId: pendingCandidate.item.id,
+        imagePath: pendingCandidate.imagePath,
+        text,
+      };
+    } catch (error) {
+      lastError = error;
+      pendingCandidate = null;
+      pendingSinceMs = 0;
     }
   }
 
