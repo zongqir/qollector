@@ -37,6 +37,7 @@ import TagFilterControl from '../shared/TagFilterControl';
 import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
+import { searchItems } from '../../services/clipboardService';
 import useCollectionQuickActions from './hooks/useCollectionQuickActions';
 import useCollectionBatchActions from './hooks/useCollectionBatchActions';
 import {
@@ -58,6 +59,7 @@ function CollectionPanel() {
   const [showCollectionSavedViews, setShowCollectionSavedViews] = useState(false);
   const [collectionSavedViewName, setCollectionSavedViewName] = useState('');
   const [collectionTagSearchQuery, setCollectionTagSearchQuery] = useState('');
+  const [backendPinnedItems, setBackendPinnedItems] = useState(null);
   const selectionAnchorIndexRef = useRef(-1);
   const collectionTypeWrapperRef = useRef(null);
   const collectionDateWrapperRef = useRef(null);
@@ -66,6 +68,7 @@ function CollectionPanel() {
   const collectionTagListboxRef = useRef(null);
 
   const items = useAppStore(s => s.items);
+  const itemsRevision = useAppStore(s => s.itemsRevision);
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const addQuickNote = useAppStore(s => s.addQuickNote);
@@ -100,8 +103,31 @@ function CollectionPanel() {
   const deleteSavedFilterView = useAppStore(s => s.deleteSavedFilterView);
   const clearActiveFilterView = useAppStore(s => s.clearActiveFilterView);
 
+  useEffect(() => {
+    let cancelled = false;
+    searchItems('', 2000, { is_pinned: true })
+      .then((results) => {
+        if (cancelled) return;
+        setBackendPinnedItems(Array.isArray(results) ? results : []);
+      })
+      .catch((error) => {
+        console.error('[Collection] fetch pinned items failed:', error);
+        if (!cancelled) {
+          setBackendPinnedItems(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [itemsRevision]);
+
+  const pinnedBaseItems = useMemo(() => {
+    if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
+    return items.filter(item => item.is_pinned);
+  }, [backendPinnedItems, items]);
+
   const allPinnedItems = useMemo(() => {
-    const pinned = items.filter(i => i.is_pinned);
+    const pinned = pinnedBaseItems;
     if (!pinnedOrder) return pinned;
     const orderMap = new Map(pinnedOrder.map((id, idx) => [id, idx]));
     return [...pinned].sort((a, b) => {
@@ -109,7 +135,7 @@ function CollectionPanel() {
       const bIdx = orderMap.has(b.id) ? orderMap.get(b.id) : 999;
       return aIdx - bIdx;
     });
-  }, [items, pinnedOrder]);
+  }, [pinnedBaseItems, pinnedOrder]);
 
   const pinnedItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -209,7 +235,7 @@ function CollectionPanel() {
     const sourceTags = new Set();
     const typeTags = new Set();
 
-    items.forEach((item) => {
+    pinnedBaseItems.forEach((item) => {
       const tags = getTags(item.tags);
       tags.forEach((tag) => {
         if (tag.startsWith('AI:')) aiTags.add(tag);
@@ -229,7 +255,7 @@ function CollectionPanel() {
       ...Array.from(sourceTags).sort(),
       ...Array.from(aiTags).sort(),
     ];
-  }, [items, t, i18n.language]);
+  }, [pinnedBaseItems, t, i18n.language]);
 
   const filteredTagsList = useMemo(() => {
     if (!collectionTagSearchQuery.trim()) return allTags;
@@ -916,4 +942,3 @@ function CollectionPanel() {
 }
 
 export default CollectionPanel;
-

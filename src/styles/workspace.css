@@ -666,8 +666,8 @@
 }
 
 .multi-select-clear-btn {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 1px solid color-mix(in srgb, var(--state-error-border) 68%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--state-error-bg) 36%, transparent);
@@ -678,6 +678,7 @@
   cursor: pointer;
   flex-shrink: 0;
   transition: all var(--motion-fast) var(--ease-standard);
+  margin-top: 1px;
 }
 
 .multi-select-clear-btn:hover:not(:disabled) {
@@ -697,7 +698,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 7px;
+  padding: 3px 6px;
   border: 1px solid var(--border-btn);
   border-radius: 6px;
   background: var(--btn-bg);
@@ -706,13 +707,13 @@
   line-height: 1;
   cursor: pointer;
   transition: all var(--motion-fast) var(--ease-standard);
-  min-height: 30px;
+  min-height: 28px;
+  margin-top: 1px;
 }
 
 .multi-select-btn svg,
 .multi-select-clear-btn svg {
-  opacity: 0.82;
-  stroke-width: 1.45;
+  opacity: 0.95;
 }
 
 .multi-select-btn:hover:not(:disabled) {
@@ -724,8 +725,8 @@
   cursor: not-allowed;
 }
 
-.multi-select-btn.tag:hover:not(:disabled),
-.multi-select-btn.tag.active {
+.multi-select-btn.btn-tag:hover:not(:disabled),
+.multi-select-btn.btn-tag.active {
   color: var(--accent-color);
   border-color: var(--accent-border-soft);
 }
@@ -779,16 +780,16 @@
   }
 
   .multi-select-btn {
-    min-width: 24px;
-    min-height: 24px;
-    padding: 1px 2px;
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0 1px;
     justify-content: center;
     gap: 0;
   }
 
   .multi-select-clear-btn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 
   .multi-select-btn span {
@@ -3324,8 +3325,8 @@
 }
 
 .multi-select-btn {
-  min-height: 30px;
-  padding: 4px 7px;
+  min-height: 28px;
+  padding: 3px 6px;
   border-radius: 8px;
   border-color: color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
   background: color-mix(in srgb, var(--surface-muted) 80%, transparent);
@@ -3336,8 +3337,8 @@
 }
 
 .multi-select-clear-btn {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
   border-color: color-mix(in srgb, var(--state-error-border) 70%, transparent);
   background: color-mix(in srgb, var(--state-error-bg) 32%, transparent);
@@ -3350,14 +3351,14 @@
 
 @container (max-width: 860px) {
   .multi-select-btn {
-    min-width: 24px;
-    min-height: 24px;
-    padding: 1px 2px;
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0 1px;
   }
 
   .multi-select-clear-btn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 }
 

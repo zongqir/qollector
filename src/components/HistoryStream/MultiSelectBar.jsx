@@ -37,8 +37,8 @@ function MultiSelectBar({
 }) {
   const { t } = useTranslation();
   const activeFeedback = compareFeedback || batchTagFeedback || batchAiFeedback;
-  const ACTION_ICON_SIZE = 15;
-  const ACTION_ICON_STROKE = 1.45;
+  const ACTION_ICON_SIZE = 16;
+  const ACTION_ICON_STROKE = 1.9;
 
   return (
     <div
@@ -63,11 +63,11 @@ function MultiSelectBar({
         title={t('multiSelect.clearSelection')}
         aria-label={t('multiSelect.clearSelection')}
       >
-        <X size={16} strokeWidth={1.5} />
+        <X size={17} strokeWidth={2.0} />
       </button>
       <div className="multi-select-actions">
         <button
-          className={`multi-select-btn tag ${showBatchTagEditor ? 'active' : ''}`}
+          className={`multi-select-btn btn-tag ${showBatchTagEditor ? 'active' : ''}`}
           onClick={(e) => {
             e.stopPropagation();
             onToggleBatchTagEditor();
