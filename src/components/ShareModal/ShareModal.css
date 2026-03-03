@@ -319,3 +319,36 @@
   background: rgba(255, 107, 107, 0.08);
   border: 1px solid rgba(255, 107, 107, 0.15);
 }
+
+@media (max-width: 560px) {
+  .share-modal-overlay {
+    padding: 10px;
+    align-items: stretch;
+  }
+
+  .share-modal {
+    width: 100%;
+    max-width: none;
+    border-radius: 12px;
+  }
+
+  .share-modal-header {
+    padding: 12px 14px;
+  }
+
+  .share-modal-body {
+    padding: 14px 12px;
+    min-height: 0;
+  }
+
+  .share-qr-image {
+    width: min(180px, 60vw);
+    height: min(180px, 60vw);
+  }
+
+  .share-copy-link-btn,
+  .share-retry-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

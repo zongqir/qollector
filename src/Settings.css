@@ -1558,3 +1558,100 @@
     width: 100%;
   }
 }
+
+@media (max-width: 560px) {
+  .settings-overlay {
+    padding: 8px;
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  .settings-modal {
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+    height: 100%;
+    border-radius: 12px;
+  }
+
+  .settings-header {
+    padding: 12px 14px 10px;
+  }
+
+  .settings-main {
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .settings-tabs {
+    width: 100%;
+    max-height: none;
+    flex-direction: row;
+    align-self: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px;
+    border-radius: 9px;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    width: auto;
+    min-width: fit-content;
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    text-align: center;
+  }
+
+  .settings-content {
+    padding: 6px 2px 10px;
+  }
+
+  .sg-row:not(.setting-toggle-row) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .sg-row .setting-select,
+  .sg-row .setting-input-small,
+  .shortcut-input,
+  .setting-row .setting-select,
+  .setting-row .setting-input,
+  .setting-inline-row .setting-input.compact {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .setting-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .setting-inline-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .setting-inline-row > span {
+    line-height: 1.3;
+  }
+
+  .settings-footer {
+    padding: 10px 12px;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .settings-footer .cancel-btn,
+  .settings-footer .save-btn {
+    width: 100%;
+    min-height: 34px;
+  }
+}

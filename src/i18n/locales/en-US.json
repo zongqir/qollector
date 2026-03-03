@@ -933,6 +933,7 @@
   "update": {
     "available": "New version {{version}} available",
     "downloadNow": "Click to download update",
+    "manualDownloadHint": "A manual click is required to start the download",
     "downloading": "Downloading update...",
     "progress": "Download progress: {{percent}}%",
     "ready": "Update ready, click to restart",

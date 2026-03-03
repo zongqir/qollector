@@ -129,6 +129,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const handleCheckUpdate = async () => {
     setAboutUpdateStatus('checking');
     setAboutUpdateError('');
+    setAboutDownloadPercent(0);
     try {
       const update = await check();
       if (update) {
@@ -136,6 +137,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         setAboutUpdateRef(update);
         setAboutUpdateStatus(null);
       } else {
+        setAboutUpdateVersion('');
+        setAboutUpdateRef(null);
         setAboutUpdateStatus('upToDate');
       }
     } catch (err) {
@@ -145,10 +148,26 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   };
 
   const handleDownloadAndRestart = async () => {
-    if (!aboutUpdateRef) return;
-    setAboutUpdateStatus('downloading');
+    setAboutUpdateError('');
+    setAboutDownloadPercent(0);
     try {
-      await aboutUpdateRef.downloadAndInstall((event) => {
+      let targetUpdate = aboutUpdateRef;
+      if (!targetUpdate) {
+        setAboutUpdateStatus('checking');
+        targetUpdate = await check();
+      }
+      if (!targetUpdate) {
+        setAboutUpdateVersion('');
+        setAboutUpdateRef(null);
+        setAboutUpdateStatus('upToDate');
+        return;
+      }
+
+      setAboutUpdateVersion(targetUpdate.version);
+      setAboutUpdateRef(targetUpdate);
+      setAboutUpdateStatus('downloading');
+
+      await targetUpdate.downloadAndInstall((event) => {
         if (event.event === 'Progress') {
           setAboutDownloadPercent((prev) => {
             const chunk = event.data?.chunkLength || 0;
@@ -1695,10 +1714,13 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                   {t('settings.about.betaNotice')}
                 </div>
 
-                {aboutUpdateVersion && !aboutUpdateStatus && (
+                {aboutUpdateVersion && aboutUpdateRef && !aboutUpdateStatus && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 13, color: '#3b82f6' }}>
                       {t('update.available', { version: aboutUpdateVersion })}
+                    </span>
+                    <span style={{ fontSize: 12, opacity: 0.65 }}>
+                      {t('update.manualDownloadHint')}
                     </span>
                     <button
                       onClick={handleDownloadAndRestart}
