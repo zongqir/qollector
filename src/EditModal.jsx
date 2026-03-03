@@ -212,8 +212,18 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const buildTagsForSave = useCallback(() => {
+    const pendingTag = String(newTag || '').trim();
+    if (!pendingTag) return tags;
+
+    const exists = tags.some(tag => String(tag).trim().toLowerCase() === pendingTag.toLowerCase());
+    if (exists) return tags;
+
+    return [...tags, pendingTag];
+  }, [newTag, tags]);
+
   const handleSave = () => {
-    onSave({ content, note, tags });
+    onSave({ content, note, tags: buildTagsForSave() });
   };
 
   const handleSaveAndContinue = useCallback(async () => {

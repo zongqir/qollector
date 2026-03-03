@@ -29,6 +29,12 @@ function getDragText(item, externalPaths) {
   return item.content || '';
 }
 
+function canDragTextAsFile(item) {
+  return item?.type_ === 'text'
+    && typeof item.content === 'string'
+    && item.content.trim().length > 0;
+}
+
 export default function useHistoryRowInteractions({
   filteredItems,
   selectedItemIds,
@@ -164,10 +170,20 @@ export default function useHistoryRowInteractions({
 
   const handleStartExternalDrag = useCallback(async (item) => {
     if (!supportsNativeExternalDrag) return;
-    const paths = getExternalFilePaths(item);
-    if (paths.length === 0) return;
 
     try {
+      if (canDragTextAsFile(item)) {
+        await invoke('start_native_text_drag', {
+          content: item.content,
+          language: item.code_language || null,
+          operation: 'copy',
+        });
+        return;
+      }
+
+      const paths = getExternalFilePaths(item);
+      if (paths.length === 0) return;
+
       await invoke('start_native_file_drag', {
         paths,
         operation: 'copy',
@@ -179,7 +195,8 @@ export default function useHistoryRowInteractions({
 
   const handleDragStart = useCallback((item, e) => {
     const externalPaths = getExternalFilePaths(item);
-    if (supportsNativeExternalDrag && externalPaths.length > 0 && !e.shiftKey) {
+    const nativeTextDrag = canDragTextAsFile(item);
+    if (supportsNativeExternalDrag && !e.shiftKey && (externalPaths.length > 0 || nativeTextDrag)) {
       e.preventDefault();
       handleStartExternalDrag(item);
       return;

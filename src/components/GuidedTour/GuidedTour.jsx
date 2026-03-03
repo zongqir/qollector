@@ -110,6 +110,7 @@ function GuidedTour() {
   const tooltipRef = useRef(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const [tooltipReady, setTooltipReady] = useState(false);
+  const prevStepRef = useRef(tourStep);
 
   const step = TOUR_STEPS[tourStep];
   const isLastStep = tourStep === TOUR_STEPS.length - 1;
@@ -144,15 +145,23 @@ function GuidedTour() {
 
   // Recalculate on step change and resize
   useEffect(() => {
-    // Skip exitMini step if already in normal mode
-    if (step?.action === 'exitMini' && !useAppStore.getState().isMiniMode) {
-      nextTourStep();
-      return;
-    }
-    // Skip showPanel step if panel is already open
-    if (step?.action === 'showPanel' && useAppStore.getState().collectionPanelEnabled) {
-      nextTourStep();
-      return;
+    const prevStep = prevStepRef.current;
+    const movedBackward = tourStep < prevStep;
+    prevStepRef.current = tourStep;
+
+    // Only auto-skip action steps when moving forward.
+    // If user clicks "prev", keep the step visible instead of forcing jump.
+    if (!movedBackward) {
+      // Skip exitMini step if already in normal mode
+      if (step?.action === 'exitMini' && !useAppStore.getState().isMiniMode) {
+        nextTourStep();
+        return;
+      }
+      // Skip showPanel step if panel is already open
+      if (step?.action === 'showPanel' && useAppStore.getState().collectionPanelEnabled) {
+        nextTourStep();
+        return;
+      }
     }
     setTooltipReady(false);
     // Small delay to let DOM settle (e.g. panel might be opening)
@@ -162,7 +171,7 @@ function GuidedTour() {
       clearTimeout(timer);
       window.removeEventListener('resize', updatePositions);
     };
-  }, [tourStep, updatePositions]);
+  }, [tourStep, step, nextTourStep, updatePositions]);
 
   // Re-measure after tooltip mounts so position accounts for actual size
   useEffect(() => {

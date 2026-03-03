@@ -71,7 +71,12 @@ function CompactCard({
   const sourceApp = getSourceApp(item.metadata);
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
-  const canDragOut = supportsNativeExternalDrag && (item.type_ === 'file' || item.type_ === 'image');
+  const canDragOut = supportsNativeExternalDrag
+    && (
+      item.type_ === 'file'
+      || item.type_ === 'image'
+      || (item.type_ === 'text' && typeof item.content === 'string' && item.content.trim().length > 0)
+    );
   const canOpen = item.type_ === 'link' || item.type_ === 'file';
   const cardBackground = useMemo(
     () => getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata)),

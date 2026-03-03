@@ -740,6 +740,7 @@ fn main() {
             add_clipboard_item_manual,
             add_image_file,
             start_native_file_drag,
+            start_native_text_drag,
             toggle_favorite_item,
             open_item,
             open_url,
