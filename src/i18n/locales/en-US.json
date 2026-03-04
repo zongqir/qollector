@@ -817,7 +817,18 @@
     "dedupeDone": "Removed {{count}} duplicate item(s)"
   },
   "collection": {
-    "longTermStorageHint": "Collection is for long-term storage, so important items stay easy to revisit and reuse."
+    "longTermStorageHint": "Collection is for long-term storage, so important items stay easy to revisit and reuse.",
+    "title": "Collection",
+    "allTags": "All",
+    "tagFilterHint": "Multi-select tags with OR filtering",
+    "activeCardHint": "Quick tag target ready",
+    "pickCardFirst": "Select a card first, then add a tag",
+    "addTagPlaceholder": "Add a tag to active card",
+    "confirmAddTag": "Save tag",
+    "cancelAddTag": "Cancel",
+    "emptyTitle": "No favorite items yet",
+    "emptyHint": "Click the star on any history item to add it here",
+    "noTagMatch": "No collection item matches selected tags"
   },
   "aiAssistant": {
     "title": "AI Assistant",

@@ -792,7 +792,18 @@
     "dedupeDone": "已移除 {{count}} 个重复项"
   },
   "collection": {
-    "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。"
+    "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。",
+    "title": "收藏流",
+    "allTags": "全部",
+    "tagFilterHint": "可多选标签，按并集筛选",
+    "activeCardHint": "当前可快速加标签",
+    "pickCardFirst": "先点选一张收藏卡片，再添加标签",
+    "addTagPlaceholder": "给当前卡片添加标签",
+    "confirmAddTag": "保存标签",
+    "cancelAddTag": "取消添加",
+    "emptyTitle": "还没有收藏内容",
+    "emptyHint": "在历史流点星标即可加入收藏",
+    "noTagMatch": "没有符合当前标签的收藏"
   },
   "aiAssistant": {
     "title": "AI 助手",

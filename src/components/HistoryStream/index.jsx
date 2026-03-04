@@ -5,6 +5,7 @@ import { Virtuoso } from 'react-virtuoso';
 import { invoke } from '@tauri-apps/api/core';
 import useAppStore from '../../store/useAppStore';
 import SearchBar from '../SearchBar';
+import CollectionBoard from '../CollectionBoard';
 import HistoryVirtualRow from './HistoryVirtualRow';
 import HistoryContextMenu from './HistoryContextMenu';
 import MultiSelectBar from './MultiSelectBar';
@@ -260,6 +261,7 @@ function HistoryStream({ style }) {
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const setSelectedItemIds = useAppStore(s => s.setSelectedItemIds);
   const clearSelection = useAppStore(s => s.clearSelection);
+  const addTagToItem = useAppStore(s => s.addTagToItem);
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
@@ -418,6 +420,11 @@ function HistoryStream({ style }) {
     const query = tagSearchQuery.toLowerCase();
     return allTags.filter(tag => tag.toLowerCase().includes(query));
   }, [allTags, tagSearchQuery]);
+
+  useEffect(() => {
+    if (!showFavoritesOnly || selectedTags.length === 0) return;
+    setSelectedTags([]);
+  }, [showFavoritesOnly, selectedTags.length, setSelectedTags]);
 
   const handleSelectDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
@@ -1360,6 +1367,14 @@ function HistoryStream({ style }) {
     setShowDateFilter(!showDateFilter);
   }, [setShowDateFilter, showDateFilter]);
 
+  const handleOpenCollectionPreview = useCallback((item) => {
+    if (!item || isMiniMode) return;
+    if (!workbenchPanelEnabled) {
+      setWorkbenchPanelEnabled(true);
+    }
+    setPanelMode('preview', item);
+  }, [isMiniMode, setPanelMode, setWorkbenchPanelEnabled, workbenchPanelEnabled]);
+
   const searchBarProps = useMemo(() => ({
     searchQuery,
     onSearchChange: setSearchQuery,
@@ -1370,12 +1385,12 @@ function HistoryStream({ style }) {
     showPinnedOnly,
     onTogglePinned: handleTogglePinnedOnly,
     isMiniMode,
-    selectedTags,
+    selectedTags: showFavoritesOnly ? [] : selectedTags,
     onClearTags: handleClearSelectedTags,
     showTagFilter,
     onToggleTagFilter: handleToggleTagFilterVisible,
-    allTags,
-    filteredTagsList,
+    allTags: showFavoritesOnly ? [] : allTags,
+    filteredTagsList: showFavoritesOnly ? [] : filteredTagsList,
     tagSearchQuery,
     onTagSearchChange: setTagSearchQuery,
     onToggleTag: toggleTagFilter,
@@ -1454,6 +1469,7 @@ function HistoryStream({ style }) {
       })
       : t('history.autoCleanupNoticeDisabled')
   ), [isCalmPresetActive, cleanupMaxAgeDays, autoCleanupItemsLabel, t]);
+  const shouldRenderCollectionBoard = showFavoritesOnly;
 
   const handleToggleBatchTagEditor = useCallback(() => {
     if (showBatchTagEditor) {
@@ -1644,7 +1660,7 @@ function HistoryStream({ style }) {
       <SearchBar {...searchBarProps} />
 
       <div className="history-stream-content">
-        {historyGrouping.availableGroups.length > 1 && (
+        {!shouldRenderCollectionBoard && historyGrouping.availableGroups.length > 1 && (
           <div className="history-group-jump" onClick={(event) => event.stopPropagation()}>
             {historyGrouping.availableGroups.map((groupKey) => (
               <button
@@ -1675,6 +1691,21 @@ function HistoryStream({ style }) {
             <div className="loading-spinner"></div>
             <div className="loading-text">{t('search.searching')}</div>
           </div>
+        ) : shouldRenderCollectionBoard ? (
+          <CollectionBoard
+            items={filteredItems}
+            timeTick={timeTick}
+            copiedItemId={copiedItemId}
+            copyFeedbackSource={copyFeedbackSource}
+            onCopy={(item) => handleCopy(item, 'collection')}
+            onTogglePin={togglePin}
+            onToggleFavorite={toggleFavorite}
+            onOpenPreview={handleOpenCollectionPreview}
+            onOpenItem={handleOpenItem}
+            onOpenEditModal={openEditModal}
+            onAddTagToItem={addTagToItem}
+            maxPinnedItems={maxPinnedItems}
+          />
         ) : filteredItems.length === 0 ? (
           <div className="empty empty-diagnostic" role="status" aria-live="polite">
             <div className="empty-content">
@@ -1764,7 +1795,7 @@ function HistoryStream({ style }) {
             increaseViewportBy={{ top: 200, bottom: 400 }}
           />
         )}
-        {showJumpToLatest && (
+        {!shouldRenderCollectionBoard && showJumpToLatest && (
           <button
             type="button"
             className="history-jump-top-btn"
@@ -1799,14 +1830,16 @@ function HistoryStream({ style }) {
         )}
       </div>
 
-      <HistoryContextMenu
-        state={contextMenuState}
-        menuRef={contextMenuRef}
-        t={t}
-        maxPinnedItems={maxPinnedItems}
-        enableQuickPaste={autoPasteOnDoubleClick}
-        onAction={handleContextMenuAction}
-      />
+      {!shouldRenderCollectionBoard && (
+        <HistoryContextMenu
+          state={contextMenuState}
+          menuRef={contextMenuRef}
+          t={t}
+          maxPinnedItems={maxPinnedItems}
+          enableQuickPaste={autoPasteOnDoubleClick}
+          onAction={handleContextMenuAction}
+        />
+      )}
 
       {shouldShowBottomHelper && (
         <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''}`.trim()}>
@@ -1832,7 +1865,7 @@ function HistoryStream({ style }) {
         </div>
       )}
 
-      {selectedCount > 0 && (
+      {!shouldRenderCollectionBoard && selectedCount > 0 && (
         <MultiSelectBar {...multiSelectBarProps} />
       )}
     </div>

@@ -1,0 +1,416 @@
+.collection-board {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 10px 12px;
+  min-height: 0;
+}
+
+.collection-tag-rail-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.collection-tag-rail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+
+.collection-tag-rail::-webkit-scrollbar {
+  height: 6px;
+}
+
+.collection-tag-chip {
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 86%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1;
+  padding: 7px 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+
+.collection-tag-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-color) 32%, transparent);
+  color: var(--text-primary);
+}
+
+.collection-tag-chip.active {
+  border-color: color-mix(in srgb, var(--accent-color) 46%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 76%, transparent);
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-primary) 14%);
+}
+
+.collection-tag-chip.add {
+  min-width: 30px;
+  padding: 7px 9px;
+}
+
+.collection-tag-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+  padding: 2px 3px 2px 8px;
+  flex-shrink: 0;
+}
+
+.collection-tag-editor input {
+  border: none;
+  outline: none;
+  min-width: 120px;
+  width: 120px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11.5px;
+  line-height: 1.2;
+}
+
+.collection-tag-editor button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.collection-tag-editor button:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-color) 26%, transparent);
+}
+
+.collection-tag-editor button.confirm {
+  color: var(--state-success-fg);
+}
+
+.collection-tag-editor button.cancel:hover {
+  color: var(--state-error-fg);
+  border-color: color-mix(in srgb, var(--state-error-border) 72%, transparent);
+}
+
+.collection-tag-editor button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.collection-tag-rail-meta {
+  min-height: 17px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.collection-active-item {
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-secondary) 14%);
+  background: color-mix(in srgb, var(--accent-light) 64%, transparent);
+}
+
+.collection-tag-feedback {
+  color: var(--state-warning-fg);
+}
+
+.collection-grid {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(226px, 1fr));
+  gap: 10px;
+  padding-right: 2px;
+  align-content: start;
+}
+
+.collection-card {
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  border-radius: 14px;
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--surface-elevated) 94%, transparent),
+    color-mix(in srgb, var(--surface-muted) 90%, transparent)
+  );
+  box-shadow:
+    0 10px 18px color-mix(in srgb, var(--shadow-sm) 56%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 40%, transparent);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 146px;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+
+.collection-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-color) 32%, transparent);
+}
+
+.collection-card.active {
+  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  box-shadow:
+    0 12px 22px color-mix(in srgb, var(--shadow-md) 58%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent-color) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 40%, transparent);
+}
+
+.collection-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.collection-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.collection-card-time {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+.collection-card-source {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.collection-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.collection-card-actions button {
+  width: 25px;
+  height: 25px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-muted) 90%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
+}
+
+.collection-card-actions button:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-color) 28%, transparent);
+}
+
+.collection-card-actions button.active {
+  color: color-mix(in srgb, var(--accent-color) 90%, var(--text-primary) 10%);
+  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 78%, transparent);
+}
+
+.collection-card-actions button.favorite.active {
+  color: var(--state-warning-fg);
+  border-color: color-mix(in srgb, var(--state-warning-border) 82%, transparent);
+  background: color-mix(in srgb, var(--state-warning-bg) 76%, transparent);
+}
+
+.collection-card-actions button.copied {
+  color: var(--state-success-fg);
+  border-color: color-mix(in srgb, var(--state-success-border) 82%, transparent);
+  background: color-mix(in srgb, var(--state-success-bg) 76%, transparent);
+}
+
+.collection-card-body {
+  min-height: 0;
+  flex: 1;
+}
+
+.collection-card-text {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.collection-card-image {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.collection-card-image img {
+  width: 100%;
+  max-height: 132px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.collection-card-image-ocr {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.collection-card-link-title {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-primary);
+  word-break: break-word;
+  margin-bottom: 4px;
+}
+
+.collection-card-link-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collection-card-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.collection-card-file-item {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
+  border-radius: 8px;
+  padding: 4px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.collection-card-file-more {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+}
+
+.collection-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.collection-card-tag {
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 86%, transparent);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.collection-card-tag.active {
+  border-color: color-mix(in srgb, var(--accent-color) 44%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 78%, transparent);
+  color: color-mix(in srgb, var(--accent-color) 90%, var(--text-primary) 10%);
+}
+
+.collection-card-tag.more {
+  cursor: default;
+  color: var(--text-tertiary);
+}
+
+.collection-empty {
+  flex: 1;
+  min-height: 0;
+  border: 1px dashed color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-muted) 66%, transparent);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 22px;
+  text-align: center;
+}
+
+.collection-empty-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.collection-empty-hint {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+
+@container (max-width: 560px) {
+  .collection-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .collection-card {
+    min-height: 134px;
+    padding: 9px;
+  }
+
+  .collection-tag-editor input {
+    min-width: 96px;
+    width: 96px;
+  }
+}
+
+.app.mini-mode .collection-board {
+  padding: 8px 8px 10px;
+  gap: 8px;
+}
+
+.app.mini-mode .collection-tag-rail-meta {
+  gap: 6px;
+}

@@ -29,7 +29,7 @@ const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
-const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'workbench', 'global']);
+const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'workbench', 'collection', 'global']);
 const normalizeCopyFeedbackSource = (source) => {
   if (typeof source !== 'string') return 'global';
   const normalized = source.trim().toLowerCase();
