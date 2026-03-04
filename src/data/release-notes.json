@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.2.7",
+      "publishedAt": "2026-03-05",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-7",
+      "summary": {
+        "zh-CN": "聚焦收藏区体验，补齐视图切换与交互细节，收藏管理更清晰顺手。",
+        "en-US": "Focused on favorites/workbench experience with view switching and interaction refinements for clearer, smoother collection management."
+      },
+      "highlights": {
+        "zh-CN": [
+          "收藏区新增视图切换能力，支持按不同浏览偏好切换展示方式。",
+          "继续优化收藏栏结构与操作路径，常用动作更集中、反馈更直接。",
+          "完善收藏项的交互处理细节，减少状态切换时的困惑与误触。",
+          "同步优化相关历史流文件展示细节，收藏与历史协同更顺滑。"
+        ],
+        "en-US": [
+          "Added view switching in the favorites/workbench area for different browsing preferences.",
+          "Further refined favorites panel structure and action flow for clearer, faster operations.",
+          "Improved favorite-item interaction handling to reduce confusion and mis-taps during state changes.",
+          "Polished related history-file presentation details for smoother flow between history and favorites."
+        ]
+      }
+    },
+    {
       "version": "0.2.6",
       "publishedAt": "2026-03-03",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-6",
