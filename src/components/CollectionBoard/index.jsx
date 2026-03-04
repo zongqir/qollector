@@ -5,6 +5,8 @@ import {
   Copy,
   ExternalLink,
   Inbox,
+  LayoutGrid,
+  List,
   PencilLine,
   Plus,
   Star,
@@ -24,6 +26,22 @@ import { getSourceApp, getTags } from '../../utils/tagHelpers';
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
 const getUserTags = (item) => getTags(item?.tags).filter(tag => !tag.startsWith('AI:'));
+const COLLECTION_VIEW_MODE_KEY = 'qollect-collection-view-mode-v1';
+const COLLECTION_VIEW_MODE_CARDS = 'cards';
+const COLLECTION_VIEW_MODE_LIST = 'list';
+
+const readCollectionViewMode = () => {
+  if (typeof window === 'undefined') return COLLECTION_VIEW_MODE_CARDS;
+  try {
+    const stored = String(localStorage.getItem(COLLECTION_VIEW_MODE_KEY) || '').trim().toLowerCase();
+    if (stored === COLLECTION_VIEW_MODE_LIST || stored === COLLECTION_VIEW_MODE_CARDS) {
+      return stored;
+    }
+  } catch (error) {
+    console.warn('[CollectionBoard] read view mode failed:', error);
+  }
+  return COLLECTION_VIEW_MODE_CARDS;
+};
 
 function CollectionBoard({
   items,
@@ -46,6 +64,7 @@ function CollectionBoard({
   const [draftTag, setDraftTag] = useState('');
   const [tagEditorBusy, setTagEditorBusy] = useState(false);
   const [tagEditorFeedback, setTagEditorFeedback] = useState('');
+  const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
 
   const itemsById = useMemo(() => {
     const map = new Map();
@@ -80,6 +99,15 @@ function CollectionBoard({
       return next.length === current.length ? current : next;
     });
   }, [allCollectionTags]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(COLLECTION_VIEW_MODE_KEY, collectionViewMode);
+    } catch (error) {
+      console.warn('[CollectionBoard] persist view mode failed:', error);
+    }
+  }, [collectionViewMode]);
 
   const activeItem = activeItemId ? itemsById.get(activeItemId) : null;
 
@@ -202,67 +230,92 @@ function CollectionBoard({
   return (
     <section className="collection-board" onClick={(event) => event.stopPropagation()}>
       <div className="collection-tag-rail-wrap">
-        <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
-          <button
-            type="button"
-            className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
-            onClick={() => setSelectedCollectionTags([])}
-          >
-            {t('collection.allTags')}
-          </button>
-          {allCollectionTags.map((tag) => (
+        <div className="collection-toolbar-row">
+          <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
             <button
-              key={tag}
               type="button"
-              className={`collection-tag-chip ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
-              onClick={() => toggleRailTag(tag)}
+              className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
+              onClick={() => setSelectedCollectionTags([])}
             >
-              {tag}
+              {t('collection.allTags')}
             </button>
-          ))}
-          <button
-            type="button"
-            className="collection-tag-chip add"
-            onClick={handleOpenTagEditor}
-            title={t('item.addTag')}
-            aria-label={t('item.addTag')}
-          >
-            <Plus size={12} />
-          </button>
-          {showTagEditor && (
-            <div className="collection-tag-editor" onClick={(event) => event.stopPropagation()}>
-              <input
-                type="text"
-                value={draftTag}
-                onChange={(event) => setDraftTag(event.target.value)}
-                onKeyDown={handleTagInputKeyDown}
-                placeholder={t('collection.addTagPlaceholder')}
-                autoFocus
-              />
+            {allCollectionTags.map((tag) => (
               <button
+                key={tag}
                 type="button"
-                className="confirm"
-                onClick={() => void submitTag()}
-                disabled={tagEditorBusy || !normalizeTag(draftTag)}
-                title={t('collection.confirmAddTag')}
-                aria-label={t('collection.confirmAddTag')}
+                className={`collection-tag-chip ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                onClick={() => toggleRailTag(tag)}
               >
-                <Check size={12} />
+                {tag}
               </button>
-              <button
-                type="button"
-                className="cancel"
-                onClick={closeTagEditor}
-                title={t('collection.cancelAddTag')}
-                aria-label={t('collection.cancelAddTag')}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          )}
+            ))}
+            <button
+              type="button"
+              className="collection-tag-chip add"
+              onClick={handleOpenTagEditor}
+              title={t('item.addTag')}
+              aria-label={t('item.addTag')}
+            >
+              <Plus size={12} />
+            </button>
+            {showTagEditor && (
+              <div className="collection-tag-editor" onClick={(event) => event.stopPropagation()}>
+                <input
+                  type="text"
+                  value={draftTag}
+                  onChange={(event) => setDraftTag(event.target.value)}
+                  onKeyDown={handleTagInputKeyDown}
+                  placeholder={t('collection.addTagPlaceholder')}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="confirm"
+                  onClick={() => void submitTag()}
+                  disabled={tagEditorBusy || !normalizeTag(draftTag)}
+                  title={t('collection.confirmAddTag')}
+                  aria-label={t('collection.confirmAddTag')}
+                >
+                  <Check size={12} />
+                </button>
+                <button
+                  type="button"
+                  className="cancel"
+                  onClick={closeTagEditor}
+                  title={t('collection.cancelAddTag')}
+                  aria-label={t('collection.cancelAddTag')}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="collection-view-toggle" role="group" aria-label={t('collection.viewToggle')}>
+            <button
+              type="button"
+              className={collectionViewMode === COLLECTION_VIEW_MODE_CARDS ? 'active' : ''}
+              onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_CARDS)}
+              title={t('collection.viewCards')}
+              aria-label={t('collection.viewCards')}
+              aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_CARDS}
+            >
+              <LayoutGrid size={13} />
+            </button>
+            <button
+              type="button"
+              className={collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'active' : ''}
+              onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_LIST)}
+              title={t('collection.viewList')}
+              aria-label={t('collection.viewList')}
+              aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_LIST}
+            >
+              <List size={13} />
+            </button>
+          </div>
         </div>
         <div className="collection-tag-rail-meta">
           <span>{t('collection.tagFilterHint')}</span>
+          <span>{t('collection.countLabel', { count: filteredItems.length })}</span>
           {activeItem && (
             <span className="collection-active-item">
               {t('collection.activeCardHint')}
@@ -285,7 +338,7 @@ function CollectionBoard({
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
         </div>
       ) : (
-        <div className="collection-grid">
+        <div className={`collection-grid ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}>
           {filteredItems.map((item) => {
             const itemTags = getUserTags(item);
             const sourceApp = getSourceApp(item.metadata);
@@ -295,7 +348,7 @@ function CollectionBoard({
             return (
               <article
                 key={item.id}
-                className={`collection-card ${activeItemId === item.id ? 'active' : ''}`}
+                className={`collection-card ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''} ${activeItemId === item.id ? 'active' : ''}`}
                 onClick={() => {
                   setActiveItemId(item.id);
                   onOpenPreview?.(item);
@@ -364,8 +417,8 @@ function CollectionBoard({
                         event.stopPropagation();
                         onOpenEditModal?.(item);
                       }}
-                      title={t('item.editNoteAndTag')}
-                      aria-label={t('item.editNoteAndTag')}
+                      title={t('item.editNoteAndTags')}
+                      aria-label={t('item.editNoteAndTags')}
                     >
                       <PencilLine size={13} />
                     </button>
