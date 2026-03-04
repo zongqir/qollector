@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Inbox, FileText, Image, Type, Link, Code, GripVertical, ExternalLink, Expand, Check, FolderOpen, Palette } from 'lucide-react';
+import { Star, Inbox, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Expand, Check, FolderOpen, Palette } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -23,6 +23,38 @@ import useAppStore from '../../store/useAppStore';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
+const FileIconLazy = lazy(() =>
+  import('react-file-icon').then(module => ({
+    default: ({ extension, ...props }) => {
+      const { FileIcon, defaultStyles } = module;
+      return <FileIcon extension={extension} {...(defaultStyles[extension] || {})} {...props} />;
+    }
+  }))
+);
+
+const getExt = (filename) => {
+  const parts = String(filename || '').split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
+
+const isFolderPath = (path) => {
+  const raw = String(path || '');
+  if (!raw) return false;
+  if (raw.endsWith('/') || raw.endsWith('\\')) return true;
+  const name = raw.split(/[/\\]/).pop() || '';
+  return !name.includes('.');
+};
+
+const looksLikeFileLine = (line) => {
+  const raw = String(line || '').trim();
+  if (!raw) return false;
+  const normalized = raw.replace(/^file:\/\//i, '');
+  const name = getFileName(normalized);
+  if (!name) return false;
+  if (normalized.includes('\\') || normalized.includes('/')) return true;
+  return /\.[a-z0-9]{1,8}$/i.test(name);
+};
+
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const TypeIcon = ({ type, hasCodeLanguage }) => {
@@ -59,6 +91,7 @@ function CompactCard({
 }) {
   const { t, i18n } = useTranslation();
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
+  const isMiniMode = useAppStore(s => s.isMiniMode);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const timelineColor = getTimelineColor(item.updated_at);
@@ -137,6 +170,65 @@ function CompactCard({
   }, []);
 
   const renderContent = () => {
+    const getRenderableFileLines = () => {
+      if (item.type_ === 'file') {
+        return getFileList(item.content || '');
+      }
+
+      // Compatibility: some old Windows Explorer captures were stored as text.
+      if (item.type_ !== 'text') return [];
+      const source = String(sourceApp || '').toLowerCase();
+      const likelyFileSource = source.includes('windows')
+        || source.includes('explorer')
+        || source.includes('finder')
+        || source.includes('file manager')
+        || source.includes('文件资源管理器');
+      if (!likelyFileSource) return [];
+
+      const lines = getFileList(item.content || '');
+      if (lines.length === 0) return [];
+      const fileLikeCount = lines.reduce((count, line) => (
+        count + (looksLikeFileLine(line) ? 1 : 0)
+      ), 0);
+      if (fileLikeCount === 0) return [];
+      if (lines.length === 1 && fileLikeCount !== 1) return [];
+      if (lines.length > 1 && fileLikeCount < Math.ceil(lines.length / 2)) return [];
+      return lines;
+    };
+
+    const renderableFiles = getRenderableFileLines();
+    if (renderableFiles.length > 0) {
+      const visibleCount = isMiniMode ? 1 : 2;
+      const visibleFiles = renderableFiles.slice(0, visibleCount);
+      return (
+        <div className="compact-card-files">
+          {visibleFiles.map((filePath, index) => {
+            const name = getFileName(filePath);
+            const isFolder = isFolderPath(filePath);
+            const ext = getExt(name);
+            return (
+              <div key={`${filePath}-${index}`} className="compact-card-file-item">
+                {isFolder ? (
+                  <Folder size={14} className="compact-card-file-icon file-icon-folder" />
+                ) : (
+                  <Suspense fallback={<FileText size={14} className="compact-card-file-icon" />}>
+                    <span className="compact-card-file-icon">
+                      <FileIconLazy extension={ext} />
+                    </span>
+                  </Suspense>
+                )}
+                <span className="compact-card-file-name" title={name}>{name}</span>
+                {!isFolder && ext && <span className="compact-card-file-ext">{ext}</span>}
+              </div>
+            );
+          })}
+          {renderableFiles.length > visibleCount && (
+            <div className="compact-card-file-more">+{renderableFiles.length - visibleCount}</div>
+          )}
+        </div>
+      );
+    }
+
     if (item.type_ === 'image' && item.image_paths) {
       return (
         <div className="compact-card-image">
@@ -175,14 +267,6 @@ function CompactCard({
           </div>
         );
       }
-    }
-    if (item.type_ === 'file') {
-      const files = getFileList(item.content);
-      return (
-        <div className="compact-card-text">
-          {files.map(f => getFileName(f)).join(', ')}
-        </div>
-      );
     }
     if (item.code_language && item.content) {
       return (
