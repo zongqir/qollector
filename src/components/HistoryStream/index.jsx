@@ -372,7 +372,7 @@ function HistoryStream({ style }) {
     let cancelled = false;
     setIsSearching(true);
     const filters = showFavoritesOnly ? { is_favorite: true } : undefined;
-    const limit = query.length > 0 ? 240 : 1000;
+    const limit = query.length > 0 ? 240 : 200;
     searchItems(query, limit, filters)
       .then((results) => {
         if (!cancelled) setBackendSearchResults(results);

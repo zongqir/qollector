@@ -801,6 +801,8 @@
     "viewCards": "卡片视图",
     "viewList": "列表视图",
     "countLabel": "{{count}} 条",
+    "loadingMore": "正在加载更多...",
+    "queryFailed": "后端筛选失败，请稍后重试",
     "pickCardFirst": "先点选一张收藏卡片，再添加标签",
     "addTagPlaceholder": "给当前卡片添加标签",
     "confirmAddTag": "保存标签",

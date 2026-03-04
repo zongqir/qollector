@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Check,
   Copy,
   ExternalLink,
+  FileText,
+  Folder,
   Inbox,
   LayoutGrid,
   List,
@@ -21,6 +23,7 @@ import {
   parseUrl,
 } from '../../utils/formatters';
 import { getImageThumbnail } from '../../utils/imageHelpers';
+import { searchItems } from '../../services/clipboardService';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -29,6 +32,30 @@ const getUserTags = (item) => getTags(item?.tags).filter(tag => !tag.startsWith(
 const COLLECTION_VIEW_MODE_KEY = 'qollect-collection-view-mode-v1';
 const COLLECTION_VIEW_MODE_CARDS = 'cards';
 const COLLECTION_VIEW_MODE_LIST = 'list';
+const COLLECTION_QUERY_PAGE_SIZE = 200;
+
+// Keep same file visual language as Workbench to reduce cognitive switching cost.
+const FileIconLazy = lazy(() =>
+  import('react-file-icon').then(module => ({
+    default: ({ extension, ...props }) => {
+      const { FileIcon, defaultStyles } = module;
+      return <FileIcon extension={extension} {...(defaultStyles[extension] || {})} {...props} />;
+    }
+  }))
+);
+
+const getExt = (filename) => {
+  const parts = String(filename || '').split('.');
+  return parts.length > 1 ? parts.pop().toLowerCase() : '';
+};
+
+const isFolderPath = (path) => {
+  const raw = String(path || '');
+  if (!raw) return false;
+  if (raw.endsWith('/') || raw.endsWith('\\')) return true;
+  const name = raw.split(/[/\\]/).pop() || '';
+  return !name.includes('.');
+};
 
 const readCollectionViewMode = () => {
   if (typeof window === 'undefined') return COLLECTION_VIEW_MODE_CARDS;
@@ -65,31 +92,81 @@ function CollectionBoard({
   const [tagEditorBusy, setTagEditorBusy] = useState(false);
   const [tagEditorFeedback, setTagEditorFeedback] = useState('');
   const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
+  const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
+  const [backendItems, setBackendItems] = useState([]);
+  const [backendLoading, setBackendLoading] = useState(false);
+  const [backendError, setBackendError] = useState('');
+
+  const selectedTagSignature = useMemo(
+    () => [...selectedCollectionTags].sort((left, right) => left.localeCompare(right)).join('\u0001'),
+    [selectedCollectionTags],
+  );
+
+  useEffect(() => {
+    setBackendLimit(COLLECTION_QUERY_PAGE_SIZE);
+  }, [selectedTagSignature]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBackendLoading(true);
+    setBackendError('');
+    const filters = {
+      is_favorite: true,
+      ...(selectedCollectionTags.length > 0 ? { tag_filter: selectedCollectionTags } : {}),
+    };
+    searchItems('', backendLimit, filters)
+      .then((results) => {
+        if (cancelled) return;
+        setBackendItems(Array.isArray(results) ? results : []);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = typeof error === 'string' ? error : String(error?.message || error || '');
+        setBackendError(message);
+        setBackendItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setBackendLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [backendLimit, selectedCollectionTags]);
+
+  const collectionItems = backendItems;
+  const tagsSourceItems = useMemo(() => {
+    const merged = new Map();
+    [...items, ...collectionItems].forEach((item) => {
+      if (!item?.id) return;
+      merged.set(item.id, item);
+    });
+    return Array.from(merged.values());
+  }, [items, collectionItems]);
 
   const itemsById = useMemo(() => {
     const map = new Map();
-    items.forEach((item) => map.set(item.id, item));
+    collectionItems.forEach((item) => map.set(item.id, item));
     return map;
-  }, [items]);
+  }, [collectionItems]);
 
   const allCollectionTags = useMemo(() => {
     const set = new Set();
-    items.forEach((item) => {
+    tagsSourceItems.forEach((item) => {
       getUserTags(item).forEach((tag) => set.add(tag));
     });
     return Array.from(set).sort((left, right) => (
       left.localeCompare(right, i18n.language || undefined, { sensitivity: 'base' })
     ));
-  }, [items, i18n.language]);
+  }, [tagsSourceItems, i18n.language]);
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (collectionItems.length === 0) {
       setActiveItemId(null);
       return;
     }
     if (activeItemId && itemsById.has(activeItemId)) return;
-    setActiveItemId(items[0].id);
-  }, [items, itemsById, activeItemId]);
+    setActiveItemId(collectionItems[0].id);
+  }, [collectionItems, itemsById, activeItemId]);
 
   useEffect(() => {
     setSelectedCollectionTags((current) => {
@@ -111,14 +188,6 @@ function CollectionBoard({
 
   const activeItem = activeItemId ? itemsById.get(activeItemId) : null;
 
-  const filteredItems = useMemo(() => {
-    if (selectedCollectionTags.length === 0) return items;
-    return items.filter((item) => {
-      const tags = getUserTags(item);
-      return selectedCollectionTags.some(tag => tags.includes(tag));
-    });
-  }, [items, selectedCollectionTags]);
-
   const toggleRailTag = useCallback((tag) => {
     const normalized = normalizeTag(tag);
     if (!normalized) return;
@@ -129,6 +198,15 @@ function CollectionBoard({
       return [...current, normalized];
     });
   }, []);
+
+  const canLoadMore = !backendLoading && collectionItems.length >= backendLimit;
+  const handleCollectionGridScroll = useCallback((event) => {
+    if (!canLoadMore) return;
+    const target = event.currentTarget;
+    const remaining = target.scrollHeight - (target.scrollTop + target.clientHeight);
+    if (remaining > 120) return;
+    setBackendLimit(current => current + COLLECTION_QUERY_PAGE_SIZE);
+  }, [canLoadMore]);
 
   const handleOpenTagEditor = useCallback(() => {
     if (!activeItem) {
@@ -207,12 +285,30 @@ function CollectionBoard({
 
     if (item.type_ === 'file') {
       const files = getFileList(item.content || '');
-      const visibleFiles = files.slice(0, 3);
+      const isSingle = files.length === 1;
+      const visibleFiles = files.slice(0, isSingle ? 1 : 3);
       return (
-        <div className="collection-card-files">
-          {visibleFiles.map((filePath) => (
-            <div key={filePath} className="collection-card-file-item">{getFileName(filePath)}</div>
-          ))}
+        <div className={`collection-card-files ${isSingle ? 'single-file' : ''}`}>
+          {visibleFiles.map((filePath, index) => {
+            const name = getFileName(filePath);
+            const isFolder = isFolderPath(filePath);
+            const ext = getExt(name);
+            return (
+              <div key={`${filePath}-${index}`} className="collection-card-file-item">
+                {isFolder ? (
+                  <Folder size={isSingle ? 26 : 18} color="#f5c542" fill="#f5c542" className="file-icon" />
+                ) : (
+                  <Suspense fallback={<FileText size={isSingle ? 26 : 18} className="file-icon" />}>
+                    <div className="file-icon" style={{ width: isSingle ? 26 : 18 }}>
+                      <FileIconLazy extension={ext} />
+                    </div>
+                  </Suspense>
+                )}
+                <span className="file-name" title={name}>{name}</span>
+                {!isFolder && ext && <span className="file-ext">{ext}</span>}
+              </div>
+            );
+          })}
           {files.length > visibleFiles.length && (
             <div className="collection-card-file-more">+{files.length - visibleFiles.length}</div>
           )}
@@ -315,7 +411,7 @@ function CollectionBoard({
         </div>
         <div className="collection-tag-rail-meta">
           <span>{t('collection.tagFilterHint')}</span>
-          <span>{t('collection.countLabel', { count: filteredItems.length })}</span>
+          <span>{t('collection.countLabel', { count: collectionItems.length })}</span>
           {activeItem && (
             <span className="collection-active-item">
               {t('collection.activeCardHint')}
@@ -324,22 +420,33 @@ function CollectionBoard({
           {tagEditorFeedback && (
             <span className="collection-tag-feedback">{tagEditorFeedback}</span>
           )}
+          {backendError && (
+            <span className="collection-tag-feedback">{t('collection.queryFailed')}</span>
+          )}
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {backendLoading && collectionItems.length === 0 ? (
+        <div className="collection-loading" role="status" aria-live="polite">
+          <div className="loading-spinner"></div>
+          <div className="loading-text">{t('search.searching')}</div>
+        </div>
+      ) : selectedCollectionTags.length === 0 && collectionItems.length === 0 ? (
         <div className="collection-empty" role="status" aria-live="polite">
           <div className="collection-empty-title">{t('collection.emptyTitle')}</div>
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : collectionItems.length === 0 ? (
         <div className="collection-empty" role="status" aria-live="polite">
           <div className="collection-empty-title">{t('collection.noTagMatch')}</div>
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
         </div>
       ) : (
-        <div className={`collection-grid ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}>
-          {filteredItems.map((item) => {
+        <div
+          className={`collection-grid ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}
+          onScroll={handleCollectionGridScroll}
+        >
+          {collectionItems.map((item) => {
             const itemTags = getUserTags(item);
             const sourceApp = getSourceApp(item.metadata);
             const isCopied = copiedItemId === item.id
@@ -450,6 +557,9 @@ function CollectionBoard({
               </article>
             );
           })}
+          {backendLoading && (
+            <div className="collection-load-more-hint">{t('collection.loadingMore')}</div>
+          )}
         </div>
       )}
     </section>

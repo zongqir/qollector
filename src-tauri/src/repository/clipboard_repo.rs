@@ -23,6 +23,27 @@ const LIGHT_CONTENT_PREVIEW_CHARS: i32 = 4000;
 const LIGHT_OCR_PREVIEW_CHARS: i32 = 3000;
 const SYNC_GLOBAL_SLOT_ID: &str = "global";
 
+fn build_tag_filter_clause(tag_filter: Option<&Vec<String>>, column: &str) -> Option<String> {
+    let tags = tag_filter?;
+    let expressions: Vec<String> = tags
+        .iter()
+        .filter_map(|raw| {
+            let normalized = raw.trim().to_lowercase();
+            if normalized.is_empty() {
+                return None;
+            }
+            let escaped = normalized.replace('\'', "''");
+            Some(format!("LOWER({}) LIKE '%\"{}\"%'", column, escaped))
+        })
+        .collect();
+
+    if expressions.is_empty() {
+        None
+    } else {
+        Some(format!(" AND ({})", expressions.join(" OR ")))
+    }
+}
+
 impl ClipboardRepository {
     /// 获取数据库连接池的引用
     pub fn pool(&self) -> &SqlitePool {
@@ -523,6 +544,10 @@ impl ClipboardRepository {
             ));
         }
 
+        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "tags") {
+            sql.push_str(&tag_clause);
+        }
+
         if !query.is_empty() {
             let escaped_query = query.replace('\'', "''");
             sql.push_str(&format!(
@@ -599,6 +624,10 @@ impl ClipboardRepository {
                 " AND is_favorite = {}",
                 if is_favorite { 1 } else { 0 }
             ));
+        }
+
+        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "tags") {
+            sql.push_str(&tag_clause);
         }
 
         sql.push_str(&format!(" AND LOWER(tags) LIKE '%{}%'", escaped_query));
@@ -1298,6 +1327,9 @@ impl ClipboardRepository {
                 " AND ci.is_favorite = {}",
                 if is_favorite { 1 } else { 0 }
             ));
+        }
+        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "ci.tags") {
+            filter_sql.push_str(&tag_clause);
         }
 
         let sql = format!(

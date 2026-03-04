@@ -826,6 +826,8 @@
     "viewCards": "Card view",
     "viewList": "List view",
     "countLabel": "{{count}} items",
+    "loadingMore": "Loading more...",
+    "queryFailed": "Backend filtering failed. Please retry.",
     "pickCardFirst": "Select a card first, then add a tag",
     "addTagPlaceholder": "Add a tag to active card",
     "confirmAddTag": "Save tag",
