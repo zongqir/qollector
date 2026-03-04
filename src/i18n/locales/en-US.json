@@ -754,7 +754,7 @@
     "clearSelection": "Clear Selection",
     "delete": "Delete"
   },
-  "collection": {
+  "workbench": {
     "emptyTitle": "Your workbench is empty",
     "emptyHint": "Click the workbench button on any item, or drag cards here",
     "workspaceGuide": "This is your workbench. Add important items here to organize, merge, and export them — turn your clipboard into a personal library.",
@@ -814,6 +814,9 @@
     "dedupeNoItems": "No workbench items to deduplicate",
     "dedupeNoChanges": "No duplicates found",
     "dedupeDone": "Removed {{count}} duplicate item(s)"
+  },
+  "collection": {
+    "longTermStorageHint": "Collection is for long-term storage, so important items stay easy to revisit and reuse."
   },
   "aiAssistant": {
     "title": "AI Assistant",

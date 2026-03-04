@@ -18,7 +18,7 @@ function TimelinePanel() {
   const setPanelMode = useAppStore(s => s.setPanelMode);
 
   const handleBackToCollection = () => {
-    setPanelMode('collection');
+    setPanelMode('workbench');
   };
 
   const handleDateSwitch = (date) => {
@@ -31,14 +31,14 @@ function TimelinePanel() {
         <button
           className="timeline-back-btn"
           onClick={handleBackToCollection}
-          title={t('collection.backToCollectionFromTimeline')}
+          title={t('workbench.backToCollectionFromTimeline')}
         >
           <ChevronLeft size={16} />
-          <span>{t('collection.backToCollection')}</span>
+          <span>{t('workbench.backToCollection')}</span>
         </button>
         <div className="timeline-title">
           <Clock size={18} />
-          <span>{t('collection.timelineTitle')}</span>
+          <span>{t('workbench.timelineTitle')}</span>
         </div>
       </div>
 
@@ -48,14 +48,14 @@ function TimelinePanel() {
           onClick={() => handleDateSwitch('today')}
         >
           <Calendar size={14} />
-          <span>{t('collection.today')}</span>
+          <span>{t('workbench.today')}</span>
         </button>
         <button
           className={`timeline-date-btn ${timelineDate === 'yesterday' ? 'active' : ''}`}
           onClick={() => handleDateSwitch('yesterday')}
         >
           <Calendar size={14} />
-          <span>{t('collection.yesterday')}</span>
+          <span>{t('workbench.yesterday')}</span>
         </button>
       </div>
 
@@ -75,7 +75,7 @@ function TimelinePanel() {
       {!timelineLoading && !timelineError && timelineItems.length === 0 && (
         <div className="timeline-empty">
           <Clock size={48} strokeWidth={1} />
-          <div className="timeline-empty-text">{t('collection.noDataForDate')}</div>
+          <div className="timeline-empty-text">{t('workbench.noDataForDate')}</div>
         </div>
       )}
 

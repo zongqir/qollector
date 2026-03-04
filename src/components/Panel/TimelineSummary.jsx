@@ -11,7 +11,7 @@ function TimelineSummary({ summary, aiEnabled }) {
           <AlertCircle size={20} />
         </div>
         <div className="timeline-summary-text">
-          {t('collection.aiNotEnabled')}
+          {t('workbench.aiNotEnabled')}
         </div>
       </div>
     );
@@ -24,7 +24,7 @@ function TimelineSummary({ summary, aiEnabled }) {
           <Sparkles size={20} className="sparkle-icon" />
         </div>
         <div className="timeline-summary-text">
-          {t('collection.aiSummaryLoading')}
+          {t('workbench.aiSummaryLoading')}
         </div>
       </div>
     );

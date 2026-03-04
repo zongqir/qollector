@@ -121,15 +121,15 @@ function DragDrop({ onItemAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
-  const switchToCollection = useAppStore(s => s.switchToCollection);
+  const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
 
   const onItemAddedRef = useRef(onItemAdded);
   onItemAddedRef.current = onItemAdded;
 
   const maxPinnedItemsRef = useRef(maxPinnedItems);
   maxPinnedItemsRef.current = maxPinnedItems;
-  const switchToCollectionRef = useRef(switchToCollection);
-  switchToCollectionRef.current = switchToCollection;
+  const switchToWorkbenchRef = useRef(switchToWorkbench);
+  switchToWorkbenchRef.current = switchToWorkbench;
   const cleanupRef = useRef(null);
   const nativeDropDragActiveRef = useRef(false);
   const domDragActiveRef = useRef(false);
@@ -177,7 +177,7 @@ function DragDrop({ onItemAdded }) {
         return 0;
       }
 
-      switchToCollectionRef.current?.();
+      switchToWorkbenchRef.current?.();
       let insertedCount = 0;
 
       for (const filePath of uniquePaths) {
@@ -217,7 +217,7 @@ function DragDrop({ onItemAdded }) {
       const normalized = content.trim();
       if (!normalized) return false;
 
-      switchToCollectionRef.current?.();
+      switchToWorkbenchRef.current?.();
 
       const itemId = await invoke('add_clipboard_item_manual', {
         contentType: 'text',

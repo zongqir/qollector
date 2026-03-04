@@ -835,7 +835,7 @@ function App() {
       }
 
       handleSelectViewMode(VIEW_MODE_ALL);
-      setPanelMode('collection');
+      setPanelMode('workbench');
       showAppFeedback(t('quickInput.openWorkbenchFeedback'), 'success', 1400);
     });
 

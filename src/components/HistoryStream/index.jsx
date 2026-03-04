@@ -249,7 +249,7 @@ function HistoryStream({ style }) {
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
-  const switchToCollection = useAppStore(s => s.switchToCollection);
+  const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
   const loadMore = useAppStore(s => s.loadMore);
   const loadItems = useAppStore(s => s.loadItems);
   const togglePin = useAppStore(s => s.togglePin);
@@ -1170,7 +1170,7 @@ function HistoryStream({ style }) {
     clearExpandedPreview,
     handleCopyAndAutoPaste,
     handleCopy,
-    switchToCollection,
+    switchToWorkbench,
   });
 
   const { handleSearchInputKeyDown } = useHistoryKeyboardNavigation({
@@ -1791,7 +1791,7 @@ function HistoryStream({ style }) {
                   onClick={handleUndoAddFromSearch}
                   disabled={quickAddUndoPending}
                 >
-                  {quickAddUndoPending ? t('app.loading') : t('collection.undo')}
+                  {quickAddUndoPending ? t('app.loading') : t('workbench.undo')}
                 </button>
               )}
             </div>

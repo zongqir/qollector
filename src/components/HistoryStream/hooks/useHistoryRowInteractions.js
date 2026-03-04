@@ -55,7 +55,7 @@ export default function useHistoryRowInteractions({
   clearExpandedPreview,
   handleCopyAndAutoPaste,
   handleCopy,
-  switchToCollection,
+  switchToWorkbench,
 }) {
   const clickTimerRef = useRef(null);
 
@@ -208,7 +208,7 @@ export default function useHistoryRowInteractions({
     e.dataTransfer.setData('text/plain', text);
     e.dataTransfer.setData('application/x-qollect-item', JSON.stringify({ id: item.id }));
     e.dataTransfer.effectAllowed = 'copyMove';
-    switchToCollection();
+    switchToWorkbench();
 
     const dragEl = document.createElement('div');
     dragEl.textContent = text.substring(0, 40) + (text.length > 40 ? '...' : '');
@@ -216,7 +216,7 @@ export default function useHistoryRowInteractions({
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 0, 0);
     setTimeout(() => document.body.removeChild(dragEl), 0);
-  }, [supportsNativeExternalDrag, handleStartExternalDrag, switchToCollection]);
+  }, [supportsNativeExternalDrag, handleStartExternalDrag, switchToWorkbench]);
 
   const handleStreamClick = useCallback(() => {
     if (selectedItemIds.length > 0) {
@@ -228,9 +228,9 @@ export default function useHistoryRowInteractions({
       return;
     }
     if (panelMode === 'preview') {
-      switchToCollection();
+      switchToWorkbench();
     }
-  }, [panelMode, switchToCollection, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearExpandedPreview]);
+  }, [panelMode, switchToWorkbench, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearExpandedPreview]);
 
   return {
     handleCardClick,

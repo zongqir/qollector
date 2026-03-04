@@ -44,11 +44,11 @@ function CollectionQuickActionsBar({
         <button
           className="collection-btn timeline-btn"
           onClick={() => setPanelMode('timeline')}
-          title={t('collection.timeTravel')}
+          title={t('workbench.timeTravel')}
           disabled={isBusy}
         >
           <Clock size={14} />
-          <span>{t('collection.timeTravel')}</span>
+          <span>{t('workbench.timeTravel')}</span>
         </button>
 
         <div className={`collection-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
@@ -56,12 +56,12 @@ function CollectionQuickActionsBar({
             className="collection-btn quick-output-main-btn"
             onClick={() => handleRunQuickOutput(quickOutputTask)}
             disabled={isBusy}
-            title={t('collection.quickOutputRunTitle', {
+            title={t('workbench.quickOutputRunTitle', {
               task: t(`aiAssistant.tasks.${quickOutputTask}`),
             })}
           >
             {quickOutputRunning ? <Loader2 size={14} className="collection-btn-spinner" /> : <Bot size={14} />}
-            <span>{t('collection.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
+            <span>{t('workbench.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
           </button>
           <button
             type="button"
@@ -71,8 +71,8 @@ function CollectionQuickActionsBar({
               setShowQuickOutputMenu(current => !current);
             }}
             disabled={isBusy}
-            title={t('collection.quickOutputSelectTitle')}
-            aria-label={t('collection.quickOutputSelectTitle')}
+            title={t('workbench.quickOutputSelectTitle')}
+            aria-label={t('workbench.quickOutputSelectTitle')}
             aria-expanded={showQuickOutputMenu}
             aria-haspopup="menu"
           >
@@ -102,17 +102,17 @@ function CollectionQuickActionsBar({
               setShowCollectionMoreMenu(current => !current);
             }}
             disabled={isBusy}
-            title={t('collection.moreActions')}
+            title={t('workbench.moreActions')}
           >
             <SlidersHorizontal size={14} />
-            <span>{t('collection.moreActions')}</span>
+            <span>{t('workbench.moreActions')}</span>
             <ChevronDown size={13} className="collection-more-caret" />
           </button>
           {showCollectionMoreMenu && (
             <div className="collection-dropdown-menu align-right">
               <button className="collection-dropdown-item" onClick={handleSaveSnapshot} disabled={isBusy}>
                 {activeAction === 'snapshot' ? <Loader2 size={14} className="collection-btn-spinner" /> : <BookmarkPlus size={14} />}
-                <span>{t('collection.snapshotSave')}</span>
+                <span>{t('workbench.snapshotSave')}</span>
               </button>
               <button
                 className="collection-dropdown-item"
@@ -120,19 +120,19 @@ function CollectionQuickActionsBar({
                 disabled={isBusy || !hasSnapshot}
               >
                 {activeAction === 'restore-snapshot' ? <Loader2 size={14} className="collection-btn-spinner" /> : <History size={14} />}
-                <span>{t('collection.snapshotRestore')}</span>
+                <span>{t('workbench.snapshotRestore')}</span>
               </button>
               <button className="collection-dropdown-item" onClick={handleExportCollection} disabled={isBusy}>
                 {activeAction === 'export' ? <Loader2 size={14} className="collection-btn-spinner" /> : <FileDown size={14} />}
-                <span>{t('collection.exportMarkdown')}</span>
+                <span>{t('workbench.exportMarkdown')}</span>
               </button>
               <button className="collection-dropdown-item" onClick={handleDedupeCollection} disabled={isBusy}>
                 {activeAction === 'dedupe' ? <Loader2 size={14} className="collection-btn-spinner" /> : <Trash2 size={14} />}
-                <span>{t('collection.dedupePinned')}</span>
+                <span>{t('workbench.dedupePinned')}</span>
               </button>
               <button className="collection-dropdown-item danger" onClick={handleClearAll} disabled={isBusy}>
                 {activeAction === 'clear' ? <Loader2 size={14} className="collection-btn-spinner" /> : <Trash2 size={14} />}
-                <span>{t('collection.clearAll')}</span>
+                <span>{t('workbench.clearAll')}</span>
               </button>
             </div>
           )}
@@ -150,7 +150,7 @@ function CollectionQuickActionsBar({
               disabled={isBusy}
             >
               {activeAction === 'undo-clear' ? <Loader2 size={12} className="collection-feedback-spinner" /> : <Undo2 size={12} />}
-              <span>{t('collection.undo')}</span>
+              <span>{t('workbench.undo')}</span>
             </button>
           )}
         </div>

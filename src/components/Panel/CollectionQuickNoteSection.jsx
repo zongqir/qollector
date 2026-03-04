@@ -20,7 +20,7 @@ function CollectionQuickNoteSection({
           <div className="quick-note-expanded-body">
             <textarea
               className="quick-note-textarea"
-              placeholder={t('collection.expandedNotePlaceholder')}
+              placeholder={t('workbench.expandedNotePlaceholder')}
               value={quickNote}
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onExpandedKeyDown}
@@ -41,7 +41,7 @@ function CollectionQuickNoteSection({
               disabled={!quickNote.trim()}
             >
               <Send size={14} />
-              <span>{t('collection.expandedNoteSubmit')}</span>
+              <span>{t('workbench.expandedNoteSubmit')}</span>
             </button>
           </div>
         </div>
@@ -51,14 +51,14 @@ function CollectionQuickNoteSection({
             <button
               className="quick-note-expand-btn"
               onClick={onExpand}
-              title={t('collection.expandedNotePlaceholder')}
+              title={t('workbench.expandedNotePlaceholder')}
             >
               <Plus size={16} />
             </button>
             <input
               type="text"
               className="quick-note-input"
-              placeholder={t('collection.quickNotePlaceholder')}
+              placeholder={t('workbench.quickNotePlaceholder')}
               value={quickNote}
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onQuickNoteKeyDown}

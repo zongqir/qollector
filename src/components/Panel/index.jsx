@@ -9,7 +9,7 @@ function PolymorphicPanel() {
 
   return (
     <div className="polymorphic-panel">
-      {panelMode === 'collection' && (
+      {panelMode === 'workbench' && (
         <div className="panel-view active">
           <CollectionPanel />
         </div>

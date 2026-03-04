@@ -105,7 +105,7 @@ function ComparePanel() {
   const compareCandidateIds = useAppStore(s => s.compareCandidateIds);
   const compareItemIds = useAppStore(s => s.compareItemIds);
   const setCompareItemIds = useAppStore(s => s.setCompareItemIds);
-  const switchToCollection = useAppStore(s => s.switchToCollection);
+  const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
@@ -457,9 +457,9 @@ function ComparePanel() {
         <div className="compare-panel-header">
           <button
             className="compare-back-btn"
-            onClick={switchToCollection}
-            title={t('collection.backToCollection')}
-            aria-label={t('collection.backToCollection')}
+            onClick={switchToWorkbench}
+            title={t('workbench.backToCollection')}
+            aria-label={t('workbench.backToCollection')}
           >
             <span className="compare-back-icon" aria-hidden="true">
               <ArrowLeft size={13} />
@@ -478,9 +478,9 @@ function ComparePanel() {
       <div className="compare-panel-header">
         <button
           className="compare-back-btn"
-          onClick={switchToCollection}
-          title={t('collection.backToCollection')}
-          aria-label={t('collection.backToCollection')}
+          onClick={switchToWorkbench}
+          title={t('workbench.backToCollection')}
+          aria-label={t('workbench.backToCollection')}
         >
           <span className="compare-back-icon" aria-hidden="true">
             <ArrowLeft size={13} />

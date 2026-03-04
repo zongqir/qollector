@@ -66,10 +66,10 @@ const saveSnapshot = (ids) => {
 const buildExportMarkdown = (items, t) => {
   const now = new Date().toLocaleString();
   const lines = [
-    `# ${t('collection.exportTitle')}`,
+    `# ${t('workbench.exportTitle')}`,
     '',
-    `${t('collection.exportGeneratedAt')}: ${now}`,
-    `${t('collection.exportItemCount')}: ${items.length}`,
+    `${t('workbench.exportGeneratedAt')}: ${now}`,
+    `${t('workbench.exportItemCount')}: ${items.length}`,
     '',
   ];
 
@@ -80,7 +80,7 @@ const buildExportMarkdown = (items, t) => {
     const content = String(
       item?.content
         || (item?.type_ === 'image' ? item?.ocr_text || '' : '')
-        || t('collection.exportEmptyLine')
+        || t('workbench.exportEmptyLine')
     ).trim();
     const note = String(item?.user_note || '').trim();
 
@@ -89,7 +89,7 @@ const buildExportMarkdown = (items, t) => {
     lines.push(content);
     if (note) {
       lines.push('');
-      lines.push(`> ${t('collection.exportNoteLabel')}: ${note}`);
+      lines.push(`> ${t('workbench.exportNoteLabel')}: ${note}`);
     }
     lines.push('');
   });
@@ -188,7 +188,7 @@ function useCollectionQuickActions({
     closeMenus();
 
     if (!aiEnabled) {
-      showMessage({ type: 'warning', text: t('collection.aiNotEnabled') });
+      showMessage({ type: 'warning', text: t('workbench.aiNotEnabled') });
       return;
     }
 
@@ -214,7 +214,7 @@ function useCollectionQuickActions({
 
       const outputText = typeof response?.output === 'string' ? response.output.trim() : '';
       if (!outputText) {
-        showMessage({ type: 'warning', text: t('collection.quickOutputEmpty') });
+        showMessage({ type: 'warning', text: t('workbench.quickOutputEmpty') });
         return;
       }
 
@@ -228,11 +228,11 @@ function useCollectionQuickActions({
       setQuickOutputTask(taskType);
       showMessage({
         type: 'success',
-        text: t('collection.quickOutputSuccess', { task: t(`aiAssistant.tasks.${taskType}`) }),
+        text: t('workbench.quickOutputSuccess', { task: t(`aiAssistant.tasks.${taskType}`) }),
       });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.quickOutputFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.quickOutputFailed', { error: message }) });
     } finally {
       setQuickOutputRunning(false);
     }
@@ -260,7 +260,7 @@ function useCollectionQuickActions({
 
     const pinnedIds = pinnedItems.map(item => item.id);
     if (pinnedIds.length === 0) {
-      showMessage({ type: 'warning', text: t('collection.snapshotNoItems') });
+      showMessage({ type: 'warning', text: t('workbench.snapshotNoItems') });
       return;
     }
 
@@ -270,11 +270,11 @@ function useCollectionQuickActions({
       setHasSnapshot(true);
       showMessage({
         type: 'success',
-        text: t('collection.snapshotSaved', { count: pinnedIds.length }),
+        text: t('workbench.snapshotSaved', { count: pinnedIds.length }),
       });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }
@@ -286,7 +286,7 @@ function useCollectionQuickActions({
 
     const snapshot = readSnapshot();
     if (!snapshot?.ids?.length) {
-      showMessage({ type: 'warning', text: t('collection.snapshotMissing') });
+      showMessage({ type: 'warning', text: t('workbench.snapshotMissing') });
       return;
     }
 
@@ -297,7 +297,7 @@ function useCollectionQuickActions({
       const snapshotIds = snapshot.ids.filter(id => itemMap.has(id));
 
       if (snapshotIds.length === 0) {
-        showMessage({ type: 'warning', text: t('collection.snapshotNoMatch') });
+        showMessage({ type: 'warning', text: t('workbench.snapshotNoMatch') });
         return;
       }
 
@@ -314,14 +314,14 @@ function useCollectionQuickActions({
       }
 
       await loadItems();
-      setPanelMode('collection');
+      setPanelMode('workbench');
       showMessage({
         type: 'success',
-        text: t('collection.snapshotRestored', { count: snapshotIds.length }),
+        text: t('workbench.snapshotRestored', { count: snapshotIds.length }),
       });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }
@@ -332,7 +332,7 @@ function useCollectionQuickActions({
     closeMenus();
 
     if (pinnedItems.length === 0) {
-      showMessage({ type: 'warning', text: t('collection.exportNoItems') });
+      showMessage({ type: 'warning', text: t('workbench.exportNoItems') });
       return;
     }
 
@@ -344,11 +344,11 @@ function useCollectionQuickActions({
         content,
         format: 'markdown',
       });
-      showMessage({ type: 'success', text: t('collection.exportSuccess', { path: outputPath }) });
+      showMessage({ type: 'success', text: t('workbench.exportSuccess', { path: outputPath }) });
     } catch (error) {
       if (String(error) === 'CANCELLED') return;
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }
@@ -359,7 +359,7 @@ function useCollectionQuickActions({
     closeMenus();
 
     if (pinnedItems.length === 0) {
-      showMessage({ type: 'warning', text: t('collection.dedupeNoItems') });
+      showMessage({ type: 'warning', text: t('workbench.dedupeNoItems') });
       return;
     }
 
@@ -379,7 +379,7 @@ function useCollectionQuickActions({
       }
 
       if (duplicateIds.length === 0) {
-        showMessage({ type: 'warning', text: t('collection.dedupeNoChanges') });
+        showMessage({ type: 'warning', text: t('workbench.dedupeNoChanges') });
         return;
       }
 
@@ -388,10 +388,10 @@ function useCollectionQuickActions({
       }
 
       await loadItems();
-      showMessage({ type: 'success', text: t('collection.dedupeDone', { count: duplicateIds.length }) });
+      showMessage({ type: 'success', text: t('workbench.dedupeDone', { count: duplicateIds.length }) });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }
@@ -401,7 +401,7 @@ function useCollectionQuickActions({
     if (isBusy || pinnedItems.length === 0) return;
     closeMenus();
 
-    const confirmed = window.confirm(t('collection.clearAllConfirm'));
+    const confirmed = window.confirm(t('workbench.clearAllConfirm'));
     if (!confirmed) return;
 
     const pinnedIdsSnapshot = pinnedItems.map(item => item.id);
@@ -411,16 +411,16 @@ function useCollectionQuickActions({
         await invoke('toggle_pin_item', { id: item.id, maxPinned: 999 });
       }
       await loadItems();
-      setPanelMode('collection');
+      setPanelMode('workbench');
       setLastClearedPinnedIds(pinnedIdsSnapshot);
       showMessage({
         type: 'warning',
-        text: t('collection.clearAllDone'),
+        text: t('workbench.clearAllDone'),
         withUndo: true,
       });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }
@@ -438,10 +438,10 @@ function useCollectionQuickActions({
       }
       await loadItems();
       setLastClearedPinnedIds([]);
-      showMessage({ type: 'success', text: t('collection.clearAllUndoSuccess') });
+      showMessage({ type: 'success', text: t('workbench.clearAllUndoSuccess') });
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('collection.actionFailed', { error: message }) });
+      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
     } finally {
       setActiveAction(null);
     }

@@ -25,9 +25,9 @@ function TimelineChart({ items }) {
   const maxCount = Math.max(...hourlyData.map(d => d.count), 1);
 
   const getTimeLabel = (hour) => {
-    if (hour >= 6 && hour < 12) return t('collection.morning');
-    if (hour >= 12 && hour < 18) return t('collection.afternoon');
-    return t('collection.evening');
+    if (hour >= 6 && hour < 12) return t('workbench.morning');
+    if (hour >= 12 && hour < 18) return t('workbench.afternoon');
+    return t('workbench.evening');
   };
 
   return (
@@ -60,15 +60,15 @@ function TimelineChart({ items }) {
       </div>
       <div className="timeline-chart-legend">
         <div className="timeline-legend-item">
-          <span className="timeline-legend-label">{t('collection.morning')}</span>
+          <span className="timeline-legend-label">{t('workbench.morning')}</span>
           <span className="timeline-legend-range">6-12</span>
         </div>
         <div className="timeline-legend-item">
-          <span className="timeline-legend-label">{t('collection.afternoon')}</span>
+          <span className="timeline-legend-label">{t('workbench.afternoon')}</span>
           <span className="timeline-legend-range">12-18</span>
         </div>
         <div className="timeline-legend-item">
-          <span className="timeline-legend-label">{t('collection.evening')}</span>
+          <span className="timeline-legend-label">{t('workbench.evening')}</span>
           <span className="timeline-legend-range">18-24</span>
         </div>
       </div>

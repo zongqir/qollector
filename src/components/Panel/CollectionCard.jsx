@@ -196,7 +196,7 @@ function CollectionCard({
             e.stopPropagation();
           }}
           onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-          title={t('collection.removeFromCollection')}
+          title={t('workbench.removeFromCollection')}
         >
           <X size={14} />
         </button>

@@ -730,7 +730,7 @@
     "clearSelection": "取消选中",
     "delete": "删除"
   },
-  "collection": {
+  "workbench": {
     "emptyTitle": "工作台是空的",
     "emptyHint": "点击左侧的放入工作台按钮，或直接把卡片拖到这里",
     "workspaceGuide": "这里是你的工作台，放入重要内容后可以在这里整理、合并、导出，让剪贴板变成你的素材库。",
@@ -790,6 +790,9 @@
     "dedupeNoItems": "当前没有可去重的工作台项",
     "dedupeNoChanges": "未检测到重复项",
     "dedupeDone": "已移除 {{count}} 个重复项"
+  },
+  "collection": {
+    "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。"
   },
   "aiAssistant": {
     "title": "AI 助手",

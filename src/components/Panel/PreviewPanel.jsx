@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -45,7 +45,7 @@ function PreviewPanel() {
   const contentSelectableRef = useRef(null);
 
   const previewItem = useAppStore(s => s.previewItem);
-  const switchToCollection = useAppStore(s => s.switchToCollection);
+  const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
   const backFromPreview = useAppStore(s => s.backFromPreview);
   const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
@@ -105,7 +105,7 @@ function PreviewPanel() {
   }, [items, previewItem]);
 
   if (!item) {
-    switchToCollection();
+    switchToWorkbench();
     return null;
   }
 
@@ -292,7 +292,7 @@ function PreviewPanel() {
     const wasPinned = item.is_pinned;
     await togglePin(item);
     if (wasPinned) {
-      switchToCollection();
+      switchToWorkbench();
     }
   };
 
@@ -852,11 +852,11 @@ function PreviewPanel() {
               <button
                 className={`preview-tool-btn tool-more-btn ${showSecondaryTools ? 'active' : ''}`}
                 onClick={() => setShowSecondaryTools(prev => !prev)}
-                title={t('collection.moreActions')}
+                title={t('workbench.moreActions')}
                 aria-pressed={showSecondaryTools}
               >
                 <MoreHorizontal size={14} />
-                <span>{t('collection.moreActions')}</span>
+                <span>{t('workbench.moreActions')}</span>
               </button>
             )}
             {shouldShowOpenButton && (

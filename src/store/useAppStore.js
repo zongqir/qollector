@@ -29,7 +29,7 @@ const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
-const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'collection', 'global']);
+const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'workbench', 'collection', 'global']);
 const normalizeCopyFeedbackSource = (source) => {
   if (typeof source !== 'string') return 'global';
   const normalized = source.trim().toLowerCase();
@@ -381,10 +381,10 @@ const useAppStore = create((set, get) => ({
   isMemorySuspended: false,
 
   // ========== 右栏面板状态机 ==========
-  // 'collection' | 'preview' | 'compare' | 'timeline'
-  panelMode: 'collection',
+  // 'workbench' | 'preview' | 'compare' | 'timeline'
+  panelMode: 'workbench',
   previewItem: null,
-  previewReturnMode: 'collection',
+  previewReturnMode: 'workbench',
   compareCandidateIds: [],
   compareItemIds: [],
 
@@ -491,7 +491,7 @@ const useAppStore = create((set, get) => ({
         return {
           panelMode: 'preview',
           previewItem: item,
-          previewReturnMode: keepCompareContext ? 'compare' : 'collection',
+          previewReturnMode: keepCompareContext ? 'compare' : 'workbench',
           compareCandidateIds: keepCompareContext ? state.compareCandidateIds : [],
           compareItemIds: keepCompareContext ? state.compareItemIds : [],
           timelineItems: [],
@@ -517,9 +517,9 @@ const useAppStore = create((set, get) => ({
       const fallbackCompareItemIds = normalizeCompareItemIds(compareCandidateIds);
       if (fallbackCompareItemIds.length < 2) {
         set({
-          panelMode: 'collection',
+          panelMode: 'workbench',
           previewItem: null,
-          previewReturnMode: 'collection',
+          previewReturnMode: 'workbench',
           compareCandidateIds: [],
           compareItemIds: [],
           timelineItems: [],
@@ -537,7 +537,7 @@ const useAppStore = create((set, get) => ({
         return {
           panelMode: 'compare',
           previewItem: null,
-          previewReturnMode: 'collection',
+          previewReturnMode: 'workbench',
           compareCandidateIds,
           compareItemIds: canKeepCurrentPair ? state.compareItemIds : fallbackCompareItemIds,
           timelineItems: [],
@@ -548,7 +548,7 @@ const useAppStore = create((set, get) => ({
       set({
         panelMode: 'timeline',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
       });
@@ -556,9 +556,9 @@ const useAppStore = create((set, get) => ({
       get().loadTimelineData('today');
     } else {
       set({
-        panelMode: 'collection',
+        panelMode: 'workbench',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
         timelineItems: [],
@@ -596,24 +596,24 @@ const useAppStore = create((set, get) => ({
         return {
           panelMode: 'compare',
           previewItem: null,
-          previewReturnMode: 'collection',
+          previewReturnMode: 'workbench',
         };
       }
       return {
-        panelMode: 'collection',
+        panelMode: 'workbench',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
       };
     });
   },
 
-  switchToCollection: () => {
+  switchToWorkbench: () => {
     set({
-      panelMode: 'collection',
+      panelMode: 'workbench',
       previewItem: null,
-      previewReturnMode: 'collection',
+      previewReturnMode: 'workbench',
       compareCandidateIds: [],
       compareItemIds: [],
     });
@@ -859,9 +859,9 @@ const useAppStore = create((set, get) => ({
       loadingMore: false,
       itemsRevision: state.itemsRevision + 1,
       processedItemIds: new Set(),
-      panelMode: 'collection',
+      panelMode: 'workbench',
       previewItem: null,
-      previewReturnMode: 'collection',
+      previewReturnMode: 'workbench',
       compareCandidateIds: [],
       compareItemIds: [],
       isMemorySuspended: true,
@@ -1269,9 +1269,9 @@ const useAppStore = create((set, get) => ({
       await deleteItemSvc(item.id);
       set((state) => ({
         items: state.items.filter(i => i.id !== item.id),
-        panelMode: 'collection',
+        panelMode: 'workbench',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
         itemsRevision: state.itemsRevision + 1,
@@ -1474,9 +1474,9 @@ const useAppStore = create((set, get) => ({
       set((state) => ({
         items: items.filter(i => !selectedItemIds.includes(i.id)),
         selectedItemIds: [],
-        panelMode: 'collection',
+        panelMode: 'workbench',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
         itemsRevision: state.itemsRevision + 1,
@@ -1900,9 +1900,9 @@ const useAppStore = create((set, get) => ({
       loadingMore: false,
       itemsRevision: state.itemsRevision + 1,
       processedItemIds: new Set(),
-      panelMode: 'collection',
+      panelMode: 'workbench',
       previewItem: null,
-      previewReturnMode: 'collection',
+      previewReturnMode: 'workbench',
       compareCandidateIds: [],
       compareItemIds: [],
       hoverPreviewItem: null,
@@ -1965,7 +1965,7 @@ const useAppStore = create((set, get) => ({
           feedbackToken = state.copyFeedbackToken + 1;
           return {
             copiedItemId: 'merge-success',
-            copyFeedbackSource: 'collection',
+            copyFeedbackSource: 'workbench',
             copyFeedbackToken: feedbackToken,
             lastCopyWasAutoPaste: false,
           };
@@ -1992,9 +1992,9 @@ const useAppStore = create((set, get) => ({
       }
       await loadItems();
       set({
-        panelMode: 'collection',
+        panelMode: 'workbench',
         previewItem: null,
-        previewReturnMode: 'collection',
+        previewReturnMode: 'workbench',
         compareCandidateIds: [],
         compareItemIds: [],
       });

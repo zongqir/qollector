@@ -618,9 +618,9 @@ function CollectionPanel() {
     event.stopPropagation();
     if (selectedPinnedIds.length > 0) return;
     if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item, 'collection');
+      handleCopy(item, 'workbench');
     } else {
-      handleCopyAndAutoPaste(item, 'collection');
+      handleCopyAndAutoPaste(item, 'workbench');
     }
   }, [selectedPinnedIds.length, handleCopyAndAutoPaste, handleCopy]);
 
@@ -705,9 +705,9 @@ function CollectionPanel() {
           <div className="collection-empty-icon">
             <Package size={48} strokeWidth={1} />
           </div>
-          <div className="collection-empty-title">{t('collection.emptyTitle')}</div>
-          <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
-          <div className="collection-empty-guide">{t('collection.workspaceGuide')}</div>
+          <div className="collection-empty-title">{t('workbench.emptyTitle')}</div>
+          <div className="collection-empty-hint">{t('workbench.emptyHint')}</div>
+          <div className="collection-empty-guide">{t('workbench.workspaceGuide')}</div>
         </div>
       </div>
     );
@@ -858,7 +858,7 @@ function CollectionPanel() {
           <div className="collection-empty-icon">
             <Package size={42} strokeWidth={1} />
           </div>
-          <div className="collection-empty-title">{t('collection.noFilteredItems')}</div>
+          <div className="collection-empty-title">{t('workbench.noFilteredItems')}</div>
           <button className="clear-filter-btn" onClick={handleClearCollectionFilters}>
             <X size={12} /> {t('toolbar.clearFilter')}
           </button>
@@ -871,7 +871,7 @@ function CollectionPanel() {
                 <SortableCollectionCard
                   key={item.id}
                   item={item}
-                  isCopied={copiedItemId === item.id && copyFeedbackSource === 'collection'}
+                  isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
                   isMultiSelected={selectedPinnedIds.includes(item.id)}
                   isSelectionMode={selectedPinnedIds.length > 0}
                   onUnpin={() => togglePin(item)}
