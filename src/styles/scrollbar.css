@@ -19,12 +19,12 @@
 /* Show scrollbar thumbs only on hover */
 .history-stream-scroller::-webkit-scrollbar-thumb,
 .preview-content-area::-webkit-scrollbar-thumb,
-.collection-cards::-webkit-scrollbar-thumb {
+.workbench-cards::-webkit-scrollbar-thumb {
   background: transparent;
 }
 
 .history-stream-scroller:hover::-webkit-scrollbar-thumb,
 .preview-content-area:hover::-webkit-scrollbar-thumb,
-.collection-cards:hover::-webkit-scrollbar-thumb {
+.workbench-cards:hover::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
 }

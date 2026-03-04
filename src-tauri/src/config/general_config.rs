@@ -34,9 +34,12 @@ pub struct GeneralConfig {
     /// Enable Ctrl/Cmd+T quick-tag shortcut in history/preview UI.
     #[serde(default = "default_history_tag_shortcut_enabled")]
     pub history_tag_shortcut_enabled: bool,
-    /// Whether the collection panel is visible.
-    #[serde(default = "default_collection_panel_enabled")]
-    pub collection_panel_enabled: bool,
+    /// Whether the workbench panel is visible.
+    #[serde(
+        default = "default_workbench_panel_enabled",
+        alias = "collection_panel_enabled"
+    )]
+    pub workbench_panel_enabled: bool,
     /// Double-click auto-paste: copy and paste to foreground app.
     #[serde(default)]
     pub auto_paste_on_double_click: bool,
@@ -109,7 +112,7 @@ fn default_history_tag_shortcut_enabled() -> bool {
     true
 }
 
-fn default_collection_panel_enabled() -> bool {
+fn default_workbench_panel_enabled() -> bool {
     true
 }
 
@@ -143,7 +146,7 @@ impl Default for GeneralConfig {
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
             history_tag_shortcut_enabled: default_history_tag_shortcut_enabled(),
-            collection_panel_enabled: true,
+            workbench_panel_enabled: true,
             auto_paste_on_double_click: false,
             auto_cleanup_enabled: true,
             cleanup_max_items: 50000,

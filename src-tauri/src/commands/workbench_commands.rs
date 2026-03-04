@@ -14,14 +14,14 @@ fn sanitize_file_stem(input: &str) -> String {
         .collect::<Vec<_>>()
         .join("_");
     if compact.is_empty() {
-        "qollect_collection".to_string()
+        "qollect_workbench".to_string()
     } else {
         compact
     }
 }
 
 #[tauri::command]
-pub async fn export_collection_text(
+pub async fn export_workbench_text(
     default_name: Option<String>,
     content: String,
     format: Option<String>,
@@ -35,7 +35,7 @@ pub async fn export_collection_text(
         ("md", "Markdown")
     };
 
-    let base_name = sanitize_file_stem(default_name.as_deref().unwrap_or("qollect_collection"));
+    let base_name = sanitize_file_stem(default_name.as_deref().unwrap_or("qollect_workbench"));
     let file_name = format!("{}.{}", base_name, ext);
 
     let save_path = rfd::FileDialog::new()

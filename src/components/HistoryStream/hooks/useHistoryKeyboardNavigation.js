@@ -107,7 +107,7 @@ export default function useHistoryKeyboardNavigation({
 
       if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
 
-      if (target?.closest('.collection-panel') || document.activeElement?.closest?.('.collection-panel')) return;
+      if (target?.closest('.workbench-panel') || document.activeElement?.closest?.('.workbench-panel')) return;
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();

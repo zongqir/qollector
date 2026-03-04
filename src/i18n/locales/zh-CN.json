@@ -744,9 +744,9 @@
     "showPanel": "显示工作台",
     "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。",
     "archivedToHistory": "已归档至历史流",
-    "backToCollection": "返回工作台",
-    "addToCollection": "放入工作台",
-    "removeFromCollection": "移出工作台",
+    "backToWorkbench": "返回工作台",
+    "addToWorkbench": "放入工作台",
+    "removeFromWorkbench": "移出工作台",
     "timeTravel": "时间旅行",
     "today": "今天",
     "yesterday": "昨天",
@@ -758,7 +758,7 @@
     "aiSummaryError": "AI 总结失败",
     "aiNotEnabled": "请先在设置中启用 AI 功能",
     "timelineTitle": "时间旅行",
-    "backToCollectionFromTimeline": "返回工作台",
+    "backToWorkbenchFromTimeline": "返回工作台",
     "quickOutputTaskLabel": "一键产出：{{task}}",
     "quickOutputRunTitle": "执行一键产出（{{task}}）",
     "quickOutputSelectTitle": "切换一键产出类型",
@@ -1034,7 +1034,8 @@
       "history": "历史流",
       "preview": "预览区",
       "hover": "悬浮预览",
-      "collection": "工作区",
+      "workbench": "工作区",
+      "collection": "收藏区",
       "global": "全局"
     },
     "mode": {
@@ -1062,12 +1063,14 @@
       "timeline": "时间轴面板",
       "preview": "预览面板",
       "compare": "对比面板",
+      "workbench": "工作区面板",
       "collection": "收藏面板"
     },
     "sections": {
       "global": "全局",
       "history": "历史流",
       "selection": "已选项（{{count}}）",
+      "workbench": "工作区",
       "collection": "收藏区"
     },
     "items": {
@@ -1079,7 +1082,7 @@
       "layoutAll": "切换到全览模式",
       "layoutCompare": "切换到对比分栏预设",
       "toggleHistory": "显示 / 隐藏历史流",
-      "togglePanel": "显示 / 隐藏收藏面板",
+      "togglePanel": "显示 / 隐藏工作区面板",
       "focusSearch": "聚焦搜索输入框",
       "moveCards": "上下移动焦点卡片",
       "copyFocused": "复制当前焦点项",
@@ -1090,6 +1093,7 @@
       "copySelection": "复制已选项（合并）",
       "deleteSelection": "删除已选项",
       "clearSelection": "清除当前选择",
+      "selectAllWorkbench": "在工作区聚焦时全选",
       "selectAllCollection": "在收藏区聚焦时全选"
     }
   }

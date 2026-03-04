@@ -11,7 +11,7 @@ import {
   Undo2
 } from 'lucide-react';
 
-function CollectionQuickActionsBar({
+function WorkbenchQuickActionsBar({
   t,
   setPanelMode,
   quickOutputTask,
@@ -20,9 +20,9 @@ function CollectionQuickActionsBar({
   setShowQuickOutputMenu,
   quickOutputMenuRef,
   quickOutputTasks,
-  showCollectionMoreMenu,
-  setShowCollectionMoreMenu,
-  collectionMoreMenuRef,
+  showWorkbenchMoreMenu,
+  setShowWorkbenchMoreMenu,
+  workbenchMoreMenuRef,
   activeAction,
   feedback,
   lastClearedPinnedIds,
@@ -31,8 +31,8 @@ function CollectionQuickActionsBar({
   handleQuickOutputMenuSelect,
   handleSaveSnapshot,
   handleRestoreSnapshot,
-  handleExportCollection,
-  handleDedupeCollection,
+  handleExportWorkbench,
+  handleDedupeWorkbench,
   handleClearAll,
   handleUndoClearAll,
 }) {
@@ -40,9 +40,9 @@ function CollectionQuickActionsBar({
 
   return (
     <>
-      <div className="collection-bottom-bar">
+      <div className="workbench-bottom-bar">
         <button
-          className="collection-btn timeline-btn"
+          className="workbench-btn timeline-btn"
           onClick={() => setPanelMode('timeline')}
           title={t('workbench.timeTravel')}
           disabled={isBusy}
@@ -51,23 +51,23 @@ function CollectionQuickActionsBar({
           <span>{t('workbench.timeTravel')}</span>
         </button>
 
-        <div className={`collection-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
+        <div className={`workbench-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
           <button
-            className="collection-btn quick-output-main-btn"
+            className="workbench-btn quick-output-main-btn"
             onClick={() => handleRunQuickOutput(quickOutputTask)}
             disabled={isBusy}
             title={t('workbench.quickOutputRunTitle', {
               task: t(`aiAssistant.tasks.${quickOutputTask}`),
             })}
           >
-            {quickOutputRunning ? <Loader2 size={14} className="collection-btn-spinner" /> : <Bot size={14} />}
+            {quickOutputRunning ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Bot size={14} />}
             <span>{t('workbench.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
           </button>
           <button
             type="button"
-            className="collection-btn quick-output-toggle-btn"
+            className="workbench-btn quick-output-toggle-btn"
             onClick={() => {
-              setShowCollectionMoreMenu(false);
+              setShowWorkbenchMoreMenu(false);
               setShowQuickOutputMenu(current => !current);
             }}
             disabled={isBusy}
@@ -79,11 +79,11 @@ function CollectionQuickActionsBar({
             <ChevronDown size={14} />
           </button>
           {showQuickOutputMenu && (
-            <div className="collection-dropdown-menu">
+            <div className="workbench-dropdown-menu">
               {quickOutputTasks.map((taskType) => (
                 <button
                   key={taskType}
-                  className={`collection-dropdown-item ${quickOutputTask === taskType ? 'active' : ''}`}
+                  className={`workbench-dropdown-item ${quickOutputTask === taskType ? 'active' : ''}`}
                   onClick={() => handleQuickOutputMenuSelect(taskType)}
                   disabled={isBusy}
                 >
@@ -94,44 +94,44 @@ function CollectionQuickActionsBar({
           )}
         </div>
 
-        <div className={`collection-more-menu ${showCollectionMoreMenu ? 'open' : ''}`} ref={collectionMoreMenuRef}>
+        <div className={`workbench-more-menu ${showWorkbenchMoreMenu ? 'open' : ''}`} ref={workbenchMoreMenuRef}>
           <button
-            className={`collection-btn collection-more-btn ${showCollectionMoreMenu ? 'open' : ''}`}
+            className={`workbench-btn workbench-more-btn ${showWorkbenchMoreMenu ? 'open' : ''}`}
             onClick={() => {
               setShowQuickOutputMenu(false);
-              setShowCollectionMoreMenu(current => !current);
+              setShowWorkbenchMoreMenu(current => !current);
             }}
             disabled={isBusy}
             title={t('workbench.moreActions')}
           >
             <SlidersHorizontal size={14} />
             <span>{t('workbench.moreActions')}</span>
-            <ChevronDown size={13} className="collection-more-caret" />
+            <ChevronDown size={13} className="workbench-more-caret" />
           </button>
-          {showCollectionMoreMenu && (
-            <div className="collection-dropdown-menu align-right">
-              <button className="collection-dropdown-item" onClick={handleSaveSnapshot} disabled={isBusy}>
-                {activeAction === 'snapshot' ? <Loader2 size={14} className="collection-btn-spinner" /> : <BookmarkPlus size={14} />}
+          {showWorkbenchMoreMenu && (
+            <div className="workbench-dropdown-menu align-right">
+              <button className="workbench-dropdown-item" onClick={handleSaveSnapshot} disabled={isBusy}>
+                {activeAction === 'snapshot' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <BookmarkPlus size={14} />}
                 <span>{t('workbench.snapshotSave')}</span>
               </button>
               <button
-                className="collection-dropdown-item"
+                className="workbench-dropdown-item"
                 onClick={handleRestoreSnapshot}
                 disabled={isBusy || !hasSnapshot}
               >
-                {activeAction === 'restore-snapshot' ? <Loader2 size={14} className="collection-btn-spinner" /> : <History size={14} />}
+                {activeAction === 'restore-snapshot' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <History size={14} />}
                 <span>{t('workbench.snapshotRestore')}</span>
               </button>
-              <button className="collection-dropdown-item" onClick={handleExportCollection} disabled={isBusy}>
-                {activeAction === 'export' ? <Loader2 size={14} className="collection-btn-spinner" /> : <FileDown size={14} />}
+              <button className="workbench-dropdown-item" onClick={handleExportWorkbench} disabled={isBusy}>
+                {activeAction === 'export' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <FileDown size={14} />}
                 <span>{t('workbench.exportMarkdown')}</span>
               </button>
-              <button className="collection-dropdown-item" onClick={handleDedupeCollection} disabled={isBusy}>
-                {activeAction === 'dedupe' ? <Loader2 size={14} className="collection-btn-spinner" /> : <Trash2 size={14} />}
+              <button className="workbench-dropdown-item" onClick={handleDedupeWorkbench} disabled={isBusy}>
+                {activeAction === 'dedupe' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Trash2 size={14} />}
                 <span>{t('workbench.dedupePinned')}</span>
               </button>
-              <button className="collection-dropdown-item danger" onClick={handleClearAll} disabled={isBusy}>
-                {activeAction === 'clear' ? <Loader2 size={14} className="collection-btn-spinner" /> : <Trash2 size={14} />}
+              <button className="workbench-dropdown-item danger" onClick={handleClearAll} disabled={isBusy}>
+                {activeAction === 'clear' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Trash2 size={14} />}
                 <span>{t('workbench.clearAll')}</span>
               </button>
             </div>
@@ -140,16 +140,16 @@ function CollectionQuickActionsBar({
       </div>
 
       {feedback && (
-        <div className={`collection-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
+        <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
           <span>{feedback.text}</span>
           {feedback.withUndo && lastClearedPinnedIds.length > 0 && (
             <button
               type="button"
-              className="collection-bottom-feedback-undo"
+              className="workbench-bottom-feedback-undo"
               onClick={handleUndoClearAll}
               disabled={isBusy}
             >
-              {activeAction === 'undo-clear' ? <Loader2 size={12} className="collection-feedback-spinner" /> : <Undo2 size={12} />}
+              {activeAction === 'undo-clear' ? <Loader2 size={12} className="workbench-feedback-spinner" /> : <Undo2 size={12} />}
               <span>{t('workbench.undo')}</span>
             </button>
           )}
@@ -159,4 +159,4 @@ function CollectionQuickActionsBar({
   );
 }
 
-export default CollectionQuickActionsBar;
+export default WorkbenchQuickActionsBar;

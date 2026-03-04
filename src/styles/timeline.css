@@ -280,9 +280,9 @@
   font-size: 11px;
 }
 
-/* Collection Panel Timeline Button */
-.collection-btn.timeline-btn {
-  /* Use same style as other collection buttons */
+/* Workbench Panel Timeline Button */
+.workbench-btn.timeline-btn {
+  /* Use same style as other workbench buttons */
 }
 
 /* Dark mode adjustments */

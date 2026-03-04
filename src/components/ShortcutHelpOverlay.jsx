@@ -45,7 +45,7 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
   const panelMode = useAppStore(s => s.panelMode);
   const selectedCount = useAppStore(s => s.selectedItemIds.length);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
-  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
 
   const modifiers = useMemo(() => getPlatformModifiers(), []);
   const contextLabel = useMemo(() => {
@@ -53,7 +53,7 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
     if (panelMode === 'timeline') return t('shortcutHelp.context.timeline');
     if (panelMode === 'preview') return t('shortcutHelp.context.preview');
     if (panelMode === 'compare') return t('shortcutHelp.context.compare');
-    return t('shortcutHelp.context.collection');
+    return t('shortcutHelp.context.workbench');
   }, [isMiniMode, panelMode, t]);
 
   const sections = useMemo(() => {
@@ -125,15 +125,15 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
       });
     }
 
-    if (!isMiniMode && collectionPanelEnabled) {
+    if (!isMiniMode && workbenchPanelEnabled) {
       result.push({
-        id: 'collection',
-        title: t('shortcutHelp.sections.collection'),
+        id: 'workbench',
+        title: t('shortcutHelp.sections.workbench'),
         items: [
           {
-            id: 'select-all-collection',
+            id: 'select-all-workbench',
             combo: `${modifiers.primary}+A`,
-            label: t('shortcutHelp.items.selectAllCollection'),
+            label: t('shortcutHelp.items.selectAllWorkbench'),
           },
         ],
       });
@@ -141,7 +141,7 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
 
     return result;
   }, [
-    collectionPanelEnabled,
+    workbenchPanelEnabled,
     historyTagShortcutEnabled,
     isMiniMode,
     modifiers.primary,

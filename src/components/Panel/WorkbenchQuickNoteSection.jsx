@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, X, Send } from 'lucide-react';
 
-function CollectionQuickNoteSection({
+function WorkbenchQuickNoteSection({
   isExpanded,
   quickNote,
   onQuickNoteChange,
@@ -14,7 +14,7 @@ function CollectionQuickNoteSection({
   const { t } = useTranslation();
 
   return (
-    <div className={`collection-quick-note ${isExpanded ? 'expanded' : ''}`}>
+    <div className={`workbench-quick-note ${isExpanded ? 'expanded' : ''}`}>
       {isExpanded ? (
         <div className="quick-note-expanded">
           <div className="quick-note-expanded-body">
@@ -70,4 +70,4 @@ function CollectionQuickNoteSection({
   );
 }
 
-export default CollectionQuickNoteSection;
+export default WorkbenchQuickNoteSection;

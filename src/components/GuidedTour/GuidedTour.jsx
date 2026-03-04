@@ -85,12 +85,12 @@ function GuidedTour() {
         const appWindow = getCurrentWindow();
         await appWindow.setSize(new LogicalSize(NORMAL_SIZE.width, NORMAL_SIZE.height));
         localStorage.setItem('qollect-window-mode', 'normal');
-        useAppStore.setState({ isMiniMode: false, collectionPanelEnabled: true });
+        useAppStore.setState({ isMiniMode: false, workbenchPanelEnabled: true });
       } catch (error) {
         console.error('failed to exit mini mode during tour:', error);
       }
     } else if (stepDef?.action === 'showPanel') {
-      useAppStore.setState({ collectionPanelEnabled: true });
+      useAppStore.setState({ workbenchPanelEnabled: true });
     }
   }, []);
 
@@ -158,7 +158,7 @@ function GuidedTour() {
         return;
       }
       // Skip showPanel step if panel is already open
-      if (step?.action === 'showPanel' && useAppStore.getState().collectionPanelEnabled) {
+      if (step?.action === 'showPanel' && useAppStore.getState().workbenchPanelEnabled) {
         nextTourStep();
         return;
       }

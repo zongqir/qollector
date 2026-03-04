@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Bot, Check, Copy, Inbox, Star, Tag, Wand2, X } from 'lucide-react';
 
-function CollectionMultiSelectBar({
+function WorkbenchMultiSelectBar({
   selectedCount,
   showBatchTagEditor,
   onToggleBatchTagEditor,
@@ -27,7 +27,7 @@ function CollectionMultiSelectBar({
   const { t } = useTranslation();
 
   return (
-    <div className="multi-select-bar collection-multi-select-bar">
+    <div className="multi-select-bar workbench-multi-select-bar">
       <span className="multi-select-count">
         {t('multiSelect.selected', { count: selectedCount })}
       </span>
@@ -131,4 +131,4 @@ function CollectionMultiSelectBar({
   );
 }
 
-export default CollectionMultiSelectBar;
+export default WorkbenchMultiSelectBar;

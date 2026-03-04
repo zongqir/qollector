@@ -26,10 +26,10 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import useAppStore from '../../store/useAppStore';
-import SortableCollectionCard from './SortableCollectionCard';
-import CollectionQuickNoteSection from './CollectionQuickNoteSection';
-import CollectionMultiSelectBar from './CollectionMultiSelectBar';
-import CollectionQuickActionsBar from './CollectionQuickActionsBar';
+import SortableWorkbenchCard from './SortableWorkbenchCard';
+import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
+import WorkbenchMultiSelectBar from './WorkbenchMultiSelectBar';
+import WorkbenchQuickActionsBar from './WorkbenchQuickActionsBar';
 import useEscapeDismiss from '../hooks/useEscapeDismiss';
 import useClickOutsideDismiss from '../hooks/useClickOutsideDismiss';
 import useFilterDropdownCoordinator from '../hooks/useFilterDropdownCoordinator';
@@ -38,8 +38,8 @@ import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
 import { searchItems } from '../../services/clipboardService';
-import useCollectionQuickActions from './hooks/useCollectionQuickActions';
-import useCollectionBatchActions from './hooks/useCollectionBatchActions';
+import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
+import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
 import {
   getDateRangeForPreset,
   dateStringToTimestamp,
@@ -47,25 +47,25 @@ import {
 } from '../../utils/dateHelpers';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
 
-function CollectionPanel() {
+function WorkbenchPanel() {
   const { t, i18n } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
   const [pinnedOrder, setPinnedOrder] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
-  const [showCollectionTypeFilter, setShowCollectionTypeFilter] = useState(false);
-  const [showCollectionDateFilter, setShowCollectionDateFilter] = useState(false);
-  const [showCollectionTagFilter, setShowCollectionTagFilter] = useState(false);
-  const [showCollectionSavedViews, setShowCollectionSavedViews] = useState(false);
-  const [collectionSavedViewName, setCollectionSavedViewName] = useState('');
-  const [collectionTagSearchQuery, setCollectionTagSearchQuery] = useState('');
+  const [showWorkbenchTypeFilter, setShowWorkbenchTypeFilter] = useState(false);
+  const [showWorkbenchDateFilter, setShowWorkbenchDateFilter] = useState(false);
+  const [showWorkbenchTagFilter, setShowWorkbenchTagFilter] = useState(false);
+  const [showWorkbenchSavedViews, setShowWorkbenchSavedViews] = useState(false);
+  const [workbenchSavedViewName, setWorkbenchSavedViewName] = useState('');
+  const [workbenchTagSearchQuery, setWorkbenchTagSearchQuery] = useState('');
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
   const selectionAnchorIndexRef = useRef(-1);
-  const collectionTypeWrapperRef = useRef(null);
-  const collectionDateWrapperRef = useRef(null);
-  const collectionTagWrapperRef = useRef(null);
-  const collectionSavedViewWrapperRef = useRef(null);
-  const collectionTagListboxRef = useRef(null);
+  const workbenchTypeWrapperRef = useRef(null);
+  const workbenchDateWrapperRef = useRef(null);
+  const workbenchTagWrapperRef = useRef(null);
+  const workbenchSavedViewWrapperRef = useRef(null);
+  const workbenchTagListboxRef = useRef(null);
 
   const items = useAppStore(s => s.items);
   const itemsRevision = useAppStore(s => s.itemsRevision);
@@ -111,7 +111,7 @@ function CollectionPanel() {
         setBackendPinnedItems(Array.isArray(results) ? results : []);
       })
       .catch((error) => {
-        console.error('[Collection] fetch pinned items failed:', error);
+        console.error('[Workbench] fetch pinned items failed:', error);
         if (!cancelled) {
           setBackendPinnedItems(null);
         }
@@ -258,10 +258,10 @@ function CollectionPanel() {
   }, [pinnedBaseItems, t, i18n.language]);
 
   const filteredTagsList = useMemo(() => {
-    if (!collectionTagSearchQuery.trim()) return allTags;
-    const query = collectionTagSearchQuery.toLowerCase();
+    if (!workbenchTagSearchQuery.trim()) return allTags;
+    const query = workbenchTagSearchQuery.toLowerCase();
     return allTags.filter(tag => tag.toLowerCase().includes(query));
-  }, [allTags, collectionTagSearchQuery]);
+  }, [allTags, workbenchTagSearchQuery]);
 
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
@@ -272,11 +272,11 @@ function CollectionPanel() {
     { key: 'code', icon: <Braces size={14} /> },
   ];
   const selectedTypeOption = typeOptions.find(({ key }) => key === selectedType) || typeOptions[0];
-  const collectionTypeDropdownId = 'collection-type-filter-dropdown';
-  const collectionDateDropdownId = 'collection-date-filter-dropdown';
-  const collectionTagDropdownId = 'collection-tag-filter-dropdown';
-  const collectionTagListboxId = `${collectionTagDropdownId}-options`;
-  const collectionSavedViewDropdownId = 'collection-saved-view-dropdown';
+  const workbenchTypeDropdownId = 'workbench-type-filter-dropdown';
+  const workbenchDateDropdownId = 'workbench-date-filter-dropdown';
+  const workbenchTagDropdownId = 'workbench-tag-filter-dropdown';
+  const workbenchTagListboxId = `${workbenchTagDropdownId}-options`;
+  const workbenchSavedViewDropdownId = 'workbench-saved-view-dropdown';
   const selectedDatePreset = selectedDateRange?.preset || null;
   const typeFilterOptions = typeOptions.map(({ key, icon }) => ({ key, icon }));
   const parsedTagOptions = useMemo(() => (
@@ -311,13 +311,13 @@ function CollectionPanel() {
   ];
   const datePresetOptions = datePresets.map(({ key, label }) => ({ key, label }));
 
-  const collectionDateBadgeText = selectedDateRange
+  const workbenchDateBadgeText = selectedDateRange
     ? (selectedDateRange.preset === 'custom'
       ? '...'
       : datePresets.find(preset => preset.key === selectedDateRange.preset)?.badge || '')
     : '';
 
-  const hasCollectionFilters = Boolean(
+  const hasWorkbenchFilters = Boolean(
     searchQuery.trim()
     || selectedType !== 'all'
     || showFavoritesOnly
@@ -341,65 +341,65 @@ function CollectionPanel() {
     setPinnedOrder(newOrder);
   }, [allPinnedItems]);
 
-  const handleCollectionTypeChange = useCallback((nextType) => {
+  const handleWorkbenchTypeChange = useCallback((nextType) => {
     setSelectedType(nextType);
-    setShowCollectionTypeFilter(false);
+    setShowWorkbenchTypeFilter(false);
   }, [setSelectedType]);
 
-  const closeCollectionTypeFilter = useCallback(() => {
-    if (showCollectionTypeFilter) {
-      setShowCollectionTypeFilter(false);
+  const closeWorkbenchTypeFilter = useCallback(() => {
+    if (showWorkbenchTypeFilter) {
+      setShowWorkbenchTypeFilter(false);
     }
-  }, [showCollectionTypeFilter]);
+  }, [showWorkbenchTypeFilter]);
 
-  const closeCollectionDateFilter = useCallback(() => {
-    if (showCollectionDateFilter) {
-      setShowCollectionDateFilter(false);
+  const closeWorkbenchDateFilter = useCallback(() => {
+    if (showWorkbenchDateFilter) {
+      setShowWorkbenchDateFilter(false);
     }
-  }, [showCollectionDateFilter]);
+  }, [showWorkbenchDateFilter]);
 
-  const closeCollectionTagFilter = useCallback(() => {
-    if (showCollectionTagFilter) {
-      setShowCollectionTagFilter(false);
+  const closeWorkbenchTagFilter = useCallback(() => {
+    if (showWorkbenchTagFilter) {
+      setShowWorkbenchTagFilter(false);
     }
-  }, [showCollectionTagFilter]);
+  }, [showWorkbenchTagFilter]);
 
-  const closeCollectionSavedViews = useCallback(() => {
-    if (showCollectionSavedViews) {
-      setShowCollectionSavedViews(false);
+  const closeWorkbenchSavedViews = useCallback(() => {
+    if (showWorkbenchSavedViews) {
+      setShowWorkbenchSavedViews(false);
     }
-  }, [showCollectionSavedViews]);
+  }, [showWorkbenchSavedViews]);
 
   const coordinatedDropdowns = useMemo(() => ({
     saved: {
-      isOpen: showCollectionSavedViews,
-      open: () => setShowCollectionSavedViews(true),
-      close: closeCollectionSavedViews,
+      isOpen: showWorkbenchSavedViews,
+      open: () => setShowWorkbenchSavedViews(true),
+      close: closeWorkbenchSavedViews,
     },
     type: {
-      isOpen: showCollectionTypeFilter,
-      open: () => setShowCollectionTypeFilter(true),
-      close: closeCollectionTypeFilter,
+      isOpen: showWorkbenchTypeFilter,
+      open: () => setShowWorkbenchTypeFilter(true),
+      close: closeWorkbenchTypeFilter,
     },
     date: {
-      isOpen: showCollectionDateFilter,
-      open: () => setShowCollectionDateFilter(true),
-      close: closeCollectionDateFilter,
+      isOpen: showWorkbenchDateFilter,
+      open: () => setShowWorkbenchDateFilter(true),
+      close: closeWorkbenchDateFilter,
     },
     tag: {
-      isOpen: showCollectionTagFilter,
-      open: () => setShowCollectionTagFilter(true),
-      close: closeCollectionTagFilter,
+      isOpen: showWorkbenchTagFilter,
+      open: () => setShowWorkbenchTagFilter(true),
+      close: closeWorkbenchTagFilter,
     },
   }), [
-    showCollectionSavedViews,
-    closeCollectionSavedViews,
-    showCollectionTypeFilter,
-    closeCollectionTypeFilter,
-    showCollectionDateFilter,
-    closeCollectionDateFilter,
-    showCollectionTagFilter,
-    closeCollectionTagFilter,
+    showWorkbenchSavedViews,
+    closeWorkbenchSavedViews,
+    showWorkbenchTypeFilter,
+    closeWorkbenchTypeFilter,
+    showWorkbenchDateFilter,
+    closeWorkbenchDateFilter,
+    showWorkbenchTagFilter,
+    closeWorkbenchTagFilter,
   ]);
 
   const {
@@ -408,23 +408,23 @@ function CollectionPanel() {
     dismissOpenDropdowns,
   } = useFilterDropdownCoordinator(coordinatedDropdowns);
 
-  const toggleCollectionTypeFilter = useCallback(() => {
+  const toggleWorkbenchTypeFilter = useCallback(() => {
     toggleDropdown('type');
   }, [toggleDropdown]);
 
-  const toggleCollectionDateFilter = useCallback(() => {
+  const toggleWorkbenchDateFilter = useCallback(() => {
     toggleDropdown('date');
   }, [toggleDropdown]);
 
-  const toggleCollectionTagFilter = useCallback(() => {
+  const toggleWorkbenchTagFilter = useCallback(() => {
     toggleDropdown('tag');
   }, [toggleDropdown]);
 
-  const toggleCollectionSavedViews = useCallback(() => {
+  const toggleWorkbenchSavedViews = useCallback(() => {
     toggleDropdown('saved');
   }, [toggleDropdown]);
 
-  const handleSelectCollectionDatePreset = useCallback((preset) => {
+  const handleSelectWorkbenchDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
       setSelectedDateRange({ preset: 'custom', start: null, end: null });
       return;
@@ -436,7 +436,7 @@ function CollectionPanel() {
     }
   }, [setSelectedDateRange]);
 
-  const handleApplyCollectionCustomDateRange = useCallback(() => {
+  const handleApplyWorkbenchCustomDateRange = useCallback(() => {
     const start = dateStringToTimestamp(customDateStart);
     const end = dateStringToEndTimestamp(customDateEnd);
     if (start != null || end != null) {
@@ -444,12 +444,12 @@ function CollectionPanel() {
     }
   }, [customDateStart, customDateEnd, setSelectedDateRange]);
 
-  const handleClearCollectionDateFilter = useCallback(() => {
+  const handleClearWorkbenchDateFilter = useCallback(() => {
     clearDateFilter();
-    setShowCollectionDateFilter(false);
+    setShowWorkbenchDateFilter(false);
   }, [clearDateFilter]);
 
-  const handleToggleCollectionTag = useCallback((tag) => {
+  const handleToggleWorkbenchTag = useCallback((tag) => {
     setSelectedTags(
       selectedTags.includes(tag)
         ? selectedTags.filter(current => current !== tag)
@@ -457,40 +457,40 @@ function CollectionPanel() {
     );
   }, [selectedTags, setSelectedTags]);
 
-  const handleCollectionTagSearchInputKeyDown = useCallback((event) => {
+  const handleWorkbenchTagSearchInputKeyDown = useCallback((event) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     if (visibleTagOptions.length === 0) return;
     event.preventDefault();
     if (event.key === 'ArrowUp') {
-      collectionTagListboxRef.current?.focusLast?.();
+      workbenchTagListboxRef.current?.focusLast?.();
       return;
     }
-    collectionTagListboxRef.current?.focusFirst?.();
+    workbenchTagListboxRef.current?.focusFirst?.();
   }, [visibleTagOptions.length]);
 
-  const handleSaveCollectionView = useCallback(() => {
-    const normalizedName = collectionSavedViewName.trim();
+  const handleSaveWorkbenchView = useCallback(() => {
+    const normalizedName = workbenchSavedViewName.trim();
     if (!normalizedName) return;
     const result = saveCurrentFilterView(normalizedName);
     if (result?.ok) {
-      setCollectionSavedViewName('');
+      setWorkbenchSavedViewName('');
     }
-  }, [collectionSavedViewName, saveCurrentFilterView]);
+  }, [workbenchSavedViewName, saveCurrentFilterView]);
 
-  const handleClearCollectionFilters = useCallback(() => {
+  const handleClearWorkbenchFilters = useCallback(() => {
     setSearchQuery('');
     setSelectedType('all');
     setSelectedTags([]);
-    setCollectionTagSearchQuery('');
-    setShowCollectionTagFilter(false);
-    setShowCollectionSavedViews(false);
-    setShowCollectionTypeFilter(false);
+    setWorkbenchTagSearchQuery('');
+    setShowWorkbenchTagFilter(false);
+    setShowWorkbenchSavedViews(false);
+    setShowWorkbenchTypeFilter(false);
     setShowFavoritesOnly(false);
-    handleClearCollectionDateFilter();
+    handleClearWorkbenchDateFilter();
     clearActiveFilterView();
   }, [
     clearActiveFilterView,
-    handleClearCollectionDateFilter,
+    handleClearWorkbenchDateFilter,
     setSearchQuery,
     setSelectedType,
     setSelectedTags,
@@ -511,24 +511,24 @@ function CollectionPanel() {
   }, [selectedPinnedIds.length]);
 
   useClickOutsideDismiss({
-    isOpen: showCollectionTypeFilter,
-    wrapperRef: collectionTypeWrapperRef,
-    onDismiss: () => setShowCollectionTypeFilter(false),
+    isOpen: showWorkbenchTypeFilter,
+    wrapperRef: workbenchTypeWrapperRef,
+    onDismiss: () => setShowWorkbenchTypeFilter(false),
   });
   useClickOutsideDismiss({
-    isOpen: showCollectionDateFilter,
-    wrapperRef: collectionDateWrapperRef,
-    onDismiss: () => setShowCollectionDateFilter(false),
+    isOpen: showWorkbenchDateFilter,
+    wrapperRef: workbenchDateWrapperRef,
+    onDismiss: () => setShowWorkbenchDateFilter(false),
   });
   useClickOutsideDismiss({
-    isOpen: showCollectionTagFilter,
-    wrapperRef: collectionTagWrapperRef,
-    onDismiss: () => setShowCollectionTagFilter(false),
+    isOpen: showWorkbenchTagFilter,
+    wrapperRef: workbenchTagWrapperRef,
+    onDismiss: () => setShowWorkbenchTagFilter(false),
   });
   useClickOutsideDismiss({
-    isOpen: showCollectionSavedViews,
-    wrapperRef: collectionSavedViewWrapperRef,
-    onDismiss: () => setShowCollectionSavedViews(false),
+    isOpen: showWorkbenchSavedViews,
+    wrapperRef: workbenchSavedViewWrapperRef,
+    onDismiss: () => setShowWorkbenchSavedViews(false),
   });
 
   useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
@@ -577,7 +577,7 @@ function CollectionPanel() {
     if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
     event.stopPropagation();
     event.preventDefault();
-    collectionPanelRef.current?.focus();
+    workbenchPanelRef.current?.focus();
 
     if (event.shiftKey) {
       const anchorCandidate = selectionAnchorIndexRef.current >= 0
@@ -602,7 +602,7 @@ function CollectionPanel() {
 
   const handleCardClick = useCallback((item, index, event) => {
     event.stopPropagation();
-    collectionPanelRef.current?.focus();
+    workbenchPanelRef.current?.focus();
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       event.preventDefault();
       return;
@@ -628,13 +628,13 @@ function CollectionPanel() {
     setSelectedPinnedIds([]);
   }, []);
 
-  const collectionPanelRef = useRef(null);
+  const workbenchPanelRef = useRef(null);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
-      const panel = collectionPanelRef.current;
+      const panel = workbenchPanelRef.current;
       if (!panel) return;
       const active = document.activeElement;
       if (!panel.contains(e.target) && !panel.contains(active) && active !== panel) return;
@@ -659,7 +659,7 @@ function CollectionPanel() {
     }
   }, [quickNote, handleExpandedSubmit]);
 
-  const batchActions = useCollectionBatchActions({
+  const batchActions = useWorkbenchBatchActions({
     selectedPinnedItems,
     selectedCount: selectedPinnedIds.length,
     allSelectedAreFavorite,
@@ -672,7 +672,7 @@ function CollectionPanel() {
     t,
   });
 
-  const quickActions = useCollectionQuickActions({
+  const quickActions = useWorkbenchQuickActions({
     pinnedItems: allPinnedItems,
     items,
     aiEnabled,
@@ -685,7 +685,7 @@ function CollectionPanel() {
   });
 
   const quickNoteSection = (
-    <CollectionQuickNoteSection
+    <WorkbenchQuickNoteSection
       isExpanded={isExpanded}
       quickNote={quickNote}
       onQuickNoteChange={setQuickNote}
@@ -699,28 +699,28 @@ function CollectionPanel() {
 
   if (allPinnedItems.length === 0) {
     return (
-      <div className="collection-panel" ref={collectionPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+      <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
         {quickNoteSection}
-        <div className="collection-empty">
-          <div className="collection-empty-icon">
+        <div className="workbench-empty">
+          <div className="workbench-empty-icon">
             <Package size={48} strokeWidth={1} />
           </div>
-          <div className="collection-empty-title">{t('workbench.emptyTitle')}</div>
-          <div className="collection-empty-hint">{t('workbench.emptyHint')}</div>
-          <div className="collection-empty-guide">{t('workbench.workspaceGuide')}</div>
+          <div className="workbench-empty-title">{t('workbench.emptyTitle')}</div>
+          <div className="workbench-empty-hint">{t('workbench.emptyHint')}</div>
+          <div className="workbench-empty-guide">{t('workbench.workspaceGuide')}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="collection-panel" ref={collectionPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+    <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
       {quickNoteSection}
-      <div className="collection-filter-row">
-        <div className="collection-search-box">
+      <div className="workbench-filter-row">
+        <div className="workbench-search-box">
           <input
             type="text"
-            className="collection-search-input"
+            className="workbench-search-input"
             placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
@@ -729,7 +729,7 @@ function CollectionPanel() {
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="collection-search-clear-btn"
+              className="workbench-search-clear-btn"
               title={t('toolbar.clearFilter')}
               aria-label={t('toolbar.clearFilter')}
             >
@@ -739,18 +739,18 @@ function CollectionPanel() {
         </div>
 
         <TypeFilterControl
-          wrapperRef={collectionTypeWrapperRef}
-          wrapperClassName="collection-type-filter-wrapper"
-          isOpen={showCollectionTypeFilter}
-          onToggle={toggleCollectionTypeFilter}
-          onClose={closeCollectionTypeFilter}
-          controlsId={collectionTypeDropdownId}
+          wrapperRef={workbenchTypeWrapperRef}
+          wrapperClassName="workbench-type-filter-wrapper"
+          isOpen={showWorkbenchTypeFilter}
+          onToggle={toggleWorkbenchTypeFilter}
+          onClose={closeWorkbenchTypeFilter}
+          controlsId={workbenchTypeDropdownId}
           selectedType={selectedType}
           selectedTypeIcon={selectedTypeOption.icon}
           showSelectedTypeText
           selectedTypeText={t(`search.typeFilter.${selectedType}`)}
           options={typeFilterOptions}
-          onSelectType={handleCollectionTypeChange}
+          onSelectType={handleWorkbenchTypeChange}
           typeLabelText={t('toolbar.filterType')}
           getOptionLabel={(key) => t(`search.typeFilter.${key}`)}
         />
@@ -767,21 +767,21 @@ function CollectionPanel() {
 
         {allTags.length > 0 && (
           <TagFilterControl
-            wrapperRef={collectionTagWrapperRef}
-            triggerClassName="collection-tag-filter-wrapper"
-            isOpen={showCollectionTagFilter}
-            onToggle={toggleCollectionTagFilter}
-            onClose={closeCollectionTagFilter}
-            controlsId={collectionTagDropdownId}
-            listboxId={collectionTagListboxId}
-            listboxRef={collectionTagListboxRef}
+            wrapperRef={workbenchTagWrapperRef}
+            triggerClassName="workbench-tag-filter-wrapper"
+            isOpen={showWorkbenchTagFilter}
+            onToggle={toggleWorkbenchTagFilter}
+            onClose={closeWorkbenchTagFilter}
+            controlsId={workbenchTagDropdownId}
+            listboxId={workbenchTagListboxId}
+            listboxRef={workbenchTagListboxRef}
             selectedTags={selectedTags}
-            tagSearchQuery={collectionTagSearchQuery}
-            onTagSearchChange={setCollectionTagSearchQuery}
-            onTagSearchInputKeyDown={handleCollectionTagSearchInputKeyDown}
+            tagSearchQuery={workbenchTagSearchQuery}
+            onTagSearchChange={setWorkbenchTagSearchQuery}
+            onTagSearchInputKeyDown={handleWorkbenchTagSearchInputKeyDown}
             visibleTagOptions={visibleTagOptions}
             totalTagOptionsCount={parsedTagOptions.length}
-            onToggleTag={handleToggleCollectionTag}
+            onToggleTag={handleToggleWorkbenchTag}
             onClearTags={() => setSelectedTags([])}
             labelText={t('toolbar.filterTags')}
             searchPlaceholderText={t('toolbar.searchTags')}
@@ -792,24 +792,24 @@ function CollectionPanel() {
         )}
 
         <DateFilterControl
-          wrapperRef={collectionDateWrapperRef}
-          isOpen={showCollectionDateFilter}
-          onToggle={toggleCollectionDateFilter}
-          onClose={closeCollectionDateFilter}
-          controlsId={collectionDateDropdownId}
+          wrapperRef={workbenchDateWrapperRef}
+          isOpen={showWorkbenchDateFilter}
+          onToggle={toggleWorkbenchDateFilter}
+          onClose={closeWorkbenchDateFilter}
+          controlsId={workbenchDateDropdownId}
           hasSelection={Boolean(selectedDateRange)}
-          badgeText={collectionDateBadgeText}
+          badgeText={workbenchDateBadgeText}
           dateFilterText={t('toolbar.dateFilter')}
           datePresetOptions={datePresetOptions}
           selectedDatePreset={selectedDatePreset}
-          onSelectDatePreset={handleSelectCollectionDatePreset}
+          onSelectDatePreset={handleSelectWorkbenchDatePreset}
           selectedDateRange={selectedDateRange}
           customDateStart={customDateStart}
           customDateEnd={customDateEnd}
           onCustomDateStartChange={setCustomDateStart}
           onCustomDateEndChange={setCustomDateEnd}
-          onApplyCustomDateRange={handleApplyCollectionCustomDateRange}
-          onClearDateFilter={handleClearCollectionDateFilter}
+          onApplyCustomDateRange={handleApplyWorkbenchCustomDateRange}
+          onClearDateFilter={handleClearWorkbenchDateFilter}
           dateStartText={t('toolbar.dateStart')}
           dateEndText={t('toolbar.dateEnd')}
           dateApplyText={t('toolbar.dateApply')}
@@ -817,18 +817,18 @@ function CollectionPanel() {
         />
 
         <SavedViewControl
-          wrapperRef={collectionSavedViewWrapperRef}
-          triggerClassName="collection-saved-view-wrapper"
-          isOpen={showCollectionSavedViews}
-          onToggle={toggleCollectionSavedViews}
-          onClose={closeCollectionSavedViews}
-          controlsId={collectionSavedViewDropdownId}
+          wrapperRef={workbenchSavedViewWrapperRef}
+          triggerClassName="workbench-saved-view-wrapper"
+          isOpen={showWorkbenchSavedViews}
+          onToggle={toggleWorkbenchSavedViews}
+          onClose={closeWorkbenchSavedViews}
+          controlsId={workbenchSavedViewDropdownId}
           savedViews={savedViews}
           activeFilterViewId={activeFilterViewId}
           activeSavedView={activeSavedView}
-          savedViewName={collectionSavedViewName}
-          onSavedViewNameChange={setCollectionSavedViewName}
-          onSaveView={handleSaveCollectionView}
+          savedViewName={workbenchSavedViewName}
+          onSavedViewNameChange={setWorkbenchSavedViewName}
+          onSaveView={handleSaveWorkbenchView}
           onApplySavedView={applySavedFilterView}
           onDeleteSavedView={deleteSavedFilterView}
           onClearActiveSavedView={clearActiveFilterView}
@@ -841,10 +841,10 @@ function CollectionPanel() {
           clearActiveText={t('search.savedViews.clearActive')}
         />
 
-        {hasCollectionFilters && (
+        {hasWorkbenchFilters && (
           <button
-            className="clear-filter-btn collection-type-clear-btn"
-            onClick={handleClearCollectionFilters}
+            className="clear-filter-btn workbench-type-clear-btn"
+            onClick={handleClearWorkbenchFilters}
             title={t('toolbar.clearAll')}
           >
             <X size={12} />
@@ -854,21 +854,21 @@ function CollectionPanel() {
       </div>
 
       {pinnedItems.length === 0 ? (
-        <div className="collection-filter-empty">
-          <div className="collection-empty-icon">
+        <div className="workbench-filter-empty">
+          <div className="workbench-empty-icon">
             <Package size={42} strokeWidth={1} />
           </div>
-          <div className="collection-empty-title">{t('workbench.noFilteredItems')}</div>
-          <button className="clear-filter-btn" onClick={handleClearCollectionFilters}>
+          <div className="workbench-empty-title">{t('workbench.noFilteredItems')}</div>
+          <button className="clear-filter-btn" onClick={handleClearWorkbenchFilters}>
             <X size={12} /> {t('toolbar.clearFilter')}
           </button>
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
-            <div className="collection-cards">
+            <div className="workbench-cards">
               {pinnedItems.map((item, index) => (
-                <SortableCollectionCard
+                <SortableWorkbenchCard
                   key={item.id}
                   item={item}
                   isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
@@ -887,7 +887,7 @@ function CollectionPanel() {
         </DndContext>
       )}
       {selectedPinnedIds.length > 0 ? (
-        <CollectionMultiSelectBar
+        <WorkbenchMultiSelectBar
           selectedCount={selectedPinnedIds.length}
           showBatchTagEditor={batchActions.showBatchTagEditor}
           onToggleBatchTagEditor={batchActions.handleToggleBatchTagEditor}
@@ -911,7 +911,7 @@ function CollectionPanel() {
           multiSelectFeedback={batchActions.multiSelectFeedback}
         />
       ) : (
-        <CollectionQuickActionsBar
+        <WorkbenchQuickActionsBar
           t={t}
           setPanelMode={setPanelMode}
           quickOutputTask={quickActions.quickOutputTask}
@@ -920,9 +920,9 @@ function CollectionPanel() {
           setShowQuickOutputMenu={quickActions.setShowQuickOutputMenu}
           quickOutputMenuRef={quickActions.quickOutputMenuRef}
           quickOutputTasks={quickActions.quickOutputTasks}
-          showCollectionMoreMenu={quickActions.showCollectionMoreMenu}
-          setShowCollectionMoreMenu={quickActions.setShowCollectionMoreMenu}
-          collectionMoreMenuRef={quickActions.collectionMoreMenuRef}
+          showWorkbenchMoreMenu={quickActions.showWorkbenchMoreMenu}
+          setShowWorkbenchMoreMenu={quickActions.setShowWorkbenchMoreMenu}
+          workbenchMoreMenuRef={quickActions.workbenchMoreMenuRef}
           activeAction={quickActions.activeAction}
           feedback={quickActions.feedback}
           lastClearedPinnedIds={quickActions.lastClearedPinnedIds}
@@ -931,8 +931,8 @@ function CollectionPanel() {
           handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
           handleSaveSnapshot={quickActions.handleSaveSnapshot}
           handleRestoreSnapshot={quickActions.handleRestoreSnapshot}
-          handleExportCollection={quickActions.handleExportCollection}
-          handleDedupeCollection={quickActions.handleDedupeCollection}
+          handleExportWorkbench={quickActions.handleExportWorkbench}
+          handleDedupeWorkbench={quickActions.handleDedupeWorkbench}
           handleClearAll={quickActions.handleClearAll}
           handleUndoClearAll={quickActions.handleUndoClearAll}
         />
@@ -941,4 +941,4 @@ function CollectionPanel() {
   );
 }
 
-export default CollectionPanel;
+export default WorkbenchPanel;

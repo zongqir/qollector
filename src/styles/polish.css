@@ -969,7 +969,7 @@ html:not(.dark-mode) .preview-tool-btn.secondary {
 }
 
 .history-stream .copy-success-toast,
-.collection-panel .copy-success-toast,
+.workbench-panel .copy-success-toast,
 .preview-panel .copy-success-toast {
   display: none;
 }
@@ -1002,11 +1002,11 @@ html:not(.dark-mode) .preview-tool-btn.secondary {
   background: color-mix(in srgb, var(--state-error-bg) 72%, transparent);
 }
 
-.collection-dropdown-item.danger {
+.workbench-dropdown-item.danger {
   color: var(--state-error-fg);
 }
 
-.collection-dropdown-item.danger::before {
+.workbench-dropdown-item.danger::before {
   background: color-mix(in srgb, var(--state-error-border) 78%, transparent);
 }
 

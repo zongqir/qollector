@@ -178,7 +178,7 @@ function App() {
   const isAlwaysOnTop = useAppStore(s => s.isAlwaysOnTop);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const themeMode = useAppStore(s => s.themeMode);
-  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
   const widgetEnabled = useAppStore(s => s.widgetEnabled);
@@ -187,7 +187,7 @@ function App() {
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
   const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
-  const showHistoryStream = isMiniMode || historyStreamEnabled || !collectionPanelEnabled;
+  const showHistoryStream = isMiniMode || historyStreamEnabled || !workbenchPanelEnabled;
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -196,9 +196,9 @@ function App() {
   const setIsLocked = useAppStore(s => s.setIsLocked);
   const setIsAlwaysOnTop = useAppStore(s => s.setIsAlwaysOnTop);
   const setIsMiniMode = useAppStore(s => s.setIsMiniMode);
-  const setCollectionPanelBeforeMini = useAppStore(s => s.setCollectionPanelBeforeMini);
-  const collectionPanelBeforeMini = useAppStore(s => s.collectionPanelBeforeMini);
-  const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
+  const setWorkbenchPanelBeforeMini = useAppStore(s => s.setWorkbenchPanelBeforeMini);
+  const workbenchPanelBeforeMini = useAppStore(s => s.workbenchPanelBeforeMini);
+  const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const setThemeMode = useAppStore(s => s.setThemeMode);
   const setPanelMode = useAppStore(s => s.setPanelMode);
@@ -608,7 +608,7 @@ function App() {
   const applyLayoutPreset = useCallback((preset) => {
     if (!isValidLayoutPreset(preset)) return;
 
-    if (collectionPanelEnabled && showHistoryStream) {
+    if (workbenchPanelEnabled && showHistoryStream) {
       rememberPresetWidth(layoutPreset, leftWidthRef.current);
     }
 
@@ -617,21 +617,21 @@ function App() {
 
     setLayoutPreset(preset);
     persistLayoutPreset(preset);
-    setCollectionPanelBeforeMini(null);
+    setWorkbenchPanelBeforeMini(null);
     setHistoryStreamEnabled(true);
-    setCollectionPanelEnabled(nextShowPanel);
+    setWorkbenchPanelEnabled(nextShowPanel);
     setLeftWidth(clampHistoryWidth(targetWidth));
   }, [
-    collectionPanelEnabled,
+    workbenchPanelEnabled,
     layoutPreset,
     rememberPresetWidth,
-    setCollectionPanelBeforeMini,
-    setCollectionPanelEnabled,
+    setWorkbenchPanelBeforeMini,
+    setWorkbenchPanelEnabled,
     setHistoryStreamEnabled,
     showHistoryStream,
   ]);
 
-  const activeDesktopViewMode = !collectionPanelEnabled
+  const activeDesktopViewMode = !workbenchPanelEnabled
     ? VIEW_MODE_LEFT
     : (!historyStreamEnabled ? VIEW_MODE_RIGHT : VIEW_MODE_ALL);
 
@@ -687,13 +687,13 @@ function App() {
       if (restoreMode === VIEW_MODE_LEFT) {
         applyLayoutPreset(LAYOUT_PRESET_FLOW);
       } else if (restoreMode === VIEW_MODE_RIGHT) {
-        if (collectionPanelEnabled && showHistoryStream) {
+        if (workbenchPanelEnabled && showHistoryStream) {
           rememberPresetWidth(layoutPreset, leftWidthRef.current);
         }
         setLayoutPreset(LAYOUT_PRESET_DETAIL);
         persistLayoutPreset(LAYOUT_PRESET_DETAIL);
-        setCollectionPanelBeforeMini(null);
-        setCollectionPanelEnabled(true);
+        setWorkbenchPanelBeforeMini(null);
+        setWorkbenchPanelEnabled(true);
         setHistoryStreamEnabled(false);
       } else {
         applyLayoutPreset(LAYOUT_PRESET_DETAIL);
@@ -722,13 +722,13 @@ function App() {
       if (currentMiniMode) {
         await setMiniMode(false);
       }
-      if (collectionPanelEnabled && showHistoryStream) {
+      if (workbenchPanelEnabled && showHistoryStream) {
         rememberPresetWidth(layoutPreset, leftWidthRef.current);
       }
       setLayoutPreset(LAYOUT_PRESET_DETAIL);
       persistLayoutPreset(LAYOUT_PRESET_DETAIL);
-      setCollectionPanelBeforeMini(null);
-      setCollectionPanelEnabled(true);
+      setWorkbenchPanelBeforeMini(null);
+      setWorkbenchPanelEnabled(true);
       setHistoryStreamEnabled(false);
       showAppFeedback(t('feedback.mode.right'), 'info');
       return;
@@ -743,11 +743,11 @@ function App() {
     }
   }, [
     applyLayoutPreset,
-    collectionPanelEnabled,
+    workbenchPanelEnabled,
     layoutPreset,
     rememberPresetWidth,
-    setCollectionPanelBeforeMini,
-    setCollectionPanelEnabled,
+    setWorkbenchPanelBeforeMini,
+    setWorkbenchPanelEnabled,
     setHistoryStreamEnabled,
     setMiniMode,
     showAppFeedback,
@@ -888,14 +888,14 @@ function App() {
       const width = window.innerWidth;
 
       // Handle panel auto-close/restore
-      if (width <= PANEL_CLOSE_THRESHOLD && collectionPanelEnabled) {
+      if (width <= PANEL_CLOSE_THRESHOLD && workbenchPanelEnabled) {
         // Save current state and close panel
-        setCollectionPanelBeforeMini(true);
-        setCollectionPanelEnabled(false);
-      } else if (width > PANEL_CLOSE_THRESHOLD && collectionPanelBeforeMini === true && !collectionPanelEnabled) {
+        setWorkbenchPanelBeforeMini(true);
+        setWorkbenchPanelEnabled(false);
+      } else if (width > PANEL_CLOSE_THRESHOLD && workbenchPanelBeforeMini === true && !workbenchPanelEnabled) {
         // Restore panel when window gets bigger
-        setCollectionPanelEnabled(true);
-        setCollectionPanelBeforeMini(null);
+        setWorkbenchPanelEnabled(true);
+        setWorkbenchPanelBeforeMini(null);
       }
 
       // Handle mini mode
@@ -909,7 +909,7 @@ function App() {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [initialWindowModeReady, isMiniMode, collectionPanelEnabled, collectionPanelBeforeMini, setMiniMode]);
+  }, [initialWindowModeReady, isMiniMode, workbenchPanelEnabled, workbenchPanelBeforeMini, setMiniMode]);
 
   // 窗口置顶
   const toggleWindowAlwaysOnTop = async () => {
@@ -949,7 +949,7 @@ function App() {
       isDraggingRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      if (!isMiniMode && collectionPanelEnabled && showHistoryStream) {
+      if (!isMiniMode && workbenchPanelEnabled && showHistoryStream) {
         rememberPresetWidth(layoutPreset, leftWidthRef.current);
       }
     };
@@ -960,7 +960,7 @@ function App() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [
-    collectionPanelEnabled,
+    workbenchPanelEnabled,
     isMiniMode,
     layoutPreset,
     rememberPresetWidth,
@@ -979,7 +979,7 @@ function App() {
 
   return (
     <div
-      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !collectionPanelEnabled ? 'panel-hidden' : ''}`}
+      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''}`}
       role="application"
       aria-label={t('app.title')}
     >
@@ -1043,9 +1043,9 @@ function App() {
 
       <div className="workspace">
         {showHistoryStream && (
-          <HistoryStream style={{ width: isMiniMode || !collectionPanelEnabled ? '100%' : `${leftWidth}px` }} />
+          <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
         )}
-        {!isMiniMode && collectionPanelEnabled && (
+        {!isMiniMode && workbenchPanelEnabled && (
           <>
             {showHistoryStream && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />

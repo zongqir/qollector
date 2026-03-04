@@ -8,7 +8,8 @@ import {
   resolveQuickOutputTaskFromItems,
 } from '../../../features/ai-assistant/constants/actionProfiles';
 
-const SNAPSHOT_STORAGE_KEY = 'qollect.collection.snapshot.v1';
+const WORKBENCH_SNAPSHOT_STORAGE_KEY = 'qollect.workbench.snapshot.v1';
+const LEGACY_COLLECTION_SNAPSHOT_STORAGE_KEY = 'qollect.collection.snapshot.v1';
 const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
 
 const normalizeText = (value) => String(value || '')
@@ -44,11 +45,15 @@ const buildDedupeKey = (item) => {
 
 const readSnapshot = () => {
   try {
-    const raw = localStorage.getItem(SNAPSHOT_STORAGE_KEY);
-    if (!raw) return null;
-    const payload = JSON.parse(raw);
-    if (!Array.isArray(payload?.ids)) return null;
-    return payload;
+    const keys = [WORKBENCH_SNAPSHOT_STORAGE_KEY, LEGACY_COLLECTION_SNAPSHOT_STORAGE_KEY];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const payload = JSON.parse(raw);
+      if (!Array.isArray(payload?.ids)) continue;
+      return payload;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -60,7 +65,7 @@ const saveSnapshot = (ids) => {
     savedAt: new Date().toISOString(),
     ids,
   };
-  localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
+  localStorage.setItem(WORKBENCH_SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
 };
 
 const buildExportMarkdown = (items, t) => {
@@ -97,7 +102,7 @@ const buildExportMarkdown = (items, t) => {
   return lines.join('\n').trimEnd() + '\n';
 };
 
-function useCollectionQuickActions({
+function useWorkbenchQuickActions({
   pinnedItems,
   items,
   aiEnabled,
@@ -117,14 +122,14 @@ function useCollectionQuickActions({
   const [quickOutputRunning, setQuickOutputRunning] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
   const [showQuickOutputMenu, setShowQuickOutputMenu] = useState(false);
-  const [showCollectionMoreMenu, setShowCollectionMoreMenu] = useState(false);
+  const [showWorkbenchMoreMenu, setShowWorkbenchMoreMenu] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [lastClearedPinnedIds, setLastClearedPinnedIds] = useState([]);
   const [hasSnapshot, setHasSnapshot] = useState(() => Boolean(readSnapshot()));
   const quickOutputMenuRef = useRef(null);
-  const collectionMoreMenuRef = useRef(null);
+  const workbenchMoreMenuRef = useRef(null);
 
-  const collectionAiSourceText = useMemo(
+  const workbenchAiSourceText = useMemo(
     () => pinnedItems
       .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
       .filter(Boolean)
@@ -148,7 +153,7 @@ function useCollectionQuickActions({
 
   const closeMenus = useCallback(() => {
     setShowQuickOutputMenu(false);
-    setShowCollectionMoreMenu(false);
+    setShowWorkbenchMoreMenu(false);
   }, []);
 
   const showMessage = useCallback((next) => {
@@ -165,18 +170,18 @@ function useCollectionQuickActions({
   }, [feedback]);
 
   useEffect(() => {
-    if (!showQuickOutputMenu && !showCollectionMoreMenu) return undefined;
+    if (!showQuickOutputMenu && !showWorkbenchMoreMenu) return undefined;
     const handlePointerDown = (event) => {
       if (showQuickOutputMenu && !quickOutputMenuRef.current?.contains(event.target)) {
         setShowQuickOutputMenu(false);
       }
-      if (showCollectionMoreMenu && !collectionMoreMenuRef.current?.contains(event.target)) {
-        setShowCollectionMoreMenu(false);
+      if (showWorkbenchMoreMenu && !workbenchMoreMenuRef.current?.contains(event.target)) {
+        setShowWorkbenchMoreMenu(false);
       }
     };
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
-  }, [showQuickOutputMenu, showCollectionMoreMenu]);
+  }, [showQuickOutputMenu, showWorkbenchMoreMenu]);
 
   useEffect(() => {
     if (!selectionMode) return;
@@ -192,7 +197,7 @@ function useCollectionQuickActions({
       return;
     }
 
-    const sourceText = collectionAiSourceText.trim();
+    const sourceText = workbenchAiSourceText.trim();
     if (!sourceText) {
       showMessage({ type: 'warning', text: t('aiAssistant.noInput') });
       return;
@@ -241,7 +246,7 @@ function useCollectionQuickActions({
     isBusy,
     closeMenus,
     aiEnabled,
-    collectionAiSourceText,
+    workbenchAiSourceText,
     uiLanguage,
     addQuickNote,
     showMessage,
@@ -327,7 +332,7 @@ function useCollectionQuickActions({
     }
   }, [isBusy, closeMenus, items, pinnedItems, loadItems, setPanelMode, showMessage, t]);
 
-  const handleExportCollection = useCallback(async () => {
+  const handleExportWorkbench = useCallback(async () => {
     if (isBusy) return;
     closeMenus();
 
@@ -339,8 +344,8 @@ function useCollectionQuickActions({
     setActiveAction('export');
     try {
       const content = buildExportMarkdown(pinnedItems, t);
-      const outputPath = await invoke('export_collection_text', {
-        defaultName: 'qollect_collection',
+      const outputPath = await invoke('export_workbench_text', {
+        defaultName: 'qollect_workbench',
         content,
         format: 'markdown',
       });
@@ -354,7 +359,7 @@ function useCollectionQuickActions({
     }
   }, [isBusy, closeMenus, pinnedItems, t, showMessage]);
 
-  const handleDedupeCollection = useCallback(async () => {
+  const handleDedupeWorkbench = useCallback(async () => {
     if (isBusy) return;
     closeMenus();
 
@@ -451,27 +456,27 @@ function useCollectionQuickActions({
     quickOutputTask,
     quickOutputRunning,
     showQuickOutputMenu,
-    showCollectionMoreMenu,
+    showWorkbenchMoreMenu,
     activeAction,
     feedback,
     lastClearedPinnedIds,
     hasSnapshot,
     quickOutputMenuRef,
-    collectionMoreMenuRef,
+    workbenchMoreMenuRef,
     quickOutputTasks: QUICK_OUTPUT_TASKS,
     isBusy,
     setShowQuickOutputMenu,
-    setShowCollectionMoreMenu,
+    setShowWorkbenchMoreMenu,
     closeMenus,
     handleRunQuickOutput,
     handleQuickOutputMenuSelect,
     handleSaveSnapshot,
     handleRestoreSnapshot,
-    handleExportCollection,
-    handleDedupeCollection,
+    handleExportWorkbench,
+    handleDedupeWorkbench,
     handleClearAll,
     handleUndoClearAll,
   };
 }
 
-export default useCollectionQuickActions;
+export default useWorkbenchQuickActions;

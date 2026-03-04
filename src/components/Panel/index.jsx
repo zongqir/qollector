@@ -1,5 +1,5 @@
 import useAppStore from '../../store/useAppStore';
-import CollectionPanel from './CollectionPanel';
+import WorkbenchPanel from './WorkbenchPanel';
 import ComparePanel from './ComparePanel';
 import PreviewPanel from './PreviewPanel';
 import TimelinePanel from './TimelinePanel';
@@ -11,7 +11,7 @@ function PolymorphicPanel() {
     <div className="polymorphic-panel">
       {panelMode === 'workbench' && (
         <div className="panel-view active">
-          <CollectionPanel />
+          <WorkbenchPanel />
         </div>
       )}
       {panelMode === 'preview' && (

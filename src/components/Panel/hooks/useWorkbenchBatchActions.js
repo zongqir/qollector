@@ -5,7 +5,7 @@ import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/util
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { getTags, hasReservedTagPrefix } from '../../../utils/tagHelpers';
 
-function useCollectionBatchActions({
+function useWorkbenchBatchActions({
   selectedPinnedItems,
   selectedCount,
   allSelectedAreFavorite,
@@ -311,4 +311,4 @@ function useCollectionBatchActions({
   };
 }
 
-export default useCollectionBatchActions;
+export default useWorkbenchBatchActions;

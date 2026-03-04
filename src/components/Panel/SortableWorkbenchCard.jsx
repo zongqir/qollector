@@ -1,8 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import CollectionCard from './CollectionCard';
+import WorkbenchCard from './WorkbenchCard';
 
-function SortableCollectionCard({
+function SortableWorkbenchCard({
   item,
   isCopied,
   isMultiSelected,
@@ -32,7 +32,7 @@ function SortableCollectionCard({
 
   return (
     <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...attributes} {...listeners}>
-      <CollectionCard
+      <WorkbenchCard
         item={item}
         isCopied={isCopied}
         isMultiSelected={isMultiSelected}
@@ -47,4 +47,4 @@ function SortableCollectionCard({
   );
 }
 
-export default SortableCollectionCard;
+export default SortableWorkbenchCard;

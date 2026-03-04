@@ -458,8 +458,8 @@ function ComparePanel() {
           <button
             className="compare-back-btn"
             onClick={switchToWorkbench}
-            title={t('workbench.backToCollection')}
-            aria-label={t('workbench.backToCollection')}
+            title={t('workbench.backToWorkbench')}
+            aria-label={t('workbench.backToWorkbench')}
           >
             <span className="compare-back-icon" aria-hidden="true">
               <ArrowLeft size={13} />
@@ -479,8 +479,8 @@ function ComparePanel() {
         <button
           className="compare-back-btn"
           onClick={switchToWorkbench}
-          title={t('workbench.backToCollection')}
-          aria-label={t('workbench.backToCollection')}
+          title={t('workbench.backToWorkbench')}
+          aria-label={t('workbench.backToWorkbench')}
         >
           <span className="compare-back-icon" aria-hidden="true">
             <ArrowLeft size={13} />

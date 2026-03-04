@@ -29,7 +29,7 @@ const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
-const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'workbench', 'collection', 'global']);
+const COPY_FEEDBACK_SOURCES = new Set(['history', 'preview', 'hover', 'workbench', 'global']);
 const normalizeCopyFeedbackSource = (source) => {
   if (typeof source !== 'string') return 'global';
   const normalized = source.trim().toLowerCase();
@@ -429,7 +429,7 @@ const useAppStore = create((set, get) => ({
   isAlwaysOnTop: false,
   isMiniMode: false,
   pinBeforeMini: false,
-  collectionPanelBeforeMini: null,
+  workbenchPanelBeforeMini: null,
 
   // ========== 配置 ==========
   aiEnabled: false,
@@ -440,7 +440,7 @@ const useAppStore = create((set, get) => ({
   themeMode: 'system',
   isLocked: true,
   hasPassword: false,
-  collectionPanelEnabled: true,
+  workbenchPanelEnabled: true,
   historyStreamEnabled: readHistoryStreamEnabled(),
   lowMemoryModeEnabled: false,
   autoPasteOnDoubleClick: false,
@@ -693,26 +693,26 @@ const useAppStore = create((set, get) => ({
     get().loadTimelineData(date);
   },
 
-  // ========== 收集箱面板开关 ==========
-  setCollectionPanelEnabled: (v) => {
+  // ========== 工作区面板开关 ==========
+  setWorkbenchPanelEnabled: (v) => {
     const nextPanelEnabled = Boolean(v);
-    const updates = { collectionPanelEnabled: nextPanelEnabled };
+    const updates = { workbenchPanelEnabled: nextPanelEnabled };
     if (!nextPanelEnabled) {
       Object.assign(updates, { hoverPreviewItem: null, hoverPreviewPosition: null });
     }
     set(updates);
   },
 
-  toggleCollectionPanel: async () => {
-    const next = !get().collectionPanelEnabled;
-    get().setCollectionPanelEnabled(next);
+  toggleWorkbenchPanel: async () => {
+    const next = !get().workbenchPanelEnabled;
+    get().setWorkbenchPanelEnabled(next);
     try {
       const generalConfig = await invoke('get_general_config');
       await invoke('update_general_config', {
-        config: { ...generalConfig, collection_panel_enabled: next },
+        config: { ...generalConfig, workbench_panel_enabled: next },
       });
     } catch (error) {
-      console.error('persist collection_panel_enabled failed:', error);
+      console.error('persist workbench panel visibility failed:', error);
     }
   },
 
@@ -723,8 +723,8 @@ const useAppStore = create((set, get) => ({
       return;
     }
     const updates = { historyStreamEnabled: next };
-    if (!next && !state.collectionPanelEnabled) {
-      updates.collectionPanelEnabled = true;
+    if (!next && !state.workbenchPanelEnabled) {
+      updates.workbenchPanelEnabled = true;
     }
     set(updates);
     persistHistoryStreamEnabled(next);
@@ -733,7 +733,7 @@ const useAppStore = create((set, get) => ({
   toggleHistoryStream: () => {
     const state = get();
     if (state.isMiniMode) return;
-    const visibleNow = state.historyStreamEnabled || !state.collectionPanelEnabled;
+    const visibleNow = state.historyStreamEnabled || !state.workbenchPanelEnabled;
     get().setHistoryStreamEnabled(!visibleNow);
   },
 
@@ -904,7 +904,7 @@ const useAppStore = create((set, get) => ({
         maxPinnedItems: generalConfig.max_pinned_items || 10,
         hasPassword: hasLock,
         isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
-        collectionPanelEnabled: generalConfig.collection_panel_enabled !== false,
+        workbenchPanelEnabled: generalConfig.workbench_panel_enabled !== false,
         lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
         autoPasteOnDoubleClick: SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK
           && (generalConfig.auto_paste_on_double_click || false),
@@ -1870,7 +1870,7 @@ const useAppStore = create((set, get) => ({
   setIsAlwaysOnTop: (v) => set({ isAlwaysOnTop: v }),
   setIsMiniMode: (v) => set({ isMiniMode: v }),
   setPinBeforeMini: (v) => set({ pinBeforeMini: v }),
-  setCollectionPanelBeforeMini: (v) => set({ collectionPanelBeforeMini: v }),
+  setWorkbenchPanelBeforeMini: (v) => set({ workbenchPanelBeforeMini: v }),
   setIsLocked: (v) => set({ isLocked: v }),
   setThemeMode: (v) => set({ themeMode: v }),
   setEditNote: (v) => set({ editNote: v }),

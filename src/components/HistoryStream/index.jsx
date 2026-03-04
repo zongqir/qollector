@@ -263,8 +263,8 @@ function HistoryStream({ style }) {
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
-  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
-  const setCollectionPanelEnabled = useAppStore(s => s.setCollectionPanelEnabled);
+  const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
+  const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
   const deleteItem = useAppStore(s => s.deleteItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
@@ -273,7 +273,7 @@ function HistoryStream({ style }) {
   const openEditModal = useAppStore(s => s.openEditModal);
   const startTour = useAppStore(s => s.startTour);
   const previewItemId = previewItem?.id;
-  const shouldUseHoverPreview = isMiniMode || !collectionPanelEnabled;
+  const shouldUseHoverPreview = isMiniMode || !workbenchPanelEnabled;
 
   const virtuosoRef = useRef(null);
 
@@ -1491,16 +1491,16 @@ function HistoryStream({ style }) {
       showCompareFeedback('warning', t('panel.compareNeedFullMode'));
       return;
     }
-    if (!collectionPanelEnabled) {
-      setCollectionPanelEnabled(true);
+    if (!workbenchPanelEnabled) {
+      setWorkbenchPanelEnabled(true);
       showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
     }
     setPanelMode('compare', targetItems);
   }, [
     selectedItemsForCompare,
     isMiniMode,
-    collectionPanelEnabled,
-    setCollectionPanelEnabled,
+    workbenchPanelEnabled,
+    setWorkbenchPanelEnabled,
     showCompareFeedback,
     t,
     setPanelMode,
@@ -1525,15 +1525,15 @@ function HistoryStream({ style }) {
       showCompareFeedback('warning', t('panel.compareNeedFullMode'));
       return;
     }
-    if (!collectionPanelEnabled) {
-      setCollectionPanelEnabled(true);
+    if (!workbenchPanelEnabled) {
+      setWorkbenchPanelEnabled(true);
       showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
     }
     setPanelMode('compare', targetItems.slice(0, 2));
   }, [
     isMiniMode,
-    collectionPanelEnabled,
-    setCollectionPanelEnabled,
+    workbenchPanelEnabled,
+    setWorkbenchPanelEnabled,
     showCompareFeedback,
     t,
     setPanelMode,

@@ -1,6 +1,5 @@
 pub mod ai_commands;
 pub mod clipboard_commands;
-pub mod collection_commands;
 pub mod drag_drop_commands;
 pub mod export_commands;
 pub mod general_commands;
@@ -14,3 +13,4 @@ pub mod prompt_commands;
 pub mod share_commands;
 pub mod smart_copy_commands;
 pub mod sync_commands;
+pub mod workbench_commands;

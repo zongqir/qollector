@@ -216,7 +216,8 @@
       "history": "History",
       "preview": "Preview",
       "hover": "Hover Preview",
-      "collection": "Workbench",
+      "workbench": "Workbench",
+      "collection": "Collection",
       "global": "Global"
     },
     "mode": {
@@ -768,9 +769,9 @@
     "showPanel": "Show Workbench",
     "longTermStorageHint": "Workbench stores important items for quick access so you can revisit and reuse them anytime.",
     "archivedToHistory": "Archived to history",
-    "backToCollection": "Back to Workbench",
-    "addToCollection": "Add to Workbench",
-    "removeFromCollection": "Remove from Workbench",
+    "backToWorkbench": "Back to Workbench",
+    "addToWorkbench": "Add to Workbench",
+    "removeFromWorkbench": "Remove from Workbench",
     "timeTravel": "Time Travel",
     "today": "Today",
     "yesterday": "Yesterday",
@@ -782,7 +783,7 @@
     "aiSummaryError": "AI summary failed",
     "aiNotEnabled": "Please enable AI in settings first",
     "timelineTitle": "Time Travel",
-    "backToCollectionFromTimeline": "Back to Workbench",
+    "backToWorkbenchFromTimeline": "Back to Workbench",
     "quickOutputTaskLabel": "Quick Output: {{task}}",
     "quickOutputRunTitle": "Run quick output ({{task}})",
     "quickOutputSelectTitle": "Choose quick output type",
@@ -1062,12 +1063,14 @@
       "timeline": "Timeline panel",
       "preview": "Preview panel",
       "compare": "Compare panel",
+      "workbench": "Workbench panel",
       "collection": "Collection panel"
     },
     "sections": {
       "global": "Global",
       "history": "History Stream",
       "selection": "Selection ({{count}})",
+      "workbench": "Workbench",
       "collection": "Collection"
     },
     "items": {
@@ -1079,7 +1082,7 @@
       "layoutAll": "Switch to Overview mode",
       "layoutCompare": "Switch to Compare layout preset",
       "toggleHistory": "Show / hide history stream",
-      "togglePanel": "Show / hide collection panel",
+      "togglePanel": "Show / hide workbench panel",
       "focusSearch": "Focus search input",
       "moveCards": "Move focused card",
       "copyFocused": "Copy focused item",
@@ -1090,6 +1093,7 @@
       "copySelection": "Copy selected items (merged)",
       "deleteSelection": "Delete selected items",
       "clearSelection": "Clear current selection",
+      "selectAllWorkbench": "Select all items in workbench (when focused)",
       "selectAllCollection": "Select all items in collection (when focused)"
     }
   }

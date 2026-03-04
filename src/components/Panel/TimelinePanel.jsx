@@ -17,7 +17,7 @@ function TimelinePanel() {
   const switchTimelineDate = useAppStore(s => s.switchTimelineDate);
   const setPanelMode = useAppStore(s => s.setPanelMode);
 
-  const handleBackToCollection = () => {
+  const handleBackToWorkbench = () => {
     setPanelMode('workbench');
   };
 
@@ -30,11 +30,11 @@ function TimelinePanel() {
       <div className="timeline-header">
         <button
           className="timeline-back-btn"
-          onClick={handleBackToCollection}
-          title={t('workbench.backToCollectionFromTimeline')}
+          onClick={handleBackToWorkbench}
+          title={t('workbench.backToWorkbenchFromTimeline')}
         >
           <ChevronLeft size={16} />
-          <span>{t('workbench.backToCollection')}</span>
+          <span>{t('workbench.backToWorkbench')}</span>
         </button>
         <div className="timeline-title">
           <Clock size={18} />

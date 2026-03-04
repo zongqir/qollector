@@ -32,14 +32,14 @@ function HoverPreviewInner() {
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const isMiniMode = useAppStore(s => s.isMiniMode);
-  const collectionPanelEnabled = useAppStore(s => s.collectionPanelEnabled);
+  const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const panelRef = useRef(null);
   const pointerStartRef = useRef(null);
   const pointerMovedRef = useRef(false);
   const [pos, setPos] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [modifierPressed, setModifierPressed] = useState(false);
-  const isCollapsedWorkspace = !isMiniMode && !collectionPanelEnabled;
+  const isCollapsedWorkspace = !isMiniMode && !workbenchPanelEnabled;
   const isRightAnchored = isMiniMode || isCollapsedWorkspace;
   const previewGap = isCollapsedWorkspace
     ? COLLAPSED_PREVIEW_GAP
