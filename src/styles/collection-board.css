@@ -117,7 +117,7 @@
 .collection-view-toggle button:focus-visible,
 .collection-card-actions button:focus-visible,
 .collection-card-tag:focus-visible,
-.collection-card-color-dot:focus-visible {
+.compact-card-color-dot:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 34%, transparent);
 }
@@ -374,7 +374,7 @@
   position: relative;
 }
 
-.collection-card-actions button {
+.collection-card-actions > button {
   width: 25px;
   height: 25px;
   border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
@@ -388,77 +388,31 @@
   transition: border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
 
-.collection-card-actions button:hover {
+.collection-card-actions > button:hover {
   color: var(--text-primary);
   border-color: color-mix(in srgb, var(--accent-color) 28%, transparent);
 }
 
-.collection-card-actions button.active {
+.collection-card-actions > button.active {
   color: color-mix(in srgb, var(--accent-color) 90%, var(--text-primary) 10%);
   border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
   background: color-mix(in srgb, var(--accent-light) 78%, transparent);
 }
 
-.collection-card-actions button.favorite.active {
+.collection-card-actions > button.favorite.active {
   color: var(--state-warning-fg);
   border-color: color-mix(in srgb, var(--state-warning-border) 82%, transparent);
   background: color-mix(in srgb, var(--state-warning-bg) 76%, transparent);
 }
 
-.collection-card-actions button.color.active {
+.collection-card-actions > button.color.active {
   color: color-mix(in srgb, var(--accent-color) 92%, var(--text-primary) 8%);
 }
 
-.collection-card-actions button.copied {
+.collection-card-actions > button.copied {
   color: var(--state-success-fg);
   border-color: color-mix(in srgb, var(--state-success-border) 82%, transparent);
   background: color-mix(in srgb, var(--state-success-bg) 76%, transparent);
-}
-
-.collection-card-color-picker {
-  position: absolute;
-  top: 30px;
-  right: 0;
-  z-index: 12;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-panel) 94%, transparent);
-  box-shadow:
-    0 12px 24px color-mix(in srgb, var(--shadow-md) 36%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 28%, transparent);
-}
-
-.collection-card-color-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
-  background: var(--card-color-dot, color-mix(in srgb, var(--surface-strong) 90%, transparent));
-  padding: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.collection-card-color-dot.active {
-  border-color: color-mix(in srgb, var(--accent-color) 52%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-light) 70%, transparent);
-}
-
-.collection-card-color-dot.default {
-  background: var(--bg-card);
-}
-
-.collection-card-color-dot-reset {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--text-tertiary) 64%, transparent);
 }
 
 .collection-card-body {
@@ -865,7 +819,7 @@
     height: 28px;
   }
 
-  .collection-card-color-picker {
+  .collection-card .compact-card-color-picker {
     right: -2px;
   }
 }

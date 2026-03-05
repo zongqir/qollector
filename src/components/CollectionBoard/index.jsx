@@ -29,6 +29,7 @@ import {
   CARD_BACKGROUND_PRESETS,
   getCardBackgroundIdFromMetadata,
   getCardBackgroundPreset,
+  withCardBackgroundInMetadata,
 } from '../../utils/cardBackgrounds';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
@@ -350,11 +351,68 @@ function CollectionBoard({
     }
   }, [closeTagEditor, submitTag]);
 
+  const patchCollectionItem = useCallback((targetId, patch) => {
+    if (!targetId) return;
+    setBackendItems((current) => current.map((candidate) => (
+      candidate.id === targetId ? { ...candidate, ...patch } : candidate
+    )));
+  }, []);
+
+  const handleTogglePin = useCallback(async (item) => {
+    if (!item?.id) return;
+    const now = Math.floor(Date.now() / 1000);
+    let nextPinnedState = !item.is_pinned;
+    try {
+      const result = await onTogglePin?.(item);
+      if (typeof result === 'boolean') {
+        nextPinnedState = result;
+      }
+      patchCollectionItem(item.id, {
+        is_pinned: nextPinnedState,
+        pinned_at: nextPinnedState ? now : null,
+        updated_at: now,
+      });
+    } catch (error) {
+      console.error('[CollectionBoard] toggle pin failed:', error);
+    }
+  }, [onTogglePin, patchCollectionItem]);
+
+  const handleToggleFavorite = useCallback(async (item) => {
+    if (!item?.id) return;
+    let nextFavoriteState = !item.is_favorite;
+    try {
+      const result = await onToggleFavorite?.(item);
+      if (typeof result === 'boolean') {
+        nextFavoriteState = result;
+      }
+      // Keep the card visible in current collection session even after un-favorite,
+      // and only update star state immediately.
+      patchCollectionItem(item.id, { is_favorite: nextFavoriteState });
+    } catch (error) {
+      console.error('[CollectionBoard] toggle favorite failed:', error);
+    }
+  }, [onToggleFavorite, patchCollectionItem]);
+
+  const handleSetCardBackground = useCallback(async (item, backgroundId) => {
+    if (!item?.id) return;
+    const metadata = withCardBackgroundInMetadata(item.metadata, backgroundId);
+    const updatedAt = Math.floor(Date.now() / 1000);
+    try {
+      await onSetCardBackground?.(item, backgroundId);
+      patchCollectionItem(item.id, {
+        metadata,
+        updated_at: updatedAt,
+      });
+    } catch (error) {
+      console.error('[CollectionBoard] set card background failed:', error);
+    }
+  }, [onSetCardBackground, patchCollectionItem]);
+
   const handleBackgroundSelect = useCallback((item, backgroundId) => {
     if (!item) return;
-    onSetCardBackground?.(item, backgroundId);
     setOpenColorPickerItemId(null);
-  }, [onSetCardBackground]);
+    void handleSetCardBackground(item, backgroundId);
+  }, [handleSetCardBackground]);
 
   const handleOpenContextMenuFromKeyboard = useCallback((item, index, keyboardEvent) => {
     if (!item || !onOpenContextMenu) return;
@@ -649,7 +707,7 @@ function CollectionBoard({
                       className={item.is_pinned ? 'active' : ''}
                       onClick={(event) => {
                         event.stopPropagation();
-                        onTogglePin?.(item);
+                        void handleTogglePin(item);
                       }}
                       title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
                       aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
@@ -661,7 +719,7 @@ function CollectionBoard({
                       className={item.is_favorite ? 'active favorite' : 'favorite'}
                       onClick={(event) => {
                         event.stopPropagation();
-                        onToggleFavorite?.(item);
+                        void handleToggleFavorite(item);
                       }}
                       title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
                       aria-label={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
@@ -685,7 +743,7 @@ function CollectionBoard({
                     </button>
                     {showColorPicker && (
                       <div
-                        className="collection-card-color-picker"
+                        className="compact-card-color-picker"
                         onMouseDown={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -699,7 +757,7 @@ function CollectionBoard({
                             <button
                               key={preset.id}
                               type="button"
-                              className={`collection-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
+                              className={`compact-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
                               style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
                               title={t(preset.labelKey)}
                               aria-label={t(preset.labelKey)}
@@ -709,7 +767,7 @@ function CollectionBoard({
                                 handleBackgroundSelect(item, preset.id);
                               }}
                             >
-                              {isDefault && <span className="collection-card-color-dot-reset"></span>}
+                              {isDefault && <span className="compact-card-color-dot-reset"></span>}
                             </button>
                           );
                         })}
