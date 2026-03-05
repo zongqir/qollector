@@ -834,7 +834,11 @@
     "cancelAddTag": "Cancel",
     "emptyTitle": "No favorite items yet",
     "emptyHint": "Click the star on any history item to add it here",
-    "noTagMatch": "No collection item matches selected tags"
+    "noTagMatch": "No collection item matches current filters",
+    "searchTagsPlaceholder": "Filter tags...",
+    "clearTagFilter": "Clear tag filters",
+    "selectedTagsCount": "{{count}} tags selected",
+    "contextMenuHint": "Right-click a card for more actions"
   },
   "aiAssistant": {
     "title": "AI Assistant",

@@ -809,7 +809,11 @@
     "cancelAddTag": "取消添加",
     "emptyTitle": "还没有收藏内容",
     "emptyHint": "在历史流点星标即可加入收藏",
-    "noTagMatch": "没有符合当前标签的收藏"
+    "noTagMatch": "没有符合当前筛选条件的收藏",
+    "searchTagsPlaceholder": "筛选标签...",
+    "clearTagFilter": "清空标签筛选",
+    "selectedTagsCount": "已选 {{count}} 个标签",
+    "contextMenuHint": "右键卡片查看更多操作"
   },
   "aiAssistant": {
     "title": "AI 助手",

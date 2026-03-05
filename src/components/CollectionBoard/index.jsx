@@ -1,16 +1,15 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Check,
-  Copy,
-  ExternalLink,
   FileText,
   Folder,
   Inbox,
   LayoutGrid,
   List,
-  PencilLine,
+  Palette,
   Plus,
+  Search,
   Star,
   X,
 } from 'lucide-react';
@@ -25,6 +24,12 @@ import {
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import { searchItems } from '../../services/clipboardService';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
+import {
+  CARD_BACKGROUND_DEFAULT_ID,
+  CARD_BACKGROUND_PRESETS,
+  getCardBackgroundIdFromMetadata,
+  getCardBackgroundPreset,
+} from '../../utils/cardBackgrounds';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -72,30 +77,49 @@ const readCollectionViewMode = () => {
 
 function CollectionBoard({
   items,
+  searchQuery,
+  selectedType,
+  selectedDateRange,
+  showPinnedOnly,
   timeTick,
-  copiedItemId,
-  copyFeedbackSource,
-  onCopy,
   onTogglePin,
   onToggleFavorite,
+  onSetCardBackground,
   onOpenPreview,
-  onOpenItem,
-  onOpenEditModal,
+  onOpenContextMenu,
+  onVisibleItemsChange,
   onAddTagToItem,
   maxPinnedItems,
 }) {
   const { t, i18n } = useTranslation();
   const [selectedCollectionTags, setSelectedCollectionTags] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
+  const [collectionTagQuery, setCollectionTagQuery] = useState('');
   const [showTagEditor, setShowTagEditor] = useState(false);
   const [draftTag, setDraftTag] = useState('');
   const [tagEditorBusy, setTagEditorBusy] = useState(false);
   const [tagEditorFeedback, setTagEditorFeedback] = useState('');
+  const [openColorPickerItemId, setOpenColorPickerItemId] = useState(null);
   const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
   const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
   const [backendItems, setBackendItems] = useState([]);
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const colorPickerRef = useRef(null);
+
+  const normalizedSearchQuery = useMemo(
+    () => (typeof searchQuery === 'string' ? searchQuery.trim() : ''),
+    [searchQuery],
+  );
+  const normalizedSelectedType = useMemo(
+    () => (typeof selectedType === 'string' ? selectedType.trim() : 'all'),
+    [selectedType],
+  );
+  const selectedDateSignature = useMemo(() => (
+    selectedDateRange
+      ? `${selectedDateRange.start ?? ''}:${selectedDateRange.end ?? ''}`
+      : ''
+  ), [selectedDateRange]);
 
   const selectedTagSignature = useMemo(
     () => [...selectedCollectionTags].sort((left, right) => left.localeCompare(right)).join('\u0001'),
@@ -104,7 +128,7 @@ function CollectionBoard({
 
   useEffect(() => {
     setBackendLimit(COLLECTION_QUERY_PAGE_SIZE);
-  }, [selectedTagSignature]);
+  }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,9 +136,13 @@ function CollectionBoard({
     setBackendError('');
     const filters = {
       is_favorite: true,
+      ...(showPinnedOnly ? { is_pinned: true } : {}),
       ...(selectedCollectionTags.length > 0 ? { tag_filter: selectedCollectionTags } : {}),
     };
-    searchItems('', backendLimit, filters)
+    if (normalizedSelectedType !== 'all' && normalizedSelectedType !== 'code') {
+      filters.type_filter = normalizedSelectedType;
+    }
+    searchItems(normalizedSearchQuery, backendLimit, filters)
       .then((results) => {
         if (cancelled) return;
         setBackendItems(Array.isArray(results) ? results : []);
@@ -131,9 +159,26 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [backendLimit, selectedCollectionTags]);
+  }, [
+    backendLimit,
+    selectedCollectionTags,
+    showPinnedOnly,
+    normalizedSelectedType,
+    normalizedSearchQuery,
+  ]);
 
-  const collectionItems = backendItems;
+  const collectionItems = useMemo(() => (
+    backendItems.filter((item) => {
+      if (normalizedSelectedType === 'code' && !item.code_language) {
+        return false;
+      }
+      if (selectedDateRange) {
+        if (selectedDateRange.start != null && item.created_at < selectedDateRange.start) return false;
+        if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
+      }
+      return true;
+    })
+  ), [backendItems, normalizedSelectedType, selectedDateRange]);
   const tagsSourceItems = useMemo(() => {
     const merged = new Map();
     [...items, ...collectionItems].forEach((item) => {
@@ -158,6 +203,26 @@ function CollectionBoard({
       left.localeCompare(right, i18n.language || undefined, { sensitivity: 'base' })
     ));
   }, [tagsSourceItems, i18n.language]);
+
+  const collectionTagCounts = useMemo(() => {
+    const counts = new Map();
+    tagsSourceItems.forEach((item) => {
+      getUserTags(item).forEach((tag) => {
+        counts.set(tag, (counts.get(tag) || 0) + 1);
+      });
+    });
+    return counts;
+  }, [tagsSourceItems]);
+
+  const normalizedTagQuery = useMemo(
+    () => collectionTagQuery.trim().toLowerCase(),
+    [collectionTagQuery],
+  );
+
+  const visibleCollectionTags = useMemo(() => {
+    if (!normalizedTagQuery) return allCollectionTags;
+    return allCollectionTags.filter(tag => tag.toLowerCase().includes(normalizedTagQuery));
+  }, [allCollectionTags, normalizedTagQuery]);
 
   useEffect(() => {
     if (collectionItems.length === 0) {
@@ -186,7 +251,34 @@ function CollectionBoard({
     }
   }, [collectionViewMode]);
 
+  useEffect(() => {
+    if (!openColorPickerItemId) return undefined;
+    const handlePointerDown = (event) => {
+      if (colorPickerRef.current?.contains(event.target)) return;
+      setOpenColorPickerItemId(null);
+    };
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [openColorPickerItemId]);
+
+  useEffect(() => {
+    if (!openColorPickerItemId) return;
+    if (itemsById.has(openColorPickerItemId)) return;
+    setOpenColorPickerItemId(null);
+  }, [openColorPickerItemId, itemsById]);
+
+  useEffect(() => {
+    onVisibleItemsChange?.(collectionItems);
+  }, [collectionItems, onVisibleItemsChange]);
+
   const activeItem = activeItemId ? itemsById.get(activeItemId) : null;
+  const hasCollectionFilter = selectedCollectionTags.length > 0
+    || normalizedSearchQuery.length > 0
+    || normalizedSelectedType !== 'all'
+    || Boolean(showPinnedOnly)
+    || Boolean(selectedDateRange);
 
   const toggleRailTag = useCallback((tag) => {
     const normalized = normalizeTag(tag);
@@ -199,7 +291,7 @@ function CollectionBoard({
     });
   }, []);
 
-  const canLoadMore = !backendLoading && collectionItems.length >= backendLimit;
+  const canLoadMore = !backendLoading && backendItems.length >= backendLimit;
   const handleCollectionGridScroll = useCallback((event) => {
     if (!canLoadMore) return;
     const target = event.currentTarget;
@@ -257,6 +349,25 @@ function CollectionBoard({
       void submitTag();
     }
   }, [closeTagEditor, submitTag]);
+
+  const handleBackgroundSelect = useCallback((item, backgroundId) => {
+    if (!item) return;
+    onSetCardBackground?.(item, backgroundId);
+    setOpenColorPickerItemId(null);
+  }, [onSetCardBackground]);
+
+  const handleOpenContextMenuFromKeyboard = useCallback((item, index, keyboardEvent) => {
+    if (!item || !onOpenContextMenu) return;
+    const rect = keyboardEvent.currentTarget?.getBoundingClientRect?.();
+    const clientX = rect ? Math.round(rect.left + Math.min(rect.width - 12, 28)) : 0;
+    const clientY = rect ? Math.round(rect.top + Math.min(rect.height - 12, 28)) : 0;
+    onOpenContextMenu(item, index, {
+      preventDefault: () => keyboardEvent.preventDefault(),
+      stopPropagation: () => keyboardEvent.stopPropagation(),
+      clientX,
+      clientY,
+    });
+  }, [onOpenContextMenu]);
 
   const renderCardBody = useCallback((item) => {
     if (item.type_ === 'image' && item.image_paths) {
@@ -328,14 +439,36 @@ function CollectionBoard({
       <div className="collection-tag-rail-wrap">
         <div className="collection-toolbar-row">
           <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
+            <div className="collection-tag-search" onClick={(event) => event.stopPropagation()}>
+              <Search size={12} />
+              <input
+                type="text"
+                value={collectionTagQuery}
+                onChange={(event) => setCollectionTagQuery(event.target.value)}
+                placeholder={t('collection.searchTagsPlaceholder')}
+                aria-label={t('collection.searchTagsPlaceholder')}
+              />
+              {collectionTagQuery && (
+                <button
+                  type="button"
+                  className="collection-tag-search-clear"
+                  onClick={() => setCollectionTagQuery('')}
+                  title={t('toolbar.clearFilter')}
+                  aria-label={t('toolbar.clearFilter')}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
             <button
               type="button"
               className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
               onClick={() => setSelectedCollectionTags([])}
             >
               {t('collection.allTags')}
+              <span className="collection-tag-chip-count">{allCollectionTags.length}</span>
             </button>
-            {allCollectionTags.map((tag) => (
+            {visibleCollectionTags.map((tag) => (
               <button
                 key={tag}
                 type="button"
@@ -343,6 +476,7 @@ function CollectionBoard({
                 onClick={() => toggleRailTag(tag)}
               >
                 {tag}
+                <span className="collection-tag-chip-count">{collectionTagCounts.get(tag) || 0}</span>
               </button>
             ))}
             <button
@@ -412,10 +546,23 @@ function CollectionBoard({
         <div className="collection-tag-rail-meta">
           <span>{t('collection.tagFilterHint')}</span>
           <span>{t('collection.countLabel', { count: collectionItems.length })}</span>
+          {selectedCollectionTags.length > 0 && (
+            <span>{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</span>
+          )}
           {activeItem && (
             <span className="collection-active-item">
               {t('collection.activeCardHint')}
             </span>
+          )}
+          <span>{t('collection.contextMenuHint')}</span>
+          {selectedCollectionTags.length > 0 && (
+            <button
+              type="button"
+              className="collection-clear-tags-btn"
+              onClick={() => setSelectedCollectionTags([])}
+            >
+              {t('collection.clearTagFilter')}
+            </button>
           )}
           {tagEditorFeedback && (
             <span className="collection-tag-feedback">{tagEditorFeedback}</span>
@@ -431,7 +578,7 @@ function CollectionBoard({
           <div className="loading-spinner"></div>
           <div className="loading-text">{t('search.searching')}</div>
         </div>
-      ) : selectedCollectionTags.length === 0 && collectionItems.length === 0 ? (
+      ) : collectionItems.length === 0 && !hasCollectionFilter ? (
         <div className="collection-empty" role="status" aria-live="polite">
           <div className="collection-empty-title">{t('collection.emptyTitle')}</div>
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
@@ -446,19 +593,46 @@ function CollectionBoard({
           className={`collection-grid ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}
           onScroll={handleCollectionGridScroll}
         >
-          {collectionItems.map((item) => {
+          {collectionItems.map((item, index) => {
             const itemTags = getUserTags(item);
             const sourceApp = getSourceApp(item.metadata);
-            const isCopied = copiedItemId === item.id
-              && (copyFeedbackSource === 'collection' || copyFeedbackSource === 'history');
-            const canOpenNative = item.type_ === 'link' || item.type_ === 'file';
+            const cardBackground = getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata));
+            const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
+            const showColorPicker = openColorPickerItemId === item.id;
             return (
               <article
                 key={item.id}
-                className={`collection-card ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''} ${activeItemId === item.id ? 'active' : ''}`}
+                className={`
+                  collection-card
+                  ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
+                  ${activeItemId === item.id ? 'active' : ''}
+                  ${hasCustomCardBackground ? 'custom-bg' : ''}
+                `.trim()}
+                style={hasCustomCardBackground ? { '--collection-card-accent': cardBackground.accent } : undefined}
+                role="button"
+                tabIndex={0}
+                aria-label={t('collection.activeCardHint')}
+                aria-pressed={activeItemId === item.id}
                 onClick={() => {
                   setActiveItemId(item.id);
+                  setOpenColorPickerItemId(null);
                   onOpenPreview?.(item);
+                }}
+                onContextMenu={(event) => {
+                  setActiveItemId(item.id);
+                  onOpenContextMenu?.(item, index, event);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setActiveItemId(item.id);
+                    onOpenPreview?.(item);
+                    return;
+                  }
+                  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                    event.preventDefault();
+                    handleOpenContextMenuFromKeyboard(item, index, event);
+                  }
                 }}
               >
                 <div className="collection-card-head">
@@ -468,32 +642,7 @@ function CollectionBoard({
                     </span>
                     <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
                   </div>
-                  <div className="collection-card-actions">
-                    <button
-                      type="button"
-                      className={isCopied ? 'copied' : ''}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onCopy?.(item);
-                      }}
-                      title={isCopied ? t('item.copied') : t('item.copy')}
-                      aria-label={isCopied ? t('item.copied') : t('item.copy')}
-                    >
-                      {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                    </button>
-                    {canOpenNative && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onOpenItem?.(item);
-                        }}
-                        title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
-                        aria-label={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
-                      >
-                        <ExternalLink size={13} />
-                      </button>
-                    )}
+                  <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                     <button
                       type="button"
                       className={item.is_pinned ? 'active' : ''}
@@ -520,15 +669,51 @@ function CollectionBoard({
                     </button>
                     <button
                       type="button"
+                      className={hasCustomCardBackground ? 'active color' : 'color'}
                       onClick={(event) => {
+                        event.preventDefault();
                         event.stopPropagation();
-                        onOpenEditModal?.(item);
+                        setOpenColorPickerItemId((current) => (
+                          current === item.id ? null : item.id
+                        ));
                       }}
-                      title={t('item.editNoteAndTags')}
-                      aria-label={t('item.editNoteAndTags')}
+                      title={t('item.cardBackground.button')}
+                      aria-label={t('item.cardBackground.button')}
                     >
-                      <PencilLine size={13} />
+                      <Palette size={13} />
                     </button>
+                    {showColorPicker && (
+                      <div
+                        className="collection-card-color-picker"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {CARD_BACKGROUND_PRESETS.map((preset) => {
+                          const isActive = preset.id === cardBackground.id;
+                          const isDefault = preset.id === CARD_BACKGROUND_DEFAULT_ID;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              className={`collection-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
+                              style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
+                              title={t(preset.labelKey)}
+                              aria-label={t(preset.labelKey)}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                handleBackgroundSelect(item, preset.id);
+                              }}
+                            >
+                              {isDefault && <span className="collection-card-color-dot-reset"></span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="collection-card-body">

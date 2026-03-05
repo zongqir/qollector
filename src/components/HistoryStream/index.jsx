@@ -276,6 +276,7 @@ function HistoryStream({ style }) {
   const startTour = useAppStore(s => s.startTour);
   const previewItemId = previewItem?.id;
   const shouldUseHoverPreview = isMiniMode || !workbenchPanelEnabled;
+  const isCollectionMode = showFavoritesOnly;
 
   const virtuosoRef = useRef(null);
 
@@ -297,6 +298,7 @@ function HistoryStream({ style }) {
   const [quickAddPending, setQuickAddPending] = useState(false);
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
+  const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
   const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
 
   const showCompareFeedback = useCallback((type, text) => {
@@ -363,7 +365,7 @@ function HistoryStream({ style }) {
 
   useEffect(() => {
     const query = debouncedSearchQuery.trim();
-    const shouldQueryBackend = query.length > 0 || showFavoritesOnly;
+    const shouldQueryBackend = query.length > 0;
     if (!shouldQueryBackend) {
       setBackendSearchResults(null);
       setIsSearching(false);
@@ -371,7 +373,7 @@ function HistoryStream({ style }) {
     }
     let cancelled = false;
     setIsSearching(true);
-    const filters = showFavoritesOnly ? { is_favorite: true } : undefined;
+    const filters = undefined;
     const limit = query.length > 0 ? 240 : 200;
     searchItems(query, limit, filters)
       .then((results) => {
@@ -385,7 +387,7 @@ function HistoryStream({ style }) {
         if (!cancelled) setIsSearching(false);
       });
     return () => { cancelled = true; };
-  }, [debouncedSearchQuery, showFavoritesOnly, itemsRevision]);
+  }, [debouncedSearchQuery, itemsRevision]);
 
   const allTags = useMemo(() => {
     const userTags = new Set();
@@ -425,6 +427,11 @@ function HistoryStream({ style }) {
     if (!showFavoritesOnly || selectedTags.length === 0) return;
     setSelectedTags([]);
   }, [showFavoritesOnly, selectedTags.length, setSelectedTags]);
+
+  useEffect(() => {
+    if (isCollectionMode) return;
+    setCollectionVisibleItems([]);
+  }, [isCollectionMode]);
 
   const handleSelectDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
@@ -550,6 +557,15 @@ function HistoryStream({ style }) {
     clearExpandedPreview();
   }, [shouldUseHoverPreview, expandedPreviewItemId, filteredItems, clearExpandedPreview]);
 
+  const contextMenuItems = useMemo(
+    () => (
+      isCollectionMode
+        ? (collectionVisibleItems.length > 0 ? collectionVisibleItems : filteredItems)
+        : filteredItems
+    ),
+    [isCollectionMode, collectionVisibleItems, filteredItems],
+  );
+
   const {
     historyRootRef,
     contextMenuRef,
@@ -558,7 +574,7 @@ function HistoryStream({ style }) {
     closeContextMenu,
     armDeleteConfirm,
   } = useHistoryContextMenu({
-    filteredItems,
+    filteredItems: contextMenuItems,
     selectedItemIds,
     selectionAnchorIndexRef,
     setSelectedItemIds,
@@ -585,7 +601,7 @@ function HistoryStream({ style }) {
       if (contextMenuState?.isMulti) {
         switch (actionKey) {
           case 'copyMerged':
-            await copySelectedItemsMerged(filteredItems);
+            await copySelectedItemsMerged(contextMenuItems);
             closeContextMenu();
             return;
           case 'clearSelection':
@@ -627,7 +643,7 @@ function HistoryStream({ style }) {
             ? selectedItemIds
             : [...selectedItemIds, currentItem.id];
           setSelectedItemIds(nextSelected);
-          const contextIndex = filteredItems.findIndex(candidate => candidate.id === currentItem.id);
+          const contextIndex = contextMenuItems.findIndex(candidate => candidate.id === currentItem.id);
           if (contextIndex >= 0) {
             setFocusedIndex(contextIndex);
             selectionAnchorIndexRef.current = contextIndex;
@@ -673,7 +689,7 @@ function HistoryStream({ style }) {
     }
   }, [
     contextMenuState,
-    filteredItems,
+    contextMenuItems,
     selectedItemIds,
     copySelectedItemsMerged,
     clearSelection,
@@ -1469,7 +1485,7 @@ function HistoryStream({ style }) {
       })
       : t('history.autoCleanupNoticeDisabled')
   ), [isCalmPresetActive, cleanupMaxAgeDays, autoCleanupItemsLabel, t]);
-  const shouldRenderCollectionBoard = showFavoritesOnly;
+  const shouldRenderCollectionBoard = isCollectionMode;
 
   const handleToggleBatchTagEditor = useCallback(() => {
     if (showBatchTagEditor) {
@@ -1686,7 +1702,7 @@ function HistoryStream({ style }) {
             <div className="loading-spinner"></div>
             <div className="loading-text">{t('app.loading')}</div>
           </div>
-        ) : isSearching ? (
+        ) : isSearching && !shouldRenderCollectionBoard ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
             <div className="loading-text">{t('search.searching')}</div>
@@ -1694,15 +1710,17 @@ function HistoryStream({ style }) {
         ) : shouldRenderCollectionBoard ? (
           <CollectionBoard
             items={filteredItems}
+            searchQuery={debouncedSearchQuery}
+            selectedType={selectedType}
+            selectedDateRange={selectedDateRange}
+            showPinnedOnly={showPinnedOnly}
             timeTick={timeTick}
-            copiedItemId={copiedItemId}
-            copyFeedbackSource={copyFeedbackSource}
-            onCopy={(item) => handleCopy(item, 'collection')}
             onTogglePin={togglePin}
             onToggleFavorite={toggleFavorite}
+            onSetCardBackground={setCardBackground}
             onOpenPreview={handleOpenCollectionPreview}
-            onOpenItem={handleOpenItem}
-            onOpenEditModal={openEditModal}
+            onOpenContextMenu={handleCardContextMenu}
+            onVisibleItemsChange={setCollectionVisibleItems}
             onAddTagToItem={addTagToItem}
             maxPinnedItems={maxPinnedItems}
           />
