@@ -16,6 +16,11 @@ import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
+import {
+  COLLECTION_HINTS_VISIBILITY_EVENT,
+  readCollectionHintsDismissed,
+  setCollectionHintsDismissed,
+} from '../../utils/collectionHints';
 import { getHistoryGroupCounts, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
@@ -299,6 +304,7 @@ function HistoryStream({ style }) {
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
+  const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
 
   const showCompareFeedback = useCallback((type, text) => {
@@ -341,6 +347,20 @@ function HistoryStream({ style }) {
       setTimeTick(Date.now());
     }, 60 * 1000);
     return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const syncDismissed = (event) => {
+      const dismissedFromEvent = event?.detail?.dismissed;
+      if (typeof dismissedFromEvent === 'boolean') {
+        setCollectionHintsDismissedState(dismissedFromEvent);
+        return;
+      }
+      setCollectionHintsDismissedState(readCollectionHintsDismissed());
+    };
+    window.addEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
+    return () => window.removeEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
   }, []);
 
   useEffect(() => () => {
@@ -660,6 +680,10 @@ function HistoryStream({ style }) {
           await togglePin(currentItem);
           closeContextMenu();
           return;
+        case 'showCollectionHints':
+          setCollectionHintsDismissed(false);
+          closeContextMenu();
+          return;
         case 'editNote':
           openEditModal(currentItem);
           closeContextMenu();
@@ -703,6 +727,7 @@ function HistoryStream({ style }) {
     handleCopyAndAutoPaste,
     toggleFavorite,
     togglePin,
+    setCollectionHintsDismissed,
     openEditModal,
     t,
     handleOpenItem,
@@ -1855,6 +1880,7 @@ function HistoryStream({ style }) {
         t={t}
         maxPinnedItems={maxPinnedItems}
         enableQuickPaste={autoPasteOnDoubleClick}
+        collectionHintsDismissed={collectionHintsDismissed}
         onAction={handleContextMenuAction}
       />
 

@@ -813,7 +813,9 @@
     "searchTagsPlaceholder": "筛选标签...",
     "clearTagFilter": "清空标签筛选",
     "selectedTagsCount": "已选 {{count}} 个标签",
-    "contextMenuHint": "右键卡片查看更多操作"
+    "contextMenuHint": "右键卡片查看更多操作",
+    "hideHints": "隐藏提示",
+    "showHints": "显示提示"
   },
   "aiAssistant": {
     "title": "AI 助手",

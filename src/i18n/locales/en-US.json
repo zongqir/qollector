@@ -838,7 +838,9 @@
     "searchTagsPlaceholder": "Filter tags...",
     "clearTagFilter": "Clear tag filters",
     "selectedTagsCount": "{{count}} tags selected",
-    "contextMenuHint": "Right-click a card for more actions"
+    "contextMenuHint": "Right-click a card for more actions",
+    "hideHints": "Hide hints",
+    "showHints": "Show hints"
   },
   "aiAssistant": {
     "title": "AI Assistant",

@@ -4,6 +4,7 @@ import {
   CheckSquare,
   ClipboardPaste,
   Copy,
+  Eye,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -60,6 +61,7 @@ function HistoryContextMenu({
   t,
   maxPinnedItems,
   enableQuickPaste,
+  collectionHintsDismissed = false,
   onAction,
 }) {
   const item = state?.item;
@@ -146,12 +148,24 @@ function HistoryContextMenu({
     };
 
     if (isCollectionScope) {
+      const collectionEntries = [
+        ...stateEntries,
+        ...(collectionHintsDismissed
+          ? [{
+            key: 'showCollectionHints',
+            label: t('collection.showHints'),
+            icon: Eye,
+            secondary: true,
+          }]
+          : []),
+      ];
+
       return normalizeMenuEntries([
         ...commonEntries,
         { type: 'separator' },
         ...openEntries,
         { type: 'separator' },
-        ...stateEntries,
+        ...collectionEntries,
         { type: 'separator' },
         deleteEntry,
       ]);
@@ -165,7 +179,7 @@ function HistoryContextMenu({
       { type: 'separator' },
       deleteEntry,
     ]);
-  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, maxPinnedItems]);
+  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, maxPinnedItems, collectionHintsDismissed]);
 
   const position = useMemo(() => {
     if (!item || typeof window === 'undefined') {

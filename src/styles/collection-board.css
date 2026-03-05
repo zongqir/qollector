@@ -114,6 +114,8 @@
 .collection-tag-chip:focus-visible,
 .collection-tag-search-clear:focus-visible,
 .collection-clear-tags-btn:focus-visible,
+.collection-meta-hint-close:focus-visible,
+.collection-active-item-close:focus-visible,
 .collection-view-toggle button:focus-visible,
 .collection-card-actions button:focus-visible,
 .collection-card-tag:focus-visible,
@@ -242,11 +244,54 @@
 }
 
 .collection-active-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 6px 2px 8px;
   border: 1px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
   color: color-mix(in srgb, var(--accent-color) 86%, var(--text-secondary) 14%);
   background: color-mix(in srgb, var(--accent-light) 64%, transparent);
+  white-space: nowrap;
+}
+
+.collection-active-item-close {
+  width: 16px;
+  height: 16px;
+}
+
+.collection-meta-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
+  border-radius: 999px;
+  padding: 2px 6px 2px 8px;
+  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
+  color: var(--text-secondary);
+}
+
+.collection-filter-hint {
+  max-width: min(100%, 230px);
+}
+
+.collection-meta-hint-close {
+  width: 17px;
+  height: 17px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.collection-meta-hint-close:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
 }
 
 .collection-tag-feedback {

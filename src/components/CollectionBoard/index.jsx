@@ -25,6 +25,11 @@ import { getImageThumbnail } from '../../utils/imageHelpers';
 import { searchItems } from '../../services/clipboardService';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import {
+  COLLECTION_HINTS_VISIBILITY_EVENT,
+  readCollectionHintsDismissed,
+  setCollectionHintsDismissed,
+} from '../../utils/collectionHints';
+import {
   CARD_BACKGROUND_DEFAULT_ID,
   CARD_BACKGROUND_PRESETS,
   getCardBackgroundIdFromMetadata,
@@ -106,6 +111,7 @@ function CollectionBoard({
   const [backendItems, setBackendItems] = useState([]);
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const colorPickerRef = useRef(null);
 
   const normalizedSearchQuery = useMemo(
@@ -251,6 +257,20 @@ function CollectionBoard({
       console.warn('[CollectionBoard] persist view mode failed:', error);
     }
   }, [collectionViewMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const syncDismissed = (event) => {
+      const dismissedFromEvent = event?.detail?.dismissed;
+      if (typeof dismissedFromEvent === 'boolean') {
+        setCollectionHintsDismissedState(dismissedFromEvent);
+        return;
+      }
+      setCollectionHintsDismissedState(readCollectionHintsDismissed());
+    };
+    window.addEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
+    return () => window.removeEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
+  }, []);
 
   useEffect(() => {
     if (!openColorPickerItemId) return undefined;
@@ -427,6 +447,11 @@ function CollectionBoard({
     }, 'collection');
   }, [onOpenContextMenu]);
 
+  const handleDismissCollectionHints = useCallback((event) => {
+    event.stopPropagation();
+    setCollectionHintsDismissed(true);
+  }, []);
+
   const renderCardBody = useCallback((item) => {
     if (item.type_ === 'image' && item.image_paths) {
       return (
@@ -602,17 +627,52 @@ function CollectionBoard({
           </div>
         </div>
         <div className="collection-tag-rail-meta">
-          <span>{t('collection.tagFilterHint')}</span>
+          {!collectionHintsDismissed && (
+            <span className="collection-meta-hint collection-filter-hint">
+              <span>{t('collection.tagFilterHint')}</span>
+              <button
+                type="button"
+                className="collection-meta-hint-close"
+                onClick={handleDismissCollectionHints}
+                title={t('collection.hideHints')}
+                aria-label={t('collection.hideHints')}
+              >
+                <X size={11} />
+              </button>
+            </span>
+          )}
           <span>{t('collection.countLabel', { count: collectionItems.length })}</span>
           {selectedCollectionTags.length > 0 && (
             <span>{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</span>
           )}
-          {activeItem && (
+          {activeItem && !collectionHintsDismissed && (
             <span className="collection-active-item">
-              {t('collection.activeCardHint')}
+              <span>{t('collection.activeCardHint')}</span>
+              <button
+                type="button"
+                className="collection-meta-hint-close collection-active-item-close"
+                onClick={handleDismissCollectionHints}
+                title={t('collection.hideHints')}
+                aria-label={t('collection.hideHints')}
+              >
+                <X size={11} />
+              </button>
             </span>
           )}
-          <span>{t('collection.contextMenuHint')}</span>
+          {!collectionHintsDismissed && (
+            <span className="collection-meta-hint">
+              <span>{t('collection.contextMenuHint')}</span>
+              <button
+                type="button"
+                className="collection-meta-hint-close"
+                onClick={handleDismissCollectionHints}
+                title={t('collection.hideHints')}
+                aria-label={t('collection.hideHints')}
+              >
+                <X size={11} />
+              </button>
+            </span>
+          )}
           {selectedCollectionTags.length > 0 && (
             <button
               type="button"
