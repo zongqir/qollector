@@ -86,6 +86,7 @@ function CollectionBoard({
   searchQuery,
   selectedType,
   selectedDateRange,
+  isMiniMode = false,
   showPinnedOnly,
   timeTick,
   onTogglePin,
@@ -113,6 +114,11 @@ function CollectionBoard({
   const [backendError, setBackendError] = useState('');
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const colorPickerRef = useRef(null);
+  const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_LIST : collectionViewMode;
+  const effectiveSelectedCollectionTags = useMemo(
+    () => (isMiniMode ? [] : selectedCollectionTags),
+    [isMiniMode, selectedCollectionTags],
+  );
 
   const normalizedSearchQuery = useMemo(
     () => (typeof searchQuery === 'string' ? searchQuery.trim() : ''),
@@ -129,8 +135,8 @@ function CollectionBoard({
   ), [selectedDateRange]);
 
   const selectedTagSignature = useMemo(
-    () => [...selectedCollectionTags].sort((left, right) => left.localeCompare(right)).join('\u0001'),
-    [selectedCollectionTags],
+    () => [...effectiveSelectedCollectionTags].sort((left, right) => left.localeCompare(right)).join('\u0001'),
+    [effectiveSelectedCollectionTags],
   );
 
   useEffect(() => {
@@ -144,7 +150,7 @@ function CollectionBoard({
     const filters = {
       is_favorite: true,
       ...(showPinnedOnly ? { is_pinned: true } : {}),
-      ...(selectedCollectionTags.length > 0 ? { tag_filter: selectedCollectionTags } : {}),
+      ...(effectiveSelectedCollectionTags.length > 0 ? { tag_filter: effectiveSelectedCollectionTags } : {}),
     };
     if (normalizedSelectedType !== 'all' && normalizedSelectedType !== 'code') {
       filters.type_filter = normalizedSelectedType;
@@ -168,7 +174,7 @@ function CollectionBoard({
     };
   }, [
     backendLimit,
-    selectedCollectionTags,
+    effectiveSelectedCollectionTags,
     showPinnedOnly,
     normalizedSelectedType,
     normalizedSearchQuery,
@@ -295,7 +301,7 @@ function CollectionBoard({
   }, [collectionItems, onVisibleItemsChange]);
 
   const activeItem = activeItemId ? itemsById.get(activeItemId) : null;
-  const hasCollectionFilter = selectedCollectionTags.length > 0
+  const hasCollectionFilter = effectiveSelectedCollectionTags.length > 0
     || normalizedSearchQuery.length > 0
     || normalizedSelectedType !== 'all'
     || Boolean(showPinnedOnly)
@@ -518,8 +524,9 @@ function CollectionBoard({
   }, []);
 
   return (
-    <section className="collection-board" onClick={(event) => event.stopPropagation()}>
-      <div className="collection-tag-rail-wrap">
+    <section className={`collection-board ${isMiniMode ? 'mini-list-only' : ''}`.trim()} onClick={(event) => event.stopPropagation()}>
+      {!isMiniMode && (
+        <div className="collection-tag-rail-wrap">
         <div className="collection-toolbar-row">
           <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
             <div className="collection-tag-search" onClick={(event) => event.stopPropagation()}>
@@ -689,7 +696,8 @@ function CollectionBoard({
             <span className="collection-tag-feedback">{t('collection.queryFailed')}</span>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       {backendLoading && collectionItems.length === 0 ? (
         <div className="collection-loading" role="status" aria-live="polite">
@@ -708,7 +716,7 @@ function CollectionBoard({
         </div>
       ) : (
         <div
-          className={`collection-grid ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}
+          className={`collection-grid ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}
           onScroll={handleCollectionGridScroll}
         >
           {collectionItems.map((item, index) => {
@@ -722,7 +730,7 @@ function CollectionBoard({
                 key={item.id}
                 className={`
                   collection-card
-                  ${collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
+                  ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
                   ${activeItemId === item.id ? 'active' : ''}
                   ${hasCustomCardBackground ? 'custom-bg' : ''}
                 `.trim()}
@@ -838,7 +846,7 @@ function CollectionBoard({
                 <div className="collection-card-body">
                   {renderCardBody(item)}
                 </div>
-                {itemTags.length > 0 && (
+                {!isMiniMode && itemTags.length > 0 && (
                   <div className="collection-card-tags">
                     {itemTags.slice(0, 6).map((tag) => (
                       <button

@@ -1739,6 +1739,7 @@ function HistoryStream({ style }) {
             searchQuery={debouncedSearchQuery}
             selectedType={selectedType}
             selectedDateRange={selectedDateRange}
+            isMiniMode={isMiniMode}
             showPinnedOnly={showPinnedOnly}
             timeTick={timeTick}
             onTogglePin={togglePin}
