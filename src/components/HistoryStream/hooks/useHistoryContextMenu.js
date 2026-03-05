@@ -25,7 +25,7 @@ export default function useHistoryContextMenu({
     setContextMenuState(null);
   }, [clearDeleteConfirmTimer]);
 
-  const openContextMenu = useCallback((item, index, event) => {
+  const openContextMenu = useCallback((item, index, event, scope = 'history') => {
     if (!item?.id) return;
 
     event.preventDefault();
@@ -45,6 +45,7 @@ export default function useHistoryContextMenu({
       item,
       x: event.clientX,
       y: event.clientY,
+      scope,
       isMulti: isMultiContext,
       selectedCount: selectedItemIds.length,
       confirmDeleteFor: null,
@@ -81,6 +82,7 @@ export default function useHistoryContextMenu({
   useEffect(() => {
     const menuItemId = contextMenuState?.item?.id;
     if (!menuItemId) return;
+    const scope = contextMenuState?.scope || 'history';
 
     if (contextMenuState?.isMulti) {
       if (selectedItemIds.length < 2 || !selectedItemIds.includes(menuItemId)) {
@@ -95,6 +97,11 @@ export default function useHistoryContextMenu({
       });
       return;
     }
+
+    // Collection board may render backend-paged items that are not guaranteed
+    // to exist in HistoryStream's local memory window, so skip strict membership
+    // check to avoid immediate close right after opening context menu.
+    if (scope === 'collection') return;
 
     if (filteredItems.some((candidate) => candidate.id === menuItemId)) return;
     closeContextMenu();

@@ -366,7 +366,7 @@ function CollectionBoard({
       stopPropagation: () => keyboardEvent.stopPropagation(),
       clientX,
       clientY,
-    });
+    }, 'collection');
   }, [onOpenContextMenu]);
 
   const renderCardBody = useCallback((item) => {
@@ -620,9 +620,10 @@ function CollectionBoard({
                 }}
                 onContextMenu={(event) => {
                   setActiveItemId(item.id);
-                  onOpenContextMenu?.(item, index, event);
+                  onOpenContextMenu?.(item, index, event, 'collection');
                 }}
                 onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setActiveItemId(item.id);

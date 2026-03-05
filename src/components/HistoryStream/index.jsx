@@ -581,13 +581,14 @@ function HistoryStream({ style }) {
     setFocusedIndex,
   });
 
-  const handleCardContextMenu = useCallback((item, index, event) => {
-    openContextMenu(item, index, event);
+  const handleCardContextMenu = useCallback((item, index, event, scope = 'history') => {
+    openContextMenu(item, index, event, scope);
   }, [openContextMenu]);
 
   const handleContextMenuAction = useCallback(async (actionKey) => {
     const currentItem = contextMenuState?.item;
     if (!currentItem) return;
+    const contextCopySource = contextMenuState?.scope === 'collection' ? 'collection' : 'history';
 
     const toPlainText = (item) => {
       if (!item) return '';
@@ -621,21 +622,21 @@ function HistoryStream({ style }) {
 
       switch (actionKey) {
         case 'copy':
-          await handleCopy(currentItem, 'history');
+          await handleCopy(currentItem, contextCopySource);
           closeContextMenu();
           return;
         case 'copyPlainText': {
           const plainText = toPlainText(currentItem);
           if (plainText) {
-            await handleCopyPlainText(plainText, 'history');
+            await handleCopyPlainText(plainText, contextCopySource);
           } else {
-            await handleCopy(currentItem, 'history');
+            await handleCopy(currentItem, contextCopySource);
           }
           closeContextMenu();
           return;
         }
         case 'quickPaste':
-          await handleCopyAndAutoPaste(currentItem, 'history');
+          await handleCopyAndAutoPaste(currentItem, contextCopySource);
           closeContextMenu();
           return;
         case 'multiSelect': {
@@ -1848,16 +1849,14 @@ function HistoryStream({ style }) {
         )}
       </div>
 
-      {!shouldRenderCollectionBoard && (
-        <HistoryContextMenu
-          state={contextMenuState}
-          menuRef={contextMenuRef}
-          t={t}
-          maxPinnedItems={maxPinnedItems}
-          enableQuickPaste={autoPasteOnDoubleClick}
-          onAction={handleContextMenuAction}
-        />
-      )}
+      <HistoryContextMenu
+        state={contextMenuState}
+        menuRef={contextMenuRef}
+        t={t}
+        maxPinnedItems={maxPinnedItems}
+        enableQuickPaste={autoPasteOnDoubleClick}
+        onAction={handleContextMenuAction}
+      />
 
       {shouldShowBottomHelper && (
         <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''}`.trim()}>

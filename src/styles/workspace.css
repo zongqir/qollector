@@ -405,6 +405,15 @@
   color: color-mix(in srgb, var(--text-primary) 86%, transparent);
 }
 
+.history-context-menu-item.secondary {
+  color: var(--text-tertiary);
+}
+
+.history-context-menu-item.secondary .history-context-menu-icon,
+.history-context-menu-item.secondary .history-context-menu-shortcut {
+  color: color-mix(in srgb, var(--text-tertiary) 84%, transparent);
+}
+
 .history-context-menu-item.danger {
   color: var(--state-error-fg);
 }

@@ -64,6 +64,8 @@ function HistoryContextMenu({
 }) {
   const item = state?.item;
   const isMulti = Boolean(state?.isMulti);
+  const menuScope = state?.scope || 'history';
+  const isCollectionScope = menuScope === 'collection';
   const confirmDeleteFor = state?.confirmDeleteFor || null;
   const modifierKey = getModifierKeyLabel();
 
@@ -101,34 +103,69 @@ function HistoryContextMenu({
     const canOpenItem = item.type_ === 'link' || item.type_ === 'file';
     const canReveal = item.type_ === 'file' || item.type_ === 'image';
 
-    return normalizeMenuEntries([
+    const commonEntries = [
       { key: 'copy', label: t('item.copy'), icon: Copy, shortcut: `${modifierKey}+C` },
       { key: 'copyPlainText', label: t('item.copyPlainText'), icon: FileText },
       { key: 'multiSelect', label: t('history.contextMenu.multiSelect'), icon: CheckSquare },
       canQuickPaste
         ? { key: 'quickPaste', label: t('history.contextMenu.quickPaste'), icon: ClipboardPaste, shortcut: 'Enter' }
         : null,
-      { type: 'separator' },
-      { key: 'favorite', label: item.is_favorite ? t('item.unfavorite') : t('item.favorite'), icon: Star },
-      { key: 'pin', label: item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems }), icon: Inbox },
+    ];
+
+    const openEntries = [
       { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
-      { type: 'separator' },
       canOpenInNewWindow ? { key: 'openInNewWindow', label: t('item.openInNewWindow'), icon: ExternalLink } : null,
       canOpenItem
         ? { key: 'open', label: item.type_ === 'link' ? t('item.openLink') : t('item.openFile'), icon: ExternalLink }
         : null,
       canReveal ? { key: 'reveal', label: t('item.revealInFolder'), icon: FolderOpen } : null,
-      { type: 'separator' },
+    ];
+
+    const stateEntries = [
       {
-        key: 'delete',
-        label: confirmDeleteFor === 'delete' ? t('item.confirmDelete') : t('item.delete'),
-        icon: Trash2,
-        shortcut: 'Del',
-        danger: true,
-        confirm: confirmDeleteFor === 'delete',
+        key: 'favorite',
+        label: item.is_favorite ? t('item.unfavorite') : t('item.favorite'),
+        icon: Star,
+        secondary: isCollectionScope,
       },
+      {
+        key: 'pin',
+        label: item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems }),
+        icon: Inbox,
+        secondary: isCollectionScope,
+      },
+    ];
+
+    const deleteEntry = {
+      key: 'delete',
+      label: confirmDeleteFor === 'delete' ? t('item.confirmDelete') : t('item.delete'),
+      icon: Trash2,
+      shortcut: 'Del',
+      danger: true,
+      confirm: confirmDeleteFor === 'delete',
+    };
+
+    if (isCollectionScope) {
+      return normalizeMenuEntries([
+        ...commonEntries,
+        { type: 'separator' },
+        ...openEntries,
+        { type: 'separator' },
+        ...stateEntries,
+        { type: 'separator' },
+        deleteEntry,
+      ]);
+    }
+
+    return normalizeMenuEntries([
+      ...commonEntries,
+      { type: 'separator' },
+      ...stateEntries,
+      ...openEntries,
+      { type: 'separator' },
+      deleteEntry,
     ]);
-  }, [item, isMulti, confirmDeleteFor, modifierKey, t, enableQuickPaste, maxPinnedItems]);
+  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, maxPinnedItems]);
 
   const position = useMemo(() => {
     if (!item || typeof window === 'undefined') {
@@ -170,9 +207,11 @@ function HistoryContextMenu({
         event.stopPropagation();
       }}
     >
-      {isMulti && (
+      {(isMulti || isCollectionScope) && (
         <div className="history-context-menu-header">
-          {t('multiSelect.selected', { count: state?.selectedCount || 0 })}
+          {isMulti
+            ? t('multiSelect.selected', { count: state?.selectedCount || 0 })
+            : t('collection.title')}
         </div>
       )}
 
@@ -185,7 +224,7 @@ function HistoryContextMenu({
           <button
             key={entry.key}
             type="button"
-            className={`history-context-menu-item ${entry.danger ? 'danger' : ''} ${entry.confirm ? 'confirm' : ''}`}
+            className={`history-context-menu-item ${entry.secondary ? 'secondary' : ''} ${entry.danger ? 'danger' : ''} ${entry.confirm ? 'confirm' : ''}`}
             role="menuitem"
             onClick={() => onAction?.(entry.key)}
           >
