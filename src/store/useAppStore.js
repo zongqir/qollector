@@ -1121,12 +1121,23 @@ const useAppStore = create((set, get) => ({
           }
         }
 
+        const maxPinOrder = state.items.reduce((maxOrder, candidate) => {
+          if (!candidate.is_pinned || candidate.id === item.id || unpinnedByLimitIds.has(candidate.id)) {
+            return maxOrder;
+          }
+          const value = Number(candidate.pin_order);
+          if (!Number.isFinite(value)) return maxOrder;
+          return value > maxOrder ? value : maxOrder;
+        }, 0);
+        const nextPinOrder = nextPinnedState ? maxPinOrder + 1 : null;
+
         items = items.map((it) => {
           if (it.id === item.id) {
             return {
               ...it,
               is_pinned: nextPinnedState,
               pinned_at: nextPinnedState ? now : null,
+              pin_order: nextPinnedState ? nextPinOrder : null,
               updated_at: now,
             };
           }
@@ -1136,6 +1147,7 @@ const useAppStore = create((set, get) => ({
               ...it,
               is_pinned: false,
               pinned_at: null,
+              pin_order: null,
               updated_at: now,
             };
           }
@@ -1149,6 +1161,7 @@ const useAppStore = create((set, get) => ({
             ...previewItem,
             is_pinned: nextPinnedState,
             pinned_at: nextPinnedState ? now : null,
+            pin_order: nextPinnedState ? nextPinOrder : null,
             updated_at: now,
           };
         } else if (previewItem && unpinnedByLimitIds.has(previewItem.id)) {
@@ -1156,6 +1169,7 @@ const useAppStore = create((set, get) => ({
             ...previewItem,
             is_pinned: false,
             pinned_at: null,
+            pin_order: null,
             updated_at: now,
           };
         }

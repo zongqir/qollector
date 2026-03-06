@@ -72,7 +72,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 3;
+    const CURRENT_SCHEMA_VERSION: i64 = 4;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -112,6 +112,11 @@ impl ClipboardRepository {
             self.migrate_v2_to_v3().await?;
             self.set_schema_version(3).await?;
             println!("[Schema] migrated to version 3");
+        }
+        if db_version < 4 {
+            self.migrate_v3_to_v4().await?;
+            self.set_schema_version(4).await?;
+            println!("[Schema] migrated to version 4");
         }
 
         Ok(())
@@ -267,6 +272,37 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
         self.migrate_fts_data().await?;
+        Ok(())
+    }
+
+    /// V3 -> V4: Add dedicated workbench pin order column.
+    async fn migrate_v3_to_v4(&self) -> Result<(), sqlx::Error> {
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN pin_order INTEGER")
+            .execute(&self.pool)
+            .await;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_pinned_order ON clipboard_items(is_deleted, is_pinned, pin_order)",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Backfill existing pinned rows so old users keep a stable order after upgrade.
+        let pinned_ids = sqlx::query_scalar::<_, String>(
+            "SELECT id FROM clipboard_items
+             WHERE is_deleted = 0 AND is_pinned = 1
+             ORDER BY pinned_at ASC, created_at ASC, id ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        for (idx, id) in pinned_ids.iter().enumerate() {
+            sqlx::query("UPDATE clipboard_items SET pin_order = ? WHERE id = ?")
+                .bind((idx as i64) + 1)
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -774,9 +810,27 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    /// Return pinned items in persisted workbench order.
+    pub async fn get_workbench_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items
+             WHERE is_deleted = 0 AND is_pinned = 1
+             ORDER BY
+               CASE WHEN pin_order IS NULL OR pin_order <= 0 THEN 1 ELSE 0 END ASC,
+               pin_order ASC,
+               pinned_at DESC,
+               created_at DESC,
+               id DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
     /// 取消指定项的置顶状态
     pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE clipboard_items SET is_pinned = 0, pinned_at = NULL WHERE id = ?")
+        sqlx::query("UPDATE clipboard_items SET is_pinned = 0, pinned_at = NULL, pin_order = NULL WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -784,17 +838,86 @@ impl ClipboardRepository {
     }
 
     pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
-        let pinned_at = if pinned {
-            Some(chrono::Utc::now().timestamp())
-        } else {
-            None
-        };
-        sqlx::query("UPDATE clipboard_items SET is_pinned = ?, pinned_at = ? WHERE id = ?")
-            .bind(pinned as i32)
+        if pinned {
+            let pinned_at = chrono::Utc::now().timestamp();
+            sqlx::query(
+                "UPDATE clipboard_items
+                 SET is_pinned = 1,
+                     pinned_at = ?,
+                     pin_order = (
+                       SELECT COALESCE(MAX(pin_order), 0) + 1
+                       FROM clipboard_items
+                       WHERE is_deleted = 0 AND is_pinned = 1
+                     )
+                 WHERE id = ?",
+            )
             .bind(pinned_at)
             .bind(id)
             .execute(&self.pool)
             .await?;
+            return Ok(());
+        }
+
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET is_pinned = 0, pinned_at = NULL, pin_order = NULL
+             WHERE id = ?",
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn reorder_workbench_pinned_items(
+        &self,
+        ordered_ids: &[String],
+    ) -> Result<(), sqlx::Error> {
+        let existing_ids = self
+            .get_workbench_pinned_items()
+            .await?
+            .into_iter()
+            .map(|item| item.id)
+            .collect::<Vec<String>>();
+
+        if existing_ids.is_empty() {
+            return Ok(());
+        }
+
+        let existing_set = existing_ids
+            .iter()
+            .cloned()
+            .collect::<HashSet<String>>();
+
+        let mut normalized = Vec::with_capacity(existing_ids.len());
+        let mut seen = HashSet::new();
+
+        for id in ordered_ids {
+            if !existing_set.contains(id) {
+                continue;
+            }
+            if seen.insert(id.clone()) {
+                normalized.push(id.clone());
+            }
+        }
+
+        for id in existing_ids {
+            if seen.insert(id.clone()) {
+                normalized.push(id);
+            }
+        }
+
+        let mut tx = self.pool.begin().await?;
+        for (idx, id) in normalized.iter().enumerate() {
+            sqlx::query("UPDATE clipboard_items SET pin_order = ? WHERE id = ?")
+                .bind((idx as i64) + 1)
+                .bind(id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+
         Ok(())
     }
 

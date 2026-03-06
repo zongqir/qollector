@@ -12,6 +12,14 @@ const loadHighlightCSS = () => {
   }
 };
 
+const trimLeadingEmptyLines = (lines) => {
+  let startIndex = 0;
+  while (startIndex < lines.length && !String(lines[startIndex] || '').trim()) {
+    startIndex += 1;
+  }
+  return startIndex > 0 ? lines.slice(startIndex) : lines;
+};
+
 function CodeBlock({ code, language, maxLines = 200, showLanguageBadge = true, compact = false }) {
   const { t } = useTranslation();
   const { isReady, highlightCode } = useCodeHighlight();
@@ -22,15 +30,17 @@ function CodeBlock({ code, language, maxLines = 200, showLanguageBadge = true, c
 
   const { truncatedCode, totalLines, shownLines } = useMemo(() => {
     if (!code) return { truncatedCode: '', totalLines: 0, shownLines: 0 };
-    const lines = code.split('\n');
-    const total = lines.length;
+    const rawLines = String(code).split('\n');
+    const lines = compact ? trimLeadingEmptyLines(rawLines) : rawLines;
+    const effectiveLines = lines.length > 0 ? lines : rawLines;
+    const total = effectiveLines.length;
     const shown = Math.min(total, maxLines);
     return {
-      truncatedCode: lines.slice(0, shown).join('\n'),
+      truncatedCode: effectiveLines.slice(0, shown).join('\n'),
       totalLines: total,
       shownLines: shown,
     };
-  }, [code, maxLines]);
+  }, [code, maxLines, compact]);
 
   const highlightedHtml = useMemo(() => {
     if (!isReady || !language || !truncatedCode) return null;

@@ -39,7 +39,7 @@ import TagFilterControl from '../shared/TagFilterControl';
 import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
-import { searchItems } from '../../services/clipboardService';
+import { getWorkbenchPinnedItems, reorderWorkbenchPinnedItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
@@ -53,7 +53,6 @@ import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } f
 function WorkbenchPanel() {
   const { t, i18n } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
-  const [pinnedOrder, setPinnedOrder] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
   const [showWorkbenchTypeFilter, setShowWorkbenchTypeFilter] = useState(false);
@@ -116,7 +115,7 @@ function WorkbenchPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    searchItems('', 2000, { is_pinned: true })
+    getWorkbenchPinnedItems()
       .then((results) => {
         if (cancelled) return;
         setBackendPinnedItems(Array.isArray(results) ? results : []);
@@ -134,19 +133,15 @@ function WorkbenchPanel() {
 
   const pinnedBaseItems = useMemo(() => {
     if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
-    return items.filter(item => item.is_pinned);
+    return [...items.filter(item => item.is_pinned)].sort((left, right) => {
+      const leftOrder = Number.isFinite(Number(left?.pin_order)) ? Number(left.pin_order) : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(Number(right?.pin_order)) ? Number(right.pin_order) : Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+      return Number(right?.pinned_at || 0) - Number(left?.pinned_at || 0);
+    });
   }, [backendPinnedItems, items]);
 
-  const allPinnedItems = useMemo(() => {
-    const pinned = pinnedBaseItems;
-    if (!pinnedOrder) return pinned;
-    const orderMap = new Map(pinnedOrder.map((id, idx) => [id, idx]));
-    return [...pinned].sort((a, b) => {
-      const aIdx = orderMap.has(a.id) ? orderMap.get(a.id) : 999;
-      const bIdx = orderMap.has(b.id) ? orderMap.get(b.id) : 999;
-      return aIdx - bIdx;
-    });
-  }, [pinnedBaseItems, pinnedOrder]);
+  const allPinnedItems = useMemo(() => pinnedBaseItems, [pinnedBaseItems]);
 
   const pinnedItems = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -348,8 +343,18 @@ function WorkbenchPanel() {
     const oldIndex = allPinnedItems.findIndex(i => i.id === active.id);
     const newIndex = allPinnedItems.findIndex(i => i.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const newOrder = arrayMove(allPinnedItems.map(i => i.id), oldIndex, newIndex);
-    setPinnedOrder(newOrder);
+    const nextOrderedItems = arrayMove(allPinnedItems, oldIndex, newIndex);
+    const orderedIds = nextOrderedItems.map(item => item.id);
+    setBackendPinnedItems(nextOrderedItems);
+    reorderWorkbenchPinnedItems(orderedIds).catch(async (error) => {
+      console.error('[Workbench] persist pinned order failed:', error);
+      try {
+        const latest = await getWorkbenchPinnedItems();
+        setBackendPinnedItems(Array.isArray(latest) ? latest : []);
+      } catch (refreshError) {
+        console.error('[Workbench] refresh pinned items after reorder failed:', refreshError);
+      }
+    });
   }, [allPinnedItems]);
 
   const handleWorkbenchTypeChange = useCallback((nextType) => {

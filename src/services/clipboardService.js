@@ -32,6 +32,14 @@ export const getMoreItems = async (limit = 50, offset = 0) => {
   return invoke('get_more_items', { limit, offset });
 };
 
+export const getWorkbenchPinnedItems = async () => {
+  return invoke('get_workbench_pinned_items');
+};
+
+export const reorderWorkbenchPinnedItems = async (orderedIds = []) => {
+  return invoke('reorder_workbench_pinned_items', { orderedIds });
+};
+
 export const getHistoryGroupCounts = async (startToday, startYesterday, startLast7) => {
   return invoke('get_history_group_counts', { startToday, startYesterday, startLast7 });
 };

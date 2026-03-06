@@ -522,6 +522,23 @@
   overflow: hidden;
 }
 
+.collection-card-body .code-block {
+  font-size: 11.5px;
+}
+
+.collection-card-body .code-block.compact {
+  max-height: 6.2em;
+}
+
+.collection-card-body .code-block.compact pre {
+  padding: 4px 8px;
+}
+
+.collection-card-body .code-language-badge {
+  top: 1px;
+  font-size: 8px;
+}
+
 .collection-card-image {
   display: flex;
   flex-direction: column;

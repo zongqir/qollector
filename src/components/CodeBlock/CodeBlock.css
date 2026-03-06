@@ -31,11 +31,12 @@
 }
 
 .density-compact .history-stream .code-block.compact {
-  max-height: 1.8em; /* one visual line in compact history */
+  max-height: 2.4em;
+  min-height: 2.1em;
 }
 
 .density-compact .history-stream .code-block.compact pre {
-  padding: 2px 8px;
+  padding: 2px 8px 3px;
 }
 
 .density-compact .history-stream .code-block.compact code {
@@ -43,6 +44,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.32;
 }
 
 .density-compact .history-stream .code-block.compact .code-language-badge {

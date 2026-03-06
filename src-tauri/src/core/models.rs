@@ -30,6 +30,10 @@ pub struct ClipboardItem {
     pub is_deleted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pinned_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[sqlx(default)]
+    pub pin_order: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
     #[sqlx(default)]
@@ -103,6 +107,7 @@ impl ClipboardItem {
             is_favorite: false,
             is_deleted: false,
             pinned_at: None,
+            pin_order: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
@@ -283,6 +288,7 @@ impl ClipboardItem {
             is_favorite: false,
             is_deleted: false,
             pinned_at: None,
+            pin_order: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,

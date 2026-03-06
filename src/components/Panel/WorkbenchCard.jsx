@@ -26,6 +26,7 @@ const FileIconLazy = lazy(() =>
     }
   }))
 );
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 const getExt = (filename) => {
   const parts = filename.split('.');
@@ -160,6 +161,13 @@ function WorkbenchCard({
             );
           })}
         </div>
+      );
+    }
+    if (item.code_language && item.content) {
+      return (
+        <Suspense fallback={<div className="workbench-card-text">{getContentPreview(item.content)}</div>}>
+          <CodeBlock code={item.content} language={item.code_language} maxLines={8} compact />
+        </Suspense>
       );
     }
     return (

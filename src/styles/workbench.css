@@ -576,6 +576,14 @@
   letter-spacing: 0;
 }
 
+.workbench-card-content .code-block.compact {
+  max-height: 7.8em;
+}
+
+.workbench-card-content .code-block.compact pre {
+  padding: 6px 10px;
+}
+
 .workbench-card-image img {
   width: 100%;
   border-radius: 12px 12px 0 0;

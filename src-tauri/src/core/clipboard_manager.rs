@@ -254,6 +254,7 @@ impl ClipboardManager {
                     is_favorite: false,
                     is_deleted: false,
                     pinned_at: None,
+                    pin_order: None,
                     created_at: now,
                     updated_at: now,
                     has_raw_formats: false,
@@ -1080,6 +1081,19 @@ impl ClipboardManager {
         repo.get_recent_paged(limit, offset).await
     }
 
+    pub async fn get_workbench_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_workbench_pinned_items().await
+    }
+
+    pub async fn reorder_workbench_pinned_items(
+        &self,
+        ordered_ids: &[String],
+    ) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.reorder_workbench_pinned_items(ordered_ids).await
+    }
+
     pub async fn get_items_by_date_range(
         &self,
         start: i64,
@@ -1771,6 +1785,7 @@ impl ClipboardManager {
             is_favorite: false,
             is_deleted: false,
             pinned_at: None,
+            pin_order: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,

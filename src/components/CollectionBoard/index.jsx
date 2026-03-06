@@ -54,6 +54,7 @@ const FileIconLazy = lazy(() =>
     }
   }))
 );
+const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
 const getExt = (filename) => {
   const parts = String(filename || '').split('.');
@@ -513,6 +514,14 @@ function CollectionBoard({
             <div className="collection-card-file-more">+{files.length - visibleFiles.length}</div>
           )}
         </div>
+      );
+    }
+
+    if (item.code_language && item.content) {
+      return (
+        <Suspense fallback={<div className="collection-card-text">{getContentPreview(item.content || '')}</div>}>
+          <CodeBlock code={item.content} language={item.code_language} maxLines={6} compact />
+        </Suspense>
       );
     }
 
