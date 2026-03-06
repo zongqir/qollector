@@ -22,6 +22,7 @@ const HISTORY_SNAPSHOT_MAX_ITEMS = 40;
 const HISTORY_SNAPSHOT_MAX_CONTENT_CHARS = 4000;
 const HISTORY_SNAPSHOT_MAX_OCR_CHARS = 3000;
 const FILTER_VIEWS_STORAGE_KEY = 'qollect-filter-views-v1';
+const WORKBENCH_FILTER_VIEWS_STORAGE_KEY = 'qollect-workbench-filter-views-v1';
 const HISTORY_STREAM_ENABLED_KEY = 'qollect-history-stream-enabled';
 const MAX_FILTER_VIEWS = 12;
 const MANUAL_ENTRY_SOURCE = 'Quick Input';
@@ -237,6 +238,17 @@ const buildFilterPayloadFromState = (state) => normalizeFilterPayload({
   customDateEnd: state.customDateEnd,
 });
 
+const buildWorkbenchFilterPayloadFromState = (state) => normalizeFilterPayload({
+  searchQuery: state.workbenchSearchQuery,
+  selectedType: state.workbenchSelectedType,
+  selectedTags: state.workbenchSelectedTags,
+  showFavoritesOnly: state.workbenchShowFavoritesOnly,
+  showPinnedOnly: false,
+  selectedDateRange: state.workbenchSelectedDateRange,
+  customDateStart: state.workbenchCustomDateStart,
+  customDateEnd: state.workbenchCustomDateEnd,
+});
+
 const normalizeSavedFilterView = (entry, fallbackIndex = 0) => {
   if (!entry || typeof entry !== 'object') return null;
   const name = typeof entry.name === 'string' ? entry.name.trim() : '';
@@ -253,10 +265,10 @@ const normalizeSavedFilterView = (entry, fallbackIndex = 0) => {
   };
 };
 
-const readSavedFilterViews = () => {
+const readFilterViewsFromStorage = (storageKey, logPrefix = 'FilterViews') => {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(FILTER_VIEWS_STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -266,10 +278,13 @@ const readSavedFilterViews = () => {
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, MAX_FILTER_VIEWS);
   } catch (error) {
-    console.warn('[FilterViews] read failed:', error);
+    console.warn(`[${logPrefix}] read failed:`, error);
     return [];
   }
 };
+
+const readSavedFilterViews = () => readFilterViewsFromStorage(FILTER_VIEWS_STORAGE_KEY, 'FilterViews');
+const readWorkbenchSavedFilterViews = () => readFilterViewsFromStorage(WORKBENCH_FILTER_VIEWS_STORAGE_KEY, 'WorkbenchFilterViews');
 
 const readHistoryStreamEnabled = () => {
   if (typeof window === 'undefined') return true;
@@ -292,14 +307,22 @@ const persistHistoryStreamEnabled = (enabled) => {
   }
 };
 
-const persistSavedFilterViews = (views) => {
+const persistFilterViewsToStorage = (storageKey, views, logPrefix = 'FilterViews') => {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(FILTER_VIEWS_STORAGE_KEY, JSON.stringify(views));
+    localStorage.setItem(storageKey, JSON.stringify(views));
   } catch (error) {
-    console.warn('[FilterViews] persist failed:', error);
+    console.warn(`[${logPrefix}] persist failed:`, error);
   }
 };
+
+const persistSavedFilterViews = (views) => (
+  persistFilterViewsToStorage(FILTER_VIEWS_STORAGE_KEY, views, 'FilterViews')
+);
+
+const persistWorkbenchSavedFilterViews = (views) => (
+  persistFilterViewsToStorage(WORKBENCH_FILTER_VIEWS_STORAGE_KEY, views, 'WorkbenchFilterViews')
+);
 
 const itemNeedsHydration = (item) => (
   Boolean(item?.content_truncated || item?.ocr_truncated)
@@ -411,6 +434,17 @@ const useAppStore = create((set, get) => ({
   customDateEnd: '',
   savedFilterViews: readSavedFilterViews(),
   activeFilterViewId: null,
+
+  // ========== 工作区筛选（独立于历史流） ==========
+  workbenchSearchQuery: '',
+  workbenchSelectedType: 'all',
+  workbenchSelectedTags: [],
+  workbenchShowFavoritesOnly: false,
+  workbenchSelectedDateRange: null,
+  workbenchCustomDateStart: '',
+  workbenchCustomDateEnd: '',
+  workbenchSavedFilterViews: readWorkbenchSavedFilterViews(),
+  workbenchActiveFilterViewId: null,
 
   // ========== 多选状态 ==========
   selectedItemIds: [],
@@ -1540,6 +1574,20 @@ const useAppStore = create((set, get) => ({
   clearDateFilter: () => set({ selectedDateRange: null, customDateStart: '', customDateEnd: '', showDateFilter: false }),
   setActiveFilterViewId: (id) => set({ activeFilterViewId: id || null }),
   clearActiveFilterView: () => set({ activeFilterViewId: null }),
+  setWorkbenchSearchQuery: (q) => set({ workbenchSearchQuery: q }),
+  setWorkbenchSelectedType: (t) => set({ workbenchSelectedType: t }),
+  setWorkbenchSelectedTags: (tags) => set({ workbenchSelectedTags: tags }),
+  setWorkbenchShowFavoritesOnly: (v) => set({ workbenchShowFavoritesOnly: v }),
+  setWorkbenchSelectedDateRange: (range) => set({ workbenchSelectedDateRange: range }),
+  setWorkbenchCustomDateStart: (v) => set({ workbenchCustomDateStart: v }),
+  setWorkbenchCustomDateEnd: (v) => set({ workbenchCustomDateEnd: v }),
+  clearWorkbenchDateFilter: () => set({
+    workbenchSelectedDateRange: null,
+    workbenchCustomDateStart: '',
+    workbenchCustomDateEnd: '',
+  }),
+  setWorkbenchActiveFilterViewId: (id) => set({ workbenchActiveFilterViewId: id || null }),
+  clearWorkbenchActiveFilterView: () => set({ workbenchActiveFilterViewId: null }),
 
   saveCurrentFilterView: (name) => {
     const trimmedName = String(name || '').trim();
@@ -1623,6 +1671,95 @@ const useAppStore = create((set, get) => ({
       return {
         savedFilterViews: nextViews,
         activeFilterViewId: state.activeFilterViewId === targetId ? null : state.activeFilterViewId,
+      };
+    });
+  },
+
+  saveCurrentWorkbenchFilterView: (name) => {
+    const trimmedName = String(name || '').trim();
+    if (!trimmedName) {
+      return { ok: false, reason: 'empty-name' };
+    }
+
+    const now = Date.now();
+    let savedId = null;
+    set((state) => {
+      const snapshot = buildWorkbenchFilterPayloadFromState(state);
+      const existingIndex = state.workbenchSavedFilterViews.findIndex(
+        view => view.name.toLowerCase() === trimmedName.toLowerCase(),
+      );
+
+      let nextViews;
+      if (existingIndex >= 0) {
+        const existing = state.workbenchSavedFilterViews[existingIndex];
+        savedId = existing.id;
+        const updated = {
+          ...existing,
+          name: trimmedName,
+          filters: snapshot,
+          updatedAt: now,
+        };
+        nextViews = [
+          updated,
+          ...state.workbenchSavedFilterViews.filter((_, idx) => idx !== existingIndex),
+        ];
+      } else {
+        savedId = `workbench_view_${now}_${Math.random().toString(36).slice(2, 8)}`;
+        nextViews = [
+          {
+            id: savedId,
+            name: trimmedName,
+            filters: snapshot,
+            createdAt: now,
+            updatedAt: now,
+          },
+          ...state.workbenchSavedFilterViews,
+        ];
+      }
+
+      nextViews = nextViews.slice(0, MAX_FILTER_VIEWS);
+      persistWorkbenchSavedFilterViews(nextViews);
+      return {
+        workbenchSavedFilterViews: nextViews,
+        workbenchActiveFilterViewId: savedId,
+      };
+    });
+
+    return { ok: true, id: savedId };
+  },
+
+  applyWorkbenchSavedFilterView: (id) => {
+    const targetId = String(id || '').trim();
+    if (!targetId) return false;
+    const { workbenchSavedFilterViews } = get();
+    const target = workbenchSavedFilterViews.find(view => view.id === targetId);
+    if (!target) return false;
+
+    const payload = normalizeFilterPayload(target.filters);
+    set({
+      workbenchSearchQuery: payload.searchQuery,
+      workbenchSelectedType: payload.selectedType,
+      workbenchSelectedTags: payload.selectedTags,
+      workbenchShowFavoritesOnly: payload.showFavoritesOnly,
+      workbenchSelectedDateRange: payload.selectedDateRange,
+      workbenchCustomDateStart: payload.customDateStart,
+      workbenchCustomDateEnd: payload.customDateEnd,
+      workbenchActiveFilterViewId: target.id,
+    });
+    return true;
+  },
+
+  deleteWorkbenchSavedFilterView: (id) => {
+    const targetId = String(id || '').trim();
+    if (!targetId) return;
+
+    set((state) => {
+      const nextViews = state.workbenchSavedFilterViews.filter(view => view.id !== targetId);
+      if (nextViews.length === state.workbenchSavedFilterViews.length) return {};
+      persistWorkbenchSavedFilterViews(nextViews);
+      return {
+        workbenchSavedFilterViews: nextViews,
+        workbenchActiveFilterViewId: state.workbenchActiveFilterViewId === targetId ? null : state.workbenchActiveFilterViewId,
       };
     });
   },
