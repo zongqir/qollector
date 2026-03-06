@@ -410,6 +410,16 @@
   --workbench-card-hover-bg: color-mix(in srgb, var(--bg-card-hover) 78%, var(--workbench-card-accent) 22%);
 }
 
+.workbench-card.favorite {
+  --workbench-card-bg: var(--card-favorite-bg);
+  --workbench-card-hover-bg: var(--card-favorite-hover);
+  border-color: color-mix(in srgb, var(--state-warning-border) 62%, var(--border-light) 38%);
+}
+
+.workbench-card.favorite:hover:not(.multi-selected) {
+  border-color: color-mix(in srgb, var(--state-warning-border) 86%, transparent);
+}
+
 .workbench-card-tools {
   position: absolute;
   top: 8px;

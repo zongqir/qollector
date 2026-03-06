@@ -160,9 +160,17 @@ function WorkbenchCard({
     );
   };
 
+  const cardClasses = [
+    'workbench-card',
+    item.is_favorite && 'favorite',
+    hasCustomCardBackground && 'custom-bg',
+    isCopied && 'copied',
+    isMultiSelected && 'multi-selected',
+  ].filter(Boolean).join(' ');
+
   return (
     <div
-      className={`workbench-card ${hasCustomCardBackground ? 'custom-bg' : ''} ${isCopied ? 'copied' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+      className={cardClasses}
       style={hasCustomCardBackground ? { '--workbench-card-accent': cardBackground.accent } : undefined}
       onPointerDownCapture={onPointerDownCapture}
       onClick={onClick}

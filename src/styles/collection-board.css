@@ -388,6 +388,19 @@
   border-color: color-mix(in srgb, var(--collection-card-accent) 54%, var(--accent-color) 46%);
 }
 
+.collection-card.pinned {
+  border-color: color-mix(in srgb, var(--accent-color) 32%, var(--surface-border-soft) 68%);
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--card-pinned-bg) 76%, var(--surface-elevated) 24%),
+    color-mix(in srgb, var(--card-pinned-bg) 62%, var(--surface-muted) 38%)
+  );
+}
+
+.collection-card.pinned:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 44%, transparent);
+}
+
 .collection-card-head {
   display: flex;
   align-items: flex-start;
@@ -445,15 +458,21 @@
 }
 
 .collection-card-actions > button.active {
-  color: color-mix(in srgb, var(--accent-color) 90%, var(--text-primary) 10%);
-  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
-  background: color-mix(in srgb, var(--accent-light) 78%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 88%, transparent);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 62%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, var(--surface-muted) 12%);
+}
+
+.collection-card-actions > button.pin.active {
+  color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
+  border-color: color-mix(in srgb, var(--accent-color) 38%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 62%, var(--surface-elevated) 38%);
 }
 
 .collection-card-actions > button.favorite.active {
-  color: var(--state-warning-fg);
-  border-color: color-mix(in srgb, var(--state-warning-border) 82%, transparent);
-  background: color-mix(in srgb, var(--state-warning-bg) 76%, transparent);
+  color: color-mix(in srgb, var(--state-warning-fg) 92%, var(--text-primary) 8%);
+  border-color: color-mix(in srgb, var(--state-warning-border) 66%, transparent);
+  background: color-mix(in srgb, var(--state-warning-bg) 60%, var(--surface-elevated) 40%);
 }
 
 .collection-card-actions > button.color.active {

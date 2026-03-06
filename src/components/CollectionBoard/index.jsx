@@ -731,6 +731,7 @@ function CollectionBoard({
                 className={`
                   collection-card
                   ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
+                  ${item.is_pinned ? 'pinned' : ''}
                   ${activeItemId === item.id ? 'active' : ''}
                   ${hasCustomCardBackground ? 'custom-bg' : ''}
                 `.trim()}
@@ -772,7 +773,7 @@ function CollectionBoard({
                   <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                     <button
                       type="button"
-                      className={item.is_pinned ? 'active' : ''}
+                      className={item.is_pinned ? 'active pin' : 'pin'}
                       onClick={(event) => {
                         event.stopPropagation();
                         void handleTogglePin(item);
