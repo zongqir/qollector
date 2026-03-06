@@ -182,6 +182,14 @@ body {
   font-size: 12px;
 }
 
+.quick-window-error {
+  display: inline-flex;
+  align-items: center;
+  color: var(--state-error-fg);
+  font-size: 12px;
+  max-width: 100%;
+}
+
 .quick-window-feedback {
   display: inline-flex;
   align-items: center;

@@ -30,6 +30,8 @@ import SortableWorkbenchCard from './SortableWorkbenchCard';
 import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
 import WorkbenchMultiSelectBar from './WorkbenchMultiSelectBar';
 import WorkbenchQuickActionsBar from './WorkbenchQuickActionsBar';
+import HistoryContextMenu from '../HistoryStream/HistoryContextMenu';
+import useHistoryContextMenu from '../HistoryStream/hooks/useHistoryContextMenu';
 import useEscapeDismiss from '../hooks/useEscapeDismiss';
 import useClickOutsideDismiss from '../hooks/useClickOutsideDismiss';
 import useFilterDropdownCoordinator from '../hooks/useFilterDropdownCoordinator';
@@ -38,6 +40,7 @@ import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
 import { searchItems } from '../../services/clipboardService';
+import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
 import {
@@ -66,6 +69,7 @@ function WorkbenchPanel() {
   const workbenchTagWrapperRef = useRef(null);
   const workbenchSavedViewWrapperRef = useRef(null);
   const workbenchTagListboxRef = useRef(null);
+  const quickNoteSubmittingRef = useRef(false);
 
   const items = useAppStore(s => s.items);
   const itemsRevision = useAppStore(s => s.itemsRevision);
@@ -79,8 +83,15 @@ function WorkbenchPanel() {
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
   const handleCopy = useAppStore(s => s.handleCopy);
+  const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
+  const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
   const setCardBackground = useAppStore(s => s.setCardBackground);
+  const toggleFavorite = useAppStore(s => s.toggleFavorite);
+  const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
+  const deleteItem = useAppStore(s => s.deleteItem);
+  const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
+  const openEditModal = useAppStore(s => s.openEditModal);
   const searchQuery = useAppStore(s => s.workbenchSearchQuery);
   const selectedType = useAppStore(s => s.workbenchSelectedType);
   const selectedTags = useAppStore(s => s.workbenchSelectedTags);
@@ -533,23 +544,45 @@ function WorkbenchPanel() {
 
   useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
 
+  const isComposingKeyEvent = useCallback(
+    (event) => event.nativeEvent?.isComposing || event.isComposing || event.keyCode === 229,
+    [],
+  );
+
   const handleQuickNoteSubmit = useCallback(async (e) => {
+    if (isComposingKeyEvent(e)) return;
     if (e.key === 'Enter' && !e.shiftKey && quickNote.trim()) {
       e.preventDefault();
-      await addQuickNote(quickNote);
-      setQuickNote('');
-      setIsExpanded(false);
+      if (quickNoteSubmittingRef.current) return;
+      quickNoteSubmittingRef.current = true;
+      try {
+        await addQuickNote(quickNote);
+        setQuickNote('');
+        setIsExpanded(false);
+      } catch (error) {
+        console.error('[Workbench] quick note add failed:', error);
+      } finally {
+        quickNoteSubmittingRef.current = false;
+      }
     }
     if (e.key === 'Escape') {
       setIsExpanded(false);
     }
-  }, [quickNote, addQuickNote]);
+  }, [quickNote, addQuickNote, isComposingKeyEvent]);
 
   const handleExpandedSubmit = useCallback(async () => {
     if (!quickNote.trim()) return;
-    await addQuickNote(quickNote);
-    setQuickNote('');
-    setIsExpanded(false);
+    if (quickNoteSubmittingRef.current) return;
+    quickNoteSubmittingRef.current = true;
+    try {
+      await addQuickNote(quickNote);
+      setQuickNote('');
+      setIsExpanded(false);
+    } catch (error) {
+      console.error('[Workbench] expanded quick note add failed:', error);
+    } finally {
+      quickNoteSubmittingRef.current = false;
+    }
   }, [quickNote, addQuickNote]);
 
   const handleNativeDragOver = useCallback((e) => {
@@ -608,7 +641,14 @@ function WorkbenchPanel() {
       return;
     }
     if (selectedPinnedIds.length > 0) {
-      setSelectedPinnedIds([]);
+      event.preventDefault();
+      setSelectedPinnedIds((current) => (
+        current.includes(item.id)
+          ? current.filter(id => id !== item.id)
+          : [...current, item.id]
+      ));
+      selectionAnchorIndexRef.current = index;
+      return;
     }
     selectionAnchorIndexRef.current = index;
     setPanelMode('preview', item);
@@ -629,6 +669,24 @@ function WorkbenchPanel() {
   }, []);
 
   const workbenchPanelRef = useRef(null);
+
+  const {
+    contextMenuRef,
+    contextMenuState,
+    openContextMenu,
+    closeContextMenu,
+    armDeleteConfirm,
+  } = useHistoryContextMenu({
+    filteredItems: pinnedItems,
+    selectedItemIds: selectedPinnedIds,
+    selectionAnchorIndexRef,
+    setSelectedItemIds: setSelectedPinnedIds,
+    setFocusedIndex,
+  });
+
+  const handleCardContextMenu = useCallback((item, index, event) => {
+    openContextMenu(item, index, event);
+  }, [openContextMenu]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -651,13 +709,14 @@ function WorkbenchPanel() {
   }, [pinnedItems]);
 
   const handleExpandedNoteKeyDown = useCallback((event) => {
+    if (isComposingKeyEvent(event)) return;
     if (event.key === 'Enter' && event.ctrlKey && quickNote.trim()) {
       handleExpandedSubmit();
     }
     if (event.key === 'Escape') {
       setIsExpanded(false);
     }
-  }, [quickNote, handleExpandedSubmit]);
+  }, [quickNote, handleExpandedSubmit, isComposingKeyEvent]);
 
   const batchActions = useWorkbenchBatchActions({
     selectedPinnedItems,
@@ -683,6 +742,141 @@ function WorkbenchPanel() {
     setPanelMode,
     t,
   });
+
+  const handleContextMenuAction = useCallback(async (actionKey) => {
+    const currentItem = contextMenuState?.item;
+    if (!currentItem) return;
+
+    const toPlainText = (item) => {
+      if (!item) return '';
+      if (item.type_ === 'image') {
+        return String(item.ocr_text || item.content || '').trim();
+      }
+      return String(item.content || '').trim();
+    };
+
+    try {
+      if (contextMenuState?.isMulti) {
+        switch (actionKey) {
+          case 'copyMerged': {
+            const merged = selectedPinnedItems
+              .map(item => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+              .filter(Boolean)
+              .join('\n\n');
+            if (merged) {
+              await handleCopyPlainText(merged, 'workbench');
+            } else {
+              await handleCopy(currentItem, 'workbench');
+            }
+            closeContextMenu();
+            return;
+          }
+          case 'clearSelection':
+            clearPinnedSelection();
+            closeContextMenu();
+            return;
+          case 'deleteSelected':
+            if (!armDeleteConfirm('deleteSelected')) return;
+            for (const item of selectedPinnedItems) {
+              await deleteItem(item);
+            }
+            clearPinnedSelection();
+            closeContextMenu();
+            return;
+          default:
+            closeContextMenu();
+            return;
+        }
+      }
+
+      switch (actionKey) {
+        case 'copy':
+          await handleCopy(currentItem, 'workbench');
+          closeContextMenu();
+          return;
+        case 'copyPlainText': {
+          const plainText = toPlainText(currentItem);
+          if (plainText) {
+            await handleCopyPlainText(plainText, 'workbench');
+          } else {
+            await handleCopy(currentItem, 'workbench');
+          }
+          closeContextMenu();
+          return;
+        }
+        case 'quickPaste':
+          await handleCopyAndAutoPaste(currentItem, 'workbench');
+          closeContextMenu();
+          return;
+        case 'multiSelect': {
+          const nextSelected = selectedPinnedIds.includes(currentItem.id)
+            ? selectedPinnedIds
+            : [...selectedPinnedIds, currentItem.id];
+          setSelectedPinnedIds(nextSelected);
+          const contextIndex = pinnedItems.findIndex(candidate => candidate.id === currentItem.id);
+          if (contextIndex >= 0) {
+            setFocusedIndex(contextIndex);
+            selectionAnchorIndexRef.current = contextIndex;
+          }
+          closeContextMenu();
+          return;
+        }
+        case 'favorite':
+          await toggleFavorite(currentItem);
+          closeContextMenu();
+          return;
+        case 'pin':
+          await togglePin(currentItem);
+          closeContextMenu();
+          return;
+        case 'editNote':
+          openEditModal(currentItem);
+          closeContextMenu();
+          return;
+        case 'openInNewWindow':
+          await openHistoryEditorWindow(currentItem.id, t);
+          closeContextMenu();
+          return;
+        case 'open':
+          await handleOpenItem(currentItem);
+          closeContextMenu();
+          return;
+        case 'reveal':
+          await handleRevealInFolder(currentItem);
+          closeContextMenu();
+          return;
+        case 'delete':
+          if (!armDeleteConfirm('delete')) return;
+          await deleteItem(currentItem);
+          closeContextMenu();
+          return;
+        default:
+          closeContextMenu();
+      }
+    } catch (error) {
+      console.error('[WorkbenchContextMenu] action failed:', actionKey, error);
+      closeContextMenu();
+    }
+  }, [
+    contextMenuState,
+    selectedPinnedItems,
+    handleCopyPlainText,
+    handleCopy,
+    closeContextMenu,
+    clearPinnedSelection,
+    armDeleteConfirm,
+    deleteItem,
+    handleCopyAndAutoPaste,
+    selectedPinnedIds,
+    pinnedItems,
+    setFocusedIndex,
+    toggleFavorite,
+    togglePin,
+    openEditModal,
+    t,
+    handleOpenItem,
+    handleRevealInFolder,
+  ]);
 
   const quickNoteSection = (
     <WorkbenchQuickNoteSection
@@ -878,6 +1072,7 @@ function WorkbenchPanel() {
                   onPointerDownCapture={(event) => handleCardPointerDownCapture(item, index, event)}
                   onClick={(event) => handleCardClick(item, index, event)}
                   onDoubleClick={(event) => handleCardDoubleClick(item, event)}
+                  onContextMenu={(event) => handleCardContextMenu(item, index, event)}
                   onOpenItem={handleOpenItem}
                   onSetCardBackground={setCardBackground}
                 />
@@ -886,6 +1081,16 @@ function WorkbenchPanel() {
           </SortableContext>
         </DndContext>
       )}
+
+      <HistoryContextMenu
+        state={contextMenuState}
+        menuRef={contextMenuRef}
+        t={t}
+        maxPinnedItems={maxPinnedItems}
+        enableQuickPaste={autoPasteOnDoubleClick}
+        onAction={handleContextMenuAction}
+      />
+
       {selectedPinnedIds.length > 0 ? (
         <WorkbenchMultiSelectBar
           selectedCount={selectedPinnedIds.length}

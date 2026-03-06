@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { X, Check, Plus, Pin, PinOff, Tag } from 'lucide-react';
 import useAppStore from './store/useAppStore';
+import { QUICK_INPUT_SOURCE } from './utils/sourceConstants';
 import './EditModal.css';
 
 const NOTE_COLORS = [
@@ -24,6 +25,8 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const [activeTagSuggestionIndex, setActiveTagSuggestionIndex] = useState(-1);
   const [showContentEditor, setShowContentEditor] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [savePending, setSavePending] = useState(false);
+  const [saveContinuePending, setSaveContinuePending] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
   const [noteColor, setNoteColor] = useState('default');
   const textareaRef = useRef(null);
@@ -222,24 +225,31 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
     return [...tags, pendingTag];
   }, [newTag, tags]);
 
-  const handleSave = () => {
-    onSave({ content, note, tags: buildTagsForSave() });
-  };
+  const handleSave = useCallback(async () => {
+    if (savePending || saveContinuePending) return;
+    setSavePending(true);
+    try {
+      await Promise.resolve(onSave({ content, note, tags: buildTagsForSave() }));
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setSavePending(false);
+    }
+  }, [buildTagsForSave, content, note, onSave, saveContinuePending, savePending]);
 
   const handleSaveAndContinue = useCallback(async () => {
-    if (!content.trim()) return;
+    if (!content.trim() || savePending || saveContinuePending) return;
+    setSaveContinuePending(true);
     try {
-      await invoke('add_clipboard_item_manual', {
+      const itemId = await invoke('add_clipboard_item_manual', {
         content: content.trim(),
         contentType: 'text',
-        source: t('quickInput.source'),
+        source: QUICK_INPUT_SOURCE,
         autoFavorite: false,
       });
-      // Auto-pin the newly created item.
-      const newItems = await invoke('get_recent_items', { limit: 1 });
-      if (newItems[0]) {
+      if (itemId) {
         const maxPinned = useAppStore.getState().maxPinnedItems;
-        await invoke('toggle_pin_item', { id: newItems[0].id, maxPinned });
+        await invoke('pin_item', { id: itemId, maxPinned });
       }
       await useAppStore.getState().loadItems();
       setContent('');
@@ -248,13 +258,15 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
       textareaRef.current?.focus();
     } catch (error) {
       console.error('Save failed:', error);
+    } finally {
+      setSaveContinuePending(false);
     }
-  }, [content, t]);
+  }, [content, saveContinuePending, savePending]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
       e.preventDefault();
-      handleSave();
+      void handleSave();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onCancel();
@@ -353,7 +365,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
             <button
               onClick={handleSaveAndContinue}
               className="quick-add-btn-continue"
-              disabled={!content.trim()}
+              disabled={!content.trim() || savePending || saveContinuePending}
             >
               <Plus size={15} />
               <span>{t('editModal.saveAndContinue')}</span>
@@ -361,7 +373,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
             <button
               onClick={handleSave}
               className="quick-add-btn-save"
-              disabled={!content.trim()}
+              disabled={!content.trim() || savePending || saveContinuePending}
             >
               <Check size={15} />
               <span>{t('editModal.saveHint')}</span>
@@ -512,7 +524,11 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
             <button onClick={onCancel} className="edit-modal-btn cancel">
               {t('edit.cancel')}
             </button>
-            <button onClick={handleSave} className="edit-modal-btn submit">
+            <button
+              onClick={handleSave}
+              className="edit-modal-btn submit"
+              disabled={savePending || saveContinuePending}
+            >
               {t('editModal.savePrimary')}
             </button>
           </div>

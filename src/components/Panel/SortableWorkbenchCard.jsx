@@ -11,6 +11,7 @@ function SortableWorkbenchCard({
   onPointerDownCapture,
   onClick,
   onDoubleClick,
+  onContextMenu,
   onOpenItem,
   onSetCardBackground,
 }) {
@@ -43,6 +44,7 @@ function SortableWorkbenchCard({
         onPointerDownCapture={onPointerDownCapture}
         onClick={onClick}
         onDoubleClick={onDoubleClick}
+        onContextMenu={onContextMenu}
         onOpenItem={onOpenItem}
         onSetCardBackground={onSetCardBackground}
       />

@@ -108,7 +108,7 @@ function HistoryContextMenu({
     const commonEntries = [
       { key: 'copy', label: t('item.copy'), icon: Copy, shortcut: `${modifierKey}+C` },
       { key: 'copyPlainText', label: t('item.copyPlainText'), icon: FileText },
-      { key: 'multiSelect', label: t('history.contextMenu.multiSelect'), icon: CheckSquare },
+      { key: 'multiSelect', label: t('history.contextMenu.multiSelect'), icon: CheckSquare, shortcut: `${modifierKey}+Click` },
       canQuickPaste
         ? { key: 'quickPaste', label: t('history.contextMenu.quickPaste'), icon: ClipboardPaste, shortcut: 'Enter' }
         : null,

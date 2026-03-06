@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { emit } from '@tauri-apps/api/event';
+import { QUICK_INPUT_SOURCE } from '../utils/sourceConstants';
 
 export const QUICK_NOTE_SAVED_EVENT = 'quick-note-saved';
 export const QUICK_INPUT_WINDOW_STATE_EVENT = 'quick-input-window-state';
@@ -15,34 +16,27 @@ const resolveMaxPinnedItems = async () => {
   }
 };
 
-export const saveQuickNote = async (content, source) => {
+export const saveQuickNote = async (content, source = QUICK_INPUT_SOURCE) => {
   const trimmed = content.trim();
   if (!trimmed) {
     return null;
   }
 
-  await invoke('add_clipboard_item_manual', {
+  const itemId = await invoke('add_clipboard_item_manual', {
     content: trimmed,
     contentType: 'text',
     source,
     autoFavorite: false,
   });
 
-  const recentItems = await invoke('get_recent_items', { limit: 1 });
-  const latestItem = Array.isArray(recentItems) ? recentItems[0] : null;
-
-  if (latestItem?.id) {
+  if (itemId) {
     const maxPinned = await resolveMaxPinnedItems();
-    try {
-      await invoke('pin_item', { id: latestItem.id, maxPinned });
-    } catch (error) {
-      console.warn('Quick note pin failed:', error);
-    }
+    await invoke('pin_item', { id: itemId, maxPinned });
   }
 
   await emit(QUICK_NOTE_SAVED_EVENT, {
-    itemId: latestItem?.id ?? null,
+    itemId: itemId ?? null,
   });
 
-  return latestItem;
+  return itemId;
 };

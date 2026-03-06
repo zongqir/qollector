@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { QUICK_INPUT_SOURCE } from '../utils/sourceConstants';
 
 export function useEditModal(loadItems, t) {
   const [showEditModal, setShowEditModal] = useState(false);
@@ -20,17 +21,15 @@ export function useEditModal(loadItems, t) {
   const handleEditModalSave = async (data) => {
     try {
       if (editModalMode === 'new') {
-        await invoke('add_clipboard_item_manual', {
+        const itemId = await invoke('add_clipboard_item_manual', {
           content: data.content,
           contentType: 'text',
-          source: t('quickInput.source'),
+          source: QUICK_INPUT_SOURCE,
           autoFavorite: false
         });
 
         if (data.tags.length > 0 || data.note) {
-          await loadItems();
-          const newItems = await invoke('get_recent_items', { limit: 100 });
-          const newItem = newItems[0];
+          const newItem = await invoke('get_item_by_id', { id: itemId });
           if (newItem) {
             const updatedItem = {
               ...newItem,

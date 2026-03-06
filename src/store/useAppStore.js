@@ -6,6 +6,7 @@ import {
   normalizeCardBackgroundId,
   withCardBackgroundInMetadata,
 } from '../utils/cardBackgrounds';
+import { QUICK_INPUT_SOURCE, QUICK_NOTE_SOURCE } from '../utils/sourceConstants';
 import { generateAITagsForItem } from '../services/aiService';
 import { getRecentItemsLight, getMoreItems, copyItemToClipboard, deleteItem as deleteItemSvc } from '../services/clipboardService';
 import { initOcrService } from '../services/ocrService';
@@ -25,8 +26,6 @@ const FILTER_VIEWS_STORAGE_KEY = 'qollect-filter-views-v1';
 const WORKBENCH_FILTER_VIEWS_STORAGE_KEY = 'qollect-workbench-filter-views-v1';
 const HISTORY_STREAM_ENABLED_KEY = 'qollect-history-stream-enabled';
 const MAX_FILTER_VIEWS = 12;
-const MANUAL_ENTRY_SOURCE = 'Quick Input';
-const QUICK_NOTE_SOURCE = 'Quick Note';
 let loadItemsRequestSeq = 0;
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -1809,16 +1808,14 @@ const useAppStore = create((set, get) => ({
     const { editModalMode, editingItem, loadItems } = get();
     try {
       if (editModalMode === 'new') {
-        await invoke('add_clipboard_item_manual', {
+        const itemId = await invoke('add_clipboard_item_manual', {
           content: data.content,
           contentType: 'text',
-          source: MANUAL_ENTRY_SOURCE,
+          source: QUICK_INPUT_SOURCE,
           autoFavorite: false
         });
         if (data.tags.length > 0 || data.note) {
-          await loadItems();
-          const newItems = await invoke('get_recent_items', { limit: 100 });
-          const newItem = newItems[0];
+          const newItem = await invoke('get_item_by_id', { id: itemId });
           if (newItem) {
             const updatedItem = {
               ...newItem,
@@ -2067,20 +2064,20 @@ const useAppStore = create((set, get) => ({
     try {
       const { maxPinnedItems, loadItems } = get();
       // 创建新条目
-      await invoke('add_clipboard_item_manual', {
+      const itemId = await invoke('add_clipboard_item_manual', {
         content: content.trim(),
         contentType: 'text',
         source: QUICK_NOTE_SOURCE,
         autoFavorite: false
       });
-      // 获取刚创建的条目并 pin 它
-      const newItems = await invoke('get_recent_items', { limit: 1 });
-      if (newItems[0]) {
-        await invoke('toggle_pin_item', { id: newItems[0].id, maxPinned: maxPinnedItems });
+      if (itemId) {
+        await invoke('pin_item', { id: itemId, maxPinned: maxPinnedItems });
       }
       await loadItems();
+      return itemId;
     } catch (error) {
       console.error('快速笔记添加失败:', error);
+      throw error;
     }
   },
 

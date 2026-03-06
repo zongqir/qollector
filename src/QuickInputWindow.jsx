@@ -9,6 +9,7 @@ import {
   QUICK_INPUT_WINDOW_STATE_EVENT,
   saveQuickNote,
 } from './services/quickNoteService';
+import { QUICK_INPUT_SOURCE } from './utils/sourceConstants';
 
 import './styles/quick-input-window.css';
 
@@ -60,9 +61,12 @@ function QuickInputWindow() {
     }
   });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [savedToast, setSavedToast] = useState(false);
   const [showWorkbenchCta, setShowWorkbenchCta] = useState(false);
   const [showColorPanel, setShowColorPanel] = useState(false);
+  const contentRef = useRef('');
+  const savingRef = useRef(false);
 
   const [glassOpacity, setGlassOpacity] = useState(() => {
     try {
@@ -95,6 +99,14 @@ function QuickInputWindow() {
   }, [content]);
 
   useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    savingRef.current = saving;
+  }, [saving]);
+
+  useEffect(() => {
     try {
       localStorage.setItem(NOTE_COLOR_KEY, noteColor);
     } catch {
@@ -114,7 +126,7 @@ function QuickInputWindow() {
   }, []);
 
   const requestClose = useCallback(async () => {
-    if (saving || allowCloseRef.current) return;
+    if (savingRef.current || allowCloseRef.current) return;
     allowCloseRef.current = true;
     try {
       await appWindow.close();
@@ -122,7 +134,7 @@ function QuickInputWindow() {
       allowCloseRef.current = false;
       console.error('Failed to close quick input window:', error);
     }
-  }, [appWindow, saving]);
+  }, [appWindow]);
 
   const adjustGlassOpacity = useCallback((delta) => {
     setGlassOpacity((prev) => {
@@ -185,26 +197,33 @@ function QuickInputWindow() {
 
   useEffect(() => {
     let unlistenCloseRequested = null;
+    let disposed = false;
 
     appWindow.onCloseRequested((event) => {
       if (allowCloseRef.current) return;
-      if (saving) {
+      if (savingRef.current) {
         event.preventDefault?.();
         return;
       }
-      if (!content.trim()) clearDraft();
+      if (!contentRef.current.trim()) clearDraft();
     }).then((unlisten) => {
+      if (disposed) {
+        unlisten();
+        return;
+      }
       unlistenCloseRequested = unlisten;
     }).catch((error) => {
       console.error('Failed to bind quick input close guard:', error);
     });
 
     return () => {
+      disposed = true;
       if (typeof unlistenCloseRequested === 'function') {
         unlistenCloseRequested();
+        unlistenCloseRequested = null;
       }
     };
-  }, [appWindow, clearDraft, content, saving]);
+  }, [appWindow, clearDraft]);
 
   useEffect(() => {
     if (!showColorPanel) return undefined;
@@ -230,11 +249,13 @@ function QuickInputWindow() {
   }, [appWindow, isPinned]);
 
   const saveAndMaybeClose = useCallback(async (closeAfterSave) => {
-    if (!content.trim() || saving) return;
+    if (!content.trim() || savingRef.current) return;
 
+    savingRef.current = true;
     setSaving(true);
+    setSaveError('');
     try {
-      await saveQuickNote(content, t('quickInput.source'));
+      await saveQuickNote(content, QUICK_INPUT_SOURCE);
       clearDraft();
 
       if (closeAfterSave) {
@@ -257,10 +278,13 @@ function QuickInputWindow() {
       }, 1200);
     } catch (error) {
       console.error('Quick input save failed:', error);
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setSaveError(t('quickInput.failed', { error: message }));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [clearDraft, content, requestClose, saving, t]);
+  }, [clearDraft, content, requestClose, t]);
 
   const handleOpenWorkbench = useCallback(async () => {
     try {
@@ -272,6 +296,9 @@ function QuickInputWindow() {
   }, [requestClose]);
 
   const handleKeyDown = useCallback((event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing || event.keyCode === 229) {
+      return;
+    }
     if (event.key === 'Enter' && event.ctrlKey) {
       event.preventDefault();
       saveAndMaybeClose(true);
@@ -367,6 +394,9 @@ function QuickInputWindow() {
         value={content}
         onChange={(event) => {
           setContent(event.target.value);
+          if (saveError) {
+            setSaveError('');
+          }
           if (showWorkbenchCta) {
             setShowWorkbenchCta(false);
           }
@@ -381,6 +411,11 @@ function QuickInputWindow() {
             <div className="quick-window-toast">
               <Check size={13} />
               <span>{t('quickInput.success')}</span>
+            </div>
+          )}
+          {saveError && (
+            <div className="quick-window-error" role="status" aria-live="polite">
+              <span>{saveError}</span>
             </div>
           )}
           {showWorkbenchCta && (

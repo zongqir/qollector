@@ -16,6 +16,7 @@ import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
+import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import {
   COLLECTION_HINTS_VISIBILITY_EVENT,
   readCollectionHintsDismissed,
@@ -200,6 +201,8 @@ function HistoryStream({ style }) {
   const compareFeedbackTimerRef = useRef(null);
   const quickAddFeedbackTimerRef = useRef(null);
   const addFromSearchButtonRef = useRef(null);
+  const quickAddPendingRef = useRef(false);
+  const quickAddUndoPendingRef = useRef(false);
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
@@ -306,6 +309,14 @@ function HistoryStream({ style }) {
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
+
+  useEffect(() => {
+    quickAddPendingRef.current = quickAddPending;
+  }, [quickAddPending]);
+
+  useEffect(() => {
+    quickAddUndoPendingRef.current = quickAddUndoPending;
+  }, [quickAddUndoPending]);
 
   const showCompareFeedback = useCallback((type, text) => {
     setCompareFeedback({ type, text });
@@ -966,26 +977,25 @@ function HistoryStream({ style }) {
 
   const addSearchQueryToWorkbench = useCallback(async () => {
     const content = addFromSearchQuery.trim();
-    if (!content || quickAddPending) return;
+    if (!content || quickAddPendingRef.current) return;
 
+    quickAddPendingRef.current = true;
     setQuickAddPending(true);
     clearQuickAddFeedbackTimer();
     try {
       const pinnedCountBefore = items.filter(item => item.is_pinned).length;
-      await invoke('add_clipboard_item_manual', {
+      const itemId = await invoke('add_clipboard_item_manual', {
         content,
         contentType: 'text',
-        source: t('quickInput.source'),
+        source: QUICK_INPUT_SOURCE,
         autoFavorite: false,
       });
 
-      const recentItems = await invoke('get_recent_items', { limit: 1 });
-      const latestItem = Array.isArray(recentItems) ? recentItems[0] : null;
-      if (!latestItem?.id) {
+      if (!itemId) {
         throw new Error('new item missing id');
       }
 
-      await invoke('pin_item', { id: latestItem.id, maxPinned: maxPinnedItems });
+      await invoke('pin_item', { id: itemId, maxPinned: maxPinnedItems });
       await loadItems();
 
       setSearchQuery('');
@@ -997,7 +1007,7 @@ function HistoryStream({ style }) {
         detail: pinnedCountBefore >= maxPinnedItems
           ? t('error.pinLimitReached', { max: maxPinnedItems })
           : '',
-        itemId: latestItem.id,
+        itemId,
         undoable: true,
       }, 5000);
 
@@ -1014,6 +1024,7 @@ function HistoryStream({ style }) {
         undoable: false,
       }, 2600);
     } finally {
+      quickAddPendingRef.current = false;
       setQuickAddPending(false);
     }
   }, [
@@ -1023,7 +1034,6 @@ function HistoryStream({ style }) {
     items,
     loadItems,
     maxPinnedItems,
-    quickAddPending,
     setFocusedIndex,
     setSearchQuery,
     showQuickAddFeedback,
@@ -1034,8 +1044,9 @@ function HistoryStream({ style }) {
 
   const handleUndoAddFromSearch = useCallback(async () => {
     const itemId = quickAddUndoItemId;
-    if (!itemId || quickAddUndoPending) return;
+    if (!itemId || quickAddUndoPendingRef.current) return;
 
+    quickAddUndoPendingRef.current = true;
     setQuickAddUndoPending(true);
     clearQuickAddFeedbackTimer();
     try {
@@ -1061,6 +1072,7 @@ function HistoryStream({ style }) {
         undoable: false,
       }, 2600);
     } finally {
+      quickAddUndoPendingRef.current = false;
       setQuickAddUndoPending(false);
     }
   }, [
@@ -1068,7 +1080,6 @@ function HistoryStream({ style }) {
     focusSearchInput,
     loadItems,
     quickAddUndoItemId,
-    quickAddUndoPending,
     showQuickAddFeedback,
     t,
   ]);

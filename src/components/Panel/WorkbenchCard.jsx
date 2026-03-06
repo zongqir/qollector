@@ -46,6 +46,7 @@ function WorkbenchCard({
   onPointerDownCapture,
   onClick,
   onDoubleClick,
+  onContextMenu,
   onOpenItem,
   onSetCardBackground,
 }) {
@@ -186,6 +187,11 @@ function WorkbenchCard({
       onPointerDownCapture={onPointerDownCapture}
       onClick={onClick}
       onKeyDown={handleCardKeyDown}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onContextMenu?.(event);
+      }}
       onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(e); }}
     >
       {isCopied && (
