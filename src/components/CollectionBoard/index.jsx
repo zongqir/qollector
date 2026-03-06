@@ -780,7 +780,7 @@ function CollectionBoard({
                       title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
                       aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
                     >
-                      <Inbox size={13} />
+                      <Inbox size={12} />
                     </button>
                     <button
                       type="button"
@@ -792,7 +792,7 @@ function CollectionBoard({
                       title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
                       aria-label={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
                     >
-                      <Star size={13} fill={item.is_favorite ? 'currentColor' : 'none'} />
+                      <Star size={12} fill={item.is_favorite ? 'currentColor' : 'none'} />
                     </button>
                     <button
                       type="button"
@@ -807,7 +807,7 @@ function CollectionBoard({
                       title={t('item.cardBackground.button')}
                       aria-label={t('item.cardBackground.button')}
                     >
-                      <Palette size={13} />
+                      <Palette size={12} />
                     </button>
                     {showColorPicker && (
                       <div
