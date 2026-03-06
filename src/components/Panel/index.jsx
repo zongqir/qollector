@@ -9,26 +9,20 @@ function PolymorphicPanel() {
 
   return (
     <div className="polymorphic-panel">
-      {panelMode === 'workbench' && (
-        <div className="panel-view active">
-          <WorkbenchPanel />
-        </div>
-      )}
-      {panelMode === 'preview' && (
-        <div className="panel-view active">
-          <PreviewPanel />
-        </div>
-      )}
+      <div className={`panel-view ${panelMode === 'workbench' ? 'active' : ''}`}>
+        <WorkbenchPanel />
+      </div>
+      <div className={`panel-view ${panelMode === 'preview' ? 'active' : ''}`}>
+        {panelMode === 'preview' ? <PreviewPanel /> : null}
+      </div>
       {panelMode === 'compare' && (
         <div className="panel-view active">
           <ComparePanel />
         </div>
       )}
-      {panelMode === 'timeline' && (
-        <div className="panel-view active">
-          <TimelinePanel />
-        </div>
-      )}
+      <div className={`panel-view ${panelMode === 'timeline' ? 'active' : ''}`}>
+        <TimelinePanel />
+      </div>
     </div>
   );
 }

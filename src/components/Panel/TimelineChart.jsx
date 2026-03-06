@@ -24,26 +24,19 @@ function TimelineChart({ items }) {
 
   const maxCount = Math.max(...hourlyData.map(d => d.count), 1);
 
-  const getTimeLabel = (hour) => {
-    if (hour >= 6 && hour < 12) return t('workbench.morning');
-    if (hour >= 12 && hour < 18) return t('workbench.afternoon');
-    return t('workbench.evening');
-  };
-
   return (
     <div className="timeline-chart">
-      <div className="timeline-chart-title">Activity Timeline</div>
+      <div className="timeline-chart-title">{t('workbench.timelineActivityTitle')}</div>
       <div className="timeline-chart-bars">
-        {hourlyData.map(({ hour, count, items: hourItems }) => {
+        {hourlyData.map(({ hour, count }) => {
           const height = count > 0 ? (count / maxCount) * 100 : 2;
-          const timeLabel = getTimeLabel(hour);
 
           return (
             <div key={hour} className="timeline-bar-wrapper">
               <div
                 className={`timeline-bar ${count > 0 ? 'has-data' : ''}`}
                 style={{ height: `${height}%` }}
-                title={`${hour}:00 - ${count} items`}
+                title={t('workbench.timelineBarTitle', { hour, count })}
               >
                 {count > 0 && (
                   <div className="timeline-bar-count">{count}</div>

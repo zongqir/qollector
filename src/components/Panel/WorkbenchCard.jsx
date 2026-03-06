@@ -76,6 +76,14 @@ function WorkbenchCard({
     setShowColorPicker(false);
   }, [item, onSetCardBackground]);
 
+  const handleCardKeyDown = useCallback((event) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    event.stopPropagation();
+    onClick?.(event);
+  }, [onClick]);
+
   const renderContent = () => {
     if (item.type_ === 'image' && item.image_paths) {
       return (
@@ -172,8 +180,12 @@ function WorkbenchCard({
     <div
       className={cardClasses}
       style={hasCustomCardBackground ? { '--workbench-card-accent': cardBackground.accent } : undefined}
+      role="button"
+      tabIndex={0}
+      aria-label={t('item.clickToPreview')}
       onPointerDownCapture={onPointerDownCapture}
       onClick={onClick}
+      onKeyDown={handleCardKeyDown}
       onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(e); }}
     >
       {isCopied && (
@@ -183,6 +195,7 @@ function WorkbenchCard({
       )}
       <div className="workbench-card-tools" ref={colorPickerRef}>
         <button
+          type="button"
           className={`workbench-card-color ${hasCustomCardBackground ? 'tinted' : ''}`}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -194,10 +207,12 @@ function WorkbenchCard({
             setShowColorPicker(prev => !prev);
           }}
           title={t('item.cardBackground.button')}
+          aria-label={t('item.cardBackground.button')}
         >
           <Palette size={13} />
         </button>
         <button
+          type="button"
           className="workbench-card-remove"
           onPointerDown={(e) => {
             e.preventDefault();
@@ -205,6 +220,7 @@ function WorkbenchCard({
           }}
           onClick={(e) => { e.stopPropagation(); onUnpin(); }}
           title={t('workbench.removeFromWorkbench')}
+          aria-label={t('workbench.removeFromWorkbench')}
         >
           <X size={14} />
         </button>
@@ -222,10 +238,12 @@ function WorkbenchCard({
               const isDefault = preset.id === CARD_BACKGROUND_DEFAULT_ID;
               return (
                 <button
+                  type="button"
                   key={preset.id}
                   className={`workbench-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
                   style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
                   title={t(preset.labelKey)}
+                  aria-label={t(preset.labelKey)}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

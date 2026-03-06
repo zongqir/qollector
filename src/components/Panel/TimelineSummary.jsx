@@ -34,7 +34,7 @@ function TimelineSummary({ summary, aiEnabled }) {
     <div className="timeline-summary">
       <div className="timeline-summary-header">
         <Sparkles size={18} />
-        <span>AI Summary</span>
+        <span>{t('workbench.aiSummaryTitle')}</span>
       </div>
       <div className="timeline-summary-content">
         {summary.split('\n').map((line, index) => (

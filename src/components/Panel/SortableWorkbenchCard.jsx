@@ -29,9 +29,12 @@ function SortableWorkbenchCard({
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 100 : 'auto',
   };
+  const sortableAttributes = { ...attributes };
+  delete sortableAttributes.role;
+  delete sortableAttributes.tabIndex;
 
   return (
-    <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={{ ...style, touchAction: 'none' }} {...sortableAttributes} {...listeners}>
       <WorkbenchCard
         item={item}
         isCopied={isCopied}

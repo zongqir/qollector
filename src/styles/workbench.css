@@ -370,6 +370,7 @@
   box-shadow: 0 1px 3px var(--shadow-sm);
   break-inside: avoid;
   margin-bottom: 12px;
+  outline: none;
 }
 
 .workbench-card:has(.workbench-card-color-picker) {
@@ -385,6 +386,12 @@
   box-shadow: 0 4px 12px var(--shadow-sm);
   transform: translateY(-2px);
   border-color: var(--accent-color);
+}
+
+.workbench-card:focus-visible:not(.multi-selected) {
+  background: var(--workbench-card-hover-bg, var(--bg-card-hover));
+  border-color: color-mix(in srgb, var(--accent-color) 82%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 26%, transparent), 0 4px 12px var(--shadow-sm);
 }
 
 .workbench-card.multi-selected {
@@ -456,19 +463,28 @@
 
 .workbench-card-remove {
   opacity: 0;
+  pointer-events: none;
 }
 
 .workbench-card:hover .workbench-card-remove {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .workbench-card.multi-selected .workbench-card-remove {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .workbench-card:hover .workbench-card-color,
 .workbench-card.multi-selected .workbench-card-color,
-.workbench-card:has(.workbench-card-color-picker) .workbench-card-color {
+.workbench-card:has(.workbench-card-color-picker) .workbench-card-color,
+.workbench-card:focus-within .workbench-card-color {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.workbench-card:focus-within .workbench-card-remove {
   opacity: 1;
   pointer-events: auto;
 }
