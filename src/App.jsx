@@ -188,7 +188,12 @@ function App() {
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
   const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
+  const panelMode = useAppStore(s => s.panelMode);
   const showHistoryStream = isMiniMode || historyStreamEnabled || !workbenchPanelEnabled;
+  const previewOverlayActive = !isMiniMode
+    && workbenchPanelEnabled
+    && showHistoryStream
+    && panelMode === 'preview';
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -1056,13 +1061,13 @@ function App() {
         onSelectViewMode={handleSelectViewMode}
       />
 
-      <div className="workspace">
+      <div className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
         {showHistoryStream && (
           <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
         )}
         {!isMiniMode && workbenchPanelEnabled && (
           <>
-            {showHistoryStream && <div className="resize-handle" onMouseDown={handleResizeStart} />}
+            {showHistoryStream && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />
           </>
         )}

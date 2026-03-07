@@ -80,6 +80,31 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 88%, transparent), color-mix(in srgb, var(--surface-elevated) 84%, transparent));
 }
 
+.workspace.preview-overlay-active {
+  position: relative;
+}
+
+.workspace.preview-overlay-active .polymorphic-panel {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: clamp(460px, 68%, 860px);
+  max-width: calc(100% - 16px);
+  z-index: 36;
+  border: 1px solid color-mix(in srgb, var(--surface-border-strong) 72%, transparent);
+  border-radius: 14px;
+  box-shadow:
+    0 18px 34px color-mix(in srgb, var(--shadow-md) 48%, transparent),
+    0 32px 62px color-mix(in srgb, var(--shadow-lg) 44%, transparent);
+  overflow: hidden;
+  transition: width var(--motion-base) var(--ease-standard), right var(--motion-base) var(--ease-standard);
+}
+
+.workspace.preview-overlay-active .resize-handle {
+  display: none;
+}
+
 
 .resize-handle {
   width: 2px;
@@ -138,6 +163,12 @@
 
 .app.mini-mode .workspace {
   background: color-mix(in srgb, var(--surface-muted) 96%, transparent);
+}
+
+@media (max-width: 960px) {
+  .workspace.preview-overlay-active .polymorphic-panel {
+    width: clamp(420px, 76%, 720px);
+  }
 }
 
 
