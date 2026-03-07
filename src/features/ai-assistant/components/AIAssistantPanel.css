@@ -1,25 +1,24 @@
 .ai-assistant-panel {
   display: flex;
   flex-direction: column;
-  margin: 0;
-  padding: 14px 16px 12px;
   min-height: 100%;
   max-height: 100%;
   overflow: hidden;
-  border-radius: 0;
-  border: none;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
   background:
-    radial-gradient(circle at 20% 15%, rgba(21, 128, 152, 0.16), transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(194, 120, 3, 0.14), transparent 48%),
-    var(--bg-card);
-  box-shadow: none;
-  animation: aiAssistantSlideIn 0.22s ease;
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 92%, transparent), color-mix(in srgb, var(--surface-muted) 88%, transparent));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 34%, transparent),
+    0 8px 18px color-mix(in srgb, var(--shadow-sm) 42%, transparent);
+  animation: aiAssistantPanelIn var(--motion-base) var(--ease-emphasized);
 }
 
-@keyframes aiAssistantSlideIn {
+@keyframes aiAssistantPanelIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -31,13 +30,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 2px 2px 0;
 }
 
 .ai-assistant-title-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
 }
 
 .ai-assistant-title-icon {
@@ -47,9 +49,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #0e7490;
-  background: rgba(14, 116, 144, 0.12);
-  border: 1px solid rgba(14, 116, 144, 0.24);
+  color: color-mix(in srgb, var(--accent-color) 84%, var(--text-primary) 16%);
+  background: color-mix(in srgb, var(--accent-light) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, transparent);
+  flex-shrink: 0;
 }
 
 .ai-assistant-title {
@@ -62,26 +65,37 @@
 .ai-assistant-subtitle {
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.3;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .ai-assistant-close-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  border: 1px solid var(--border-btn);
-  background: var(--btn-bg);
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 78%, transparent);
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+  flex-shrink: 0;
 }
 
 .ai-assistant-close-btn:hover {
+  transform: translateY(-1px);
   color: var(--text-primary);
-  background: var(--btn-hover-bg);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 72%, transparent);
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--shadow-sm) 56%, transparent);
 }
 
 .ai-assistant-scroll-area {
@@ -89,29 +103,37 @@
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) 74%, transparent) transparent;
 }
 
 .ai-assistant-task-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: 7px;
   margin-bottom: 10px;
 }
 
 .ai-assistant-task-btn {
   min-width: 0;
-  display: flex;
+  height: 31px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  border: 1px solid var(--border-btn);
-  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
   color: var(--text-secondary);
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 11px;
+  border-radius: 9px;
+  padding: 0 8px;
+  font-size: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .ai-assistant-task-btn span {
@@ -121,15 +143,17 @@
 }
 
 .ai-assistant-task-btn:hover {
-  background: rgba(14, 116, 144, 0.08);
-  border-color: rgba(14, 116, 144, 0.35);
-  color: #0f617b;
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 74%, transparent);
+  box-shadow: 0 5px 11px color-mix(in srgb, var(--shadow-sm) 54%, transparent);
 }
 
 .ai-assistant-task-btn.active {
-  background: linear-gradient(135deg, rgba(14, 116, 144, 0.2), rgba(194, 120, 3, 0.14));
-  border-color: rgba(14, 116, 144, 0.45);
-  color: #0e4f65;
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-primary) 14%);
+  border-color: color-mix(in srgb, var(--accent-color) 36%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 12%, transparent);
 }
 
 .ai-assistant-controls-grid {
@@ -143,6 +167,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .ai-assistant-control-label {
@@ -157,43 +182,29 @@
   appearance: none;
   -webkit-appearance: none;
   height: 32px;
-  border: 1px solid var(--border-input);
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  border-radius: 9px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.64) 100%),
-    rgba(255, 255, 255, 0.56);
-  background-image:
-    url("data:image/svg+xml,%3Csvg width='10' height='12' viewBox='0 0 10 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4L5 1L8 4' stroke='%23798290' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 8L5 11L8 8' stroke='%23798290' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.08));
-  background-repeat: no-repeat, no-repeat;
-  background-size: 10px 12px, 1px 56%;
-  background-position: right 10px center, right 28px center;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238f97a3' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center,
+    color-mix(in srgb, var(--surface-strong) 90%, transparent);
   color: var(--text-primary);
-  padding: 0 32px 0 10px;
+  padding: 0 34px 0 10px;
   font-size: 12px;
-  font-weight: 560;
-  letter-spacing: 0.01em;
   outline: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 0.5px 1.3px rgba(0, 0, 0, 0.08);
-  transition: all 0.15s ease;
   cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .ai-assistant-control select:hover {
-  border-color: rgba(14, 116, 144, 0.32);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.72) 100%),
-    rgba(255, 255, 255, 0.58);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 1px 2px rgba(0, 0, 0, 0.12);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 72%, transparent);
 }
 
 .ai-assistant-control select:focus {
-  border-color: rgba(14, 116, 144, 0.45);
-  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.14);
+  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-medium) 62%, transparent);
 }
 
 .ai-assistant-control select::-ms-expand {
@@ -204,7 +215,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
 }
 
 .ai-assistant-input-label {
@@ -215,51 +226,54 @@
 .ai-assistant-input,
 .ai-assistant-extra {
   width: 100%;
-  border: 1px solid var(--border-input);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
   border-radius: 10px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.56);
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
   color: var(--text-primary);
   font-size: 12px;
   line-height: 1.55;
   outline: none;
   resize: vertical;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .ai-assistant-input {
-  min-height: 64px;
-  max-height: 160px;
+  min-height: 72px;
+  max-height: 180px;
 }
 
 .ai-assistant-extra {
-  min-height: 36px;
-  max-height: 76px;
+  min-height: 42px;
+  max-height: 88px;
 }
 
 .ai-assistant-input:focus,
 .ai-assistant-extra:focus {
-  border-color: rgba(14, 116, 144, 0.45);
-  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.14);
+  border-color: color-mix(in srgb, var(--accent-color) 42%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-medium) 62%, transparent);
 }
 
 .ai-assistant-footer {
   margin-top: 8px;
   padding-top: 10px;
-  border-top: 1px solid var(--border-light);
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.16));
+  border-top: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
 }
 
 .ai-assistant-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 10px;
 }
 
 .ai-assistant-btn {
-  border: 1px solid var(--border-btn);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
   border-radius: 9px;
-  height: 32px;
+  height: 33px;
   padding: 0 11px;
   display: inline-flex;
   align-items: center;
@@ -267,49 +281,60 @@
   gap: 6px;
   cursor: pointer;
   font-size: 12px;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
   width: 100%;
 }
 
 .ai-assistant-btn.secondary {
-  background: var(--btn-bg);
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
   color: var(--text-secondary);
 }
 
 .ai-assistant-btn.secondary:hover {
+  transform: translateY(-1px);
   color: var(--text-primary);
-  background: var(--btn-hover-bg);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 72%, transparent);
+  box-shadow: 0 5px 11px color-mix(in srgb, var(--shadow-sm) 52%, transparent);
 }
 
 .ai-assistant-btn.primary {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(135deg, #0e7490, #0f766e 55%, #c27803);
+  color: var(--text-on-accent);
+  border-color: color-mix(in srgb, var(--accent-color) 48%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 88%, var(--surface-strong) 12%), color-mix(in srgb, var(--accent-color) 70%, var(--surface-strong) 30%));
+  box-shadow: 0 8px 15px color-mix(in srgb, var(--accent-color) 28%, transparent);
 }
 
 .ai-assistant-btn.primary:hover:not(:disabled) {
-  filter: brightness(1.04);
   transform: translateY(-1px);
+  filter: brightness(1.03);
 }
 
 .ai-assistant-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .ai-assistant-feedback {
   margin-bottom: 8px;
   border-radius: 9px;
-  border: 1px solid rgba(180, 35, 24, 0.35);
-  background: rgba(180, 35, 24, 0.1);
-  color: #b42318;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--color-danger-bg) 78%, transparent);
+  color: var(--color-danger);
   padding: 7px 9px;
   font-size: 12px;
   line-height: 1.4;
 }
 
 .ai-assistant-result-card {
-  border-top: 1px dashed var(--border-light);
+  border-top: 1px dashed color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
   padding-top: 8px;
 }
 
@@ -340,31 +365,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
 }
 
 .ai-assistant-copy-btn {
-  border: 1px solid var(--border-btn);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
   border-radius: 7px;
   height: 24px;
   padding: 0 8px;
-  background: var(--btn-bg);
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
   flex-shrink: 0;
+  transition:
+    color var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
 }
 
 .ai-assistant-copy-btn:hover:not(:disabled) {
   color: var(--text-primary);
-  background: var(--btn-hover-bg);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 72%, transparent);
 }
 
 .ai-assistant-copy-btn.copied {
-  color: #0a7d3d;
-  border-color: rgba(10, 125, 61, 0.35);
-  background: rgba(10, 125, 61, 0.1);
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 38%, transparent);
+  background: color-mix(in srgb, var(--color-success-bg) 76%, transparent);
 }
 
 .ai-assistant-copy-btn:disabled {
@@ -375,8 +408,8 @@
 .ai-assistant-result-text {
   margin: 0;
   padding: 10px 11px;
-  min-height: 68px;
-  max-height: min(24vh, 170px);
+  min-height: 72px;
+  max-height: min(24vh, 180px);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -384,9 +417,11 @@
   color: var(--text-primary);
   font-size: 12px;
   line-height: 1.58;
-  border: 1px solid var(--border-light);
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.5);
+  background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) 76%, transparent) transparent;
 }
 
 .ai-spin {
@@ -397,64 +432,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.dark-mode .ai-assistant-panel {
-  background:
-    radial-gradient(circle at 18% 18%, rgba(14, 116, 144, 0.28), transparent 46%),
-    radial-gradient(circle at 82% 22%, rgba(194, 120, 3, 0.22), transparent 44%),
-    rgba(28, 30, 33, 0.82);
-}
-
-.dark-mode .ai-assistant-footer {
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.16));
-}
-
-.dark-mode .ai-assistant-task-btn,
-.dark-mode .ai-assistant-control select,
-.dark-mode .ai-assistant-input,
-.dark-mode .ai-assistant-extra,
-.dark-mode .ai-assistant-result-text {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.dark-mode .ai-assistant-control select {
-  color-scheme: dark;
-  color: #eef2f7;
-  border-color: rgba(255, 255, 255, 0.16);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.06) 100%),
-    rgba(255, 255, 255, 0.06);
-  background-image:
-    url("data:image/svg+xml,%3Csvg width='10' height='12' viewBox='0 0 10 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 4L5 1L8 4' stroke='%23B7C1CC' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2 8L5 11L8 8' stroke='%23B7C1CC' stroke-width='1.15' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
-  background-repeat: no-repeat, no-repeat;
-  background-size: 10px 12px, 1px 56%;
-  background-position: right 10px center, right 28px center;
-  box-shadow:
-    inset 0 0.5px 0 rgba(255, 255, 255, 0.1),
-    0 0.5px 1px rgba(0, 0, 0, 0.28);
-}
-
-.dark-mode .ai-assistant-control select:hover {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%),
-    rgba(255, 255, 255, 0.08);
-  border-color: rgba(14, 116, 144, 0.4);
-}
-
-.dark-mode .ai-assistant-control select:focus {
-  border-color: rgba(14, 116, 144, 0.52);
-  box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.2);
-}
-
-.dark-mode .ai-assistant-control select option {
-  color: #eef2f7;
-  background: #21262d;
-}
-
-.dark-mode .ai-assistant-task-btn.active {
-  color: #d8f2f7;
 }
 
 @media (max-width: 880px) {
@@ -469,7 +446,7 @@
 
 @media (max-width: 620px) {
   .ai-assistant-panel {
-    padding: 12px 12px 10px;
+    padding: 9px;
   }
 
   .ai-assistant-task-grid {

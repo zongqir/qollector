@@ -148,7 +148,7 @@
 }
 
 .preview-content-area.ai-assistant-mode {
-  padding: 0;
+  padding: 8px;
   overflow: hidden;
 }
 
@@ -592,7 +592,7 @@
 }
 
 .preview-content-area.ai-assistant-mode {
-  padding: 0;
+  padding: 8px;
 }
 
 .preview-text-content,
