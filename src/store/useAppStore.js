@@ -519,6 +519,11 @@ const useAppStore = create((set, get) => ({
   // ========== 面板 Actions ==========
   setPanelMode: (mode, item = null) => {
     if (mode === 'preview' && item) {
+      const currentState = get();
+      if (currentState.panelMode === 'preview' && currentState.previewItem?.id === item.id) {
+        get().backFromPreview();
+        return;
+      }
       set((state) => {
         const keepCompareContext = state.panelMode === 'compare' && state.compareItemIds.length >= 2;
         return {

@@ -80,8 +80,22 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 88%, transparent), color-mix(in srgb, var(--surface-elevated) 84%, transparent));
 }
 
+.workspace::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--surface-panel) 8%, transparent), color-mix(in srgb, var(--surface-panel) 3%, transparent));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-slow) var(--ease-emphasized);
+}
+
 .workspace.preview-overlay-active {
   position: relative;
+}
+
+.workspace.preview-overlay-active::after {
+  opacity: 1;
 }
 
 .workspace.preview-overlay-active .polymorphic-panel {
@@ -98,7 +112,14 @@
     0 18px 34px color-mix(in srgb, var(--shadow-md) 48%, transparent),
     0 32px 62px color-mix(in srgb, var(--shadow-lg) 44%, transparent);
   overflow: hidden;
-  transition: width var(--motion-base) var(--ease-standard), right var(--motion-base) var(--ease-standard);
+  transform-origin: right center;
+  transition:
+    width var(--motion-slow) var(--ease-emphasized),
+    right var(--motion-slow) var(--ease-emphasized),
+    box-shadow var(--motion-slow) var(--ease-emphasized),
+    border-radius var(--motion-base) var(--ease-emphasized),
+    transform var(--motion-slow) var(--ease-emphasized),
+    opacity var(--motion-slow) var(--ease-emphasized);
 }
 
 .workspace.preview-overlay-active .resize-handle {

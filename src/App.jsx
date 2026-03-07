@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { useEffect, useState, useRef, useCallback, useLayoutEffect, lazy, Suspense } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -194,6 +194,9 @@ function App() {
     && workbenchPanelEnabled
     && showHistoryStream
     && panelMode === 'preview';
+  const workspaceRef = useRef(null);
+  const prevPanelRectRef = useRef(null);
+  const prevOverlayActiveRef = useRef(previewOverlayActive);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -614,6 +617,85 @@ function App() {
   useEffect(() => {
     leftWidthRef.current = leftWidth;
   }, [leftWidth]);
+
+  useLayoutEffect(() => {
+    const workspaceEl = workspaceRef.current;
+    if (!(workspaceEl instanceof HTMLElement)) return;
+    const panelEl = workspaceEl.querySelector('.polymorphic-panel');
+    if (!(panelEl instanceof HTMLElement)) {
+      prevPanelRectRef.current = null;
+      prevOverlayActiveRef.current = previewOverlayActive;
+      return;
+    }
+
+    const nextRect = panelEl.getBoundingClientRect();
+    const prevRect = prevPanelRectRef.current;
+    const overlayStateChanged = prevOverlayActiveRef.current !== previewOverlayActive;
+
+    prevPanelRectRef.current = nextRect;
+    prevOverlayActiveRef.current = previewOverlayActive;
+
+    if (
+      !overlayStateChanged
+      || !prevRect
+      || prevRect.width <= 0
+      || prevRect.height <= 0
+      || nextRect.width <= 0
+      || nextRect.height <= 0
+    ) {
+      return;
+    }
+
+    const deltaX = prevRect.left - nextRect.left;
+    const deltaY = prevRect.top - nextRect.top;
+    const scaleX = prevRect.width / nextRect.width;
+    const scaleY = prevRect.height / nextRect.height;
+    const easing = 'var(--ease-emphasized)';
+    const duration = 'var(--motion-slow)';
+    let rafId = null;
+
+    panelEl.style.willChange = 'transform, opacity';
+    panelEl.style.transition = 'none';
+    panelEl.style.transformOrigin = 'top left';
+    panelEl.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${scaleX}, ${scaleY})`;
+    panelEl.style.opacity = '0.9';
+
+    rafId = requestAnimationFrame(() => {
+      panelEl.style.transition = `transform ${duration} ${easing}, opacity ${duration} ${easing}`;
+      panelEl.style.transform = 'translate(0, 0) scale(1, 1)';
+      panelEl.style.opacity = '1';
+    });
+
+    const clearInlineMotionStyles = () => {
+      panelEl.style.willChange = '';
+      panelEl.style.transition = '';
+      panelEl.style.transformOrigin = '';
+      panelEl.style.transform = '';
+      panelEl.style.opacity = '';
+    };
+
+    const clearTimer = window.setTimeout(() => {
+      panelEl.removeEventListener('transitionend', handleTransitionEnd);
+      clearInlineMotionStyles();
+    }, 520);
+
+    const handleTransitionEnd = (event) => {
+      if (event.propertyName !== 'transform' && event.propertyName !== 'opacity') return;
+      panelEl.removeEventListener('transitionend', handleTransitionEnd);
+      clearTimeout(clearTimer);
+      clearInlineMotionStyles();
+    };
+
+    panelEl.addEventListener('transitionend', handleTransitionEnd);
+    return () => {
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+      }
+      clearTimeout(clearTimer);
+      panelEl.removeEventListener('transitionend', handleTransitionEnd);
+      clearInlineMotionStyles();
+    };
+  }, [previewOverlayActive]);
 
   const rememberPresetWidth = useCallback((preset, width) => {
     if (!isValidLayoutPreset(preset)) return;
@@ -1061,7 +1143,7 @@ function App() {
         onSelectViewMode={handleSelectViewMode}
       />
 
-      <div className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
+      <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
         {showHistoryStream && (
           <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
         )}

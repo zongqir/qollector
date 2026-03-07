@@ -132,7 +132,11 @@ export default function useHistoryRowInteractions({
     }
 
     clickTimerRef.current = setTimeout(() => {
-      setPanelMode('preview', item);
+      if (panelMode === 'preview' && previewItemId === item.id) {
+        switchToWorkbench();
+      } else {
+        setPanelMode('preview', item);
+      }
       clickTimerRef.current = null;
     }, 250);
   }, [
@@ -151,6 +155,7 @@ export default function useHistoryRowInteractions({
     clearExpandedPreview,
     setExpandedPreviewItemId,
     setPanelMode,
+    switchToWorkbench,
   ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
