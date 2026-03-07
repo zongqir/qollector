@@ -12,9 +12,10 @@
   top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--surface-strong) 98%, var(--bg-secondary) 2%);
+  background: var(--control-dropdown-bg);
   border-radius: 12px;
-  box-shadow: 0 8px 32px var(--shadow-lg), 0 0 0 1px var(--border-light);
+  border: 1px solid var(--control-dropdown-border);
+  box-shadow: var(--control-dropdown-shadow);
   min-width: 236px;
   max-width: 320px;
   overflow: hidden;
@@ -38,6 +39,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
+  border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
   transition:
@@ -49,11 +51,12 @@
 }
 
 .date-dropdown-item:hover {
-  background: var(--bg-card-hover);
+  background: var(--control-dropdown-item-hover-bg);
 }
 
 .date-dropdown-item.selected {
-  background: var(--accent-light);
+  border-color: var(--control-dropdown-item-selected-border);
+  background: var(--control-dropdown-item-selected-bg);
 }
 
 .date-dropdown-item .date-label {
@@ -91,7 +94,7 @@
 
 .date-dropdown-custom {
   padding: 8px 10px;
-  border-top: 1px solid var(--tag-dropdown-border);
+  border-top: 1px solid var(--control-dropdown-divider);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -113,11 +116,11 @@
 .date-input-row input[type="text"] {
   flex: 1;
   padding: 5px 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-input-border);
   border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-primary);
   transition:
     border-color var(--motion-fast) var(--ease-standard),
@@ -127,8 +130,8 @@
 
 .date-input-row input[type="text"]:focus {
   outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .date-input-row input[type="text"]::placeholder {
@@ -162,8 +165,8 @@
 
 .date-dropdown-footer {
   padding: 8px 10px;
-  border-top: 1px solid var(--tag-dropdown-border);
-  background: var(--tag-dropdown-footer-bg);
+  border-top: 1px solid var(--control-dropdown-divider);
+  background: var(--control-panel-bg-soft);
 }
 
 @media (max-width: 768px) {

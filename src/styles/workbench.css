@@ -50,11 +50,11 @@
 .workbench-search-input {
   width: 100%;
   height: 30px;
-  border: none;
+  border: 1px solid var(--control-input-border);
   border-radius: 8px;
   padding: 0 28px 0 10px;
   font-size: 12px;
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-primary);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
@@ -64,7 +64,8 @@
 
 .workbench-search-input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .workbench-search-input::placeholder {
@@ -131,10 +132,10 @@
 }
 
 .workbench-sort-toggle {
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
+  border: 1px solid var(--control-button-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
-  color: var(--text-secondary);
+  background: var(--control-button-bg);
+  color: var(--control-button-fg);
   min-height: 30px;
   padding: 0 10px;
   display: inline-flex;
@@ -148,14 +149,15 @@
 }
 
 .workbench-sort-toggle:hover {
-  color: var(--text-primary);
-  border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+  color: var(--control-button-hover-fg);
+  border-color: var(--control-button-hover-border);
+  background: var(--control-button-hover-bg);
 }
 
 .workbench-sort-toggle.active {
-  color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
-  border-color: color-mix(in srgb, var(--accent-color) 38%, transparent);
-  background: color-mix(in srgb, var(--accent-light) 74%, transparent);
+  color: var(--control-button-active-fg);
+  border-color: var(--control-button-active-border);
+  background: var(--control-button-active-bg);
 }
 
 .workbench-sort-toggle:focus-visible {
@@ -187,8 +189,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--bg-input);
-  border: none;
+  background: var(--control-input-bg);
+  border: 1px solid var(--control-input-border);
   border-radius: 8px;
   padding: 8px 12px;
   transition: box-shadow var(--motion-base) var(--ease-standard);
@@ -206,7 +208,8 @@
 }
 
 .quick-note-input-wrapper:focus-within {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .quick-note-expand-btn {
@@ -284,9 +287,9 @@
   min-height: 100px;
   max-height: 300px;
   padding: 10px 32px 10px 12px;
-  border: none;
+  border: 1px solid var(--control-input-border);
   border-radius: 8px;
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.6;
@@ -297,7 +300,8 @@
 }
 
 .quick-note-textarea:focus {
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .quick-note-textarea::placeholder {
@@ -838,10 +842,10 @@
   min-width: 0;
   min-height: 34px;
   padding: 7px 12px;
-  border: 1px solid var(--border-btn);
+  border: 1px solid var(--control-button-border);
   border-radius: 8px;
-  background: var(--btn-bg);
-  color: var(--text-secondary);
+  background: var(--control-button-bg);
+  color: var(--control-button-fg);
   font-size: 13px;
   line-height: 1.25;
   cursor: pointer;
@@ -849,7 +853,9 @@
 }
 
 .workbench-btn:hover {
-  background: var(--btn-hover-bg);
+  background: var(--control-button-hover-bg);
+  border-color: var(--control-button-hover-border);
+  color: var(--control-button-hover-fg);
 }
 
 .workbench-btn.clear-btn:hover {
@@ -883,7 +889,7 @@
 }
 
 .workbench-split-btn.open .quick-output-toggle-btn {
-  background: var(--btn-hover-bg);
+  background: var(--control-button-hover-bg);
 }
 
 .workbench-more-menu {
@@ -912,9 +918,9 @@
 }
 
 .workbench-more-btn.open {
-  color: var(--accent-color);
-  border-color: var(--accent-border-soft);
-  background: var(--accent-light);
+  color: var(--control-button-active-fg);
+  border-color: var(--control-button-active-border);
+  background: var(--control-button-active-bg);
 }
 
 .workbench-more-btn.open .workbench-more-caret {
@@ -928,10 +934,10 @@
   bottom: calc(100% + 8px);
   min-width: 190px;
   padding: 6px;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--control-dropdown-border);
   border-radius: 10px;
-  background: var(--bg-primary);
-  box-shadow: 0 8px 22px var(--shadow-sm);
+  background: var(--control-dropdown-bg);
+  box-shadow: var(--control-dropdown-shadow);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -965,13 +971,13 @@
 }
 
 .workbench-dropdown-item:hover:not(:disabled) {
-  background: var(--btn-hover-bg);
-  color: var(--text-primary);
+  background: var(--control-dropdown-item-hover-bg);
+  color: var(--control-button-hover-fg);
 }
 
 .workbench-dropdown-item.active {
-  background: var(--accent-light);
-  color: var(--accent-color);
+  background: var(--control-dropdown-item-selected-bg);
+  color: var(--control-button-active-fg);
 }
 
 .workbench-dropdown-item.danger {
@@ -987,7 +993,7 @@
   left: 10px;
   right: 10px;
   height: 1px;
-  background: var(--border-light);
+  background: var(--control-dropdown-divider);
 }
 
 .workbench-dropdown-item:disabled {

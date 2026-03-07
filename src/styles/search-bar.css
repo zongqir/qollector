@@ -26,22 +26,22 @@
 .search-input {
   width: 100%;
   padding: 7px 30px 7px 12px;
-  border: none;
+  border: 1px solid var(--control-input-border);
   border-radius: 8px;
   font-size: 14px;
   transition:
     background-color var(--motion-base) var(--ease-standard),
     box-shadow var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard);
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
 .search-input:focus {
   outline: none;
-  background: var(--bg-input);
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .search-input::placeholder {
@@ -86,10 +86,10 @@
 .header-icon-btn {
   width: 30px;
   height: 30px;
-  border: none;
+  border: 1px solid var(--control-button-border);
   border-radius: 6px;
-  background: transparent;
-  color: var(--text-tertiary);
+  background: var(--control-button-bg);
+  color: var(--control-button-fg);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -104,8 +104,9 @@
 }
 
 .header-icon-btn:hover {
-  background: var(--btn-hover-bg);
-  color: var(--text-secondary);
+  background: var(--control-button-hover-bg);
+  border-color: var(--control-button-hover-border);
+  color: var(--control-button-hover-fg);
 }
 
 .header-icon-btn:focus {
@@ -118,8 +119,9 @@
 }
 
 .header-icon-btn.active {
-  color: var(--accent-color);
-  background: var(--accent-light);
+  border-color: var(--control-button-active-border);
+  color: var(--control-button-active-fg);
+  background: var(--control-button-active-bg);
 }
 
 .header-icon-btn.fav-active {
@@ -177,7 +179,8 @@
 .type-filter-group {
   display: flex;
   gap: 2px;
-  background: var(--filter-group-bg);
+  background: var(--control-panel-bg-soft);
+  border: 1px solid var(--control-panel-border);
   padding: 3px;
   border-radius: 8px;
   flex-shrink: 0;
@@ -281,17 +284,17 @@
   align-items: center;
   gap: 2px;
   padding: 2px 8px;
-  border: none;
+  border: 1px solid var(--control-button-active-border);
   border-radius: 4px;
-  background: var(--accent-light);
-  color: var(--accent-color);
+  background: var(--control-button-active-bg);
+  color: var(--control-button-active-fg);
   font-size: 11px;
   cursor: pointer;
   transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .clear-filter-btn:hover {
-  background: var(--accent-medium);
+  background: color-mix(in srgb, var(--control-button-active-bg) 88%, var(--control-button-hover-bg) 12%);
 }
 
 .clear-filter-btn:focus {
@@ -407,9 +410,7 @@
 .search-input {
   min-height: 33px;
   border-radius: 10px;
-  border: 1px solid transparent;
   padding: 7px 30px 7px 11px;
-  background: color-mix(in srgb, var(--bg-input) 82%, transparent);
   color: var(--text-primary);
   font-size: 14px;
   letter-spacing: 0.005em;
@@ -420,13 +421,13 @@
 }
 
 .search-input:hover {
-  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  border-color: var(--control-input-hover-border);
 }
 
 .search-input:focus {
-  border-color: color-mix(in srgb, var(--accent-color) 40%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-light) 70%, transparent);
-  background: color-mix(in srgb, var(--bg-input) 70%, white 30%);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
+  background: color-mix(in srgb, var(--control-input-bg) 84%, var(--surface-strong) 16%);
 }
 
 .clear-search {
@@ -439,9 +440,6 @@
   width: 31px;
   height: 31px;
   border-radius: 8px;
-  border: 1px solid transparent;
-  background: color-mix(in srgb, var(--surface-muted) 55%, transparent);
-  color: var(--text-tertiary);
   transition:
     transform var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
@@ -451,29 +449,21 @@
 
 .header-icon-btn:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
-  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
-  color: var(--text-secondary);
-}
-
-.header-icon-btn.active {
-  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
-  color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  border-color: var(--control-button-hover-border);
+  background: var(--control-button-hover-bg);
+  color: var(--control-button-hover-fg);
 }
 
 .filter-trigger-btn[aria-expanded='true'] {
-  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
-  color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  border-color: var(--control-button-active-border);
+  color: var(--control-button-active-fg);
+  background: var(--control-button-active-bg);
 }
 
 .type-filter-group {
   gap: 3px;
   padding: 3px;
   border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 85%, transparent);
-  background: color-mix(in srgb, var(--surface-muted) 68%, transparent);
 }
 
 .type-filter-btn {
@@ -489,10 +479,10 @@
 .tag-select-wrapper .tag-dropdown,
 .date-select-wrapper .date-dropdown,
 .type-select-wrapper .type-dropdown {
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
+  border: 1px solid var(--control-dropdown-border);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--surface-strong) 98%, var(--bg-secondary) 2%);
-  box-shadow: 0 16px 30px color-mix(in srgb, var(--shadow-lg) 60%, transparent);
+  background: var(--control-dropdown-bg);
+  box-shadow: var(--control-dropdown-shadow);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
@@ -508,8 +498,6 @@
 .clear-filter-btn {
   border-radius: 6px;
   padding: 2px 7px;
-  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
-  color: var(--accent-color);
 }
 
 .app.mini-mode .header {
@@ -559,21 +547,21 @@
 .tag-dropdown-item:hover,
 .date-dropdown-item:hover,
 .type-dropdown-item:hover {
-  background: color-mix(in srgb, var(--accent-light) 62%, transparent);
+  background: var(--control-dropdown-item-hover-bg);
 }
 
 .tag-dropdown-item.keyboard-active,
 .date-dropdown-item.keyboard-active,
 .type-dropdown-item.keyboard-active {
-  border: 1px solid var(--accent-border-soft);
-  background: var(--accent-bg-soft);
+  border: 1px solid var(--control-dropdown-item-active-border);
+  background: var(--control-dropdown-item-active-bg);
 }
 
 .tag-dropdown-item.selected,
 .date-dropdown-item.selected,
 .type-dropdown-item.selected {
-  border: 1px solid color-mix(in srgb, var(--accent-color) 28%, transparent);
-  background: color-mix(in srgb, var(--accent-light) 82%, transparent);
+  border: 1px solid var(--control-dropdown-item-selected-border);
+  background: var(--control-dropdown-item-selected-bg);
 }
 
 .type-select-arrow {

@@ -7,8 +7,9 @@
 }
 
 .type-select-btn.has-selection {
-  color: var(--text-secondary);
-  background: var(--btn-hover-bg);
+  color: var(--control-button-active-fg);
+  border-color: var(--control-button-active-border);
+  background: var(--control-button-active-bg);
 }
 
 .type-select-text {
@@ -40,9 +41,10 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  background: var(--tag-dropdown-bg);
+  background: var(--control-dropdown-bg);
   border-radius: 12px;
-  box-shadow: 0 6px 22px var(--shadow-lg), 0 0 0 1px var(--border-light);
+  border: 1px solid var(--control-dropdown-border);
+  box-shadow: var(--control-dropdown-shadow);
   min-width: 188px;
   max-width: 236px;
   overflow: hidden;
@@ -60,7 +62,7 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--text-tertiary);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--control-dropdown-divider);
 }
 
 .type-dropdown-list {
@@ -87,13 +89,13 @@
 }
 
 .type-dropdown-item:hover {
-  background: var(--btn-hover-bg);
-  border-color: transparent;
+  background: var(--control-dropdown-item-hover-bg);
+  border-color: var(--control-dropdown-item-active-border);
 }
 
 .type-dropdown-item.selected {
-  background: var(--bg-card-hover);
-  border-color: transparent;
+  background: var(--control-dropdown-item-selected-bg);
+  border-color: var(--control-dropdown-item-selected-border);
 }
 
 .type-check {
@@ -125,14 +127,14 @@
   height: 18px;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-tertiary);
 }
 
 .type-dropdown-item.selected .type-option-icon {
   color: var(--text-secondary);
-  border-color: var(--border-light);
-  background: var(--bg-card-hover);
+  border-color: var(--control-dropdown-divider);
+  background: color-mix(in srgb, var(--control-dropdown-item-selected-bg) 76%, var(--control-input-bg) 24%);
 }
 
 .type-option-label {
@@ -166,8 +168,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px;
-  border-top: 1px solid var(--border-light);
-  background: var(--bg-secondary);
+  border-top: 1px solid var(--control-dropdown-divider);
+  background: var(--control-panel-bg-soft);
 }
 
 .type-dropdown-footer .clear-selection-btn:disabled {
@@ -182,10 +184,10 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  background: var(--accent-light);
-  color: var(--accent-color);
+  background: var(--control-button-active-bg);
+  color: var(--control-button-active-fg);
 }
 
 .type-apply-btn:hover {
-  background: var(--accent-medium);
+  background: color-mix(in srgb, var(--control-button-active-bg) 88%, var(--control-button-hover-bg) 12%);
 }

@@ -8,8 +8,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: var(--btn-bg);
-  border: 1px solid var(--border-color);
+  background: var(--control-button-bg);
+  border: 1px solid var(--control-button-border);
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
@@ -18,13 +18,14 @@
     color var(--motion-fast) var(--ease-standard),
     border-color var(--motion-fast) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
-  color: var(--text-secondary);
+  color: var(--control-button-fg);
   font-weight: 500;
 }
 
 .tag-select-btn:hover {
-  border-color: var(--accent-color);
-  background: var(--accent-light);
+  border-color: var(--control-button-hover-border);
+  background: var(--control-button-hover-bg);
+  color: var(--control-button-hover-fg);
 }
 
 .tag-select-btn.has-selection {
@@ -71,9 +72,10 @@
   top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--tag-dropdown-bg);
+  background: var(--control-dropdown-bg);
   border-radius: 12px;
-  box-shadow: 0 8px 32px var(--shadow-lg), 0 0 0 1px var(--border-light);
+  border: 1px solid var(--control-dropdown-border);
+  box-shadow: var(--control-dropdown-shadow);
   min-width: 280px;
   max-width: 350px;
   overflow: hidden;
@@ -88,13 +90,13 @@
 
 .tag-dropdown-search {
   padding: 10px;
-  border-bottom: 1px solid var(--tag-dropdown-border);
+  border-bottom: 1px solid var(--control-dropdown-divider);
 }
 
 .tag-search-input {
   width: 100%;
   padding: 7px 12px;
-  border: none;
+  border: 1px solid var(--control-input-border);
   border-radius: 8px;
   font-size: 13px;
   transition:
@@ -102,13 +104,14 @@
     color var(--motion-fast) var(--ease-standard),
     box-shadow var(--motion-fast) var(--ease-standard),
     border-color var(--motion-fast) var(--ease-standard);
-  background: var(--bg-input);
+  background: var(--control-input-bg);
   color: var(--text-primary);
 }
 
 .tag-search-input:focus {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-medium);
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
 }
 
 .tag-search-input::placeholder {
@@ -126,6 +129,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
+  border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
   transition:
@@ -135,11 +139,12 @@
 }
 
 .tag-dropdown-item:hover {
-  background: var(--bg-card-hover);
+  background: var(--control-dropdown-item-hover-bg);
 }
 
 .tag-dropdown-item.selected {
-  background: var(--accent-light);
+  border: 1px solid var(--control-dropdown-item-selected-border);
+  background: var(--control-dropdown-item-selected-bg);
 }
 
 .tag-dropdown-item.selected .tag-text {
@@ -266,25 +271,25 @@
   text-align: center;
   color: var(--text-tertiary);
   font-size: 12px;
-  border-top: 1px solid var(--tag-dropdown-border);
+  border-top: 1px solid var(--control-dropdown-divider);
   margin-top: 4px;
 }
 
 .tag-dropdown-footer {
   padding: 8px 10px;
-  border-top: 1px solid var(--tag-dropdown-border);
-  background: var(--tag-dropdown-footer-bg);
+  border-top: 1px solid var(--control-dropdown-divider);
+  background: var(--control-panel-bg-soft);
 }
 
 .clear-selection-btn {
   width: 100%;
   padding: 7px;
-  background: var(--btn-bg);
-  border: 1px solid var(--border-color);
+  background: var(--control-button-bg);
+  border: 1px solid var(--control-button-border);
   border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--control-button-fg);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard),
