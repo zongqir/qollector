@@ -227,6 +227,12 @@
     "cancel": "取消",
     "test": "测试连接",
     "testing": "测试中...",
+    "search": {
+      "placeholder": "搜索设置项（按回车跳转）",
+      "jump": "跳转",
+      "noResult": "没有匹配的设置项",
+      "resultHint": "按回车跳转到「{{target}}」（共 {{count}} 条匹配）"
+    },
     "tabs": {
       "ai": "AI",
       "ocr": "文字识别",
@@ -792,7 +798,9 @@
     "dedupePinned": "一键去重",
     "dedupeNoItems": "当前没有可去重的工作台项",
     "dedupeNoChanges": "未检测到重复项",
-    "dedupeDone": "已移除 {{count}} 个重复项"
+    "dedupeDone": "已移除 {{count}} 个重复项",
+    "finishSortMode": "完成排序",
+    "releaseThenDragHint": "已进入排序，请松手后拖动"
   },
   "collection": {
     "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。",

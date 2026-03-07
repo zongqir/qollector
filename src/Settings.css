@@ -42,9 +42,16 @@
 .settings-header {
   padding: 18px 20px 14px;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-header-top {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
+  width: 100%;
 }
 
 .settings-header h2 {
@@ -53,6 +60,92 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+}
+
+.settings-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.settings-search-input-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-search-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.settings-search-jump-btn {
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 34px;
+}
+
+.settings-search-meta {
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  padding: 0 2px;
+}
+
+.settings-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 20;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--modal-bg);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.settings-search-option {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.settings-search-option + .settings-search-option {
+  border-top: 1px solid var(--border-light);
+}
+
+.settings-search-option:hover,
+.settings-search-option.active {
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+}
+
+.settings-search-option-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-search-option-tab {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.settings-search-empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* 关闭按钮 */
@@ -139,6 +232,26 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+}
+
+.settings-anchor-target {
+  scroll-margin-top: 10px;
+  border-radius: 10px;
+}
+
+.settings-anchor-target.settings-search-hit {
+  animation: settingsSearchHitPulse 1.05s ease;
+}
+
+@keyframes settingsSearchHitPulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-color) 35%, transparent);
+    background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background: transparent;
+  }
 }
 
 .settings-content {
@@ -1584,6 +1697,15 @@
 
   .settings-header {
     padding: 12px 14px 10px;
+  }
+
+  .settings-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-search-jump-btn {
+    width: 100%;
   }
 
   .settings-main {

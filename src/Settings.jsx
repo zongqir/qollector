@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
 import { check } from '@tauri-apps/plugin-updater';
@@ -19,16 +19,203 @@ import useShortcutSettings from './components/Settings/hooks/useShortcutSettings
 import useIntegrationsSettings from './components/Settings/hooks/useIntegrationsSettings';
 import './Settings.css';
 
+const SETTINGS_SEARCH_ANCHOR = {
+  general: 'general-main',
+  shortcuts: 'shortcuts-main',
+  integrationsCore: 'integrations-core',
+  integrationsLanSync: 'integrations-lan-sync',
+  integrationsShare: 'integrations-share',
+  data: 'data-security-data',
+  security: 'data-security-security',
+  about: 'about-main',
+};
+
+const normalizeSearchText = (value) => (
+  String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+);
+
 function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const { t, i18n } = useTranslation();
   const settingsInitialTab = useAppStore(s => s.settingsInitialTab);
   const [activeTab, setActiveTab] = useState(settingsInitialTab || 'general');
+  const settingsPanelsRef = useRef(null);
+  const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
+  const [pendingSearchTarget, setPendingSearchTarget] = useState(null);
+  const [settingsSearchDropdownOpen, setSettingsSearchDropdownOpen] = useState(false);
+  const [settingsSearchActiveIndex, setSettingsSearchActiveIndex] = useState(0);
 
   useEffect(() => {
     if (settingsInitialTab) {
       setActiveTab(settingsInitialTab);
     }
   }, [settingsInitialTab]);
+
+  const settingsSearchEntries = useMemo(() => {
+    const entries = [
+      {
+        id: 'general',
+        tab: 'general',
+        tabLabel: t('settings.tabs.general'),
+        anchor: SETTINGS_SEARCH_ANCHOR.general,
+        title: t('settings.tabs.general'),
+        keywords: [
+          t('settings.general.language'),
+          t('settings.general.theme'),
+          t('settings.general.maxPinnedItems'),
+          t('settings.general.startupDefaultView'),
+          t('settings.general.autoPaste'),
+          t('settings.general.lowMemoryMode'),
+          t('settings.general.startTour'),
+        ],
+      },
+      {
+        id: 'shortcuts',
+        tab: 'shortcuts',
+        tabLabel: t('settings.tabs.shortcuts'),
+        anchor: SETTINGS_SEARCH_ANCHOR.shortcuts,
+        title: t('settings.tabs.shortcuts'),
+        keywords: [
+          t('settings.shortcuts.toggleWindow'),
+          t('settings.shortcuts.ctrlShiftC'),
+          t('settings.shortcuts.tagQuickAdd'),
+          t('settings.shortcuts.emphasisCopy'),
+        ],
+      },
+      {
+        id: 'integrations-core',
+        tab: 'integrations',
+        tabLabel: t('settings.general.featureModules'),
+        anchor: SETTINGS_SEARCH_ANCHOR.integrationsCore,
+        title: t('settings.general.featureModules'),
+        keywords: [
+          t('settings.tabs.ai'),
+          t('settings.tabs.ocr'),
+          t('settings.tabs.mcp'),
+          t('settings.general.enableAI'),
+          t('settings.general.enableOCR'),
+          t('settings.general.enableMCP'),
+          t('settings.ai.provider'),
+          t('settings.ai.model'),
+          t('settings.ocr.provider'),
+          t('settings.mcp.port'),
+        ],
+      },
+      {
+        id: 'integrations-lan',
+        tab: 'integrations',
+        tabLabel: t('settings.lanSync.title'),
+        anchor: SETTINGS_SEARCH_ANCHOR.integrationsLanSync,
+        title: t('settings.lanSync.title'),
+        keywords: [
+          t('settings.lanSync.enabled'),
+          t('settings.lanSync.deviceName'),
+          t('settings.lanSync.pairCode'),
+          t('settings.lanSync.discovered'),
+        ],
+      },
+      {
+        id: 'integrations-share',
+        tab: 'integrations',
+        tabLabel: t('settings.tabs.share'),
+        anchor: SETTINGS_SEARCH_ANCHOR.integrationsShare,
+        title: t('settings.tabs.share'),
+        keywords: [
+          t('settings.share.provider'),
+          t('settings.share.endpoint'),
+          t('settings.share.bucket'),
+          t('settings.share.testConnection'),
+        ],
+      },
+      {
+        id: 'data',
+        tab: 'dataSecurity',
+        tabLabel: t('settings.tabs.data'),
+        anchor: SETTINGS_SEARCH_ANCHOR.data,
+        title: t('settings.tabs.data'),
+        keywords: [
+          t('settings.general.autoCleanup'),
+          t('settings.general.cleanupMaxItems'),
+          t('settings.general.cleanupMaxAgeDays'),
+          t('export.title'),
+          t('export.export'),
+          t('export.import'),
+          t('export.clearData'),
+        ],
+      },
+      {
+        id: 'security',
+        tab: 'dataSecurity',
+        tabLabel: t('settings.tabs.security'),
+        anchor: SETTINGS_SEARCH_ANCHOR.security,
+        title: t('settings.tabs.security'),
+        keywords: [
+          t('lock.settingsTitle'),
+          t('lock.enableLock'),
+          t('lock.removeLock'),
+          t('lock.changePassword'),
+        ],
+      },
+      {
+        id: 'about',
+        tab: 'about',
+        tabLabel: t('settings.tabs.about'),
+        anchor: SETTINGS_SEARCH_ANCHOR.about,
+        title: t('settings.tabs.about'),
+        keywords: [
+          t('settings.about.website'),
+          t('settings.about.betaNotice'),
+        ],
+      },
+    ];
+
+    return entries.map((entry) => {
+      const allTerms = [entry.title, ...(entry.keywords || [])]
+        .filter(Boolean)
+        .map(normalizeSearchText)
+        .filter(Boolean);
+      return {
+        ...entry,
+        allTerms,
+        searchText: allTerms.join(' '),
+      };
+    });
+  }, [t, i18n.language]);
+
+  const settingsSearchResults = useMemo(() => {
+    const query = normalizeSearchText(settingsSearchQuery);
+    if (!query) return [];
+    const tokens = query.split(' ').filter(Boolean);
+
+    return settingsSearchEntries
+      .map((entry) => {
+        const matchedAllTokens = tokens.every((token) => entry.searchText.includes(token));
+        if (!matchedAllTokens) return null;
+        const titleText = normalizeSearchText(entry.title);
+
+        let score = 0;
+        if (titleText === query) score += 120;
+        else if (titleText.startsWith(query)) score += 90;
+        else if (titleText.includes(query)) score += 70;
+
+        for (const term of entry.allTerms) {
+          if (term === query) score += 60;
+          else if (term.startsWith(query)) score += 35;
+          else if (term.includes(query)) score += 18;
+        }
+        score += Math.min(tokens.length, 4) * 5;
+
+        return { ...entry, score };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
+  }, [settingsSearchEntries, settingsSearchQuery]);
+  const selectedSettingsSearchResult = settingsSearchResults[settingsSearchActiveIndex]
+    || settingsSearchResults[0]
+    || null;
   const [generalConfig, setGeneralConfig] = useState({
     max_pinned_items: 10,
     language: 'zh-CN',
@@ -424,12 +611,172 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     }
   };
 
+  const navigateToSettingsSearchResult = (entry) => {
+    if (!entry) return;
+    setPendingSearchTarget(entry);
+    setSettingsSearchDropdownOpen(false);
+    if (activeTab !== entry.tab) {
+      setActiveTab(entry.tab);
+    }
+  };
+
+  const handleSettingsSearchSubmit = () => {
+    if (!selectedSettingsSearchResult) return;
+    navigateToSettingsSearchResult(selectedSettingsSearchResult);
+  };
+
+  useEffect(() => {
+    if (!settingsSearchQuery.trim()) {
+      setSettingsSearchDropdownOpen(false);
+      setSettingsSearchActiveIndex(0);
+      return;
+    }
+    setSettingsSearchDropdownOpen(true);
+  }, [settingsSearchQuery]);
+
+  useEffect(() => {
+    if (settingsSearchActiveIndex < settingsSearchResults.length) return;
+    setSettingsSearchActiveIndex(0);
+  }, [settingsSearchActiveIndex, settingsSearchResults.length]);
+
+  useEffect(() => {
+    if (!pendingSearchTarget) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    const tryScroll = () => {
+      if (cancelled) return;
+      attempts += 1;
+
+      const container = settingsPanelsRef.current;
+      const selector = `[data-settings-anchor="${pendingSearchTarget.anchor}"]`;
+      const target = container?.querySelector(selector);
+
+      if (!target) {
+        if (attempts < maxAttempts) {
+          requestAnimationFrame(tryScroll);
+        } else {
+          setPendingSearchTarget(null);
+        }
+        return;
+      }
+
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.remove('settings-search-hit');
+      void target.offsetWidth;
+      target.classList.add('settings-search-hit');
+      setPendingSearchTarget(null);
+    };
+
+    requestAnimationFrame(tryScroll);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, pendingSearchTarget]);
+
   return (
     <div className="settings-overlay">
       <div className="settings-modal">
         <div className="settings-header">
-          <h2>{t('settings.title')}</h2>
-          <button onClick={handleClose} className="close-btn"><X size={20} /></button>
+          <div className="settings-header-top">
+            <h2>{t('settings.title')}</h2>
+            <button onClick={handleClose} className="close-btn"><X size={20} /></button>
+          </div>
+          <div className="settings-search-row">
+            <div className="settings-search-input-wrap">
+              <input
+                type="text"
+                value={settingsSearchQuery}
+                onChange={(event) => {
+                  setSettingsSearchQuery(event.target.value);
+                  setSettingsSearchActiveIndex(0);
+                }}
+                onFocus={() => {
+                  if (settingsSearchQuery.trim()) {
+                    setSettingsSearchDropdownOpen(true);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    if (!settingsSearchDropdownOpen) {
+                      setSettingsSearchDropdownOpen(true);
+                    }
+                    if (settingsSearchResults.length > 0) {
+                      setSettingsSearchActiveIndex((prev) => (
+                        prev + 1 >= settingsSearchResults.length ? 0 : prev + 1
+                      ));
+                    }
+                    return;
+                  }
+                  if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    if (settingsSearchResults.length > 0) {
+                      setSettingsSearchActiveIndex((prev) => (
+                        prev - 1 < 0 ? settingsSearchResults.length - 1 : prev - 1
+                      ));
+                    }
+                    return;
+                  }
+                  if (event.key === 'Escape') {
+                    setSettingsSearchDropdownOpen(false);
+                    return;
+                  }
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleSettingsSearchSubmit();
+                  }
+                }}
+                placeholder={t('settings.search.placeholder')}
+                aria-label={t('settings.search.placeholder')}
+                className="setting-input settings-search-input"
+              />
+              {settingsSearchDropdownOpen && settingsSearchQuery.trim() && (
+                <div className="settings-search-dropdown" role="listbox">
+                  {settingsSearchResults.length > 0 ? (
+                    settingsSearchResults.map((entry, index) => {
+                      const active = index === settingsSearchActiveIndex;
+                      return (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          className={`settings-search-option ${active ? 'active' : ''}`}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onMouseEnter={() => setSettingsSearchActiveIndex(index)}
+                          onClick={() => navigateToSettingsSearchResult(entry)}
+                        >
+                          <span className="settings-search-option-title">{entry.title}</span>
+                          <span className="settings-search-option-tab">{entry.tabLabel}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="settings-search-empty">{t('settings.search.noResult')}</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="test-btn secondary settings-search-jump-btn"
+              onClick={handleSettingsSearchSubmit}
+              disabled={!settingsSearchQuery.trim() || settingsSearchResults.length === 0}
+            >
+              {t('settings.search.jump')}
+            </button>
+          </div>
+          {settingsSearchQuery.trim() && (
+            <div className="settings-search-meta">
+              {settingsSearchResults.length > 0
+                ? t('settings.search.resultHint', {
+                  count: settingsSearchResults.length,
+                  target: selectedSettingsSearchResult?.title || settingsSearchResults[0].title,
+                })
+                : t('settings.search.noResult')}
+            </div>
+          )}
         </div>
 
         <div className="settings-main">
@@ -443,162 +790,176 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             onOpenAbout={() => setActiveTab('about')}
           />
 
-          <div className="settings-panels">
-                    {activeTab === 'general' && (
-            <GeneralSection
-              t={t}
-              i18nLanguage={i18n.language}
-              changeLanguage={changeLanguage}
-              generalConfig={generalConfig}
-              setGeneralConfig={setGeneralConfig}
-              onThemeModeChange={onThemeModeChange}
-              getWheelNextNumber={getWheelNextNumber}
-            />
+          <div className="settings-panels" ref={settingsPanelsRef}>
+          {activeTab === 'general' && (
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.general}>
+              <GeneralSection
+                t={t}
+                i18nLanguage={i18n.language}
+                changeLanguage={changeLanguage}
+                generalConfig={generalConfig}
+                setGeneralConfig={setGeneralConfig}
+                onThemeModeChange={onThemeModeChange}
+                getWheelNextNumber={getWheelNextNumber}
+              />
+            </div>
           )}
 
           {activeTab === 'shortcuts' && (
-            <ShortcutsSection
-              t={t}
-              generalConfig={generalConfig}
-              setGeneralConfig={setGeneralConfig}
-              saveShortcutConfig={saveShortcutConfig}
-              normalizeShortcutText={normalizeShortcutText}
-              recordingTarget={recordingTarget}
-              stopShortcutRecording={stopShortcutRecording}
-              startShortcutRecording={startShortcutRecording}
-              onConfigChange={onConfigChange}
-              getTagShortcutDisplay={getTagShortcutDisplay}
-              shortcutError={shortcutError}
-              restoreShortcutDefaults={restoreShortcutDefaults}
-              getWheelNextNumber={getWheelNextNumber}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.shortcuts}>
+              <ShortcutsSection
+                t={t}
+                generalConfig={generalConfig}
+                setGeneralConfig={setGeneralConfig}
+                saveShortcutConfig={saveShortcutConfig}
+                normalizeShortcutText={normalizeShortcutText}
+                recordingTarget={recordingTarget}
+                stopShortcutRecording={stopShortcutRecording}
+                startShortcutRecording={startShortcutRecording}
+                onConfigChange={onConfigChange}
+                getTagShortcutDisplay={getTagShortcutDisplay}
+                shortcutError={shortcutError}
+                restoreShortcutDefaults={restoreShortcutDefaults}
+                getWheelNextNumber={getWheelNextNumber}
+              />
+            </div>
           )}
 
           {activeTab === 'integrations' && (
-            <IntegrationsCoreSection
-              t={t}
-              aiConfig={aiConfig}
-              ocrConfig={ocrConfig}
-              mcpConfig={mcpConfig}
-              actualMcpPort={actualMcpPort}
-              collapsedSections={collapsedSections}
-              toggleSection={toggleSection}
-              onToggleAiEnabled={handleAiEnabledChange}
-              onToggleOcrEnabled={handleOcrEnabledChange}
-              onToggleMcpEnabled={handleMcpEnabledChange}
-              getAiProviderValue={getAiProviderValue}
-              handleAiProviderChange={handleAiProviderChange}
-              customName={customName}
-              setCustomName={setCustomName}
-              customUrl={customUrl}
-              setCustomUrl={setCustomUrl}
-              setAiConfig={setAiConfig}
-              currentAiApiKey={currentAiApiKey}
-              setCurrentAiApiKey={setCurrentAiApiKey}
-              currentAiModel={currentAiModel}
-              setCurrentAiModel={setCurrentAiModel}
-              showAiApiKey={showAiApiKey}
-              setShowAiApiKey={setShowAiApiKey}
-              availableModels={availableModels}
-              modelInputMode={modelInputMode}
-              setModelInputMode={setModelInputMode}
-              handleRefreshModels={handleRefreshModels}
-              refreshingModels={refreshingModels}
-              refreshModelsResult={refreshModelsResult}
-              handleAiTest={handleAiTest}
-              aiTesting={aiTesting}
-              aiTestResult={aiTestResult}
-              currentOcrApiKey={currentOcrApiKey}
-              setCurrentOcrApiKey={setCurrentOcrApiKey}
-              currentOcrApiSecret={currentOcrApiSecret}
-              setCurrentOcrApiSecret={setCurrentOcrApiSecret}
-              showOcrApiKey={showOcrApiKey}
-              setShowOcrApiKey={setShowOcrApiKey}
-              setOcrConfig={setOcrConfig}
-              handleOcrTest={handleOcrTest}
-              ocrTesting={ocrTesting}
-              ocrTestResult={ocrTestResult}
-              setMcpConfig={setMcpConfig}
-              getWheelNextNumber={getWheelNextNumber}
-              copySuccess={copySuccess}
-              setCopySuccess={setCopySuccess}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsCore}>
+              <IntegrationsCoreSection
+                t={t}
+                aiConfig={aiConfig}
+                ocrConfig={ocrConfig}
+                mcpConfig={mcpConfig}
+                actualMcpPort={actualMcpPort}
+                collapsedSections={collapsedSections}
+                toggleSection={toggleSection}
+                onToggleAiEnabled={handleAiEnabledChange}
+                onToggleOcrEnabled={handleOcrEnabledChange}
+                onToggleMcpEnabled={handleMcpEnabledChange}
+                getAiProviderValue={getAiProviderValue}
+                handleAiProviderChange={handleAiProviderChange}
+                customName={customName}
+                setCustomName={setCustomName}
+                customUrl={customUrl}
+                setCustomUrl={setCustomUrl}
+                setAiConfig={setAiConfig}
+                currentAiApiKey={currentAiApiKey}
+                setCurrentAiApiKey={setCurrentAiApiKey}
+                currentAiModel={currentAiModel}
+                setCurrentAiModel={setCurrentAiModel}
+                showAiApiKey={showAiApiKey}
+                setShowAiApiKey={setShowAiApiKey}
+                availableModels={availableModels}
+                modelInputMode={modelInputMode}
+                setModelInputMode={setModelInputMode}
+                handleRefreshModels={handleRefreshModels}
+                refreshingModels={refreshingModels}
+                refreshModelsResult={refreshModelsResult}
+                handleAiTest={handleAiTest}
+                aiTesting={aiTesting}
+                aiTestResult={aiTestResult}
+                currentOcrApiKey={currentOcrApiKey}
+                setCurrentOcrApiKey={setCurrentOcrApiKey}
+                currentOcrApiSecret={currentOcrApiSecret}
+                setCurrentOcrApiSecret={setCurrentOcrApiSecret}
+                showOcrApiKey={showOcrApiKey}
+                setShowOcrApiKey={setShowOcrApiKey}
+                setOcrConfig={setOcrConfig}
+                handleOcrTest={handleOcrTest}
+                ocrTesting={ocrTesting}
+                ocrTestResult={ocrTestResult}
+                setMcpConfig={setMcpConfig}
+                getWheelNextNumber={getWheelNextNumber}
+                copySuccess={copySuccess}
+                setCopySuccess={setCopySuccess}
+              />
+            </div>
           )}
 
           {activeTab === 'dataSecurity' && (
-            <DataSecurityDataSection
-              t={t}
-              generalConfig={generalConfig}
-              setGeneralConfig={setGeneralConfig}
-              getWheelNextNumber={getWheelNextNumber}
-              exportIncludeImages={exportIncludeImages}
-              setExportIncludeImages={setExportIncludeImages}
-              exportEncrypt={exportEncrypt}
-              setExportEncrypt={setExportEncrypt}
-              exportPassword={exportPassword}
-              setExportPassword={setExportPassword}
-              exportConfirmPassword={exportConfirmPassword}
-              setExportConfirmPassword={setExportConfirmPassword}
-              exporting={exporting}
-              importing={importing}
-              handleExport={handleExport}
-              setImportNeedPassword={setImportNeedPassword}
-              setImportPassword={setImportPassword}
-              setImportFilePath={setImportFilePath}
-              setImportResult={setImportResult}
-              handleImport={handleImport}
-              importNeedPassword={importNeedPassword}
-              importPassword={importPassword}
-              importFilePath={importFilePath}
-              exportResult={exportResult}
-              importResult={importResult}
-              clearDataConfirm={clearDataConfirm}
-              handleClearAllData={handleClearAllData}
-              clearing={clearing}
-              setClearDataConfirm={setClearDataConfirm}
-              setClearDataResult={setClearDataResult}
-              clearDataResult={clearDataResult}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.data}>
+              <DataSecurityDataSection
+                t={t}
+                generalConfig={generalConfig}
+                setGeneralConfig={setGeneralConfig}
+                getWheelNextNumber={getWheelNextNumber}
+                exportIncludeImages={exportIncludeImages}
+                setExportIncludeImages={setExportIncludeImages}
+                exportEncrypt={exportEncrypt}
+                setExportEncrypt={setExportEncrypt}
+                exportPassword={exportPassword}
+                setExportPassword={setExportPassword}
+                exportConfirmPassword={exportConfirmPassword}
+                setExportConfirmPassword={setExportConfirmPassword}
+                exporting={exporting}
+                importing={importing}
+                handleExport={handleExport}
+                setImportNeedPassword={setImportNeedPassword}
+                setImportPassword={setImportPassword}
+                setImportFilePath={setImportFilePath}
+                setImportResult={setImportResult}
+                handleImport={handleImport}
+                importNeedPassword={importNeedPassword}
+                importPassword={importPassword}
+                importFilePath={importFilePath}
+                exportResult={exportResult}
+                importResult={importResult}
+                clearDataConfirm={clearDataConfirm}
+                handleClearAllData={handleClearAllData}
+                clearing={clearing}
+                setClearDataConfirm={setClearDataConfirm}
+                setClearDataResult={setClearDataResult}
+                clearDataResult={clearDataResult}
+              />
+            </div>
           )}
 
           {activeTab === 'dataSecurity' && (
-            <DataSecuritySecuritySection
-              t={t}
-              lockHasPassword={lockHasPassword}
-              lockOldPassword={lockOldPassword}
-              setLockOldPassword={setLockOldPassword}
-              lockNewPassword={lockNewPassword}
-              setLockNewPassword={setLockNewPassword}
-              lockConfirmPassword={lockConfirmPassword}
-              setLockConfirmPassword={setLockConfirmPassword}
-              lockError={lockError}
-              setLockError={setLockError}
-              lockSuccess={lockSuccess}
-              setLockSuccess={setLockSuccess}
-              setLockHasPassword={setLockHasPassword}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.security}>
+              <DataSecuritySecuritySection
+                t={t}
+                lockHasPassword={lockHasPassword}
+                lockOldPassword={lockOldPassword}
+                setLockOldPassword={setLockOldPassword}
+                lockNewPassword={lockNewPassword}
+                setLockNewPassword={setLockNewPassword}
+                lockConfirmPassword={lockConfirmPassword}
+                setLockConfirmPassword={setLockConfirmPassword}
+                lockError={lockError}
+                setLockError={setLockError}
+                lockSuccess={lockSuccess}
+                setLockSuccess={setLockSuccess}
+                setLockHasPassword={setLockHasPassword}
+              />
+            </div>
           )}
 
           {activeTab === 'integrations' && (
-            <IntegrationsLanSyncSection
-              t={t}
-              collapsed={collapsedSections.lanSync}
-              onToggle={() => toggleSection('lanSync')}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsLanSync}>
+              <IntegrationsLanSyncSection
+                t={t}
+                collapsed={collapsedSections.lanSync}
+                onToggle={() => toggleSection('lanSync')}
+              />
+            </div>
           )}
 
           {activeTab === 'integrations' && (
-            <IntegrationsShareSection
-              t={t}
-              shareConfig={shareConfig}
-              setShareConfig={setShareConfig}
-              shareTesting={shareTesting}
-              setShareTesting={setShareTesting}
-              shareTestResult={shareTestResult}
-              setShareTestResult={setShareTestResult}
-              collapsed={collapsedSections.share}
-              onToggle={() => toggleSection('share')}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsShare}>
+              <IntegrationsShareSection
+                t={t}
+                shareConfig={shareConfig}
+                setShareConfig={setShareConfig}
+                shareTesting={shareTesting}
+                setShareTesting={setShareTesting}
+                shareTestResult={shareTestResult}
+                setShareTestResult={setShareTestResult}
+                collapsed={collapsedSections.share}
+                onToggle={() => toggleSection('share')}
+              />
+            </div>
           )}
 
           {/* License panel - temporarily hidden for beta
@@ -682,17 +1043,19 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           */}
 
           {activeTab === 'about' && (
-            <AboutSection
-              t={t}
-              appVersion={appVersion}
-              aboutUpdateVersion={aboutUpdateVersion}
-              aboutUpdateRef={aboutUpdateRef}
-              aboutUpdateStatus={aboutUpdateStatus}
-              aboutDownloadPercent={aboutDownloadPercent}
-              aboutUpdateError={aboutUpdateError}
-              onCheckUpdate={handleCheckUpdate}
-              onDownloadAndRestart={handleDownloadAndRestart}
-            />
+            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.about}>
+              <AboutSection
+                t={t}
+                appVersion={appVersion}
+                aboutUpdateVersion={aboutUpdateVersion}
+                aboutUpdateRef={aboutUpdateRef}
+                aboutUpdateStatus={aboutUpdateStatus}
+                aboutDownloadPercent={aboutDownloadPercent}
+                aboutUpdateError={aboutUpdateError}
+                onCheckUpdate={handleCheckUpdate}
+                onDownloadAndRestart={handleDownloadAndRestart}
+              />
+            </div>
           )}
         </div>
         </div>

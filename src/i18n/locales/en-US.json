@@ -252,6 +252,12 @@
     "cancel": "Cancel",
     "test": "Test Connection",
     "testing": "Testing...",
+    "search": {
+      "placeholder": "Search settings (press Enter to jump)",
+      "jump": "Jump",
+      "noResult": "No matching settings found",
+      "resultHint": "Press Enter to jump to \"{{target}}\" ({{count}} matches)"
+    },
     "tabs": {
       "ai": "AI",
       "ocr": "Text Recognition",
@@ -817,7 +823,9 @@
     "dedupePinned": "Remove Duplicates",
     "dedupeNoItems": "No workbench items to deduplicate",
     "dedupeNoChanges": "No duplicates found",
-    "dedupeDone": "Removed {{count}} duplicate item(s)"
+    "dedupeDone": "Removed {{count}} duplicate item(s)",
+    "finishSortMode": "Done sorting",
+    "releaseThenDragHint": "Sort mode on. Release, then drag."
   },
   "collection": {
     "longTermStorageHint": "Collection is for long-term storage, so important items stay easy to revisit and reuse.",
