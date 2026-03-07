@@ -1,4 +1,5 @@
 .collection-board {
+  position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -19,6 +20,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+
+.collection-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .collection-tag-rail {
@@ -122,6 +130,7 @@
 .collection-meta-hint-close:focus-visible,
 .collection-active-item-close:focus-visible,
 .collection-view-toggle button:focus-visible,
+.collection-sort-toggle:focus-visible,
 .collection-card-actions button:focus-visible,
 .collection-card-tag:focus-visible,
 .compact-card-color-dot:focus-visible {
@@ -239,6 +248,39 @@
   background: color-mix(in srgb, var(--accent-light) 76%, transparent);
 }
 
+.collection-sort-toggle {
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 86%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
+  color: var(--text-secondary);
+  min-height: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+
+.collection-sort-toggle:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+.collection-sort-toggle.active {
+  color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
+  border-color: color-mix(in srgb, var(--accent-color) 38%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 74%, transparent);
+}
+
+.collection-sort-toggle.placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .collection-tag-rail-meta {
   min-height: 17px;
   display: flex;
@@ -329,6 +371,27 @@
   gap: 10px;
   padding-right: 2px;
   align-content: start;
+}
+
+.collection-grid-item {
+  min-width: 0;
+}
+
+.collection-grid.masonry-mode {
+  display: block;
+  columns: 4 226px;
+  column-gap: 10px;
+  align-content: initial;
+}
+
+.collection-grid.masonry-mode .collection-grid-item {
+  break-inside: avoid;
+  margin-bottom: 10px;
+}
+
+.collection-grid.masonry-mode .collection-load-more-hint {
+  display: block;
+  padding-top: 2px;
 }
 
 .collection-card {
@@ -746,6 +809,44 @@
   padding: 6px 0 2px;
 }
 
+.collection-entry-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-elevated) 88%, var(--surface-muted) 12%);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1;
+  padding: 8px 12px;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--shadow-md) 52%, transparent);
+  pointer-events: none;
+  z-index: 80;
+  animation: collection-entry-toast-fade 1.3s var(--ease-standard) forwards;
+}
+
+@keyframes collection-entry-toast-fade {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  84% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px);
+  }
+}
+
 .collection-grid.list-mode {
   grid-template-columns: 1fr;
   gap: 8px;
@@ -836,6 +937,11 @@
     gap: 6px;
   }
 
+  .collection-toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .collection-tag-rail-meta {
     flex-wrap: wrap;
     row-gap: 4px;
@@ -856,6 +962,20 @@
   .collection-view-toggle button {
     width: 26px;
     height: 24px;
+  }
+
+  .collection-sort-toggle {
+    min-height: 28px;
+    padding: 0 9px;
+  }
+
+  .collection-grid.masonry-mode {
+    columns: 2 210px;
+    column-gap: 8px;
+  }
+
+  .collection-grid.masonry-mode .collection-grid-item {
+    margin-bottom: 8px;
   }
 
   .collection-card.list-mode .collection-card-image {
@@ -920,6 +1040,13 @@
     border-radius: 6px;
   }
 
+  .collection-sort-toggle {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
   .collection-tag-editor {
     width: 100%;
     min-width: 0;
@@ -933,6 +1060,20 @@
   .collection-view-toggle {
     margin-left: auto;
     align-self: auto;
+  }
+
+  .collection-toolbar-actions {
+    width: auto;
+    margin-left: auto;
+  }
+
+  .collection-sort-toggle span {
+    display: none;
+  }
+
+  .collection-grid.masonry-mode {
+    columns: 1 180px;
+    column-gap: 8px;
   }
 
   .collection-card {

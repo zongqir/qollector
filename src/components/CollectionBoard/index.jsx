@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowUpDown,
   Check,
   FileText,
   Folder,
@@ -63,6 +64,8 @@ const COLLECTION_VIEW_MODE_KEY = 'qollect-collection-view-mode-v1';
 const COLLECTION_VIEW_MODE_CARDS = 'cards';
 const COLLECTION_VIEW_MODE_LIST = 'list';
 const COLLECTION_QUERY_PAGE_SIZE = 200;
+const COLLECTION_SORT_LONG_PRESS_MS = 190;
+const COLLECTION_SORT_LONG_PRESS_MOVE_PX = 10;
 const tokenizeSearchQuery = (query) => String(query || '').toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
 
 // Keep same file visual language as Workbench to reduce cognitive switching cost.
@@ -102,7 +105,7 @@ const readCollectionViewMode = () => {
   return COLLECTION_VIEW_MODE_CARDS;
 };
 
-function SortableCollectionItem({ id, disabled, children }) {
+function SortableCollectionItem({ id, disabled, className, children }) {
   const {
     attributes,
     listeners,
@@ -125,10 +128,14 @@ function SortableCollectionItem({ id, disabled, children }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...sortableAttributes} {...listeners}>
+    <div ref={setNodeRef} className={className} style={style} {...sortableAttributes} {...listeners}>
       {children}
     </div>
   );
+}
+
+function StaticCollectionItem({ className, children }) {
+  return <div className={className}>{children}</div>;
 }
 
 function CollectionBoard({
@@ -158,13 +165,25 @@ function CollectionBoard({
   const [tagEditorFeedback, setTagEditorFeedback] = useState('');
   const [openColorPickerItemId, setOpenColorPickerItemId] = useState(null);
   const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
+  const [collectionSortMode, setCollectionSortMode] = useState(false);
   const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
   const [backendItems, setBackendItems] = useState([]);
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const [showSortEntryToast, setShowSortEntryToast] = useState(false);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const colorPickerRef = useRef(null);
+  const collectionGridRef = useRef(null);
+  const collectionCardRefsRef = useRef(new Map());
+  const collectionSortAnchorRef = useRef(null);
+  const collectionSortLongPressTimerRef = useRef(null);
+  const collectionSortEntryToastTimerRef = useRef(null);
+  const collectionSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
+  const suppressNextCardClickRef = useRef(false);
   const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_LIST : collectionViewMode;
+  const isCollectionSortMode = !isMiniMode && collectionSortMode;
+  const shouldUseDndLayout = !isMiniMode && isCollectionSortMode;
+  const useCollectionMasonryLayout = !isCollectionSortMode && effectiveCollectionViewMode === COLLECTION_VIEW_MODE_CARDS;
   const effectiveSelectedCollectionTags = useMemo(
     () => (isMiniMode ? [] : selectedCollectionTags),
     [isMiniMode, selectedCollectionTags],
@@ -389,6 +408,15 @@ function CollectionBoard({
     || Boolean(showPinnedOnly)
     || Boolean(selectedDateRange);
 
+  const setCollectionCardRef = useCallback((id, node) => {
+    if (!id) return;
+    if (node) {
+      collectionCardRefsRef.current.set(id, node);
+      return;
+    }
+    collectionCardRefsRef.current.delete(id);
+  }, []);
+
   const toggleRailTag = useCallback((tag) => {
     const normalized = normalizeTag(tag);
     if (!normalized) return;
@@ -409,7 +437,7 @@ function CollectionBoard({
     setBackendLimit(current => current + COLLECTION_QUERY_PAGE_SIZE);
   }, [canLoadMore]);
 
-  const collectionDragEnabled = collectionItems.length > 1;
+  const collectionDragEnabled = collectionItems.length > 1 && shouldUseDndLayout;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -570,6 +598,230 @@ function CollectionBoard({
     setCollectionHintsDismissed(true);
   }, []);
 
+  const clearCollectionSortLongPressTimer = useCallback(() => {
+    if (collectionSortLongPressTimerRef.current) {
+      clearTimeout(collectionSortLongPressTimerRef.current);
+      collectionSortLongPressTimerRef.current = null;
+    }
+  }, []);
+
+  const showCollectionSortEntryToast = useCallback(() => {
+    setShowSortEntryToast(true);
+    if (collectionSortEntryToastTimerRef.current) {
+      clearTimeout(collectionSortEntryToastTimerRef.current);
+    }
+    collectionSortEntryToastTimerRef.current = setTimeout(() => {
+      setShowSortEntryToast(false);
+      collectionSortEntryToastTimerRef.current = null;
+    }, 1300);
+  }, []);
+
+  const handleCollectionCardPointerUp = useCallback(() => {
+    clearCollectionSortLongPressTimer();
+    collectionSortLongPressPointerRef.current.pointerId = null;
+  }, [clearCollectionSortLongPressTimer]);
+
+  const handleCollectionCardPointerMove = useCallback((event) => {
+    if (!collectionSortLongPressTimerRef.current) return;
+    const state = collectionSortLongPressPointerRef.current;
+    if (state.pointerId != null && event.pointerId !== state.pointerId) return;
+    const dx = Math.abs((event.clientX || 0) - state.x);
+    const dy = Math.abs((event.clientY || 0) - state.y);
+    if (dx > COLLECTION_SORT_LONG_PRESS_MOVE_PX || dy > COLLECTION_SORT_LONG_PRESS_MOVE_PX) {
+      clearCollectionSortLongPressTimer();
+    }
+  }, [clearCollectionSortLongPressTimer]);
+
+  const handleCollectionCardPointerDown = useCallback((item, event) => {
+    if (!item?.id) return;
+    if (isMiniMode || isCollectionSortMode || effectiveCollectionViewMode !== COLLECTION_VIEW_MODE_CARDS) return;
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
+      return;
+    }
+
+    clearCollectionSortLongPressTimer();
+    collectionSortLongPressPointerRef.current = {
+      pointerId: event.pointerId ?? null,
+      x: event.clientX || 0,
+      y: event.clientY || 0,
+    };
+    collectionSortLongPressTimerRef.current = setTimeout(() => {
+      collectionSortLongPressTimerRef.current = null;
+      suppressNextCardClickRef.current = true;
+      setActiveItemId(item.id);
+      setOpenColorPickerItemId(null);
+      const pointerState = collectionSortLongPressPointerRef.current;
+      const card = collectionCardRefsRef.current.get(item.id);
+      if (card) {
+        const rect = card.getBoundingClientRect();
+        collectionSortAnchorRef.current = {
+          itemId: item.id,
+          pointerClientX: pointerState.x,
+          pointerClientY: pointerState.y,
+          offsetX: pointerState.x - rect.left,
+          offsetY: pointerState.y - rect.top,
+        };
+      } else {
+        collectionSortAnchorRef.current = null;
+      }
+      setCollectionSortMode(true);
+      showCollectionSortEntryToast();
+    }, COLLECTION_SORT_LONG_PRESS_MS);
+  }, [
+    clearCollectionSortLongPressTimer,
+    effectiveCollectionViewMode,
+    isCollectionSortMode,
+    isMiniMode,
+    showCollectionSortEntryToast,
+  ]);
+
+  const handleFinishCollectionSortMode = useCallback(() => {
+    setCollectionSortMode(false);
+    setShowSortEntryToast(false);
+    clearCollectionSortLongPressTimer();
+    collectionSortLongPressPointerRef.current.pointerId = null;
+    collectionSortAnchorRef.current = null;
+  }, [clearCollectionSortLongPressTimer]);
+
+  const handleCollectionCardClick = useCallback((item, event) => {
+    if (suppressNextCardClickRef.current) {
+      suppressNextCardClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    setActiveItemId(item.id);
+    setOpenColorPickerItemId(null);
+    onOpenPreview?.(item);
+  }, [onOpenPreview]);
+
+  const handleCollectionCardContextMenu = useCallback((item, index, event) => {
+    clearCollectionSortLongPressTimer();
+    collectionSortLongPressPointerRef.current.pointerId = null;
+    setActiveItemId(item.id);
+    onOpenContextMenu?.(item, index, event, 'collection');
+  }, [clearCollectionSortLongPressTimer, onOpenContextMenu]);
+
+  const handleCollectionCardKeyDown = useCallback((item, index, event) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setActiveItemId(item.id);
+      onOpenPreview?.(item);
+      return;
+    }
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      event.preventDefault();
+      handleOpenContextMenuFromKeyboard(item, index, event);
+    }
+  }, [handleOpenContextMenuFromKeyboard, onOpenPreview]);
+
+  useEffect(() => (
+    () => {
+      clearCollectionSortLongPressTimer();
+    }
+  ), [clearCollectionSortLongPressTimer]);
+
+  useEffect(() => (
+    () => {
+      if (collectionSortEntryToastTimerRef.current) {
+        clearTimeout(collectionSortEntryToastTimerRef.current);
+        collectionSortEntryToastTimerRef.current = null;
+      }
+    }
+  ), []);
+
+  const handleCollectionCardPointerDownCapture = useCallback((event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
+      event.stopPropagation();
+    }
+  }, []);
+
+  const handleCollectionCardPointerHandlers = useMemo(() => ({
+    onPointerDown: (event, item) => handleCollectionCardPointerDown(item, event),
+    onPointerMove: handleCollectionCardPointerMove,
+    onPointerUp: handleCollectionCardPointerUp,
+    onPointerCancel: handleCollectionCardPointerUp,
+    onPointerLeave: handleCollectionCardPointerUp,
+  }), [handleCollectionCardPointerDown, handleCollectionCardPointerMove, handleCollectionCardPointerUp]);
+
+  const handleCollectionCardCommonEvents = useMemo(() => ({
+    onContextMenu: (item, index, event) => handleCollectionCardContextMenu(item, index, event),
+    onKeyDown: (item, index, event) => handleCollectionCardKeyDown(item, index, event),
+  }), [handleCollectionCardContextMenu, handleCollectionCardKeyDown]);
+
+  const handleCollectionCardClickEvent = useCallback((item, event) => {
+    handleCollectionCardClick(item, event);
+  }, [handleCollectionCardClick]);
+
+  const getCardPointerProps = useCallback((item) => ({
+    onPointerDown: (event) => handleCollectionCardPointerHandlers.onPointerDown(event, item),
+    onPointerMove: handleCollectionCardPointerHandlers.onPointerMove,
+    onPointerUp: handleCollectionCardPointerHandlers.onPointerUp,
+    onPointerCancel: handleCollectionCardPointerHandlers.onPointerCancel,
+    onPointerLeave: handleCollectionCardPointerHandlers.onPointerLeave,
+  }), [handleCollectionCardPointerHandlers]);
+
+  const getCardCommonProps = useCallback((item, index) => ({
+    onClick: (event) => handleCollectionCardClickEvent(item, event),
+    onContextMenu: (event) => handleCollectionCardCommonEvents.onContextMenu(item, index, event),
+    onKeyDown: (event) => handleCollectionCardCommonEvents.onKeyDown(item, index, event),
+    onPointerDownCapture: handleCollectionCardPointerDownCapture,
+    ...getCardPointerProps(item),
+  }), [
+    getCardPointerProps,
+    handleCollectionCardClickEvent,
+    handleCollectionCardCommonEvents,
+    handleCollectionCardPointerDownCapture,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!isCollectionSortMode) return;
+    const anchor = collectionSortAnchorRef.current;
+    if (!anchor) return;
+
+    let raf1 = 0;
+    let raf2 = 0;
+    const applyAnchorCompensation = () => {
+      const grid = collectionGridRef.current;
+      const card = collectionCardRefsRef.current.get(anchor.itemId);
+      if (!grid || !card) {
+        collectionSortAnchorRef.current = null;
+        return;
+      }
+
+      const cardRect = card.getBoundingClientRect();
+      const currentPointerX = cardRect.left + anchor.offsetX;
+      const currentPointerY = cardRect.top + anchor.offsetY;
+      const deltaX = currentPointerX - anchor.pointerClientX;
+      const deltaY = currentPointerY - anchor.pointerClientY;
+
+      if (Math.abs(deltaY) > 0.5) {
+        grid.scrollTop += deltaY;
+      }
+      if (Math.abs(deltaX) > 0.5 && grid.scrollWidth > grid.clientWidth + 1) {
+        grid.scrollLeft += deltaX;
+      }
+    };
+
+    raf1 = requestAnimationFrame(() => {
+      applyAnchorCompensation();
+      raf2 = requestAnimationFrame(() => {
+        applyAnchorCompensation();
+        collectionSortAnchorRef.current = null;
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [isCollectionSortMode]);
+
   const renderCardBody = useCallback((item) => {
     if (item.type_ === 'image' && item.image_paths) {
       return (
@@ -647,8 +899,8 @@ function CollectionBoard({
     <section className={`collection-board ${isMiniMode ? 'mini-list-only' : ''}`.trim()} onClick={(event) => event.stopPropagation()}>
       {!isMiniMode && (
         <div className="collection-tag-rail-wrap">
-        <div className="collection-toolbar-row">
-          <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
+          <div className="collection-toolbar-row">
+            <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
             <div className="collection-tag-search" onClick={(event) => event.stopPropagation()}>
               <Search size={12} />
               <input
@@ -729,30 +981,44 @@ function CollectionBoard({
                 </button>
               </div>
             )}
+            </div>
+            <div className="collection-toolbar-actions">
+              <div className="collection-view-toggle" role="group" aria-label={t('collection.viewToggle')}>
+                <button
+                  type="button"
+                  className={collectionViewMode === COLLECTION_VIEW_MODE_CARDS ? 'active' : ''}
+                  onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_CARDS)}
+                  title={t('collection.viewCards')}
+                  aria-label={t('collection.viewCards')}
+                  aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_CARDS}
+                >
+                  <LayoutGrid size={13} />
+                </button>
+                <button
+                  type="button"
+                  className={collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'active' : ''}
+                  onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_LIST)}
+                  title={t('collection.viewList')}
+                  aria-label={t('collection.viewList')}
+                  aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_LIST}
+                >
+                  <List size={13} />
+                </button>
+              </div>
+              <button
+                type="button"
+                className={`collection-sort-toggle ${isCollectionSortMode ? 'active' : 'placeholder'}`}
+                onClick={isCollectionSortMode ? handleFinishCollectionSortMode : undefined}
+                title={isCollectionSortMode ? t('collection.finishSortMode') : ''}
+                aria-label={isCollectionSortMode ? t('collection.finishSortMode') : ''}
+                aria-pressed={isCollectionSortMode}
+                tabIndex={isCollectionSortMode ? 0 : -1}
+              >
+                <ArrowUpDown size={12} />
+                <span>{t('collection.finishSortMode')}</span>
+              </button>
+            </div>
           </div>
-          <div className="collection-view-toggle" role="group" aria-label={t('collection.viewToggle')}>
-            <button
-              type="button"
-              className={collectionViewMode === COLLECTION_VIEW_MODE_CARDS ? 'active' : ''}
-              onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_CARDS)}
-              title={t('collection.viewCards')}
-              aria-label={t('collection.viewCards')}
-              aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_CARDS}
-            >
-              <LayoutGrid size={13} />
-            </button>
-            <button
-              type="button"
-              className={collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'active' : ''}
-              onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_LIST)}
-              title={t('collection.viewList')}
-              aria-label={t('collection.viewList')}
-              aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_LIST}
-            >
-              <List size={13} />
-            </button>
-          </div>
-        </div>
         <div className="collection-tag-rail-meta">
           {!collectionHintsDismissed && (
             <span className="collection-meta-hint collection-filter-hint">
@@ -771,6 +1037,9 @@ function CollectionBoard({
           <span>{t('collection.countLabel', { count: collectionItems.length })}</span>
           {selectedCollectionTags.length > 0 && (
             <span>{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</span>
+          )}
+          {isCollectionSortMode && (
+            <span className="collection-meta-hint">{t('collection.sortModeHint')}</span>
           )}
           {activeItem && !collectionHintsDismissed && (
             <span className="collection-active-item">
@@ -815,7 +1084,7 @@ function CollectionBoard({
           {backendError && (
             <span className="collection-tag-feedback">{t('collection.queryFailed')}</span>
           )}
-        </div>
+          </div>
         </div>
       )}
 
@@ -835,16 +1104,154 @@ function CollectionBoard({
           <div className="collection-empty-hint">{t('collection.emptyHint')}</div>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleCollectionDragEnd}
+        <div
+          ref={collectionGridRef}
+          className={`collection-grid ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''} ${useCollectionMasonryLayout ? 'masonry-mode' : ''}`}
+          onScroll={handleCollectionGridScroll}
         >
-          <SortableContext items={collectionItems.map((item) => item.id)} strategy={rectSortingStrategy}>
-            <div
-              className={`collection-grid ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}`}
-              onScroll={handleCollectionGridScroll}
+          {shouldUseDndLayout ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleCollectionDragEnd}
             >
+              <SortableContext items={collectionItems.map((item) => item.id)} strategy={rectSortingStrategy}>
+                {collectionItems.map((item, index) => {
+                  const itemTags = getUserTags(item);
+                  const sourceApp = getSourceApp(item.metadata);
+                  const cardBackground = getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata));
+                  const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
+                  const showColorPicker = openColorPickerItemId === item.id;
+                  return (
+                    <SortableCollectionItem key={item.id} id={item.id} disabled={!collectionDragEnabled} className="collection-grid-item">
+                      <article
+                      ref={(node) => setCollectionCardRef(item.id, node)}
+                        className={`
+                        collection-card
+                        ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
+                        ${item.is_pinned ? 'pinned' : ''}
+                        ${activeItemId === item.id ? 'active' : ''}
+                        ${hasCustomCardBackground ? 'custom-bg' : ''}
+                      `.trim()}
+                      style={hasCustomCardBackground ? { '--collection-card-accent': cardBackground.accent } : undefined}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={t('collection.activeCardHint')}
+                      aria-pressed={activeItemId === item.id}
+                      {...getCardCommonProps(item, index)}
+                    >
+                      <div className="collection-card-head">
+                        <div className="collection-card-meta">
+                          <span className="collection-card-time">
+                            {formatHistoryCardTime(item.updated_at, i18n.language, timeTick, t('item.justNow'))}
+                          </span>
+                          <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
+                        </div>
+                        <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
+                          <button
+                            type="button"
+                            className={item.is_pinned ? 'active pin' : 'pin'}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleTogglePin(item);
+                            }}
+                            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
+                            aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
+                          >
+                            <Inbox size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className={item.is_favorite ? 'active favorite' : 'favorite'}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleToggleFavorite(item);
+                            }}
+                            title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+                            aria-label={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+                          >
+                            <Star size={12} fill={item.is_favorite ? 'currentColor' : 'none'} />
+                          </button>
+                          <button
+                            type="button"
+                            className={hasCustomCardBackground ? 'active color' : 'color'}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              setOpenColorPickerItemId((current) => (
+                                current === item.id ? null : item.id
+                              ));
+                            }}
+                            title={t('item.cardBackground.button')}
+                            aria-label={t('item.cardBackground.button')}
+                          >
+                            <Palette size={12} />
+                          </button>
+                          {showColorPicker && (
+                            <div
+                              className="compact-card-color-picker"
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                              }}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {CARD_BACKGROUND_PRESETS.map((preset) => {
+                                const isActive = preset.id === cardBackground.id;
+                                const isDefault = preset.id === CARD_BACKGROUND_DEFAULT_ID;
+                                return (
+                                  <button
+                                    key={preset.id}
+                                    type="button"
+                                    className={`compact-card-color-dot ${isActive ? 'active' : ''} ${isDefault ? 'default' : ''}`}
+                                    style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
+                                    title={t(preset.labelKey)}
+                                    aria-label={t(preset.labelKey)}
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      handleBackgroundSelect(item, preset.id);
+                                    }}
+                                  >
+                                    {isDefault && <span className="compact-card-color-dot-reset"></span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="collection-card-body">
+                        {renderCardBody(item)}
+                      </div>
+                      {!isMiniMode && itemTags.length > 0 && (
+                        <div className="collection-card-tags">
+                          {itemTags.slice(0, 6).map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              className={`collection-card-tag ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleRailTag(tag);
+                              }}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                          {itemTags.length > 6 && (
+                            <span className="collection-card-tag more">+{itemTags.length - 6}</span>
+                          )}
+                        </div>
+                      )}
+                      </article>
+                    </SortableCollectionItem>
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <>
               {collectionItems.map((item, index) => {
                 const itemTags = getUserTags(item);
                 const sourceApp = getSourceApp(item.metadata);
@@ -852,8 +1259,9 @@ function CollectionBoard({
                 const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
                 const showColorPicker = openColorPickerItemId === item.id;
                 return (
-                  <SortableCollectionItem key={item.id} id={item.id} disabled={!collectionDragEnabled}>
+                  <StaticCollectionItem key={item.id} className="collection-grid-item">
                     <article
+                      ref={(node) => setCollectionCardRef(item.id, node)}
                       className={`
                         collection-card
                         ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
@@ -866,28 +1274,7 @@ function CollectionBoard({
                       tabIndex={0}
                       aria-label={t('collection.activeCardHint')}
                       aria-pressed={activeItemId === item.id}
-                      onClick={() => {
-                        setActiveItemId(item.id);
-                        setOpenColorPickerItemId(null);
-                        onOpenPreview?.(item);
-                      }}
-                      onContextMenu={(event) => {
-                        setActiveItemId(item.id);
-                        onOpenContextMenu?.(item, index, event, 'collection');
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.target !== event.currentTarget) return;
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          setActiveItemId(item.id);
-                          onOpenPreview?.(item);
-                          return;
-                        }
-                        if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
-                          event.preventDefault();
-                          handleOpenContextMenuFromKeyboard(item, index, event);
-                        }
-                      }}
+                      {...getCardCommonProps(item, index)}
                     >
                       <div className="collection-card-head">
                         <div className="collection-card-meta">
@@ -994,15 +1381,20 @@ function CollectionBoard({
                         </div>
                       )}
                     </article>
-                  </SortableCollectionItem>
+                  </StaticCollectionItem>
                 );
               })}
-              {backendLoading && (
-                <div className="collection-load-more-hint">{t('collection.loadingMore')}</div>
-              )}
-            </div>
-          </SortableContext>
-        </DndContext>
+            </>
+          )}
+          {backendLoading && (
+            <div className="collection-load-more-hint">{t('collection.loadingMore')}</div>
+          )}
+        </div>
+      )}
+      {showSortEntryToast && (
+        <div className="collection-entry-toast" role="status" aria-live="polite">
+          {t('collection.releaseThenDragHint')}
+        </div>
       )}
     </section>
   );
