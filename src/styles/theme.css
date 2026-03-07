@@ -185,9 +185,11 @@
   --motion-slow: 280ms;
   --motion-flash: 500ms;
   --motion-toast: 1000ms;
+  --motion-entry-toast: 1300ms;
   --motion-spin: 800ms;
   --motion-sparkle: 1500ms;
   --motion-pulse: 2100ms;
+  --motion-anchor-pulse: 1200ms;
   --motion-reduced: 1ms;
   --motion-widget-expand: 400ms;
   --motion-widget-swallow: 320ms;

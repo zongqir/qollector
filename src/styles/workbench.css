@@ -432,7 +432,7 @@
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--accent-color) 26%, transparent),
     0 10px 22px color-mix(in srgb, var(--accent-color) 18%, transparent);
-  animation: workbench-sort-anchor-pulse 1.2s var(--ease-standard) infinite;
+  animation: workbench-sort-anchor-pulse var(--motion-anchor-pulse) var(--ease-standard) infinite;
 }
 
 .workbench-card.sort-anchor::before {
@@ -1064,7 +1064,7 @@
   box-shadow: 0 8px 22px color-mix(in srgb, var(--shadow-md) 52%, transparent);
   pointer-events: none;
   z-index: 80;
-  animation: workbench-entry-toast-fade 1.3s var(--ease-standard) forwards;
+  animation: workbench-entry-toast-fade var(--motion-entry-toast) var(--ease-standard) forwards;
 }
 
 @keyframes workbench-entry-toast-fade {

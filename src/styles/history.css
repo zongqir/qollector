@@ -1795,7 +1795,7 @@
 }
 
 .compact-card-file-icon.file-icon-folder {
-  color: #d7a22b;
+  color: var(--state-warning-fg-strong);
 }
 
 .compact-card-file-name {
