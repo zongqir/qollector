@@ -22,6 +22,8 @@ const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const MAX_AI_FILENAME_STEM_CHARS: usize = 64;
+const LOCAL_CODE_DETECT_MIN_CHARS: usize = 12;
+const LOCAL_CODE_DETECT_MAX_CHARS: usize = 20_000;
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
@@ -174,7 +176,7 @@ impl ClipboardManager {
         // Extract source_app early, before metadata is moved into item constructors
         let source_app = metadata.source_app.clone();
 
-        let item = match &content {
+        let mut item = match &content {
             ClipboardContent::Text { plain: text, .. } => {
                 // Handle whitespace-only text carefully.
                 if text.trim().is_empty() {
@@ -312,6 +314,8 @@ impl ClipboardManager {
                 }
             }
         };
+
+        Self::populate_local_code_language(&mut item);
 
         let content_hash = item.content_hash.clone();
         let mut item_id = item.id.clone();
@@ -582,7 +586,9 @@ impl ClipboardManager {
                                     all_tags.extend(ai_tags);
 
                                     item.tags = Some(serde_json::to_string(&all_tags).unwrap());
-                                    item.code_language = code_language.clone();
+                                    if let Some(ai_language) = code_language.clone() {
+                                        item.code_language = Some(ai_language);
+                                    }
                                     if let Some(ai_title) = title.as_deref() {
                                         if let Some(next_metadata) = Self::merge_ai_naming_metadata(
                                             item.metadata.as_deref(),
@@ -1220,10 +1226,12 @@ impl ClipboardManager {
     }
 
     pub async fn insert_item(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
+        let mut prepared_item = item.clone();
+        Self::populate_local_code_language(&mut prepared_item);
         let repo = self.repository.lock().await;
-        repo.insert(item).await?;
+        repo.insert(&prepared_item).await?;
         drop(repo);
-        self.schedule_link_preview_enrichment(item);
+        self.schedule_link_preview_enrichment(&prepared_item);
         Ok(())
     }
 
@@ -1233,17 +1241,19 @@ impl ClipboardManager {
         &self,
         item: &ClipboardItem,
     ) -> Result<String, sqlx::Error> {
+        let mut prepared_item = item.clone();
+        Self::populate_local_code_language(&mut prepared_item);
         let repo = self.repository.lock().await;
 
-        if let Some(existing) = repo.find_by_hash(&item.content_hash).await? {
+        if let Some(existing) = repo.find_by_hash(&prepared_item.content_hash).await? {
             let _ = repo.touch(&existing.id).await;
             return Ok(existing.id);
         }
 
-        repo.insert(item).await?;
+        repo.insert(&prepared_item).await?;
         drop(repo);
-        self.schedule_link_preview_enrichment(item);
-        Ok(item.id.clone())
+        self.schedule_link_preview_enrichment(&prepared_item);
+        Ok(prepared_item.id.clone())
     }
 
     pub async fn get_sync_latest_slot(&self) -> Result<Option<SyncLatestSlot>, sqlx::Error> {
@@ -1561,6 +1571,7 @@ impl ClipboardManager {
 
         let mut item = ClipboardItem::new_text(content.to_string(), metadata);
         item.content_hash = hash;
+        Self::populate_local_code_language(&mut item);
 
         if let Some(note) = notes {
             item.user_note = Some(note.to_string());
@@ -1663,13 +1674,160 @@ impl ClipboardManager {
         &self,
         item: &ClipboardItem,
     ) -> Result<bool, sqlx::Error> {
+        let mut prepared_item = item.clone();
+        Self::populate_local_code_language(&mut prepared_item);
         let repo = self.repository.lock().await;
-        let existing = repo.find_by_hash(&item.content_hash).await?;
+        let existing = repo.find_by_hash(&prepared_item.content_hash).await?;
         if existing.is_some() {
             return Ok(false);
         }
-        repo.insert(item).await?;
+        repo.insert(&prepared_item).await?;
         Ok(true)
+    }
+
+    fn populate_local_code_language(item: &mut ClipboardItem) {
+        if item.type_ != "text" || item.code_language.is_some() {
+            return;
+        }
+        let Some(content) = item.content.as_deref() else {
+            return;
+        };
+        item.code_language = Self::detect_local_code_language(content);
+    }
+
+    fn detect_local_code_language(content: &str) -> Option<String> {
+        let trimmed = content.trim();
+        if trimmed.len() < LOCAL_CODE_DETECT_MIN_CHARS || trimmed.len() > LOCAL_CODE_DETECT_MAX_CHARS
+        {
+            return None;
+        }
+
+        let ascii_bytes = trimmed.as_bytes().iter().filter(|b| b.is_ascii()).count();
+        if ascii_bytes == 0 {
+            return None;
+        }
+        let non_ascii_ratio = 1.0f32 - (ascii_bytes as f32 / trimmed.len() as f32);
+        if non_ascii_ratio > 0.35 {
+            return None;
+        }
+
+        if !Self::looks_like_code_fast(trimmed) {
+            return None;
+        }
+
+        let lower = trimmed.to_ascii_lowercase();
+        let upper = trimmed.to_ascii_uppercase();
+
+        if (trimmed.starts_with('{') || trimmed.starts_with('['))
+            && serde_json::from_str::<serde_json::Value>(trimmed).is_ok()
+        {
+            return Some("json".to_string());
+        }
+
+        if (upper.contains("SELECT ") && upper.contains(" FROM "))
+            || upper.contains("INSERT INTO ")
+            || upper.contains("UPDATE ")
+            || upper.contains("DELETE FROM ")
+            || upper.contains("CREATE TABLE ")
+            || upper.contains("ALTER TABLE ")
+        {
+            return Some("sql".to_string());
+        }
+
+        if lower.contains("#!/bin/bash")
+            || lower.contains("#!/usr/bin/env bash")
+            || (lower.contains("echo ") && (lower.contains("$(") || lower.contains("fi\n")))
+        {
+            return Some("bash".to_string());
+        }
+
+        if lower.contains("<?xml")
+            || lower.contains("<!doctype html")
+            || lower.contains("<html")
+            || (lower.contains("</") && lower.contains('>') && lower.contains('<'))
+        {
+            return Some("html".to_string());
+        }
+
+        if lower.contains("fn ")
+            && (lower.contains("let ")
+                || lower.contains("impl ")
+                || lower.contains("pub ")
+                || lower.contains("::"))
+        {
+            return Some("rust".to_string());
+        }
+
+        if lower.contains("package main") && lower.contains("func ") {
+            return Some("go".to_string());
+        }
+
+        if lower.contains("def ")
+            || (lower.contains("import ") && lower.contains(":\n") && lower.contains("\n    "))
+        {
+            return Some("python".to_string());
+        }
+
+        if lower.contains("interface ")
+            || lower.contains("type ")
+            || lower.contains(": string")
+            || lower.contains(": number")
+            || lower.contains(": boolean")
+        {
+            return Some("typescript".to_string());
+        }
+
+        if lower.contains("#include") || lower.contains("std::") || lower.contains("cout <<") {
+            return Some("cpp".to_string());
+        }
+
+        if lower.contains("public class ")
+            || lower.contains("private static ")
+            || lower.contains("system.out.println(")
+        {
+            return Some("java".to_string());
+        }
+
+        if lower.contains("function ")
+            || lower.contains("=>")
+            || ((lower.contains("const ") || lower.contains("let ") || lower.contains("var "))
+                && (lower.contains('=') || lower.contains(';')))
+        {
+            return Some("javascript".to_string());
+        }
+
+        None
+    }
+
+    fn looks_like_code_fast(text: &str) -> bool {
+        const CODE_KEYWORDS: [&str; 20] = [
+            "=>",
+            "->",
+            "::",
+            "//",
+            "/*",
+            "*/",
+            "#include",
+            "import ",
+            "from ",
+            "def ",
+            "fn ",
+            "func ",
+            "class ",
+            "const ",
+            "let ",
+            "var ",
+            "return ",
+            "select ",
+            "create ",
+            "alter ",
+        ];
+        if text.chars().any(|c| "{};=<>()[ ]".contains(c) && c != ' ') {
+            return true;
+        }
+
+        let lower = text.to_ascii_lowercase();
+        CODE_KEYWORDS.iter().any(|keyword| lower.contains(keyword))
     }
 
     /// Resolve image storage paths.

@@ -10,6 +10,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
+import { prewarmCodeLanguageDetection } from './services/codeDetectionService';
 import {
   QUICK_INPUT_WINDOW_LABEL,
   openQuickInputWindow,
@@ -285,6 +286,16 @@ function App() {
 
     console.log('[Perf:App] Calling loadItems() at', performance.now().toFixed(1), 'ms');
     loadItems();
+    let prewarmTimer = null;
+    let idleHandle = null;
+    const warmup = () => {
+      prewarmCodeLanguageDetection();
+    };
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      idleHandle = window.requestIdleCallback(warmup, { timeout: 1200 });
+    } else {
+      prewarmTimer = window.setTimeout(warmup, 250);
+    }
 
     console.log('[Perf:App] Calling loadConfigs() at', performance.now().toFixed(1), 'ms');
     loadConfigs({ applyStartupView: true });
@@ -309,6 +320,10 @@ function App() {
     }
 
     return () => {
+      if (idleHandle != null && typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleHandle);
+      }
+      if (prewarmTimer != null) clearTimeout(prewarmTimer);
       if (tourTimer) clearTimeout(tourTimer);
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
