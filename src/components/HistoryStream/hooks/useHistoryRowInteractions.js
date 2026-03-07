@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { resolveFilenameStemForItem } from '../../../utils/filenameNaming';
+import { PREVIEW_CLICK_DELAY_MS, openItemPreview } from '../../../utils/previewInteractionPolicy';
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -132,13 +133,9 @@ export default function useHistoryRowInteractions({
     }
 
     clickTimerRef.current = setTimeout(() => {
-      if (panelMode === 'preview' && previewItemId === item.id) {
-        switchToWorkbench();
-      } else {
-        setPanelMode('preview', item);
-      }
+      openItemPreview(setPanelMode, item);
       clickTimerRef.current = null;
-    }, 250);
+    }, PREVIEW_CLICK_DELAY_MS);
   }, [
     filteredItems,
     selectionAnchorIndexRef,
@@ -155,7 +152,6 @@ export default function useHistoryRowInteractions({
     clearExpandedPreview,
     setExpandedPreviewItemId,
     setPanelMode,
-    switchToWorkbench,
   ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {

@@ -58,6 +58,12 @@ import {
   getCardBackgroundPreset,
   withCardBackgroundInMetadata,
 } from '../../utils/cardBackgrounds';
+import {
+  PREVIEW_CLICK_DELAY_MS,
+  SORT_MODE_LONG_PRESS_MOVE_PX,
+  SORT_MODE_LONG_PRESS_MS,
+  shouldIgnoreLongPressTarget,
+} from '../../utils/previewInteractionPolicy';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -66,9 +72,6 @@ const COLLECTION_VIEW_MODE_KEY = 'qollect-collection-view-mode-v1';
 const COLLECTION_VIEW_MODE_CARDS = 'cards';
 const COLLECTION_VIEW_MODE_LIST = 'list';
 const COLLECTION_QUERY_PAGE_SIZE = 200;
-const COLLECTION_SORT_LONG_PRESS_MS = 190;
-const COLLECTION_SORT_LONG_PRESS_MOVE_PX = 10;
-const COLLECTION_SINGLE_CLICK_DELAY_MS = 240;
 const COLLECTION_SEARCH_DEBOUNCE_MS = 260;
 const OPEN_ENDED_DATE_MAX_TS = 253402300799;
 
@@ -738,7 +741,7 @@ function CollectionBoard({
     if (state.pointerId != null && event.pointerId !== state.pointerId) return;
     const dx = Math.abs((event.clientX || 0) - state.x);
     const dy = Math.abs((event.clientY || 0) - state.y);
-    if (dx > COLLECTION_SORT_LONG_PRESS_MOVE_PX || dy > COLLECTION_SORT_LONG_PRESS_MOVE_PX) {
+    if (dx > SORT_MODE_LONG_PRESS_MOVE_PX || dy > SORT_MODE_LONG_PRESS_MOVE_PX) {
       clearCollectionSortLongPressTimer();
     }
   }, [clearCollectionSortLongPressTimer]);
@@ -747,8 +750,7 @@ function CollectionBoard({
     if (!item?.id) return;
     if (isMiniMode || isCollectionSortMode) return;
     if (event.button !== 0) return;
-    const target = event.target;
-    if (target instanceof Element && target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
+    if (shouldIgnoreLongPressTarget(event.target)) {
       return;
     }
 
@@ -783,7 +785,7 @@ function CollectionBoard({
       setCollectionSortAnchorItemId(item.id);
       setCollectionSortMode(true);
       showCollectionSortEntryToast();
-    }, COLLECTION_SORT_LONG_PRESS_MS);
+    }, SORT_MODE_LONG_PRESS_MS);
   }, [
     clearCollectionSortLongPressTimer,
     isCollectionSortMode,
@@ -813,7 +815,7 @@ function CollectionBoard({
     collectionCardClickTimerRef.current = setTimeout(() => {
       collectionCardClickTimerRef.current = null;
       onOpenPreview?.(item);
-    }, COLLECTION_SINGLE_CLICK_DELAY_MS);
+    }, PREVIEW_CLICK_DELAY_MS);
   }, [clearCollectionCardClickTimer, onOpenPreview]);
 
   const handleCollectionCardDoubleClick = useCallback((item, event) => {

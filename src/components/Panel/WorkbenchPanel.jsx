@@ -55,33 +55,18 @@ import {
   dateStringToEndTimestamp,
 } from '../../utils/dateHelpers';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
+import {
+  SORT_MODE_LONG_PRESS_MOVE_PX,
+  SORT_MODE_LONG_PRESS_MS,
+  shouldIgnoreLongPressTarget,
+  openItemPreview,
+} from '../../utils/previewInteractionPolicy';
+import {
+  buildSearchRequest,
+  SEARCH_REQUEST_TRIGGER_MODE,
+} from '../../utils/searchRequestBuilder';
 
-const WORKBENCH_SORT_LONG_PRESS_MS = 190;
-const WORKBENCH_SORT_LONG_PRESS_MOVE_PX = 10;
 const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
-const WORKBENCH_TYPE_KEYS = ['text', 'image', 'file', 'link', 'code'];
-const OPEN_ENDED_DATE_MAX_TS = 253402300799;
-
-const normalizeText = (value) => (typeof value === 'string' ? value : '');
-
-const resolveTypeKeyFromDisplay = (displayText, t) => {
-  const normalized = normalizeText(displayText).trim().toLowerCase();
-  if (!normalized) return null;
-
-  for (const key of WORKBENCH_TYPE_KEYS) {
-    const candidates = [
-      key,
-      t(`tag.types.${key}`, { defaultValue: key }),
-      t(`search.typeFilter.${key}`, { defaultValue: key }),
-    ]
-      .map(value => normalizeText(value).trim().toLowerCase())
-      .filter(Boolean);
-    if (candidates.includes(normalized)) {
-      return key;
-    }
-  }
-  return null;
-};
 
 function WorkbenchPanel() {
   const { t, i18n } = useTranslation();
@@ -227,77 +212,16 @@ function WorkbenchPanel() {
   const allPinnedItems = useMemo(() => pinnedBaseItems, [pinnedBaseItems]);
 
   const workbenchBackendFilterRequest = useMemo(() => {
-    const query = workbenchDebouncedSearchQuery.trim();
-    const selectedTagFilters = new Set();
-    const selectedSourceFilters = new Set();
-    const selectedTypeTagFilters = new Set();
-
-    selectedTags.forEach((tag) => {
-      const parsedTag = parseSystemTag(tag, {
-        sourcePrefix: t('tag.source'),
-        typePrefix: t('tag.type'),
-      });
-
-      if (parsedTag.kind === 'source') {
-        const sourceName = normalizeText(parsedTag.displayText).trim();
-        if (sourceName) selectedSourceFilters.add(sourceName);
-        return;
-      }
-
-      if (parsedTag.kind === 'type') {
-        const matchedTypeKey = resolveTypeKeyFromDisplay(parsedTag.displayText, t);
-        if (matchedTypeKey) {
-          selectedTypeTagFilters.add(matchedTypeKey);
-          return;
-        }
-      }
-
-      const normalizedTag = normalizeText(tag).trim();
-      if (normalizedTag) selectedTagFilters.add(normalizedTag);
+    return buildSearchRequest({
+      queryText: workbenchDebouncedSearchQuery,
+      selectedType,
+      selectedTags,
+      showFavoritesOnly,
+      selectedDateRange,
+      baseFilters: { is_pinned: true },
+      triggerMode: SEARCH_REQUEST_TRIGGER_MODE.ADDITIONAL_STRUCTURED_FILTER,
+      t,
     });
-
-    const filters = { is_pinned: true };
-    if (selectedType === 'code') {
-      filters.require_code_language = true;
-    } else if (selectedType !== 'all') {
-      filters.type_filter = selectedType;
-    }
-    if (showFavoritesOnly) {
-      filters.is_favorite = true;
-    }
-    if (selectedTagFilters.size > 0) {
-      filters.tag_filter = Array.from(selectedTagFilters);
-    }
-    if (selectedSourceFilters.size > 0) {
-      filters.source_filter = Array.from(selectedSourceFilters);
-    }
-    if (selectedTypeTagFilters.size > 0) {
-      filters.type_tag_filter = Array.from(selectedTypeTagFilters);
-    }
-
-    const rangeStart = Number(selectedDateRange?.start);
-    const rangeEnd = Number(selectedDateRange?.end);
-    const hasStart = Number.isFinite(rangeStart);
-    const hasEnd = Number.isFinite(rangeEnd);
-    if (hasStart || hasEnd) {
-      filters.date_range = {
-        start: hasStart ? rangeStart : 0,
-        end: hasEnd ? rangeEnd : OPEN_ENDED_DATE_MAX_TS,
-      };
-    }
-
-    const hasAdditionalFilters = query.length > 0
-      || selectedType !== 'all'
-      || showFavoritesOnly
-      || selectedTags.length > 0
-      || hasStart
-      || hasEnd;
-
-    return {
-      query,
-      filters,
-      shouldQueryBackend: hasAdditionalFilters,
-    };
   }, [
     workbenchDebouncedSearchQuery,
     selectedType,
@@ -819,7 +743,7 @@ function WorkbenchPanel() {
     if (state.pointerId != null && event.pointerId !== state.pointerId) return;
     const dx = Math.abs((event.clientX || 0) - state.x);
     const dy = Math.abs((event.clientY || 0) - state.y);
-    if (dx > WORKBENCH_SORT_LONG_PRESS_MOVE_PX || dy > WORKBENCH_SORT_LONG_PRESS_MOVE_PX) {
+    if (dx > SORT_MODE_LONG_PRESS_MOVE_PX || dy > SORT_MODE_LONG_PRESS_MOVE_PX) {
       clearWorkbenchSortLongPressTimer();
     }
   }, [clearWorkbenchSortLongPressTimer]);
@@ -828,8 +752,7 @@ function WorkbenchPanel() {
     if (!item?.id) return;
     if (isWorkbenchSortMode || selectedPinnedIds.length > 0) return;
     if (event.button !== 0) return;
-    const target = event.target;
-    if (target instanceof Element && target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
+    if (shouldIgnoreLongPressTarget(event.target)) {
       return;
     }
     clearWorkbenchSortLongPressTimer();
@@ -861,7 +784,7 @@ function WorkbenchPanel() {
       setWorkbenchSortAnchorItemId(item.id);
       setWorkbenchSortMode(true);
       showWorkbenchSortEntryToast();
-    }, WORKBENCH_SORT_LONG_PRESS_MS);
+    }, SORT_MODE_LONG_PRESS_MS);
   }, [
     clearWorkbenchSortLongPressTimer,
     isWorkbenchSortMode,
@@ -926,7 +849,7 @@ function WorkbenchPanel() {
       return;
     }
     selectionAnchorIndexRef.current = index;
-    setPanelMode('preview', item);
+    openItemPreview(setPanelMode, item);
   }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
 
   const handleCardDoubleClick = useCallback((item, event) => {

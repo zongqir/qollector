@@ -14,7 +14,7 @@ import useHistoryBatchActions from './hooks/useHistoryBatchActions';
 import useHistoryContextMenu from './hooks/useHistoryContextMenu';
 import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
-import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
+import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import {
@@ -22,6 +22,8 @@ import {
   readCollectionHintsDismissed,
   setCollectionHintsDismissed,
 } from '../../utils/collectionHints';
+import { openItemPreview } from '../../utils/previewInteractionPolicy';
+import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { getHistoryGroupCounts, getUserTags, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
@@ -52,27 +54,6 @@ const HISTORY_GROUP_ORDER = ['today', 'yesterday', 'last7', 'older'];
 
 const normalizeText = (value) => (typeof value === 'string' ? value : '');
 const tokenizeSearchQuery = (query) => normalizeText(query).toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
-const HISTORY_TYPE_KEYS = ['text', 'image', 'file', 'link', 'code'];
-const OPEN_ENDED_DATE_MAX_TS = 253402300799;
-
-const resolveTypeKeyFromDisplay = (displayText, t) => {
-  const normalized = normalizeText(displayText).trim().toLowerCase();
-  if (!normalized) return null;
-
-  for (const key of HISTORY_TYPE_KEYS) {
-    const candidates = [
-      key,
-      t(`tag.types.${key}`, { defaultValue: key }),
-      t(`search.typeFilter.${key}`, { defaultValue: key }),
-    ]
-      .map(value => normalizeText(value).trim().toLowerCase())
-      .filter(Boolean);
-    if (candidates.includes(normalized)) {
-      return key;
-    }
-  }
-  return null;
-};
 
 const findFirstMatch = (text, terms) => {
   const normalized = normalizeText(text);
@@ -418,77 +399,15 @@ function HistoryStream({ style }) {
   }, [selectedItemIds.length]);
 
   const backendSearchRequest = useMemo(() => {
-    const query = debouncedSearchQuery.trim();
-    const selectedTagFilters = new Set();
-    const selectedSourceFilters = new Set();
-    const selectedTypeTagFilters = new Set();
-
-    selectedTags.forEach((tag) => {
-      const parsedTag = parseSystemTag(tag, {
-        sourcePrefix: t('tag.source'),
-        typePrefix: t('tag.type'),
-      });
-
-      if (parsedTag.kind === 'source') {
-        const sourceName = normalizeText(parsedTag.displayText).trim();
-        if (sourceName) selectedSourceFilters.add(sourceName);
-        return;
-      }
-
-      if (parsedTag.kind === 'type') {
-        const matchedTypeKey = resolveTypeKeyFromDisplay(parsedTag.displayText, t);
-        if (matchedTypeKey) {
-          selectedTypeTagFilters.add(matchedTypeKey);
-          return;
-        }
-      }
-
-      const normalizedTag = normalizeText(tag).trim();
-      if (normalizedTag) selectedTagFilters.add(normalizedTag);
+    return buildSearchRequest({
+      queryText: debouncedSearchQuery,
+      selectedType,
+      selectedTags,
+      showFavoritesOnly,
+      showPinnedOnly,
+      selectedDateRange,
+      t,
     });
-
-    const filters = {};
-    if (selectedType === 'code') {
-      filters.require_code_language = true;
-    } else if (selectedType !== 'all') {
-      filters.type_filter = selectedType;
-    }
-    if (showFavoritesOnly) {
-      filters.is_favorite = true;
-    }
-    if (showPinnedOnly) {
-      filters.is_pinned = true;
-    }
-    if (selectedTagFilters.size > 0) {
-      filters.tag_filter = Array.from(selectedTagFilters);
-    }
-    if (selectedSourceFilters.size > 0) {
-      filters.source_filter = Array.from(selectedSourceFilters);
-    }
-    if (selectedTypeTagFilters.size > 0) {
-      filters.type_tag_filter = Array.from(selectedTypeTagFilters);
-    }
-
-    const rangeStart = Number(selectedDateRange?.start);
-    const rangeEnd = Number(selectedDateRange?.end);
-    const hasStart = Number.isFinite(rangeStart);
-    const hasEnd = Number.isFinite(rangeEnd);
-    if (hasStart || hasEnd) {
-      filters.date_range = {
-        start: hasStart ? rangeStart : 0,
-        end: hasEnd ? rangeEnd : OPEN_ENDED_DATE_MAX_TS,
-      };
-    }
-
-    const hasStructuredFilters = Object.keys(filters).length > 0;
-    const shouldQueryBackend = query.length > 0 || hasStructuredFilters;
-
-    return {
-      query,
-      filters: hasStructuredFilters ? filters : undefined,
-      hasStructuredFilters,
-      shouldQueryBackend,
-    };
   }, [
     debouncedSearchQuery,
     selectedType,
@@ -1553,7 +1472,7 @@ function HistoryStream({ style }) {
     if (!workbenchPanelEnabled) {
       setWorkbenchPanelEnabled(true);
     }
-    setPanelMode('preview', item);
+    openItemPreview(setPanelMode, item);
   }, [isMiniMode, setPanelMode, setWorkbenchPanelEnabled, workbenchPanelEnabled]);
 
   const searchBarProps = useMemo(() => ({
