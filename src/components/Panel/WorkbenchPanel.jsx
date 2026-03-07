@@ -405,17 +405,17 @@ function WorkbenchPanel() {
   const activeSavedView = savedViews.find(view => view.id === activeFilterViewId) || null;
 
   const datePresets = [
-    { key: 'today', label: t('toolbar.dateToday'), badge: '1d' },
-    { key: 'yesterday', label: t('toolbar.dateYesterday'), badge: '1d' },
-    { key: '7d', label: t('toolbar.dateLast7Days'), badge: '7d' },
-    { key: '30d', label: t('toolbar.dateLast30Days'), badge: '30d' },
-    { key: 'custom', label: t('toolbar.dateCustomRange'), badge: '...' },
+    { key: 'today', label: t('toolbar.dateToday'), badge: t('toolbar.dateBadgeToday') },
+    { key: 'yesterday', label: t('toolbar.dateYesterday'), badge: t('toolbar.dateBadgeYesterday') },
+    { key: '7d', label: t('toolbar.dateLast7Days'), badge: t('toolbar.dateBadgeLast7Days') },
+    { key: '30d', label: t('toolbar.dateLast30Days'), badge: t('toolbar.dateBadgeLast30Days') },
+    { key: 'custom', label: t('toolbar.dateCustomRange'), badge: t('toolbar.dateBadgeCustomRange') },
   ];
   const datePresetOptions = datePresets.map(({ key, label }) => ({ key, label }));
 
   const workbenchDateBadgeText = selectedDateRange
     ? (selectedDateRange.preset === 'custom'
-      ? '...'
+      ? t('toolbar.dateBadgeCustomRange')
       : datePresets.find(preset => preset.key === selectedDateRange.preset)?.badge || '')
     : '';
 

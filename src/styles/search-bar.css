@@ -157,6 +157,22 @@
   padding: 0 3px;
 }
 
+.icon-btn-badge.date-badge {
+  top: -4px;
+  right: -6px;
+  min-width: 18px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.icon-btn-badge.date-badge.date-badge-wide {
+  min-width: 24px;
+}
+
 /* 类型筛选组 - macOS 分段控件风格 */
 .type-filter-group {
   display: flex;
@@ -475,7 +491,7 @@
 .type-select-wrapper .type-dropdown {
   border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--surface-strong) 95%, transparent);
+  background: color-mix(in srgb, var(--surface-strong) 98%, var(--bg-secondary) 2%);
   box-shadow: 0 16px 30px color-mix(in srgb, var(--shadow-lg) 60%, transparent);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);

@@ -28,6 +28,16 @@ function DateFilterControl({
   dateApplyText,
   clearDateFilterText,
 }) {
+  const selectedPresetLabel = hasSelection
+    ? (Array.isArray(datePresetOptions)
+      ? datePresetOptions.find(option => option.key === selectedDatePreset)?.label || ''
+      : '')
+    : '';
+  const triggerTitle = selectedPresetLabel
+    ? `${dateFilterText}: ${selectedPresetLabel}`
+    : dateFilterText;
+  const badgeClassName = `icon-btn-badge date-badge ${String(badgeText || '').length > 3 ? 'date-badge-wide' : ''}`.trim();
+
   return (
     <div className={`date-select-wrapper ${wrapperClassName}`.trim()} ref={wrapperRef}>
       <FilterTriggerButton
@@ -36,7 +46,7 @@ function DateFilterControl({
         onClose={onClose}
         className=""
         label={dateFilterText}
-        title={dateFilterText}
+        title={triggerTitle}
         isOpen={isOpen}
         isActive={Boolean(hasSelection)}
         popup="dialog"
@@ -45,7 +55,7 @@ function DateFilterControl({
       >
         <Calendar size={15} />
         {hasSelection && (
-          <span className="icon-btn-badge">{badgeText}</span>
+          <span className={badgeClassName}>{badgeText}</span>
         )}
       </FilterTriggerButton>
       {isOpen && (
@@ -67,7 +77,7 @@ function DateFilterControl({
                 <span className="date-check">
                   {isSelected ? <Check size={14} /> : ''}
                 </span>
-                <span>{option.label}</span>
+                <span className="date-label">{option.label}</span>
               </div>
             )}
           />

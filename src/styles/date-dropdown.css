@@ -12,11 +12,11 @@
   top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--tag-dropdown-bg);
+  background: color-mix(in srgb, var(--surface-strong) 98%, var(--bg-secondary) 2%);
   border-radius: 12px;
   box-shadow: 0 8px 32px var(--shadow-lg), 0 0 0 1px var(--border-light);
-  min-width: 220px;
-  max-width: 300px;
+  min-width: 236px;
+  max-width: 320px;
   overflow: hidden;
   z-index: 10000;
   animation: dateDropdownSlide var(--motion-fast) var(--ease-standard);
@@ -28,7 +28,9 @@
 }
 
 .date-dropdown-presets {
-  padding: 4px;
+  padding: 6px;
+  max-height: 288px;
+  overflow-y: auto;
 }
 
 .date-dropdown-item {
@@ -52,6 +54,17 @@
 
 .date-dropdown-item.selected {
   background: var(--accent-light);
+}
+
+.date-dropdown-item .date-label {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.date-dropdown-item.selected .date-label {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent-color) 90%, var(--text-primary) 10%);
 }
 
 .date-dropdown-item .date-check {

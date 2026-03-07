@@ -134,6 +134,11 @@
     "dateLast7Days": "最近 7 天",
     "dateLast30Days": "最近 30 天",
     "dateCustomRange": "自定义范围",
+    "dateBadgeToday": "今",
+    "dateBadgeYesterday": "昨",
+    "dateBadgeLast7Days": "7天",
+    "dateBadgeLast30Days": "30天",
+    "dateBadgeCustomRange": "自定",
     "dateStart": "开始日期",
     "dateEnd": "结束日期",
     "dateApply": "应用"
