@@ -52,3 +52,7 @@ lessons.md
 temp_secret_key.txt
 .wrangler/
 TODO.txt
+
+.tmp/
+target-startup-check*
+tmp*
