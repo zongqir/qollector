@@ -19,6 +19,7 @@ import {
 } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
+import { getUserTags as getUserTagsSvc } from '../../services/clipboardService';
 import AIAssistantPanel from '../../features/ai-assistant/components/AIAssistantPanel';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
@@ -39,6 +40,8 @@ function PreviewPanel() {
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [debouncedTagSuggestionQuery, setDebouncedTagSuggestionQuery] = useState('');
+  const [backendUserTags, setBackendUserTags] = useState([]);
   const toolbarRef = useRef(null);
   const toolbarCopyTimerRef = useRef(null);
   const panelRef = useRef(null);
@@ -67,6 +70,7 @@ function PreviewPanel() {
   const isProUser = useAppStore(s => s.isProUser);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const items = useAppStore(s => s.items);
+  const itemsRevision = useAppStore(s => s.itemsRevision);
   const openShareModal = useAppStore(s => s.openShareModal);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
@@ -357,40 +361,49 @@ function PreviewPanel() {
     }
   };
 
-  // 璁＄畻鐢ㄦ埛鏍囩锛堢敤浜庢爣绛惧缓璁級
-  const rankedUserTags = useMemo(() => {
-    const statsByTag = new Map();
-    items.forEach((candidate) => {
-      const rankTimestamp = Math.max(candidate.updated_at || 0, candidate.created_at || 0);
-      const uniqueUserTags = new Set(
-        getTags(candidate.tags).filter(tag => !tag.startsWith('AI:')),
-      );
-      uniqueUserTags.forEach((tag) => {
-        const existing = statsByTag.get(tag);
-        if (existing) {
-          existing.count += 1;
-          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTagSuggestionQuery(newTagInput.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [newTagInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUserTagsSvc(debouncedTagSuggestionQuery, 120)
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendUserTags([]);
           return;
         }
-        statsByTag.set(tag, { tag, count: 1, lastUsedAt: rankTimestamp });
+        const seenTags = new Set();
+        const normalized = [];
+        tags.forEach((tag) => {
+          if (typeof tag !== 'string') return;
+          const normalizedTag = tag.trim();
+          if (!normalizedTag || normalizedTag.startsWith('AI:') || seenTags.has(normalizedTag)) return;
+          seenTags.add(normalizedTag);
+          normalized.push(normalizedTag);
+        });
+        setBackendUserTags(normalized);
+      })
+      .catch((error) => {
+        console.error('[PreviewPanel] load user tags failed:', error);
+        if (!cancelled) setBackendUserTags([]);
       });
-    });
-    return Array.from(statsByTag.values())
-      .sort((a, b) => (
-        b.count - a.count
-        || b.lastUsedAt - a.lastUsedAt
-        || a.tag.localeCompare(b.tag)
-      ))
-      .map(stat => stat.tag);
-  }, [items]);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedTagSuggestionQuery, itemsRevision]);
 
   const filteredUserTags = useMemo(() => {
     const query = newTagInput.trim().toLowerCase();
-    if (!query) return rankedUserTags;
+    if (!query) return backendUserTags;
 
     const prefixMatches = [];
     const partialMatches = [];
-    rankedUserTags.forEach((tag) => {
+    backendUserTags.forEach((tag) => {
       const normalizedTag = tag.toLowerCase();
       if (!normalizedTag.includes(query)) return;
       if (normalizedTag.startsWith(query)) {
@@ -400,7 +413,7 @@ function PreviewPanel() {
       }
     });
     return [...prefixMatches, ...partialMatches];
-  }, [rankedUserTags, newTagInput]);
+  }, [backendUserTags, newTagInput]);
 
   const handleTagInputKeyDown = (itemObj, e) => {
     if (e.key === 'Enter' && newTagInput.trim()) {

@@ -40,7 +40,12 @@ import TagFilterControl from '../shared/TagFilterControl';
 import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
-import { getWorkbenchPinnedItems, reorderWorkbenchPinnedItems, searchItems } from '../../services/clipboardService';
+import {
+  getUserTags as getUserTagsSvc,
+  getWorkbenchPinnedItems,
+  reorderWorkbenchPinnedItems,
+  searchItems,
+} from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
@@ -92,6 +97,8 @@ function WorkbenchPanel() {
   const [showWorkbenchSavedViews, setShowWorkbenchSavedViews] = useState(false);
   const [workbenchSavedViewName, setWorkbenchSavedViewName] = useState('');
   const [workbenchTagSearchQuery, setWorkbenchTagSearchQuery] = useState('');
+  const [debouncedWorkbenchTagSearchQuery, setDebouncedWorkbenchTagSearchQuery] = useState('');
+  const [backendWorkbenchUserTags, setBackendWorkbenchUserTags] = useState([]);
   const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
   const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
@@ -177,6 +184,35 @@ function WorkbenchPanel() {
     }, WORKBENCH_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedWorkbenchTagSearchQuery(workbenchTagSearchQuery.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [workbenchTagSearchQuery]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUserTagsSvc(debouncedWorkbenchTagSearchQuery, 200, { onlyPinned: true })
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendWorkbenchUserTags([]);
+          return;
+        }
+        setBackendWorkbenchUserTags(
+          tags.filter(tag => typeof tag === 'string' && tag.trim() && !tag.startsWith('AI:')),
+        );
+      })
+      .catch((error) => {
+        console.error('[Workbench] load pinned user tags failed:', error);
+        if (!cancelled) setBackendWorkbenchUserTags([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedWorkbenchTagSearchQuery, backendPinnedItems, itemsRevision]);
 
   const pinnedBaseItems = useMemo(() => {
     if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
@@ -332,16 +368,14 @@ function WorkbenchPanel() {
     && selectedPinnedItems.every(item => item.is_pinned);
 
   const allTags = useMemo(() => {
-    const userTags = new Set();
-    const aiTags = new Set();
+    const fallbackUserTags = new Set();
     const sourceTags = new Set();
     const typeTags = new Set();
 
     pinnedBaseItems.forEach((item) => {
       const tags = getTags(item.tags);
       tags.forEach((tag) => {
-        if (tag.startsWith('AI:')) aiTags.add(tag);
-        else userTags.add(tag);
+        if (!tag.startsWith('AI:')) fallbackUserTags.add(tag);
       });
 
       const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
@@ -351,13 +385,26 @@ function WorkbenchPanel() {
       if (typeTag) typeTags.add(typeTag);
     });
 
+    const localFallbackList = Array.from(fallbackUserTags).sort();
+    const seenBackendTags = new Set();
+    const normalizedBackendTags = [];
+    backendWorkbenchUserTags.forEach((tag) => {
+      if (typeof tag !== 'string') return;
+      const normalized = tag.trim();
+      if (!normalized || seenBackendTags.has(normalized)) return;
+      seenBackendTags.add(normalized);
+      normalizedBackendTags.push(normalized);
+    });
+    const userTagList = normalizedBackendTags.length > 0
+      ? normalizedBackendTags
+      : (!debouncedWorkbenchTagSearchQuery ? localFallbackList : []);
+
     return [
       ...Array.from(typeTags).sort(),
-      ...Array.from(userTags).sort(),
+      ...userTagList,
       ...Array.from(sourceTags).sort(),
-      ...Array.from(aiTags).sort(),
     ];
-  }, [pinnedBaseItems, t, i18n.language]);
+  }, [pinnedBaseItems, backendWorkbenchUserTags, debouncedWorkbenchTagSearchQuery, t, i18n.language]);
 
   const filteredTagsList = useMemo(() => {
     if (!workbenchTagSearchQuery.trim()) return allTags;
@@ -1030,6 +1077,7 @@ function WorkbenchPanel() {
     allSelectedArePinned,
     canRunBatchAi,
     batchAiSourceText,
+    itemsRevision,
     uiLanguage: i18n.language,
     maxPinnedItems,
     loadItems,
@@ -1438,8 +1486,14 @@ function WorkbenchPanel() {
           batchTagInput={batchActions.batchTagInput}
           onBatchTagInputChange={batchActions.handleBatchTagInputChange}
           onBatchTagInputKeyDown={batchActions.handleBatchTagInputKeyDown}
+          canApplyBatchTag={batchActions.canApplyBatchTag}
           onApplyBatchTag={batchActions.applyBatchTag}
+          activeBatchTagSuggestion={batchActions.activeBatchTagSuggestion}
           onCloseBatchTagEditor={batchActions.closeBatchTagEditor}
+          filteredBatchTagSuggestions={batchActions.filteredBatchTagSuggestions}
+          batchTagSuggestionsRef={batchActions.batchTagSuggestionsRef}
+          batchTagActiveSuggestionIndex={batchActions.batchTagActiveSuggestionIndex}
+          setBatchTagActiveSuggestionIndex={batchActions.setBatchTagActiveSuggestionIndex}
           multiSelectFeedback={batchActions.multiSelectFeedback}
         />
       ) : (

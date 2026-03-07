@@ -180,6 +180,25 @@ pub async fn search_items(
 }
 
 #[tauri::command]
+pub async fn get_user_tags(
+    manager: State<'_, Arc<ClipboardManager>>,
+    query: Option<String>,
+    limit: Option<i32>,
+    only_favorite: Option<bool>,
+    only_pinned: Option<bool>,
+) -> Result<Vec<String>, String> {
+    manager
+        .get_user_tags(
+            query.as_deref(),
+            limit.unwrap_or(80),
+            only_favorite.unwrap_or(false),
+            only_pinned.unwrap_or(false),
+        )
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn open_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,

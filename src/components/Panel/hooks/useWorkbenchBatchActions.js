@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { getTags, hasReservedTagPrefix } from '../../../utils/tagHelpers';
+import { getUserTags } from '../../../services/clipboardService';
 
 function useWorkbenchBatchActions({
   selectedPinnedItems,
@@ -12,6 +13,7 @@ function useWorkbenchBatchActions({
   allSelectedArePinned,
   canRunBatchAi,
   batchAiSourceText,
+  itemsRevision,
   uiLanguage,
   maxPinnedItems,
   loadItems,
@@ -22,8 +24,12 @@ function useWorkbenchBatchActions({
   const [batchTagPending, setBatchTagPending] = useState(false);
   const [showBatchTagEditor, setShowBatchTagEditor] = useState(false);
   const [batchTagInput, setBatchTagInput] = useState('');
+  const [debouncedBatchTagQuery, setDebouncedBatchTagQuery] = useState('');
+  const [backendUserTags, setBackendUserTags] = useState([]);
+  const [batchTagActiveSuggestionIndex, setBatchTagActiveSuggestionIndex] = useState(-1);
   const [multiSelectFeedback, setMultiSelectFeedback] = useState(null);
   const batchTagEditorRef = useRef(null);
+  const batchTagSuggestionsRef = useRef(null);
 
   useEffect(() => {
     if (!showBatchTagEditor) return undefined;
@@ -48,11 +54,71 @@ function useWorkbenchBatchActions({
     if (selectedCount > 0) return;
     setShowBatchTagEditor(false);
     setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
     setMultiSelectFeedback(null);
   }, [selectedCount]);
 
-  const applyBatchTag = useCallback(async () => {
-    const normalizedTag = batchTagInput.trim();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBatchTagQuery(batchTagInput.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [batchTagInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUserTags(debouncedBatchTagQuery, 120, { onlyPinned: true })
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendUserTags([]);
+          return;
+        }
+        const seenTags = new Set();
+        const normalized = [];
+        tags.forEach((tag) => {
+          if (typeof tag !== 'string') return;
+          const normalizedTag = tag.trim();
+          if (!normalizedTag || normalizedTag.startsWith('AI:') || seenTags.has(normalizedTag)) return;
+          seenTags.add(normalizedTag);
+          normalized.push(normalizedTag);
+        });
+        setBackendUserTags(normalized);
+      })
+      .catch((error) => {
+        console.error('[WorkbenchBatch] load user tags failed:', error);
+        if (!cancelled) setBackendUserTags([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedBatchTagQuery, itemsRevision]);
+
+  const filteredBatchTagSuggestions = useMemo(() => {
+    const normalizedInput = batchTagInput.trim().toLowerCase();
+    if (!normalizedInput) return backendUserTags.slice(0, 8);
+
+    const prefixMatches = [];
+    const partialMatches = [];
+    backendUserTags.forEach((tag) => {
+      const normalizedTag = tag.toLowerCase();
+      if (!normalizedTag.includes(normalizedInput) || normalizedTag === normalizedInput) return;
+      if (normalizedTag.startsWith(normalizedInput)) {
+        prefixMatches.push(tag);
+      } else {
+        partialMatches.push(tag);
+      }
+    });
+    return [...prefixMatches, ...partialMatches].slice(0, 8);
+  }, [backendUserTags, batchTagInput]);
+
+  const activeBatchTagSuggestion =
+    batchTagActiveSuggestionIndex >= 0
+      ? filteredBatchTagSuggestions[batchTagActiveSuggestionIndex] || null
+      : null;
+
+  const applyBatchTag = useCallback(async (tagValue = batchTagInput) => {
+    const normalizedTag = tagValue.trim();
     if (!normalizedTag || batchTagPending || selectedPinnedItems.length === 0) {
       if (!normalizedTag) {
         setMultiSelectFeedback({ type: 'warning', text: t('multiSelect.addTagEmpty') });
@@ -120,6 +186,7 @@ function useWorkbenchBatchActions({
       }
 
       setBatchTagInput('');
+      setBatchTagActiveSuggestionIndex(-1);
       setShowBatchTagEditor(false);
     } catch (error) {
       const message = typeof error === 'string' ? error : (error?.message || String(error));
@@ -261,8 +328,25 @@ function useWorkbenchBatchActions({
 
   const handleBatchTagInputKeyDown = useCallback((event) => {
     if (event.nativeEvent?.isComposing || event.isComposing) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (filteredBatchTagSuggestions.length === 0) return;
+      event.preventDefault();
+      setBatchTagActiveSuggestionIndex((current) => {
+        if (event.key === 'ArrowDown') {
+          if (current < 0) return 0;
+          return Math.min(current + 1, filteredBatchTagSuggestions.length - 1);
+        }
+        if (current < 0) return filteredBatchTagSuggestions.length - 1;
+        return Math.max(current - 1, 0);
+      });
+      return;
+    }
     if (event.key === 'Enter') {
       event.preventDefault();
+      if (activeBatchTagSuggestion) {
+        applyBatchTag(activeBatchTagSuggestion);
+        return;
+      }
       applyBatchTag();
       return;
     }
@@ -270,12 +354,14 @@ function useWorkbenchBatchActions({
       event.preventDefault();
       setShowBatchTagEditor(false);
       setBatchTagInput('');
+      setBatchTagActiveSuggestionIndex(-1);
     }
-  }, [applyBatchTag]);
+  }, [activeBatchTagSuggestion, applyBatchTag, filteredBatchTagSuggestions.length]);
 
   const closeBatchTagEditor = useCallback(() => {
     setShowBatchTagEditor(false);
     setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
   }, []);
 
   const handleToggleBatchTagEditor = useCallback(() => {
@@ -284,12 +370,33 @@ function useWorkbenchBatchActions({
       return;
     }
     setBatchTagInput('');
+    setBatchTagActiveSuggestionIndex(-1);
     setShowBatchTagEditor(true);
   }, [showBatchTagEditor, closeBatchTagEditor]);
 
   const handleBatchTagInputChange = useCallback((value) => {
     setBatchTagInput(value);
+    setBatchTagActiveSuggestionIndex(-1);
   }, []);
+
+  useEffect(() => {
+    if (!showBatchTagEditor || filteredBatchTagSuggestions.length === 0) {
+      setBatchTagActiveSuggestionIndex(-1);
+      return;
+    }
+    setBatchTagActiveSuggestionIndex((current) => (
+      current >= filteredBatchTagSuggestions.length ? filteredBatchTagSuggestions.length - 1 : current
+    ));
+  }, [showBatchTagEditor, filteredBatchTagSuggestions.length]);
+
+  useEffect(() => {
+    if (!showBatchTagEditor || batchTagActiveSuggestionIndex < 0) return;
+    const activeItem = batchTagSuggestionsRef.current
+      ?.querySelector(`[data-suggestion-index="${batchTagActiveSuggestionIndex}"]`);
+    activeItem?.scrollIntoView?.({ block: 'nearest' });
+  }, [showBatchTagEditor, batchTagActiveSuggestionIndex]);
+
+  const canApplyBatchTag = Boolean(activeBatchTagSuggestion || batchTagInput.trim());
 
   return {
     batchAiRunningTask,
@@ -297,8 +404,14 @@ function useWorkbenchBatchActions({
     batchTagPending,
     showBatchTagEditor,
     batchTagInput,
+    canApplyBatchTag,
+    filteredBatchTagSuggestions,
+    activeBatchTagSuggestion,
+    batchTagActiveSuggestionIndex,
+    setBatchTagActiveSuggestionIndex,
     multiSelectFeedback,
     batchTagEditorRef,
+    batchTagSuggestionsRef,
     applyBatchTag,
     handleBatchFavoriteToggle,
     handleBatchPinToggle,

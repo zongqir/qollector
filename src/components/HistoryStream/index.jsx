@@ -22,7 +22,7 @@ import {
   readCollectionHintsDismissed,
   setCollectionHintsDismissed,
 } from '../../utils/collectionHints';
-import { getHistoryGroupCounts, searchItems } from '../../services/clipboardService';
+import { getHistoryGroupCounts, getUserTags, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -320,6 +320,8 @@ function HistoryStream({ style }) {
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [backendGroupCounts, setBackendGroupCounts] = useState(null);
+  const [backendUserTags, setBackendUserTags] = useState([]);
+  const [debouncedTagSearchQuery, setDebouncedTagSearchQuery] = useState('');
   const [timeTick, setTimeTick] = useState(() => Date.now());
   const [visibleRangeStartIndex, setVisibleRangeStartIndex] = useState(0);
   const [compareFeedback, setCompareFeedback] = useState(null);
@@ -521,17 +523,48 @@ function HistoryStream({ style }) {
     return () => { cancelled = true; };
   }, [backendSearchRequest, items.length, itemsRevision]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTagSearchQuery(tagSearchQuery.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [tagSearchQuery]);
+
+  useEffect(() => {
+    if (showFavoritesOnly) {
+      setBackendUserTags([]);
+      return;
+    }
+
+    let cancelled = false;
+    getUserTags(debouncedTagSearchQuery, 120)
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendUserTags([]);
+          return;
+        }
+        setBackendUserTags(tags.filter(tag => typeof tag === 'string' && tag.trim() && !tag.startsWith('AI:')));
+      })
+      .catch((error) => {
+        console.error('[History] load user tags failed:', error);
+        if (!cancelled) setBackendUserTags([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedTagSearchQuery, showFavoritesOnly, itemsRevision]);
+
   const allTags = useMemo(() => {
-    const userTags = new Set();
-    const aiTags = new Set();
+    const fallbackUserTags = new Set();
     const sourceTags = new Set();
     const typeTags = new Set();
 
     items.forEach(item => {
       const tags = getTags(item.tags);
       tags.forEach(tag => {
-        if (tag.startsWith('AI:')) aiTags.add(tag);
-        else userTags.add(tag);
+        if (!tag.startsWith('AI:')) fallbackUserTags.add(tag);
       });
 
       const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
@@ -541,13 +574,26 @@ function HistoryStream({ style }) {
       if (typeTag) typeTags.add(typeTag);
     });
 
+    const localFallbackList = Array.from(fallbackUserTags).sort();
+    const seenBackendTags = new Set();
+    const normalizedBackendTags = [];
+    backendUserTags.forEach((tag) => {
+      if (typeof tag !== 'string') return;
+      const normalized = tag.trim();
+      if (!normalized || seenBackendTags.has(normalized)) return;
+      seenBackendTags.add(normalized);
+      normalizedBackendTags.push(normalized);
+    });
+    const userTagList = normalizedBackendTags.length > 0
+      ? normalizedBackendTags
+      : (!debouncedTagSearchQuery ? localFallbackList : []);
+
     return [
       ...Array.from(typeTags).sort(),
-      ...Array.from(userTags).sort(),
+      ...userTagList,
       ...Array.from(sourceTags).sort(),
-      ...Array.from(aiTags).sort(),
     ];
-  }, [items, t, i18n.language]);
+  }, [items, backendUserTags, debouncedTagSearchQuery, t, i18n.language]);
 
   const filteredTagsList = useMemo(() => {
     if (!tagSearchQuery.trim()) return allTags;
@@ -1201,6 +1247,7 @@ function HistoryStream({ style }) {
     handleBatchTagInputChange,
   } = useHistoryBatchActions({
     items,
+    itemsRevision,
     filteredItems,
     selectedItemIds,
     aiEnabled,

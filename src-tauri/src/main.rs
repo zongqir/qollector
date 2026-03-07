@@ -754,6 +754,7 @@ fn main() {
             save_image_as,
             export_workbench_text,
             search_items,
+            get_user_tags,
             get_items_by_date_range,
             get_history_group_counts,
             generate_timeline_summary,

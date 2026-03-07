@@ -20,8 +20,14 @@ function WorkbenchMultiSelectBar({
   batchTagInput,
   onBatchTagInputChange,
   onBatchTagInputKeyDown,
+  canApplyBatchTag,
   onApplyBatchTag,
+  activeBatchTagSuggestion,
   onCloseBatchTagEditor,
+  filteredBatchTagSuggestions,
+  batchTagSuggestionsRef,
+  batchTagActiveSuggestionIndex,
+  setBatchTagActiveSuggestionIndex,
   multiSelectFeedback,
 }) {
   const { t } = useTranslation();
@@ -104,8 +110,8 @@ function WorkbenchMultiSelectBar({
             />
             <button
               className="multi-select-tag-action confirm"
-              onClick={onApplyBatchTag}
-              disabled={batchTagPending || !batchTagInput.trim()}
+              onClick={() => onApplyBatchTag(activeBatchTagSuggestion || batchTagInput)}
+              disabled={batchTagPending || !canApplyBatchTag}
               title={t('item.confirmTag')}
             >
               <Check size={12} />
@@ -119,6 +125,23 @@ function WorkbenchMultiSelectBar({
               <X size={12} />
             </button>
           </div>
+          {filteredBatchTagSuggestions.length > 0 && (
+            <div className="multi-select-tag-suggestions" ref={batchTagSuggestionsRef}>
+              {filteredBatchTagSuggestions.map((tag, index) => (
+                <button
+                  key={tag}
+                  data-suggestion-index={index}
+                  className={`multi-select-tag-suggestion-item ${batchTagActiveSuggestionIndex === index ? 'active' : ''}`}
+                  onClick={() => onApplyBatchTag(tag)}
+                  onMouseEnter={() => setBatchTagActiveSuggestionIndex(index)}
+                  disabled={batchTagPending}
+                >
+                  <Tag size={12} />
+                  <span>{tag}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="multi-select-tag-hint">{t('multiSelect.addTagHint')}</div>
         </div>
       )}

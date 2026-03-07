@@ -3,10 +3,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
-import { getTags } from '../../../utils/tagHelpers';
+import { getUserTags } from '../../../services/clipboardService';
 
 export default function useHistoryBatchActions({
   items,
+  itemsRevision,
   filteredItems,
   selectedItemIds,
   aiEnabled,
@@ -30,40 +31,52 @@ export default function useHistoryBatchActions({
   const [batchAiRunningTask, setBatchAiRunningTask] = useState(null);
   const [batchAiFeedback, setBatchAiFeedback] = useState(null);
   const [batchFlagPending, setBatchFlagPending] = useState(false);
+  const [debouncedBatchTagQuery, setDebouncedBatchTagQuery] = useState('');
+  const [backendUserTags, setBackendUserTags] = useState([]);
 
-  const rankedUserTags = useMemo(() => {
-    const statsByTag = new Map();
-    items.forEach((item) => {
-      const rankTimestamp = Math.max(item.updated_at || 0, item.created_at || 0);
-      const uniqueUserTags = new Set(
-        getTags(item.tags).filter(tag => !tag.startsWith('AI:')),
-      );
-      uniqueUserTags.forEach((tag) => {
-        const existing = statsByTag.get(tag);
-        if (existing) {
-          existing.count += 1;
-          if (rankTimestamp > existing.lastUsedAt) existing.lastUsedAt = rankTimestamp;
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBatchTagQuery(batchTagInput.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [batchTagInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUserTags(debouncedBatchTagQuery, 120)
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendUserTags([]);
           return;
         }
-        statsByTag.set(tag, { tag, count: 1, lastUsedAt: rankTimestamp });
+        const seenTags = new Set();
+        const normalized = [];
+        tags.forEach((tag) => {
+          if (typeof tag !== 'string') return;
+          const normalizedTag = tag.trim();
+          if (!normalizedTag || normalizedTag.startsWith('AI:') || seenTags.has(normalizedTag)) return;
+          seenTags.add(normalizedTag);
+          normalized.push(normalizedTag);
+        });
+        setBackendUserTags(normalized);
+      })
+      .catch((error) => {
+        console.error('[HistoryBatch] load user tags failed:', error);
+        if (!cancelled) setBackendUserTags([]);
       });
-    });
-    return Array.from(statsByTag.values())
-      .sort((a, b) => (
-        b.count - a.count
-        || b.lastUsedAt - a.lastUsedAt
-        || a.tag.localeCompare(b.tag)
-      ))
-      .map(stat => stat.tag);
-  }, [items]);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedBatchTagQuery, itemsRevision]);
 
   const filteredBatchTagSuggestions = useMemo(() => {
     const normalizedInput = batchTagInput.trim().toLowerCase();
-    if (!normalizedInput) return rankedUserTags.slice(0, 8);
+    if (!normalizedInput) return backendUserTags.slice(0, 8);
 
     const prefixMatches = [];
     const partialMatches = [];
-    rankedUserTags.forEach((tag) => {
+    backendUserTags.forEach((tag) => {
       const normalizedTag = tag.toLowerCase();
       if (!normalizedTag.includes(normalizedInput) || normalizedTag === normalizedInput) return;
       if (normalizedTag.startsWith(normalizedInput)) {
@@ -73,7 +86,7 @@ export default function useHistoryBatchActions({
       }
     });
     return [...prefixMatches, ...partialMatches].slice(0, 8);
-  }, [rankedUserTags, batchTagInput]);
+  }, [backendUserTags, batchTagInput]);
 
   const activeBatchTagSuggestion =
     batchTagActiveSuggestionIndex >= 0

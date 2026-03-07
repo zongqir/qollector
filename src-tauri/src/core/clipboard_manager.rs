@@ -1134,6 +1134,18 @@ impl ClipboardManager {
             .await
     }
 
+    pub async fn get_user_tags(
+        &self,
+        query: Option<&str>,
+        limit: i32,
+        only_favorite: bool,
+        only_pinned: bool,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_user_tags(query, limit, only_favorite, only_pinned)
+            .await
+    }
+
     pub async fn copy_to_clipboard(&self, item: &ClipboardItem) -> Result<(), ClipboardError> {
         let content = if item.type_ == "image" {
             // Load original image from file
@@ -1652,6 +1664,7 @@ impl ClipboardManager {
         sqlx::query("DELETE FROM clipboard_items")
             .execute(repo.pool())
             .await?;
+        let _ = repo.clear_user_tag_index().await;
         let _ = repo.delete_all_raw_formats().await;
         let _ = repo.clear_sync_latest_slot().await;
         let _ = repo.clear_paired_sync_devices().await;
@@ -2056,6 +2069,10 @@ impl ClipboardManager {
             .execute(repo.pool())
             .await
             .map_err(|e| format!("Failed to delete items: {}", e))?;
+        let _ = repo
+            .clear_user_tag_index()
+            .await
+            .map_err(|e| format!("Failed to clear user tags: {}", e))?;
 
         // Delete all raw formats
         sqlx::query("DELETE FROM clipboard_raw_formats")

@@ -55,3 +55,15 @@ export const getHistoryGroupCounts = async (startToday, startYesterday, startLas
 export const searchItems = async (query, limit = 200, filters = undefined) => {
   return invoke('search_items', { query, limit, filters });
 };
+
+export const getUserTags = async (query = '', limit = 80, options = {}) => {
+  const normalizedQuery = typeof query === 'string' && query.trim() ? query.trim() : null;
+  const onlyFavorite = options?.onlyFavorite === true;
+  const onlyPinned = options?.onlyPinned === true;
+  return invoke('get_user_tags', {
+    query: normalizedQuery,
+    limit,
+    onlyFavorite,
+    onlyPinned,
+  });
+};

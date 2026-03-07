@@ -27,6 +27,26 @@ fn escape_sql_literal(value: &str) -> String {
     value.replace('\'', "''")
 }
 
+fn normalize_user_tag(raw: &str) -> Option<String> {
+    let normalized = raw.trim();
+    if normalized.is_empty() || normalized.starts_with("AI:") {
+        return None;
+    }
+    Some(normalized.to_string())
+}
+
+fn parse_user_tags(tags_json: Option<&str>) -> HashSet<String> {
+    let Some(json) = tags_json else {
+        return HashSet::new();
+    };
+
+    let parsed: Vec<String> = serde_json::from_str(json).unwrap_or_default();
+    parsed
+        .into_iter()
+        .filter_map(|tag| normalize_user_tag(&tag))
+        .collect()
+}
+
 fn build_tag_filter_expression(tag_filter: Option<&Vec<String>>, column: &str) -> Option<String> {
     let tags = tag_filter?;
     let expressions: Vec<String> = tags
@@ -211,7 +231,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 5;
+    const CURRENT_SCHEMA_VERSION: i64 = 6;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -261,6 +281,11 @@ impl ClipboardRepository {
             self.migrate_v4_to_v5().await?;
             self.set_schema_version(5).await?;
             println!("[Schema] migrated to version 5");
+        }
+        if db_version < 6 {
+            self.migrate_v5_to_v6().await?;
+            self.set_schema_version(6).await?;
+            println!("[Schema] migrated to version 6");
         }
 
         Ok(())
@@ -481,6 +506,104 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    /// V5 -> V6: Add manual user tag index table for fast/complete tag dropdown.
+    async fn migrate_v5_to_v6(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS user_tag_index (
+                tag TEXT PRIMARY KEY,
+                updated_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_user_tag_index_updated_at ON user_tag_index(updated_at DESC)",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        self.rebuild_user_tag_index().await?;
+        Ok(())
+    }
+
+    async fn rebuild_user_tag_index(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM user_tag_index")
+            .execute(&self.pool)
+            .await?;
+
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query(
+            r#"
+            INSERT OR REPLACE INTO user_tag_index (tag, updated_at)
+            SELECT DISTINCT TRIM(CAST(j.value AS TEXT)) AS tag, ?
+            FROM clipboard_items AS ci
+            JOIN json_each(ci.tags) AS j
+            WHERE ci.is_deleted = 0
+              AND ci.tags IS NOT NULL
+              AND json_valid(ci.tags) = 1
+              AND TRIM(CAST(j.value AS TEXT)) != ''
+              AND CAST(j.value AS TEXT) NOT LIKE 'AI:%'
+            "#,
+        )
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    async fn user_tag_exists_in_active_items(&self, tag: &str) -> Result<bool, sqlx::Error> {
+        let exists: i64 = sqlx::query_scalar(
+            r#"
+            SELECT EXISTS (
+                SELECT 1
+                FROM clipboard_items AS ci
+                WHERE ci.is_deleted = 0
+                  AND ci.tags IS NOT NULL
+                  AND json_valid(ci.tags) = 1
+                  AND EXISTS (
+                      SELECT 1
+                      FROM json_each(ci.tags) AS j
+                      WHERE CAST(j.value AS TEXT) = ?
+                  )
+                LIMIT 1
+            )
+            "#,
+        )
+        .bind(tag)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(exists > 0)
+    }
+
+    async fn sync_user_tag_index_for_tags(&self, tags: &HashSet<String>) -> Result<(), sqlx::Error> {
+        if tags.is_empty() {
+            return Ok(());
+        }
+
+        let now = chrono::Utc::now().timestamp();
+        for tag in tags {
+            if self.user_tag_exists_in_active_items(tag).await? {
+                sqlx::query("INSERT OR REPLACE INTO user_tag_index (tag, updated_at) VALUES (?, ?)")
+                    .bind(tag)
+                    .bind(now)
+                    .execute(&self.pool)
+                    .await?;
+            } else {
+                sqlx::query("DELETE FROM user_tag_index WHERE tag = ?")
+                    .bind(tag)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn insert(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"
@@ -514,6 +637,8 @@ impl ClipboardRepository {
         .await?;
 
         self.insert_fts(item).await;
+        let affected_user_tags = parse_user_tags(item.tags.as_deref());
+        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
 
         Ok(())
     }
@@ -655,6 +780,86 @@ impl ClipboardRepository {
         .await?;
 
         Ok((today, yesterday, last7, older))
+    }
+
+    pub async fn get_user_tags(
+        &self,
+        query: Option<&str>,
+        limit: i32,
+        only_favorite: bool,
+        only_pinned: bool,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        let normalized_limit = limit.clamp(1, 200);
+        let normalized_query = query.unwrap_or("").trim().to_lowercase();
+
+        if !only_favorite && !only_pinned {
+            if normalized_query.is_empty() {
+                let tags = sqlx::query_scalar::<_, String>(
+                    "SELECT tag FROM user_tag_index
+                     ORDER BY updated_at DESC, tag COLLATE NOCASE ASC
+                     LIMIT ?",
+                )
+                .bind(normalized_limit)
+                .fetch_all(&self.pool)
+                .await?;
+                return Ok(tags);
+            }
+
+            let like_pattern = format!("%{}%", normalized_query);
+            let tags = sqlx::query_scalar::<_, String>(
+                "SELECT tag FROM user_tag_index
+                 WHERE LOWER(tag) LIKE ?
+                 ORDER BY updated_at DESC, tag COLLATE NOCASE ASC
+                 LIMIT ?",
+            )
+            .bind(like_pattern)
+            .bind(normalized_limit)
+            .fetch_all(&self.pool)
+            .await?;
+            return Ok(tags);
+        }
+
+        let like_pattern = format!("%{}%", normalized_query);
+        let empty_query = normalized_query.is_empty();
+        let tags = sqlx::query_scalar::<_, String>(
+            r#"
+            SELECT tag
+            FROM (
+                SELECT
+                    TRIM(CAST(j.value AS TEXT)) AS tag,
+                    MAX(ci.updated_at) AS latest_updated_at
+                FROM clipboard_items AS ci
+                JOIN json_each(ci.tags) AS j
+                WHERE ci.is_deleted = 0
+                  AND ci.tags IS NOT NULL
+                  AND json_valid(ci.tags) = 1
+                  AND TRIM(CAST(j.value AS TEXT)) != ''
+                  AND CAST(j.value AS TEXT) NOT LIKE 'AI:%'
+                  AND (? = 0 OR ci.is_favorite = 1)
+                  AND (? = 0 OR ci.is_pinned = 1)
+                  AND (? = 1 OR LOWER(CAST(j.value AS TEXT)) LIKE ?)
+                GROUP BY TRIM(CAST(j.value AS TEXT))
+            ) AS t
+            ORDER BY latest_updated_at DESC, tag COLLATE NOCASE ASC
+            LIMIT ?
+            "#,
+        )
+        .bind(only_favorite)
+        .bind(only_pinned)
+        .bind(empty_query)
+        .bind(&like_pattern)
+        .bind(normalized_limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(tags)
+    }
+
+    pub async fn clear_user_tag_index(&self) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM user_tag_index")
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 
     pub async fn search(
@@ -832,6 +1037,13 @@ impl ClipboardRepository {
     }
 
     pub async fn update(&self, item: &ClipboardItem) -> Result<(), sqlx::Error> {
+        let previous_tags: Option<String> =
+            sqlx::query_scalar("SELECT tags FROM clipboard_items WHERE id = ?")
+                .bind(&item.id)
+                .fetch_optional(&self.pool)
+                .await?
+                .flatten();
+
         let should_update_content = item.content_updated;
         sqlx::query(
             r#"
@@ -856,6 +1068,10 @@ impl ClipboardRepository {
         .execute(&self.pool)
         .await?;
 
+        let mut affected_user_tags = parse_user_tags(previous_tags.as_deref());
+        affected_user_tags.extend(parse_user_tags(item.tags.as_deref()));
+        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+
         if let Ok(Some(latest)) = self.find_by_id(&item.id).await {
             self.update_fts(&latest).await;
         }
@@ -864,12 +1080,21 @@ impl ClipboardRepository {
     }
 
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
+        let existing_tags: Option<String> =
+            sqlx::query_scalar("SELECT tags FROM clipboard_items WHERE id = ? AND is_deleted = 0")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?
+                .flatten();
+
         sqlx::query("UPDATE clipboard_items SET is_deleted = 1 WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await?;
 
         self.delete_fts(id).await;
+        let affected_user_tags = parse_user_tags(existing_tags.as_deref());
+        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
 
         Ok(())
     }
@@ -1825,8 +2050,8 @@ impl ClipboardRepository {
         };
 
         // Select candidates: aged out OR excess (oldest first)
-        let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
-            r#"SELECT id, type, image_paths FROM clipboard_items
+        let rows: Vec<(String, String, Option<String>, Option<String>)> = sqlx::query_as(
+            r#"SELECT id, type, image_paths, tags FROM clipboard_items
                WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0
                AND (created_at < ? OR id IN (
                    SELECT id FROM clipboard_items
@@ -1845,9 +2070,14 @@ impl ClipboardRepository {
             return Ok(vec![]);
         }
 
+        let mut affected_user_tags = HashSet::new();
+        rows.iter().for_each(|(_, _, _, tags)| {
+            affected_user_tags.extend(parse_user_tags(tags.as_deref()));
+        });
+
         let targets: Vec<CleanupTarget> = rows
             .iter()
-            .map(|(id, type_, image_paths)| CleanupTarget {
+            .map(|(id, type_, image_paths, _)| CleanupTarget {
                 id: id.clone(),
                 type_: type_.clone(),
                 image_paths: image_paths.clone(),
@@ -1870,6 +2100,8 @@ impl ClipboardRepository {
                 .await;
         }
 
+        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+
         Ok(targets)
     }
 
@@ -1878,8 +2110,8 @@ impl ClipboardRepository {
         &self,
         cutoff_ts: i64,
     ) -> Result<Vec<CleanupTarget>, sqlx::Error> {
-        let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
-            r#"SELECT id, type, image_paths FROM clipboard_items
+        let rows: Vec<(String, String, Option<String>, Option<String>)> = sqlx::query_as(
+            r#"SELECT id, type, image_paths, tags FROM clipboard_items
                WHERE is_deleted = 0 AND is_pinned = 0 AND is_favorite = 0
                AND created_at >= ?
                ORDER BY created_at ASC"#,
@@ -1892,9 +2124,14 @@ impl ClipboardRepository {
             return Ok(vec![]);
         }
 
+        let mut affected_user_tags = HashSet::new();
+        rows.iter().for_each(|(_, _, _, tags)| {
+            affected_user_tags.extend(parse_user_tags(tags.as_deref()));
+        });
+
         let targets: Vec<CleanupTarget> = rows
             .iter()
-            .map(|(id, type_, image_paths)| CleanupTarget {
+            .map(|(id, type_, image_paths, _)| CleanupTarget {
                 id: id.clone(),
                 type_: type_.clone(),
                 image_paths: image_paths.clone(),
@@ -1912,6 +2149,8 @@ impl ClipboardRepository {
                 .execute(&self.pool)
                 .await;
         }
+
+        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
 
         Ok(targets)
     }

@@ -25,6 +25,7 @@ import {
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import {
   getCollectionFavoriteItems,
+  getUserTags as getUserTagsSvc,
   reorderCollectionFavoriteItems,
   searchItems,
 } from '../../services/clipboardService';
@@ -164,6 +165,8 @@ function CollectionBoard({
   const [selectedCollectionTags, setSelectedCollectionTags] = useState([]);
   const [activeItemId, setActiveItemId] = useState(null);
   const [collectionTagQuery, setCollectionTagQuery] = useState('');
+  const [debouncedCollectionTagQuery, setDebouncedCollectionTagQuery] = useState('');
+  const [backendCollectionUserTags, setBackendCollectionUserTags] = useState([]);
   const [showTagEditor, setShowTagEditor] = useState(false);
   const [draftTag, setDraftTag] = useState('');
   const [tagEditorBusy, setTagEditorBusy] = useState(false);
@@ -226,6 +229,13 @@ function CollectionBoard({
   }, [normalizedSearchQuery]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCollectionTagQuery(collectionTagQuery.trim());
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [collectionTagQuery]);
+
+  useEffect(() => {
     setBackendLimit(COLLECTION_QUERY_PAGE_SIZE);
   }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
 
@@ -251,6 +261,28 @@ function CollectionBoard({
       cancelled = true;
     };
   }, [items]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getUserTagsSvc(debouncedCollectionTagQuery, 200, { onlyFavorite: true })
+      .then((tags) => {
+        if (cancelled) return;
+        if (!Array.isArray(tags)) {
+          setBackendCollectionUserTags([]);
+          return;
+        }
+        setBackendCollectionUserTags(
+          tags.filter(tag => typeof tag === 'string' && tag.trim() && !tag.startsWith('AI:')),
+        );
+      })
+      .catch((error) => {
+        console.error('[CollectionBoard] load favorite user tags failed:', error);
+        if (!cancelled) setBackendCollectionUserTags([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedCollectionTagQuery, backendItems]);
 
   const collectionBackendFilterRequest = useMemo(() => {
     const query = debouncedSearchQuery.trim();
@@ -359,15 +391,35 @@ function CollectionBoard({
     return map;
   }, [collectionItems]);
 
-  const allCollectionTags = useMemo(() => {
-    const set = new Set();
+  const collectionAvailableTags = useMemo(() => {
+    const availableSet = new Set();
     tagsSourceItems.forEach((item) => {
-      getUserTags(item).forEach((tag) => set.add(tag));
+      getUserTags(item).forEach((tag) => availableSet.add(tag));
     });
-    return Array.from(set).sort((left, right) => (
+    return Array.from(availableSet).sort((left, right) => (
       left.localeCompare(right, i18n.language || undefined, { sensitivity: 'base' })
     ));
   }, [tagsSourceItems, i18n.language]);
+
+  const allCollectionTags = useMemo(() => {
+    const seenBackendTags = new Set();
+    const normalizedBackendTags = [];
+    backendCollectionUserTags.forEach((tag) => {
+      if (typeof tag !== 'string') return;
+      const normalized = tag.trim();
+      if (!normalized || seenBackendTags.has(normalized)) return;
+      seenBackendTags.add(normalized);
+      normalizedBackendTags.push(normalized);
+    });
+
+    if (normalizedBackendTags.length > 0) {
+      return normalizedBackendTags;
+    }
+    if (!debouncedCollectionTagQuery) {
+      return collectionAvailableTags;
+    }
+    return [];
+  }, [collectionAvailableTags, backendCollectionUserTags, debouncedCollectionTagQuery]);
 
   const collectionTagCounts = useMemo(() => {
     const counts = new Map();
@@ -401,11 +453,11 @@ function CollectionBoard({
   useEffect(() => {
     setSelectedCollectionTags((current) => {
       if (current.length === 0) return current;
-      const allowed = new Set(allCollectionTags);
+      const allowed = new Set(collectionAvailableTags);
       const next = current.filter(tag => allowed.has(tag));
       return next.length === current.length ? current : next;
     });
-  }, [allCollectionTags]);
+  }, [collectionAvailableTags]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
