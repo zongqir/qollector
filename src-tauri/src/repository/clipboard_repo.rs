@@ -72,7 +72,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 4;
+    const CURRENT_SCHEMA_VERSION: i64 = 5;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -117,6 +117,11 @@ impl ClipboardRepository {
             self.migrate_v3_to_v4().await?;
             self.set_schema_version(4).await?;
             println!("[Schema] migrated to version 4");
+        }
+        if db_version < 5 {
+            self.migrate_v4_to_v5().await?;
+            self.set_schema_version(5).await?;
+            println!("[Schema] migrated to version 5");
         }
 
         Ok(())
@@ -297,6 +302,37 @@ impl ClipboardRepository {
 
         for (idx, id) in pinned_ids.iter().enumerate() {
             sqlx::query("UPDATE clipboard_items SET pin_order = ? WHERE id = ?")
+                .bind((idx as i64) + 1)
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// V4 -> V5: Add dedicated collection favorite order column.
+    async fn migrate_v4_to_v5(&self) -> Result<(), sqlx::Error> {
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN favorite_order INTEGER")
+            .execute(&self.pool)
+            .await;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_favorite_order ON clipboard_items(is_deleted, is_favorite, favorite_order)",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Backfill existing favorites with deterministic order aligned to prior UI sort.
+        let favorite_ids = sqlx::query_scalar::<_, String>(
+            "SELECT id FROM clipboard_items
+             WHERE is_deleted = 0 AND is_favorite = 1
+             ORDER BY updated_at DESC, created_at DESC, id DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        for (idx, id) in favorite_ids.iter().enumerate() {
+            sqlx::query("UPDATE clipboard_items SET favorite_order = ? WHERE id = ?")
                 .bind((idx as i64) + 1)
                 .bind(id)
                 .execute(&self.pool)
@@ -828,6 +864,24 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    /// Return favorite items in persisted collection order.
+    pub async fn get_collection_favorite_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items
+             WHERE is_deleted = 0 AND is_favorite = 1
+             ORDER BY
+               CASE WHEN favorite_order IS NULL OR favorite_order <= 0 THEN 1 ELSE 0 END ASC,
+               favorite_order ASC,
+               updated_at DESC,
+               created_at DESC,
+               id DESC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
     /// 取消指定项的置顶状态
     pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
         sqlx::query("UPDATE clipboard_items SET is_pinned = 0, pinned_at = NULL, pin_order = NULL WHERE id = ?")
@@ -911,6 +965,90 @@ impl ClipboardRepository {
         let mut tx = self.pool.begin().await?;
         for (idx, id) in normalized.iter().enumerate() {
             sqlx::query("UPDATE clipboard_items SET pin_order = ? WHERE id = ?")
+                .bind((idx as i64) + 1)
+                .bind(id)
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    pub async fn set_favorite(&self, id: &str, favorite: bool) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        if favorite {
+            sqlx::query(
+                "UPDATE clipboard_items
+                 SET is_favorite = 1,
+                     favorite_order = (
+                       SELECT COALESCE(MAX(favorite_order), 0) + 1
+                       FROM clipboard_items
+                       WHERE is_deleted = 0 AND is_favorite = 1
+                     ),
+                     updated_at = ?
+                 WHERE id = ?",
+            )
+            .bind(now)
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+            return Ok(());
+        }
+
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET is_favorite = 0, favorite_order = NULL, updated_at = ?
+             WHERE id = ?",
+        )
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn reorder_collection_favorite_items(
+        &self,
+        ordered_ids: &[String],
+    ) -> Result<(), sqlx::Error> {
+        let existing_ids = self
+            .get_collection_favorite_items()
+            .await?
+            .into_iter()
+            .map(|item| item.id)
+            .collect::<Vec<String>>();
+
+        if existing_ids.is_empty() {
+            return Ok(());
+        }
+
+        let existing_set = existing_ids
+            .iter()
+            .cloned()
+            .collect::<HashSet<String>>();
+
+        let mut normalized = Vec::with_capacity(existing_ids.len());
+        let mut seen = HashSet::new();
+
+        for id in ordered_ids {
+            if !existing_set.contains(id) {
+                continue;
+            }
+            if seen.insert(id.clone()) {
+                normalized.push(id.clone());
+            }
+        }
+
+        for id in existing_ids {
+            if seen.insert(id.clone()) {
+                normalized.push(id);
+            }
+        }
+
+        let mut tx = self.pool.begin().await?;
+        for (idx, id) in normalized.iter().enumerate() {
+            sqlx::query("UPDATE clipboard_items SET favorite_order = ? WHERE id = ?")
                 .bind((idx as i64) + 1)
                 .bind(id)
                 .execute(&mut *tx)

@@ -255,6 +255,7 @@ impl ClipboardManager {
                     is_deleted: false,
                     pinned_at: None,
                     pin_order: None,
+                    favorite_order: None,
                     created_at: now,
                     updated_at: now,
                     has_raw_formats: false,
@@ -1094,6 +1095,19 @@ impl ClipboardManager {
         repo.reorder_workbench_pinned_items(ordered_ids).await
     }
 
+    pub async fn get_collection_favorite_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.get_collection_favorite_items().await
+    }
+
+    pub async fn reorder_collection_favorite_items(
+        &self,
+        ordered_ids: &[String],
+    ) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.reorder_collection_favorite_items(ordered_ids).await
+    }
+
     pub async fn get_items_by_date_range(
         &self,
         start: i64,
@@ -1474,12 +1488,10 @@ impl ClipboardManager {
         let repo = self.repository.lock().await;
 
         // Load the current item first.
-        if let Some(mut item) = repo.find_by_id(id).await? {
-            // Toggle favorite state.
-            item.is_favorite = !item.is_favorite;
-
-            repo.update(&item).await?;
-            Ok(item.is_favorite)
+        if let Some(item) = repo.find_by_id(id).await? {
+            let next_favorite_state = !item.is_favorite;
+            repo.set_favorite(id, next_favorite_state).await?;
+            Ok(next_favorite_state)
         } else {
             Err(sqlx::Error::RowNotFound)
         }
@@ -1786,6 +1798,7 @@ impl ClipboardManager {
             is_deleted: false,
             pinned_at: None,
             pin_order: None,
+            favorite_order: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,

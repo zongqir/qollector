@@ -371,6 +371,7 @@ pub async fn import_data(
             is_deleted: false,
             pinned_at: None,
             pin_order: None,
+            favorite_order: None,
             created_at: ei.created_at,
             updated_at: ei.updated_at,
             has_raw_formats: false,

@@ -1189,12 +1189,21 @@ const useAppStore = create((set, get) => ({
     try {
       await invoke('toggle_favorite_item', { id: item.id });
       const newFavorite = !item.is_favorite;
+      const nextFavoriteOrder = newFavorite
+        ? get().items.reduce((maxOrder, candidate) => {
+          const value = Number(candidate.favorite_order);
+          if (!candidate.is_favorite || !Number.isFinite(value)) return maxOrder;
+          return value > maxOrder ? value : maxOrder;
+        }, 0) + 1
+        : null;
       set((state) => ({
         items: state.items.map((it) =>
-          it.id === item.id ? { ...it, is_favorite: newFavorite } : it
+          it.id === item.id
+            ? { ...it, is_favorite: newFavorite, favorite_order: nextFavoriteOrder }
+            : it
         ),
         previewItem: state.previewItem?.id === item.id
-          ? { ...state.previewItem, is_favorite: newFavorite }
+          ? { ...state.previewItem, is_favorite: newFavorite, favorite_order: nextFavoriteOrder }
           : state.previewItem,
         itemsRevision: state.itemsRevision + 1,
       }));

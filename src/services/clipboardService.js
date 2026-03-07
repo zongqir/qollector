@@ -40,6 +40,14 @@ export const reorderWorkbenchPinnedItems = async (orderedIds = []) => {
   return invoke('reorder_workbench_pinned_items', { orderedIds });
 };
 
+export const getCollectionFavoriteItems = async () => {
+  return invoke('get_collection_favorite_items');
+};
+
+export const reorderCollectionFavoriteItems = async (orderedIds = []) => {
+  return invoke('reorder_collection_favorite_items', { orderedIds });
+};
+
 export const getHistoryGroupCounts = async (startToday, startYesterday, startLast7) => {
   return invoke('get_history_group_counts', { startToday, startYesterday, startLast7 });
 };

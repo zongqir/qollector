@@ -61,6 +61,27 @@ pub async fn reorder_workbench_pinned_items(
 }
 
 #[tauri::command]
+pub async fn get_collection_favorite_items(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<Vec<ClipboardItem>, String> {
+    manager
+        .get_collection_favorite_items()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn reorder_collection_favorite_items(
+    manager: State<'_, Arc<ClipboardManager>>,
+    ordered_ids: Vec<String>,
+) -> Result<(), String> {
+    manager
+        .reorder_collection_favorite_items(&ordered_ids)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn get_item_by_id(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,

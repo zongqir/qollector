@@ -719,6 +719,8 @@ fn main() {
             get_more_items,
             get_workbench_pinned_items,
             reorder_workbench_pinned_items,
+            get_collection_favorite_items,
+            reorder_collection_favorite_items,
             get_item_by_id,
             copy_item,
             copy_plain_text,
