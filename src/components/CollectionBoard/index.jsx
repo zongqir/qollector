@@ -26,6 +26,7 @@ import { getImageThumbnail } from '../../utils/imageHelpers';
 import {
   getCollectionFavoriteItems,
   reorderCollectionFavoriteItems,
+  searchItems,
 } from '../../services/clipboardService';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import {
@@ -66,7 +67,9 @@ const COLLECTION_VIEW_MODE_LIST = 'list';
 const COLLECTION_QUERY_PAGE_SIZE = 200;
 const COLLECTION_SORT_LONG_PRESS_MS = 190;
 const COLLECTION_SORT_LONG_PRESS_MOVE_PX = 10;
-const tokenizeSearchQuery = (query) => String(query || '').toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
+const COLLECTION_SINGLE_CLICK_DELAY_MS = 240;
+const COLLECTION_SEARCH_DEBOUNCE_MS = 260;
+const OPEN_ENDED_DATE_MAX_TS = 253402300799;
 
 // Keep same file visual language as Workbench to reduce cognitive switching cost.
 const FileIconLazy = lazy(() =>
@@ -153,6 +156,8 @@ function CollectionBoard({
   onOpenContextMenu,
   onVisibleItemsChange,
   onAddTagToItem,
+  onCopy,
+  onCopyAndAutoPaste,
   maxPinnedItems,
 }) {
   const { t, i18n } = useTranslation();
@@ -170,7 +175,10 @@ function CollectionBoard({
   const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
   const [backendItems, setBackendItems] = useState([]);
   const [backendLoading, setBackendLoading] = useState(false);
+  const [backendFiltering, setBackendFiltering] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [backendFilteredFavoriteIds, setBackendFilteredFavoriteIds] = useState(null);
   const [showSortEntryToast, setShowSortEntryToast] = useState(false);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const colorPickerRef = useRef(null);
@@ -179,6 +187,7 @@ function CollectionBoard({
   const collectionSortAnchorRef = useRef(null);
   const collectionSortLongPressTimerRef = useRef(null);
   const collectionSortEntryToastTimerRef = useRef(null);
+  const collectionCardClickTimerRef = useRef(null);
   const collectionSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
   const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_LIST : collectionViewMode;
@@ -210,6 +219,13 @@ function CollectionBoard({
   );
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(normalizedSearchQuery);
+    }, COLLECTION_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [normalizedSearchQuery]);
+
+  useEffect(() => {
     setBackendLimit(COLLECTION_QUERY_PAGE_SIZE);
   }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
 
@@ -236,59 +252,93 @@ function CollectionBoard({
     };
   }, [items]);
 
-  const searchTerms = useMemo(
-    () => tokenizeSearchQuery(normalizedSearchQuery),
-    [normalizedSearchQuery],
-  );
+  const collectionBackendFilterRequest = useMemo(() => {
+    const query = debouncedSearchQuery.trim();
+    const filters = { is_favorite: true };
 
-  const allFavoriteItems = useMemo(() => (
-    backendItems.filter((item) => {
-      if (showPinnedOnly && !item.is_pinned) {
-        return false;
-      }
-      if (normalizedSelectedType === 'code' && !item.code_language) {
-        return false;
-      }
-      if (normalizedSelectedType !== 'all' && normalizedSelectedType !== 'code' && item.type_ !== normalizedSelectedType) {
-        return false;
-      }
-      if (selectedDateRange) {
-        if (selectedDateRange.start != null && item.created_at < selectedDateRange.start) return false;
-        if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
-      }
-      if (effectiveSelectedCollectionTags.length > 0) {
-        const tags = getUserTags(item);
-        if (!effectiveSelectedCollectionTags.some(tag => tags.includes(tag))) {
-          return false;
-        }
-      }
-      if (searchTerms.length > 0) {
-        const searchTarget = [
-          item.content,
-          item.user_note,
-          item.ocr_text,
-          getUserTags(item).join(' '),
-          getSourceApp(item.metadata),
-          item.type_,
-          item.code_language,
-        ]
-          .filter(Boolean)
-          .join('\n')
-          .toLowerCase();
-        if (!searchTerms.some(term => searchTarget.includes(term))) {
-          return false;
-        }
-      }
-      return true;
-    })
-  ), [
-    backendItems,
+    if (showPinnedOnly) {
+      filters.is_pinned = true;
+    }
+    if (normalizedSelectedType === 'code') {
+      filters.require_code_language = true;
+    } else if (normalizedSelectedType !== 'all') {
+      filters.type_filter = normalizedSelectedType;
+    }
+    if (effectiveSelectedCollectionTags.length > 0) {
+      filters.tag_filter = Array.from(new Set(effectiveSelectedCollectionTags));
+    }
+
+    const rangeStart = Number(selectedDateRange?.start);
+    const rangeEnd = Number(selectedDateRange?.end);
+    const hasStart = Number.isFinite(rangeStart);
+    const hasEnd = Number.isFinite(rangeEnd);
+    if (hasStart || hasEnd) {
+      filters.date_range = {
+        start: hasStart ? rangeStart : 0,
+        end: hasEnd ? rangeEnd : OPEN_ENDED_DATE_MAX_TS,
+      };
+    }
+
+    const shouldQueryBackend = query.length > 0
+      || showPinnedOnly
+      || normalizedSelectedType !== 'all'
+      || effectiveSelectedCollectionTags.length > 0
+      || hasStart
+      || hasEnd;
+
+    return {
+      query,
+      filters,
+      shouldQueryBackend,
+    };
+  }, [
+    debouncedSearchQuery,
     showPinnedOnly,
     normalizedSelectedType,
-    selectedDateRange,
     effectiveSelectedCollectionTags,
-    searchTerms,
+    selectedDateRange,
   ]);
+
+  useEffect(() => {
+    if (!collectionBackendFilterRequest.shouldQueryBackend) {
+      setBackendFilteredFavoriteIds(null);
+      setBackendFiltering(false);
+      return;
+    }
+
+    let cancelled = false;
+    setBackendFiltering(true);
+    const limit = Math.max(COLLECTION_QUERY_PAGE_SIZE, Math.min(6000, backendItems.length + 400));
+    searchItems(collectionBackendFilterRequest.query, limit, collectionBackendFilterRequest.filters)
+      .then((results) => {
+        if (cancelled) return;
+        const ids = new Set((Array.isArray(results) ? results : []).map((item) => item.id));
+        setBackendFilteredFavoriteIds(ids);
+      })
+      .catch((error) => {
+        console.error('[CollectionBoard] backend filter search failed:', error);
+        if (!cancelled) setBackendFilteredFavoriteIds(null);
+      })
+      .finally(() => {
+        if (!cancelled) setBackendFiltering(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collectionBackendFilterRequest, backendItems.length, items]);
+
+  const orderedFavoriteItems = useMemo(
+    () => backendItems.filter(item => item.is_favorite !== false),
+    [backendItems],
+  );
+
+  const allFavoriteItems = useMemo(() => {
+    if (!(backendFilteredFavoriteIds instanceof Set)) {
+      return orderedFavoriteItems;
+    }
+    return orderedFavoriteItems.filter((item) => backendFilteredFavoriteIds.has(item.id));
+  }, [orderedFavoriteItems, backendFilteredFavoriteIds]);
 
   const collectionItems = useMemo(
     () => allFavoriteItems.slice(0, backendLimit),
@@ -429,7 +479,8 @@ function CollectionBoard({
     });
   }, []);
 
-  const canLoadMore = !backendLoading && allFavoriteItems.length > collectionItems.length;
+  const isBackendBusy = backendLoading || backendFiltering;
+  const canLoadMore = !isBackendBusy && allFavoriteItems.length > collectionItems.length;
   const handleCollectionGridScroll = useCallback((event) => {
     if (!canLoadMore) return;
     const target = event.currentTarget;
@@ -606,6 +657,13 @@ function CollectionBoard({
     }
   }, []);
 
+  const clearCollectionCardClickTimer = useCallback(() => {
+    if (collectionCardClickTimerRef.current) {
+      clearTimeout(collectionCardClickTimerRef.current);
+      collectionCardClickTimerRef.current = null;
+    }
+  }, []);
+
   const showCollectionSortEntryToast = useCallback(() => {
     setShowSortEntryToast(true);
     if (collectionSortEntryToastTimerRef.current) {
@@ -697,23 +755,74 @@ function CollectionBoard({
       event.stopPropagation();
       return;
     }
+    clearCollectionCardClickTimer();
     setActiveItemId(item.id);
     setOpenColorPickerItemId(null);
-    onOpenPreview?.(item);
-  }, [onOpenPreview]);
+    collectionCardClickTimerRef.current = setTimeout(() => {
+      collectionCardClickTimerRef.current = null;
+      onOpenPreview?.(item);
+    }, COLLECTION_SINGLE_CLICK_DELAY_MS);
+  }, [clearCollectionCardClickTimer, onOpenPreview]);
+
+  const handleCollectionCardDoubleClick = useCallback((item, event) => {
+    if (!item?.id) return;
+    event.preventDefault();
+    event.stopPropagation();
+    clearCollectionSortLongPressTimer();
+    clearCollectionCardClickTimer();
+    collectionSortLongPressPointerRef.current.pointerId = null;
+    setActiveItemId(item.id);
+    setOpenColorPickerItemId(null);
+    window.getSelection()?.removeAllRanges();
+
+    if (isCollectionSortMode) return;
+    if (item.type_ === 'image' || item.type_ === 'file') {
+      onCopy?.(item, 'collection');
+      return;
+    }
+    onCopyAndAutoPaste?.(item, 'collection');
+  }, [
+    clearCollectionSortLongPressTimer,
+    clearCollectionCardClickTimer,
+    isCollectionSortMode,
+    onCopy,
+    onCopyAndAutoPaste,
+  ]);
 
   const handleCollectionCardContextMenu = useCallback((item, index, event) => {
     clearCollectionSortLongPressTimer();
+    clearCollectionCardClickTimer();
     collectionSortLongPressPointerRef.current.pointerId = null;
     setActiveItemId(item.id);
     onOpenContextMenu?.(item, index, event, 'collection');
-  }, [clearCollectionSortLongPressTimer, onOpenContextMenu]);
+  }, [clearCollectionSortLongPressTimer, clearCollectionCardClickTimer, onOpenContextMenu]);
 
   const handleCollectionCardKeyDown = useCallback((item, index, event) => {
     if (event.target !== event.currentTarget) return;
-    if (event.key === 'Enter' || event.key === ' ') {
+    if (event.key === 'Enter') {
       event.preventDefault();
+      clearCollectionCardClickTimer();
       setActiveItemId(item.id);
+      setOpenColorPickerItemId(null);
+      if (event.shiftKey) {
+        onOpenPreview?.(item);
+        return;
+      }
+      if (isCollectionSortMode) {
+        return;
+      }
+      if (item.type_ === 'image' || item.type_ === 'file') {
+        onCopy?.(item, 'collection');
+        return;
+      }
+      onCopyAndAutoPaste?.(item, 'collection');
+      return;
+    }
+    if (event.key === ' ') {
+      event.preventDefault();
+      clearCollectionCardClickTimer();
+      setActiveItemId(item.id);
+      setOpenColorPickerItemId(null);
       onOpenPreview?.(item);
       return;
     }
@@ -721,13 +830,26 @@ function CollectionBoard({
       event.preventDefault();
       handleOpenContextMenuFromKeyboard(item, index, event);
     }
-  }, [handleOpenContextMenuFromKeyboard, onOpenPreview]);
+  }, [
+    clearCollectionCardClickTimer,
+    handleOpenContextMenuFromKeyboard,
+    isCollectionSortMode,
+    onCopy,
+    onCopyAndAutoPaste,
+    onOpenPreview,
+  ]);
 
   useEffect(() => (
     () => {
       clearCollectionSortLongPressTimer();
     }
   ), [clearCollectionSortLongPressTimer]);
+
+  useEffect(() => (
+    () => {
+      clearCollectionCardClickTimer();
+    }
+  ), [clearCollectionCardClickTimer]);
 
   useEffect(() => (
     () => {
@@ -773,6 +895,7 @@ function CollectionBoard({
 
   const getCardCommonProps = useCallback((item, index) => ({
     onClick: (event) => handleCollectionCardClickEvent(item, event),
+    onDoubleClick: (event) => handleCollectionCardDoubleClick(item, event),
     onContextMenu: (event) => handleCollectionCardCommonEvents.onContextMenu(item, index, event),
     onKeyDown: (event) => handleCollectionCardCommonEvents.onKeyDown(item, index, event),
     onPointerDownCapture: handleCollectionCardPointerDownCapture,
@@ -780,6 +903,7 @@ function CollectionBoard({
   }), [
     getCardPointerProps,
     handleCollectionCardClickEvent,
+    handleCollectionCardDoubleClick,
     handleCollectionCardCommonEvents,
     handleCollectionCardPointerDownCapture,
   ]);
@@ -1106,7 +1230,7 @@ function CollectionBoard({
         </div>
       )}
 
-      {backendLoading && collectionItems.length === 0 ? (
+      {isBackendBusy && collectionItems.length === 0 ? (
         <div className="collection-loading" role="status" aria-live="polite">
           <div className="loading-spinner"></div>
           <div className="loading-text">{t('search.searching')}</div>
@@ -1406,7 +1530,7 @@ function CollectionBoard({
               })}
             </>
           )}
-          {backendLoading && (
+          {isBackendBusy && (
             <div className="collection-load-more-hint">{t('collection.loadingMore')}</div>
           )}
         </div>

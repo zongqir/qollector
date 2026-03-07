@@ -374,9 +374,12 @@ impl ClipboardContent {
 pub struct SearchFilters {
     pub type_filter: Option<String>,
     pub tag_filter: Option<Vec<String>>,
+    pub source_filter: Option<Vec<String>>,
+    pub type_tag_filter: Option<Vec<String>>,
     pub date_range: Option<DateRange>,
     pub is_pinned: Option<bool>,
     pub is_favorite: Option<bool>,
+    pub require_code_language: Option<bool>,
 }
 
 #[cfg(test)]
@@ -435,9 +438,12 @@ impl Default for SearchFilters {
         Self {
             type_filter: None,
             tag_filter: None,
+            source_filter: None,
+            type_tag_filter: None,
             date_range: None,
             is_pinned: None,
             is_favorite: None,
+            require_code_language: None,
         }
     }
 }

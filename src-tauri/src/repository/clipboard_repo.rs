@@ -23,7 +23,11 @@ const LIGHT_CONTENT_PREVIEW_CHARS: i32 = 4000;
 const LIGHT_OCR_PREVIEW_CHARS: i32 = 3000;
 const SYNC_GLOBAL_SLOT_ID: &str = "global";
 
-fn build_tag_filter_clause(tag_filter: Option<&Vec<String>>, column: &str) -> Option<String> {
+fn escape_sql_literal(value: &str) -> String {
+    value.replace('\'', "''")
+}
+
+fn build_tag_filter_expression(tag_filter: Option<&Vec<String>>, column: &str) -> Option<String> {
     let tags = tag_filter?;
     let expressions: Vec<String> = tags
         .iter()
@@ -32,7 +36,7 @@ fn build_tag_filter_clause(tag_filter: Option<&Vec<String>>, column: &str) -> Op
             if normalized.is_empty() {
                 return None;
             }
-            let escaped = normalized.replace('\'', "''");
+            let escaped = escape_sql_literal(&normalized);
             Some(format!("LOWER({}) LIKE '%\"{}\"%'", column, escaped))
         })
         .collect();
@@ -40,7 +44,142 @@ fn build_tag_filter_clause(tag_filter: Option<&Vec<String>>, column: &str) -> Op
     if expressions.is_empty() {
         None
     } else {
+        Some(expressions.join(" OR "))
+    }
+}
+
+fn build_source_filter_expression(
+    source_filter: Option<&Vec<String>>,
+    metadata_column: &str,
+) -> Option<String> {
+    let sources = source_filter?;
+    let expressions: Vec<String> = sources
+        .iter()
+        .filter_map(|raw| {
+            let normalized = raw.trim().to_lowercase();
+            if normalized.is_empty() {
+                return None;
+            }
+            let escaped = escape_sql_literal(&normalized);
+            Some(format!(
+                "LOWER(REPLACE(COALESCE(json_extract({}, '$.source_app'), ''), '.exe', '')) = '{}'",
+                metadata_column, escaped
+            ))
+        })
+        .collect();
+
+    if expressions.is_empty() {
+        None
+    } else {
+        Some(expressions.join(" OR "))
+    }
+}
+
+fn build_type_list_filter_expression(
+    type_filter: Option<&Vec<String>>,
+    type_column: &str,
+) -> Option<String> {
+    let types = type_filter?;
+    let expressions: Vec<String> = types
+        .iter()
+        .filter_map(|raw| {
+            let normalized = raw.trim().to_lowercase();
+            if normalized.is_empty() {
+                return None;
+            }
+            let escaped = escape_sql_literal(&normalized);
+            Some(format!("LOWER({}) = '{}'", type_column, escaped))
+        })
+        .collect();
+
+    if expressions.is_empty() {
+        None
+    } else {
+        Some(expressions.join(" OR "))
+    }
+}
+
+fn build_selected_tag_clause(
+    filters: &SearchFilters,
+    tags_column: &str,
+    metadata_column: &str,
+    type_column: &str,
+) -> Option<String> {
+    let mut expressions: Vec<String> = Vec::new();
+
+    if let Some(tag_expr) = build_tag_filter_expression(filters.tag_filter.as_ref(), tags_column) {
+        expressions.push(format!("({})", tag_expr));
+    }
+    if let Some(source_expr) =
+        build_source_filter_expression(filters.source_filter.as_ref(), metadata_column)
+    {
+        expressions.push(format!("({})", source_expr));
+    }
+    if let Some(type_expr) =
+        build_type_list_filter_expression(filters.type_tag_filter.as_ref(), type_column)
+    {
+        expressions.push(format!("({})", type_expr));
+    }
+
+    if expressions.is_empty() {
+        None
+    } else {
         Some(format!(" AND ({})", expressions.join(" OR ")))
+    }
+}
+
+fn append_common_search_filters(
+    sql: &mut String,
+    filters: &SearchFilters,
+    type_column: &str,
+    code_language_column: &str,
+    pinned_column: &str,
+    favorite_column: &str,
+    tags_column: &str,
+    metadata_column: &str,
+    created_at_column: &str,
+) {
+    if let Some(type_filter) = &filters.type_filter {
+        let escaped = escape_sql_literal(type_filter.trim());
+        if !escaped.is_empty() {
+            sql.push_str(&format!(" AND {} = '{}'", type_column, escaped));
+        }
+    }
+
+    if let Some(require_code_language) = filters.require_code_language {
+        if require_code_language {
+            sql.push_str(&format!(
+                " AND {} IS NOT NULL AND TRIM({}) != ''",
+                code_language_column, code_language_column
+            ));
+        }
+    }
+
+    if let Some(is_pinned) = filters.is_pinned {
+        sql.push_str(&format!(
+            " AND {} = {}",
+            pinned_column,
+            if is_pinned { 1 } else { 0 }
+        ));
+    }
+
+    if let Some(is_favorite) = filters.is_favorite {
+        sql.push_str(&format!(
+            " AND {} = {}",
+            favorite_column,
+            if is_favorite { 1 } else { 0 }
+        ));
+    }
+
+    if let Some(selected_tag_clause) =
+        build_selected_tag_clause(filters, tags_column, metadata_column, type_column)
+    {
+        sql.push_str(&selected_tag_clause);
+    }
+
+    if let Some(date_range) = &filters.date_range {
+        sql.push_str(&format!(" AND {} >= {}", created_at_column, date_range.start));
+        sql.push_str(&format!(" AND {} <= {}", created_at_column, date_range.end));
     }
 }
 
@@ -598,27 +737,17 @@ impl ClipboardRepository {
             ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
         );
 
-        if let Some(type_filter) = &filters.type_filter {
-            sql.push_str(&format!(" AND type = '{}'", type_filter));
-        }
-
-        if let Some(is_pinned) = filters.is_pinned {
-            sql.push_str(&format!(
-                " AND is_pinned = {}",
-                if is_pinned { 1 } else { 0 }
-            ));
-        }
-
-        if let Some(is_favorite) = filters.is_favorite {
-            sql.push_str(&format!(
-                " AND is_favorite = {}",
-                if is_favorite { 1 } else { 0 }
-            ));
-        }
-
-        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "tags") {
-            sql.push_str(&tag_clause);
-        }
+        append_common_search_filters(
+            &mut sql,
+            filters,
+            "type",
+            "code_language",
+            "is_pinned",
+            "is_favorite",
+            "tags",
+            "metadata",
+            "created_at",
+        );
 
         if !query.is_empty() {
             let escaped_query = query.replace('\'', "''");
@@ -680,27 +809,17 @@ impl ClipboardRepository {
             ocr_limit = LIGHT_OCR_PREVIEW_CHARS,
         );
 
-        if let Some(type_filter) = &filters.type_filter {
-            sql.push_str(&format!(" AND type = '{}'", type_filter));
-        }
-
-        if let Some(is_pinned) = filters.is_pinned {
-            sql.push_str(&format!(
-                " AND is_pinned = {}",
-                if is_pinned { 1 } else { 0 }
-            ));
-        }
-
-        if let Some(is_favorite) = filters.is_favorite {
-            sql.push_str(&format!(
-                " AND is_favorite = {}",
-                if is_favorite { 1 } else { 0 }
-            ));
-        }
-
-        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "tags") {
-            sql.push_str(&tag_clause);
-        }
+        append_common_search_filters(
+            &mut sql,
+            filters,
+            "type",
+            "code_language",
+            "is_pinned",
+            "is_favorite",
+            "tags",
+            "metadata",
+            "created_at",
+        );
 
         sql.push_str(&format!(" AND LOWER(tags) LIKE '%{}%'", escaped_query));
         sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT {}", limit));
@@ -1572,26 +1691,18 @@ impl ClipboardRepository {
             return Ok(vec![]);
         }
 
-        // Build filter conditions for the main table
         let mut filter_sql = String::new();
-        if let Some(type_filter) = &filters.type_filter {
-            filter_sql.push_str(&format!(" AND ci.type = '{}'", type_filter));
-        }
-        if let Some(is_pinned) = filters.is_pinned {
-            filter_sql.push_str(&format!(
-                " AND ci.is_pinned = {}",
-                if is_pinned { 1 } else { 0 }
-            ));
-        }
-        if let Some(is_favorite) = filters.is_favorite {
-            filter_sql.push_str(&format!(
-                " AND ci.is_favorite = {}",
-                if is_favorite { 1 } else { 0 }
-            ));
-        }
-        if let Some(tag_clause) = build_tag_filter_clause(filters.tag_filter.as_ref(), "ci.tags") {
-            filter_sql.push_str(&tag_clause);
-        }
+        append_common_search_filters(
+            &mut filter_sql,
+            filters,
+            "ci.type",
+            "ci.code_language",
+            "ci.is_pinned",
+            "ci.is_favorite",
+            "ci.tags",
+            "ci.metadata",
+            "ci.created_at",
+        );
 
         let sql = format!(
             r#"SELECT ci.id, ci.type,

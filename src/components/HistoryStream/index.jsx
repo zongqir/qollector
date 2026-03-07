@@ -14,7 +14,7 @@ import useHistoryBatchActions from './hooks/useHistoryBatchActions';
 import useHistoryContextMenu from './hooks/useHistoryContextMenu';
 import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
-import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
+import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
 import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import {
@@ -52,6 +52,27 @@ const HISTORY_GROUP_ORDER = ['today', 'yesterday', 'last7', 'older'];
 
 const normalizeText = (value) => (typeof value === 'string' ? value : '');
 const tokenizeSearchQuery = (query) => normalizeText(query).toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
+const HISTORY_TYPE_KEYS = ['text', 'image', 'file', 'link', 'code'];
+const OPEN_ENDED_DATE_MAX_TS = 253402300799;
+
+const resolveTypeKeyFromDisplay = (displayText, t) => {
+  const normalized = normalizeText(displayText).trim().toLowerCase();
+  if (!normalized) return null;
+
+  for (const key of HISTORY_TYPE_KEYS) {
+    const candidates = [
+      key,
+      t(`tag.types.${key}`, { defaultValue: key }),
+      t(`search.typeFilter.${key}`, { defaultValue: key }),
+    ]
+      .map(value => normalizeText(value).trim().toLowerCase())
+      .filter(Boolean);
+    if (candidates.includes(normalized)) {
+      return key;
+    }
+  }
+  return null;
+};
 
 const findFirstMatch = (text, terms) => {
   const normalized = normalizeText(text);
@@ -394,31 +415,111 @@ function HistoryStream({ style }) {
     }
   }, [selectedItemIds.length]);
 
-  useEffect(() => {
+  const backendSearchRequest = useMemo(() => {
     const query = debouncedSearchQuery.trim();
-    const shouldQueryBackend = query.length > 0;
-    if (!shouldQueryBackend) {
+    const selectedTagFilters = new Set();
+    const selectedSourceFilters = new Set();
+    const selectedTypeTagFilters = new Set();
+
+    selectedTags.forEach((tag) => {
+      const parsedTag = parseSystemTag(tag, {
+        sourcePrefix: t('tag.source'),
+        typePrefix: t('tag.type'),
+      });
+
+      if (parsedTag.kind === 'source') {
+        const sourceName = normalizeText(parsedTag.displayText).trim();
+        if (sourceName) selectedSourceFilters.add(sourceName);
+        return;
+      }
+
+      if (parsedTag.kind === 'type') {
+        const matchedTypeKey = resolveTypeKeyFromDisplay(parsedTag.displayText, t);
+        if (matchedTypeKey) {
+          selectedTypeTagFilters.add(matchedTypeKey);
+          return;
+        }
+      }
+
+      const normalizedTag = normalizeText(tag).trim();
+      if (normalizedTag) selectedTagFilters.add(normalizedTag);
+    });
+
+    const filters = {};
+    if (selectedType === 'code') {
+      filters.require_code_language = true;
+    } else if (selectedType !== 'all') {
+      filters.type_filter = selectedType;
+    }
+    if (showFavoritesOnly) {
+      filters.is_favorite = true;
+    }
+    if (showPinnedOnly) {
+      filters.is_pinned = true;
+    }
+    if (selectedTagFilters.size > 0) {
+      filters.tag_filter = Array.from(selectedTagFilters);
+    }
+    if (selectedSourceFilters.size > 0) {
+      filters.source_filter = Array.from(selectedSourceFilters);
+    }
+    if (selectedTypeTagFilters.size > 0) {
+      filters.type_tag_filter = Array.from(selectedTypeTagFilters);
+    }
+
+    const rangeStart = Number(selectedDateRange?.start);
+    const rangeEnd = Number(selectedDateRange?.end);
+    const hasStart = Number.isFinite(rangeStart);
+    const hasEnd = Number.isFinite(rangeEnd);
+    if (hasStart || hasEnd) {
+      filters.date_range = {
+        start: hasStart ? rangeStart : 0,
+        end: hasEnd ? rangeEnd : OPEN_ENDED_DATE_MAX_TS,
+      };
+    }
+
+    const hasStructuredFilters = Object.keys(filters).length > 0;
+    const shouldQueryBackend = query.length > 0 || hasStructuredFilters;
+
+    return {
+      query,
+      filters: hasStructuredFilters ? filters : undefined,
+      hasStructuredFilters,
+      shouldQueryBackend,
+    };
+  }, [
+    debouncedSearchQuery,
+    selectedType,
+    selectedTags,
+    showFavoritesOnly,
+    showPinnedOnly,
+    selectedDateRange,
+    t,
+    i18n.language,
+  ]);
+
+  useEffect(() => {
+    if (!backendSearchRequest.shouldQueryBackend) {
       setBackendSearchResults(null);
       setIsSearching(false);
       return;
     }
     let cancelled = false;
     setIsSearching(true);
-    const filters = undefined;
-    const limit = query.length > 0 ? 240 : 200;
-    searchItems(query, limit, filters)
+    const limit = Math.max(800, Math.min(6000, items.length + 400));
+    searchItems(backendSearchRequest.query, limit, backendSearchRequest.filters)
       .then((results) => {
         if (!cancelled) setBackendSearchResults(results);
       })
       .catch((err) => {
-        console.error('[FTS] backend search failed:', err);
+        console.error('[History] backend filtered search failed:', err);
         if (!cancelled) setBackendSearchResults(null);
       })
       .finally(() => {
         if (!cancelled) setIsSearching(false);
       });
     return () => { cancelled = true; };
-  }, [debouncedSearchQuery, itemsRevision]);
+  }, [backendSearchRequest, items.length, itemsRevision]);
 
   const allTags = useMemo(() => {
     const userTags = new Set();
@@ -517,66 +618,46 @@ function HistoryStream({ style }) {
 
   const filteredItems = useMemo(() => {
     const startedAt = performance.now();
-    let scannedItems = 0;
-    let scannedChars = 0;
-    const normalizedQuery = debouncedSearchQuery.trim().toLowerCase();
-    const hasSearch = normalizedQuery.length > 0;
-    const shouldUseBackendBase = (hasSearch || showFavoritesOnly) && backendSearchResults != null;
-
-    // Search/favorites can exceed local memory window, so use backend results as filter base.
+    const normalizedQuery = backendSearchRequest.query.toLowerCase();
+    const shouldUseBackendBase = Array.isArray(backendSearchResults);
     const baseItems = shouldUseBackendBase ? backendSearchResults : items;
+    let result = baseItems;
 
-    let result = baseItems.filter(item => {
-      scannedItems += 1;
-      scannedChars += toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note);
-
-      if (showFavoritesOnly && !item.is_favorite) return false;
-      if (showPinnedOnly && !item.is_pinned) return false;
-      if (selectedType === 'code') {
-        if (!item.code_language) return false;
-      } else if (selectedType !== 'all' && item.type_ !== selectedType) {
-        return false;
-      }
-
-      if (selectedTags.length > 0) {
-        const itemTags = getTags(item.tags);
-        const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
-        const typeTag = buildTypeTag(item.type_, t);
-        const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
-        if (!selectedTags.some(st => allItemTags.includes(st))) return false;
-      }
-
-      if (selectedDateRange) {
-        if (selectedDateRange.start != null && item.created_at < selectedDateRange.start) return false;
-        if (selectedDateRange.end != null && item.created_at > selectedDateRange.end) return false;
-      }
-
-      // Text matching is handled by backend FTS when searching
-      return true;
-    });
-
-    // Keep pinned-only results sorted by pin time (newest first).
     if (showPinnedOnly) {
-      result.sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
+      result = [...result].sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
     }
 
     filterProbeRef.current = {
       elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
       totalItems: baseItems.length,
       resultItems: result.length,
-      scannedItems,
-      scannedChars,
-      hasSearch,
+      scannedItems: shouldUseBackendBase ? 0 : baseItems.length,
+      scannedChars: shouldUseBackendBase
+        ? 0
+        : baseItems.reduce(
+          (sum, item) => sum + toLen(item.content) + toLen(item.ocr_text) + toLen(item.user_note),
+          0,
+        ),
+      hasSearch: normalizedQuery.length > 0,
       searchChars: normalizedQuery.length,
       selectedTags: selectedTags.length,
       selectedType,
       showFavoritesOnly,
       showPinnedOnly,
       backendSearch: shouldUseBackendBase,
+      backendFilters: backendSearchRequest.hasStructuredFilters,
     };
 
     return result;
-  }, [items, backendSearchResults, selectedTags, selectedType, debouncedSearchQuery, showFavoritesOnly, showPinnedOnly, selectedDateRange, t, i18n.language]);
+  }, [
+    items,
+    backendSearchResults,
+    showPinnedOnly,
+    backendSearchRequest,
+    selectedTags.length,
+    selectedType,
+    showFavoritesOnly,
+  ]);
 
   useEffect(() => {
     if (!shouldUseHoverPreview) {
@@ -1760,6 +1841,8 @@ function HistoryStream({ style }) {
             onOpenContextMenu={handleCardContextMenu}
             onVisibleItemsChange={setCollectionVisibleItems}
             onAddTagToItem={addTagToItem}
+            onCopy={handleCopy}
+            onCopyAndAutoPaste={handleCopyAndAutoPaste}
             maxPinnedItems={maxPinnedItems}
           />
         ) : filteredItems.length === 0 ? (

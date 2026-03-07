@@ -40,7 +40,7 @@ import TagFilterControl from '../shared/TagFilterControl';
 import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
-import { getWorkbenchPinnedItems, reorderWorkbenchPinnedItems } from '../../services/clipboardService';
+import { getWorkbenchPinnedItems, reorderWorkbenchPinnedItems, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
@@ -53,6 +53,30 @@ import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } f
 
 const WORKBENCH_SORT_LONG_PRESS_MS = 190;
 const WORKBENCH_SORT_LONG_PRESS_MOVE_PX = 10;
+const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
+const WORKBENCH_TYPE_KEYS = ['text', 'image', 'file', 'link', 'code'];
+const OPEN_ENDED_DATE_MAX_TS = 253402300799;
+
+const normalizeText = (value) => (typeof value === 'string' ? value : '');
+
+const resolveTypeKeyFromDisplay = (displayText, t) => {
+  const normalized = normalizeText(displayText).trim().toLowerCase();
+  if (!normalized) return null;
+
+  for (const key of WORKBENCH_TYPE_KEYS) {
+    const candidates = [
+      key,
+      t(`tag.types.${key}`, { defaultValue: key }),
+      t(`search.typeFilter.${key}`, { defaultValue: key }),
+    ]
+      .map(value => normalizeText(value).trim().toLowerCase())
+      .filter(Boolean);
+    if (candidates.includes(normalized)) {
+      return key;
+    }
+  }
+  return null;
+};
 
 function WorkbenchPanel() {
   const { t, i18n } = useTranslation();
@@ -68,6 +92,8 @@ function WorkbenchPanel() {
   const [showWorkbenchSavedViews, setShowWorkbenchSavedViews] = useState(false);
   const [workbenchSavedViewName, setWorkbenchSavedViewName] = useState('');
   const [workbenchTagSearchQuery, setWorkbenchTagSearchQuery] = useState('');
+  const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
+  const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
   const selectionAnchorIndexRef = useRef(-1);
   const workbenchTypeWrapperRef = useRef(null);
@@ -145,6 +171,13 @@ function WorkbenchPanel() {
     };
   }, [itemsRevision]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setWorkbenchDebouncedSearchQuery(searchQuery);
+    }, WORKBENCH_SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const pinnedBaseItems = useMemo(() => {
     if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
     return [...items.filter(item => item.is_pinned)].sort((left, right) => {
@@ -157,71 +190,120 @@ function WorkbenchPanel() {
 
   const allPinnedItems = useMemo(() => pinnedBaseItems, [pinnedBaseItems]);
 
-  const pinnedItems = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const queryTerms = normalizedQuery.split(/\s+/).filter(Boolean);
+  const workbenchBackendFilterRequest = useMemo(() => {
+    const query = workbenchDebouncedSearchQuery.trim();
+    const selectedTagFilters = new Set();
+    const selectedSourceFilters = new Set();
+    const selectedTypeTagFilters = new Set();
 
-    return allPinnedItems.filter((item) => {
-      if (queryTerms.length > 0) {
-        const itemTags = getTags(item.tags);
-        const sourceApp = getSourceApp(item.metadata);
-        const sourceTag = buildSourceTag(sourceApp, t);
-        const typeTag = buildTypeTag(item.type_, t);
-        const typeLabel = item.code_language
-          ? t('search.typeFilter.code')
-          : t(`search.typeFilter.${item.type_ || 'text'}`);
+    selectedTags.forEach((tag) => {
+      const parsedTag = parseSystemTag(tag, {
+        sourcePrefix: t('tag.source'),
+        typePrefix: t('tag.type'),
+      });
 
-        const searchTarget = [
-          item.content,
-          item.user_note,
-          item.ocr_text,
-          itemTags.join(' '),
-          sourceApp,
-          sourceTag,
-          typeTag,
-          typeLabel,
-          item.type_,
-          item.code_language,
-        ]
-          .filter(Boolean)
-          .join('\n')
-          .toLowerCase();
-        if (!queryTerms.some(term => searchTarget.includes(term))) return false;
+      if (parsedTag.kind === 'source') {
+        const sourceName = normalizeText(parsedTag.displayText).trim();
+        if (sourceName) selectedSourceFilters.add(sourceName);
+        return;
       }
 
-      if (selectedType === 'code') {
-        if (!item.code_language) return false;
-      } else if (selectedType !== 'all' && item.type_ !== selectedType) {
-        return false;
+      if (parsedTag.kind === 'type') {
+        const matchedTypeKey = resolveTypeKeyFromDisplay(parsedTag.displayText, t);
+        if (matchedTypeKey) {
+          selectedTypeTagFilters.add(matchedTypeKey);
+          return;
+        }
       }
 
-      if (showFavoritesOnly && !item.is_favorite) return false;
-
-      if (selectedTags.length > 0) {
-        const itemTags = getTags(item.tags);
-        const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
-        const typeTag = buildTypeTag(item.type_, t);
-        const allItemTags = [...itemTags, ...(sourceTag ? [sourceTag] : []), ...(typeTag ? [typeTag] : [])];
-        if (!selectedTags.some(st => allItemTags.includes(st))) return false;
-      }
-
-      if (selectedDateRange) {
-        const createdAt = Number(item.created_at || 0);
-        if (selectedDateRange.start != null && createdAt < selectedDateRange.start) return false;
-        if (selectedDateRange.end != null && createdAt > selectedDateRange.end) return false;
-      }
-
-      return true;
+      const normalizedTag = normalizeText(tag).trim();
+      if (normalizedTag) selectedTagFilters.add(normalizedTag);
     });
+
+    const filters = { is_pinned: true };
+    if (selectedType === 'code') {
+      filters.require_code_language = true;
+    } else if (selectedType !== 'all') {
+      filters.type_filter = selectedType;
+    }
+    if (showFavoritesOnly) {
+      filters.is_favorite = true;
+    }
+    if (selectedTagFilters.size > 0) {
+      filters.tag_filter = Array.from(selectedTagFilters);
+    }
+    if (selectedSourceFilters.size > 0) {
+      filters.source_filter = Array.from(selectedSourceFilters);
+    }
+    if (selectedTypeTagFilters.size > 0) {
+      filters.type_tag_filter = Array.from(selectedTypeTagFilters);
+    }
+
+    const rangeStart = Number(selectedDateRange?.start);
+    const rangeEnd = Number(selectedDateRange?.end);
+    const hasStart = Number.isFinite(rangeStart);
+    const hasEnd = Number.isFinite(rangeEnd);
+    if (hasStart || hasEnd) {
+      filters.date_range = {
+        start: hasStart ? rangeStart : 0,
+        end: hasEnd ? rangeEnd : OPEN_ENDED_DATE_MAX_TS,
+      };
+    }
+
+    const hasAdditionalFilters = query.length > 0
+      || selectedType !== 'all'
+      || showFavoritesOnly
+      || selectedTags.length > 0
+      || hasStart
+      || hasEnd;
+
+    return {
+      query,
+      filters,
+      shouldQueryBackend: hasAdditionalFilters,
+    };
   }, [
-    allPinnedItems,
-    searchQuery,
+    workbenchDebouncedSearchQuery,
     selectedType,
     showFavoritesOnly,
     selectedTags,
     selectedDateRange,
     t,
     i18n.language,
+  ]);
+
+  useEffect(() => {
+    if (!workbenchBackendFilterRequest.shouldQueryBackend) {
+      setBackendFilteredPinnedIds(null);
+      return;
+    }
+
+    let cancelled = false;
+    const limit = Math.max(600, Math.min(6000, allPinnedItems.length + 400));
+    searchItems(workbenchBackendFilterRequest.query, limit, workbenchBackendFilterRequest.filters)
+      .then((results) => {
+        if (cancelled) return;
+        const ids = new Set((Array.isArray(results) ? results : []).map((item) => item.id));
+        setBackendFilteredPinnedIds(ids);
+      })
+      .catch((error) => {
+        console.error('[Workbench] backend filter search failed:', error);
+        if (!cancelled) setBackendFilteredPinnedIds(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workbenchBackendFilterRequest, allPinnedItems.length, itemsRevision]);
+
+  const pinnedItems = useMemo(() => {
+    if (!(backendFilteredPinnedIds instanceof Set)) {
+      return allPinnedItems;
+    }
+    return allPinnedItems.filter((item) => backendFilteredPinnedIds.has(item.id));
+  }, [
+    allPinnedItems,
+    backendFilteredPinnedIds,
   ]);
 
   const selectedPinnedItems = useMemo(() => {
