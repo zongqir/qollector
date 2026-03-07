@@ -365,7 +365,7 @@
       "doubleCopyWindowMs": "Double-tap Interval",
       "doubleCopyWindowMsHint": "How close two copies must be to count (ms)",
       "autoPaste": "Auto-paste on double-click",
-      "autoPasteHint": "When enabled, double-clicking copies and pastes to the previous app, hiding the window",
+      "autoPasteHint": "When enabled, double-click copies and pastes to the previous app; if always-on-top is enabled, the window auto-restores after paste",
       "autostart": "Launch at system startup",
       "autostartHint": "Automatically run Qollect when your system starts",
       "lowMemoryMode": "Low Memory Mode",

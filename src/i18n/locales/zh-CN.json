@@ -340,7 +340,7 @@
       "doubleCopyWindowMs": "连按间隔",
       "doubleCopyWindowMsHint": "两次复制间隔多久算「连按」（毫秒）",
       "autoPaste": "双击自动粘贴",
-      "autoPasteHint": "开启后，双击条目会自动复制并粘贴到上一个应用，窗口会自动隐藏",
+      "autoPasteHint": "开启后，双击条目会自动复制并粘贴到上一个应用；若窗口已置顶，会在粘贴后自动恢复显示，不会收起面板",
       "autostart": "开机自启动",
       "autostartHint": "系统启动时自动运行 Qollect",
       "lowMemoryMode": "低内存模式",

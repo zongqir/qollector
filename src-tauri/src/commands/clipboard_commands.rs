@@ -1,7 +1,7 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::{ClipboardItem, SearchFilters};
 use crate::window_lifecycle::{
-    hide_main_window_with_release, hide_main_window_without_release, MAIN_WINDOW_LABEL,
+    cancel_main_window_release, hide_main_window_with_release, MAIN_WINDOW_LABEL,
 };
 use serde::Serialize;
 use std::path::Path;
@@ -225,17 +225,32 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
             pinned_always_on_top = main_window.is_always_on_top().unwrap_or(false);
         }
 
+        let mut should_restore_pinned_window = false;
         if pinned_always_on_top {
+            // For pinned windows, briefly hide to hand focus back to the previous app,
+            // then restore without activation after paste.
             println!(
-                "[AutoPaste] main window is pinned(always-on-top), hide without release"
+                "[AutoPaste] main window is pinned(always-on-top), hide briefly and restore"
             );
-            hide_main_window_without_release(&app, "auto_paste_hide_pinned");
+            cancel_main_window_release(&app, "auto_paste_hide_restore_pinned");
+            if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                let _ = main_window.hide();
+                should_restore_pinned_window = true;
+            }
         } else {
             hide_main_window_with_release(&app, "auto_paste_hide");
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
         send_ctrl_v_input().map_err(|e| format!("Failed to simulate paste: {}", e))?;
+
+        if should_restore_pinned_window {
+            tokio::time::sleep(std::time::Duration::from_millis(45)).await;
+            if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+                let _ = main_window.show();
+                let _ = main_window.set_always_on_top(true);
+            }
+        }
         return Ok(true);
     }
 
@@ -383,6 +398,7 @@ fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     Ok(())
 }
+
 
 #[tauri::command]
 pub async fn reveal_in_folder(
