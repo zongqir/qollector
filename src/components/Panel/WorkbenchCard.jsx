@@ -43,6 +43,8 @@ function WorkbenchCard({
   item,
   isCopied,
   isMultiSelected,
+  isSortMode,
+  isSortAnchor,
   onUnpin,
   onPointerDownCapture,
   onClick,
@@ -179,6 +181,8 @@ function WorkbenchCard({
 
   const cardClasses = [
     'workbench-card',
+    isSortMode && 'sort-enabled',
+    isSortAnchor && 'sort-anchor',
     item.is_favorite && 'favorite',
     hasCustomCardBackground && 'custom-bg',
     isCopied && 'copied',

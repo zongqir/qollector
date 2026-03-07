@@ -1,6 +1,7 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ArrowUpDown,
   Package,
   Star,
   X,
@@ -50,11 +51,17 @@ import {
 } from '../../utils/dateHelpers';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
 
+const WORKBENCH_SORT_LONG_PRESS_MS = 190;
+const WORKBENCH_SORT_LONG_PRESS_MOVE_PX = 10;
+
 function WorkbenchPanel() {
   const { t, i18n } = useTranslation();
   const [quickNote, setQuickNote] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedPinnedIds, setSelectedPinnedIds] = useState([]);
+  const [workbenchSortMode, setWorkbenchSortMode] = useState(false);
+  const [workbenchSortAnchorItemId, setWorkbenchSortAnchorItemId] = useState(null);
+  const [showSortEntryToast, setShowSortEntryToast] = useState(false);
   const [showWorkbenchTypeFilter, setShowWorkbenchTypeFilter] = useState(false);
   const [showWorkbenchDateFilter, setShowWorkbenchDateFilter] = useState(false);
   const [showWorkbenchTagFilter, setShowWorkbenchTagFilter] = useState(false);
@@ -69,6 +76,13 @@ function WorkbenchPanel() {
   const workbenchSavedViewWrapperRef = useRef(null);
   const workbenchTagListboxRef = useRef(null);
   const quickNoteSubmittingRef = useRef(false);
+  const workbenchCardsRef = useRef(null);
+  const workbenchCardRefsRef = useRef(new Map());
+  const workbenchSortAnchorRef = useRef(null);
+  const workbenchSortLongPressTimerRef = useRef(null);
+  const workbenchSortEntryToastTimerRef = useRef(null);
+  const workbenchSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
+  const suppressNextCardClickRef = useRef(false);
 
   const items = useAppStore(s => s.items);
   const itemsRevision = useAppStore(s => s.itemsRevision);
@@ -331,13 +345,53 @@ function WorkbenchPanel() {
     || selectedTags.length > 0
     || activeSavedView
   );
+  const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
+  const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const setWorkbenchCardRef = useCallback((itemId, node) => {
+    const map = workbenchCardRefsRef.current;
+    if (!itemId) return;
+    if (node) {
+      map.set(itemId, node);
+      return;
+    }
+    map.delete(itemId);
+  }, []);
+
+  const clearWorkbenchSortLongPressTimer = useCallback(() => {
+    if (workbenchSortLongPressTimerRef.current) {
+      clearTimeout(workbenchSortLongPressTimerRef.current);
+      workbenchSortLongPressTimerRef.current = null;
+    }
+  }, []);
+
+  const showWorkbenchSortEntryToast = useCallback(() => {
+    setShowSortEntryToast(true);
+    if (workbenchSortEntryToastTimerRef.current) {
+      clearTimeout(workbenchSortEntryToastTimerRef.current);
+    }
+    workbenchSortEntryToastTimerRef.current = setTimeout(() => {
+      setShowSortEntryToast(false);
+      workbenchSortEntryToastTimerRef.current = null;
+    }, 1300);
+  }, []);
+
+  const handleFinishWorkbenchSortMode = useCallback(() => {
+    setWorkbenchSortMode(false);
+    setWorkbenchSortAnchorItemId(null);
+    setShowSortEntryToast(false);
+    clearWorkbenchSortLongPressTimer();
+    workbenchSortLongPressPointerRef.current.pointerId = null;
+    workbenchSortAnchorRef.current = null;
+  }, [clearWorkbenchSortLongPressTimer]);
+
   const handleDragEnd = useCallback((event) => {
+    if (!isWorkbenchSortMode) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = allPinnedItems.findIndex(i => i.id === active.id);
@@ -355,7 +409,7 @@ function WorkbenchPanel() {
         console.error('[Workbench] refresh pinned items after reorder failed:', refreshError);
       }
     });
-  }, [allPinnedItems]);
+  }, [allPinnedItems, isWorkbenchSortMode]);
 
   const handleWorkbenchTypeChange = useCallback((nextType) => {
     setSelectedType(nextType);
@@ -526,6 +580,20 @@ function WorkbenchPanel() {
     selectionAnchorIndexRef.current = -1;
   }, [selectedPinnedIds.length]);
 
+  useEffect(() => {
+    if (!workbenchSortMode) return;
+    if (selectedPinnedIds.length > 0) {
+      handleFinishWorkbenchSortMode();
+    }
+  }, [selectedPinnedIds.length, workbenchSortMode, handleFinishWorkbenchSortMode]);
+
+  useEffect(() => {
+    if (!workbenchSortMode) return;
+    if (pinnedItems.length <= 1) {
+      handleFinishWorkbenchSortMode();
+    }
+  }, [pinnedItems.length, workbenchSortMode, handleFinishWorkbenchSortMode]);
+
   useClickOutsideDismiss({
     isOpen: showWorkbenchTypeFilter,
     wrapperRef: workbenchTypeWrapperRef,
@@ -611,8 +679,71 @@ function WorkbenchPanel() {
     }
   }, [items, togglePin]);
 
+  const handleWorkbenchCardPointerUp = useCallback(() => {
+    clearWorkbenchSortLongPressTimer();
+    workbenchSortLongPressPointerRef.current.pointerId = null;
+  }, [clearWorkbenchSortLongPressTimer]);
+
+  const handleWorkbenchCardPointerMove = useCallback((event) => {
+    if (!workbenchSortLongPressTimerRef.current) return;
+    const state = workbenchSortLongPressPointerRef.current;
+    if (state.pointerId != null && event.pointerId !== state.pointerId) return;
+    const dx = Math.abs((event.clientX || 0) - state.x);
+    const dy = Math.abs((event.clientY || 0) - state.y);
+    if (dx > WORKBENCH_SORT_LONG_PRESS_MOVE_PX || dy > WORKBENCH_SORT_LONG_PRESS_MOVE_PX) {
+      clearWorkbenchSortLongPressTimer();
+    }
+  }, [clearWorkbenchSortLongPressTimer]);
+
+  const handleWorkbenchCardPointerDown = useCallback((item, event) => {
+    if (!item?.id) return;
+    if (isWorkbenchSortMode || selectedPinnedIds.length > 0) return;
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
+      return;
+    }
+    clearWorkbenchSortLongPressTimer();
+    workbenchSortLongPressPointerRef.current = {
+      pointerId: event.pointerId ?? null,
+      x: event.clientX || 0,
+      y: event.clientY || 0,
+    };
+    workbenchSortLongPressTimerRef.current = setTimeout(() => {
+      workbenchSortLongPressTimerRef.current = null;
+      suppressNextCardClickRef.current = true;
+      const pointerState = workbenchSortLongPressPointerRef.current;
+      const card = workbenchCardRefsRef.current.get(item.id);
+      if (card) {
+        const rect = card.getBoundingClientRect();
+        const cardsRect = workbenchCardsRef.current?.getBoundingClientRect?.();
+        const offsetYRatio = rect.height > 0
+          ? Math.min(1, Math.max(0, (pointerState.y - rect.top) / rect.height))
+          : 0.5;
+        workbenchSortAnchorRef.current = {
+          itemId: item.id,
+          pointerClientY: pointerState.y,
+          offsetYRatio,
+          pointerYInCards: cardsRect ? (pointerState.y - cardsRect.top) : null,
+        };
+      } else {
+        workbenchSortAnchorRef.current = null;
+      }
+      setWorkbenchSortAnchorItemId(item.id);
+      setWorkbenchSortMode(true);
+      showWorkbenchSortEntryToast();
+    }, WORKBENCH_SORT_LONG_PRESS_MS);
+  }, [
+    clearWorkbenchSortLongPressTimer,
+    isWorkbenchSortMode,
+    selectedPinnedIds.length,
+    showWorkbenchSortEntryToast,
+  ]);
+
   const handleCardPointerDownCapture = useCallback((item, index, event) => {
     if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
+    clearWorkbenchSortLongPressTimer();
+    workbenchSortLongPressPointerRef.current.pointerId = null;
     event.stopPropagation();
     event.preventDefault();
     workbenchPanelRef.current?.focus();
@@ -636,12 +767,22 @@ function WorkbenchPanel() {
         : [...current, item.id]
     ));
     selectionAnchorIndexRef.current = index;
-  }, [pinnedItems]);
+  }, [clearWorkbenchSortLongPressTimer, pinnedItems]);
 
   const handleCardClick = useCallback((item, index, event) => {
+    if (suppressNextCardClickRef.current) {
+      suppressNextCardClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.stopPropagation();
     workbenchPanelRef.current?.focus();
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
+      event.preventDefault();
+      return;
+    }
+    if (isWorkbenchSortMode) {
       event.preventDefault();
       return;
     }
@@ -657,17 +798,18 @@ function WorkbenchPanel() {
     }
     selectionAnchorIndexRef.current = index;
     setPanelMode('preview', item);
-  }, [selectedPinnedIds.length, setPanelMode]);
+  }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
 
   const handleCardDoubleClick = useCallback((item, event) => {
     event.stopPropagation();
+    if (isWorkbenchSortMode) return;
     if (selectedPinnedIds.length > 0) return;
     if (item.type_ === 'image' || item.type_ === 'file') {
       handleCopy(item, 'workbench');
     } else {
       handleCopyAndAutoPaste(item, 'workbench');
     }
-  }, [selectedPinnedIds.length, handleCopyAndAutoPaste, handleCopy]);
+  }, [isWorkbenchSortMode, selectedPinnedIds.length, handleCopyAndAutoPaste, handleCopy]);
 
   const clearPinnedSelection = useCallback(() => {
     setSelectedPinnedIds([]);
@@ -690,8 +832,64 @@ function WorkbenchPanel() {
   });
 
   const handleCardContextMenu = useCallback((item, index, event) => {
+    clearWorkbenchSortLongPressTimer();
+    workbenchSortLongPressPointerRef.current.pointerId = null;
     openContextMenu(item, index, event);
-  }, [openContextMenu]);
+  }, [clearWorkbenchSortLongPressTimer, openContextMenu]);
+
+  useLayoutEffect(() => {
+    if (!isWorkbenchSortMode) return;
+    const anchor = workbenchSortAnchorRef.current;
+    if (!anchor) return;
+
+    let rafId = 0;
+    let attemptCount = 0;
+    const maxAttempts = 60;
+    const applyAnchorCompensation = () => {
+      const cardsEl = workbenchCardsRef.current;
+      const cardEl = workbenchCardRefsRef.current.get(anchor.itemId);
+      if (!cardsEl || !cardEl) {
+        workbenchSortAnchorRef.current = null;
+        return;
+      }
+      const cardsRect = cardsEl.getBoundingClientRect();
+      const cardRect = cardEl.getBoundingClientRect();
+      const ratioY = Math.min(1, Math.max(0, anchor.offsetYRatio ?? 0.5));
+      const desiredY = anchor.pointerYInCards != null
+        ? cardsRect.top + anchor.pointerYInCards
+        : anchor.pointerClientY;
+      const currentY = cardRect.top + (cardRect.height * ratioY);
+      const deltaY = currentY - desiredY;
+
+      if (Math.abs(deltaY) > 0.5) {
+        const prevScrollTop = cardsEl.scrollTop;
+        cardsEl.scrollTop += deltaY;
+        const reachedBoundary = Math.abs(cardsEl.scrollTop - prevScrollTop) < 0.5;
+        if (reachedBoundary) {
+          workbenchSortAnchorRef.current = null;
+          return;
+        }
+      }
+
+      const pointerYInCards = desiredY - cardsRect.top;
+      const cardTopInCards = cardRect.top - cardsRect.top;
+      const cardBottomInCards = cardRect.bottom - cardsRect.top;
+      const verticalSearchHit = pointerYInCards >= cardTopInCards - 14 && pointerYInCards <= cardBottomInCards + 14;
+
+      attemptCount += 1;
+      if (attemptCount < maxAttempts && (!verticalSearchHit || Math.abs(deltaY) > 0.35)) {
+        rafId = requestAnimationFrame(applyAnchorCompensation);
+        return;
+      }
+      workbenchSortAnchorRef.current = null;
+    };
+
+    rafId = requestAnimationFrame(applyAnchorCompensation);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [isWorkbenchSortMode]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -701,6 +899,11 @@ function WorkbenchPanel() {
       if (!panel) return;
       const active = document.activeElement;
       if (!panel.contains(e.target) && !panel.contains(active) && active !== panel) return;
+      if (e.key === 'Escape' && isWorkbenchSortMode) {
+        e.preventDefault();
+        handleFinishWorkbenchSortMode();
+        return;
+      }
 
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'a') {
         if (pinnedItems.length === 0) return;
@@ -711,7 +914,22 @@ function WorkbenchPanel() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pinnedItems]);
+  }, [handleFinishWorkbenchSortMode, isWorkbenchSortMode, pinnedItems]);
+
+  useEffect(() => (
+    () => {
+      clearWorkbenchSortLongPressTimer();
+    }
+  ), [clearWorkbenchSortLongPressTimer]);
+
+  useEffect(() => (
+    () => {
+      if (workbenchSortEntryToastTimerRef.current) {
+        clearTimeout(workbenchSortEntryToastTimerRef.current);
+        workbenchSortEntryToastTimerRef.current = null;
+      }
+    }
+  ), []);
 
   const handleExpandedNoteKeyDown = useCallback((event) => {
     if (isComposingKeyEvent(event)) return;
@@ -1050,6 +1268,18 @@ function WorkbenchPanel() {
             <span>{t('toolbar.clearFilter')}</span>
           </button>
         )}
+        <button
+          type="button"
+          className={`workbench-sort-toggle ${isWorkbenchSortMode ? 'active' : 'placeholder'}`}
+          onClick={isWorkbenchSortMode ? handleFinishWorkbenchSortMode : undefined}
+          title={isWorkbenchSortMode ? t('workbench.finishSortMode') : ''}
+          aria-label={isWorkbenchSortMode ? t('workbench.finishSortMode') : ''}
+          aria-pressed={isWorkbenchSortMode}
+          tabIndex={isWorkbenchSortMode ? 0 : -1}
+        >
+          <ArrowUpDown size={12} />
+          <span>{t('workbench.finishSortMode')}</span>
+        </button>
       </div>
 
       {pinnedItems.length === 0 ? (
@@ -1065,15 +1295,24 @@ function WorkbenchPanel() {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
-            <div className="workbench-cards">
+            <div ref={workbenchCardsRef} className={`workbench-cards ${isWorkbenchSortMode ? 'sort-mode' : ''}`}>
               {pinnedItems.map((item, index) => (
                 <SortableWorkbenchCard
                   key={item.id}
                   item={item}
                   isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
                   isMultiSelected={selectedPinnedIds.includes(item.id)}
+                  isSortMode={isWorkbenchSortMode}
+                  isSortAnchor={isWorkbenchSortMode && workbenchSortAnchorItemId === item.id}
                   isSelectionMode={selectedPinnedIds.length > 0}
+                  sortableDisabled={!workbenchDragEnabled || selectedPinnedIds.length > 0}
                   onUnpin={() => togglePin(item)}
+                  onSetCardRef={(node) => setWorkbenchCardRef(item.id, node)}
+                  onCardPointerDown={(event) => handleWorkbenchCardPointerDown(item, event)}
+                  onCardPointerMove={handleWorkbenchCardPointerMove}
+                  onCardPointerUp={handleWorkbenchCardPointerUp}
+                  onCardPointerCancel={handleWorkbenchCardPointerUp}
+                  onCardPointerLeave={handleWorkbenchCardPointerUp}
                   onPointerDownCapture={(event) => handleCardPointerDownCapture(item, index, event)}
                   onClick={(event) => handleCardClick(item, index, event)}
                   onDoubleClick={(event) => handleCardDoubleClick(item, event)}
@@ -1146,6 +1385,11 @@ function WorkbenchPanel() {
           handleClearAll={quickActions.handleClearAll}
           handleUndoClearAll={quickActions.handleUndoClearAll}
         />
+      )}
+      {isWorkbenchSortMode && showSortEntryToast && (
+        <div className="workbench-entry-toast" role="status" aria-live="polite">
+          {t('workbench.releaseThenDragHint')}
+        </div>
       )}
     </div>
   );

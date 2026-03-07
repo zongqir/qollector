@@ -166,6 +166,7 @@ function CollectionBoard({
   const [openColorPickerItemId, setOpenColorPickerItemId] = useState(null);
   const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
   const [collectionSortMode, setCollectionSortMode] = useState(false);
+  const [collectionSortAnchorItemId, setCollectionSortAnchorItemId] = useState(null);
   const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
   const [backendItems, setBackendItems] = useState([]);
   const [backendLoading, setBackendLoading] = useState(false);
@@ -656,16 +657,20 @@ function CollectionBoard({
       const card = collectionCardRefsRef.current.get(item.id);
       if (card) {
         const rect = card.getBoundingClientRect();
+        const gridRect = collectionGridRef.current?.getBoundingClientRect?.();
+        const offsetYRatio = rect.height > 0
+          ? Math.min(1, Math.max(0, (pointerState.y - rect.top) / rect.height))
+          : 0.5;
         collectionSortAnchorRef.current = {
           itemId: item.id,
-          pointerClientX: pointerState.x,
           pointerClientY: pointerState.y,
-          offsetX: pointerState.x - rect.left,
-          offsetY: pointerState.y - rect.top,
+          offsetYRatio,
+          pointerYInGrid: gridRect ? (pointerState.y - gridRect.top) : null,
         };
       } else {
         collectionSortAnchorRef.current = null;
       }
+      setCollectionSortAnchorItemId(item.id);
       setCollectionSortMode(true);
       showCollectionSortEntryToast();
     }, COLLECTION_SORT_LONG_PRESS_MS);
@@ -679,6 +684,7 @@ function CollectionBoard({
 
   const handleFinishCollectionSortMode = useCallback(() => {
     setCollectionSortMode(false);
+    setCollectionSortAnchorItemId(null);
     setShowSortEntryToast(false);
     clearCollectionSortLongPressTimer();
     collectionSortLongPressPointerRef.current.pointerId = null;
@@ -784,8 +790,9 @@ function CollectionBoard({
     const anchor = collectionSortAnchorRef.current;
     if (!anchor) return;
 
-    let raf1 = 0;
-    let raf2 = 0;
+    let rafId = 0;
+    let attemptCount = 0;
+    const maxAttempts = 60;
     const applyAnchorCompensation = () => {
       const grid = collectionGridRef.current;
       const card = collectionCardRefsRef.current.get(anchor.itemId);
@@ -794,31 +801,42 @@ function CollectionBoard({
         return;
       }
 
+      const gridRect = grid.getBoundingClientRect();
       const cardRect = card.getBoundingClientRect();
-      const currentPointerX = cardRect.left + anchor.offsetX;
-      const currentPointerY = cardRect.top + anchor.offsetY;
-      const deltaX = currentPointerX - anchor.pointerClientX;
-      const deltaY = currentPointerY - anchor.pointerClientY;
+      const ratioY = Math.min(1, Math.max(0, anchor.offsetYRatio ?? 0.5));
+      const desiredY = anchor.pointerYInGrid != null
+        ? gridRect.top + anchor.pointerYInGrid
+        : anchor.pointerClientY;
+      const currentY = cardRect.top + (cardRect.height * ratioY);
+      const deltaY = currentY - desiredY;
 
       if (Math.abs(deltaY) > 0.5) {
+        const prevScrollTop = grid.scrollTop;
         grid.scrollTop += deltaY;
+        const reachedBoundary = Math.abs(grid.scrollTop - prevScrollTop) < 0.5;
+        if (reachedBoundary) {
+          collectionSortAnchorRef.current = null;
+          return;
+        }
       }
-      if (Math.abs(deltaX) > 0.5 && grid.scrollWidth > grid.clientWidth + 1) {
-        grid.scrollLeft += deltaX;
+
+      const pointerYInGrid = desiredY - gridRect.top;
+      const cardTopInGrid = cardRect.top - gridRect.top;
+      const cardBottomInGrid = cardRect.bottom - gridRect.top;
+      const verticalSearchHit = pointerYInGrid >= cardTopInGrid - 14 && pointerYInGrid <= cardBottomInGrid + 14;
+
+      attemptCount += 1;
+      if (attemptCount < maxAttempts && (!verticalSearchHit || Math.abs(deltaY) > 0.35)) {
+        rafId = requestAnimationFrame(applyAnchorCompensation);
+        return;
       }
+      collectionSortAnchorRef.current = null;
     };
 
-    raf1 = requestAnimationFrame(() => {
-      applyAnchorCompensation();
-      raf2 = requestAnimationFrame(() => {
-        applyAnchorCompensation();
-        collectionSortAnchorRef.current = null;
-      });
-    });
+    rafId = requestAnimationFrame(applyAnchorCompensation);
 
     return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      cancelAnimationFrame(rafId);
     };
   }, [isCollectionSortMode]);
 
@@ -1131,6 +1149,7 @@ function CollectionBoard({
                         ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
                         ${item.is_pinned ? 'pinned' : ''}
                         ${activeItemId === item.id ? 'active' : ''}
+                        ${isCollectionSortMode && collectionSortAnchorItemId === item.id ? 'sort-anchor' : ''}
                         ${hasCustomCardBackground ? 'custom-bg' : ''}
                       `.trim()}
                       style={hasCustomCardBackground ? { '--collection-card-accent': cardBackground.accent } : undefined}
@@ -1267,6 +1286,7 @@ function CollectionBoard({
                         ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
                         ${item.is_pinned ? 'pinned' : ''}
                         ${activeItemId === item.id ? 'active' : ''}
+                        ${isCollectionSortMode && collectionSortAnchorItemId === item.id ? 'sort-anchor' : ''}
                         ${hasCustomCardBackground ? 'custom-bg' : ''}
                       `.trim()}
                       style={hasCustomCardBackground ? { '--collection-card-accent': cardBackground.accent } : undefined}

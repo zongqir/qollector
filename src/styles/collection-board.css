@@ -438,6 +438,26 @@
     inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 40%, transparent);
 }
 
+.collection-card.sort-anchor {
+  border-color: color-mix(in srgb, var(--accent-color) 84%, transparent);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-color) 26%, transparent),
+    0 10px 22px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  animation: collection-sort-anchor-pulse 1.2s var(--ease-standard) infinite;
+}
+
+.collection-card.sort-anchor::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
 .collection-card.custom-bg {
   border-color: color-mix(in srgb, var(--collection-card-accent) 34%, var(--surface-border-soft) 66%);
   background: linear-gradient(
@@ -462,6 +482,24 @@
 
 .collection-card.pinned:hover {
   border-color: color-mix(in srgb, var(--accent-color) 44%, transparent);
+}
+
+@keyframes collection-sort-anchor-pulse {
+  0% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent),
+      0 8px 20px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent-color) 32%, transparent),
+      0 12px 26px color-mix(in srgb, var(--accent-color) 22%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent),
+      0 8px 20px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
 }
 
 .collection-card-head {
