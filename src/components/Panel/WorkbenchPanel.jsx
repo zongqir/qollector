@@ -1268,18 +1268,19 @@ function WorkbenchPanel() {
             <span>{t('toolbar.clearFilter')}</span>
           </button>
         )}
-        <button
-          type="button"
-          className={`workbench-sort-toggle ${isWorkbenchSortMode ? 'active' : 'placeholder'}`}
-          onClick={isWorkbenchSortMode ? handleFinishWorkbenchSortMode : undefined}
-          title={isWorkbenchSortMode ? t('workbench.finishSortMode') : ''}
-          aria-label={isWorkbenchSortMode ? t('workbench.finishSortMode') : ''}
-          aria-pressed={isWorkbenchSortMode}
-          tabIndex={isWorkbenchSortMode ? 0 : -1}
-        >
-          <ArrowUpDown size={12} />
-          <span>{t('workbench.finishSortMode')}</span>
-        </button>
+        {isWorkbenchSortMode && (
+          <button
+            type="button"
+            className="workbench-sort-toggle active"
+            onClick={handleFinishWorkbenchSortMode}
+            title={t('workbench.finishSortMode')}
+            aria-label={t('workbench.finishSortMode')}
+            aria-pressed
+          >
+            <ArrowUpDown size={12} />
+            <span>{t('workbench.finishSortMode')}</span>
+          </button>
+        )}
       </div>
 
       {pinnedItems.length === 0 ? (

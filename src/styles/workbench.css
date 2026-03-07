@@ -158,11 +158,6 @@
   background: color-mix(in srgb, var(--accent-light) 74%, transparent);
 }
 
-.workbench-sort-toggle.placeholder {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .workbench-sort-toggle:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 34%, transparent);

@@ -635,7 +635,7 @@ function CollectionBoard({
 
   const handleCollectionCardPointerDown = useCallback((item, event) => {
     if (!item?.id) return;
-    if (isMiniMode || isCollectionSortMode || effectiveCollectionViewMode !== COLLECTION_VIEW_MODE_CARDS) return;
+    if (isMiniMode || isCollectionSortMode) return;
     if (event.button !== 0) return;
     const target = event.target;
     if (target instanceof Element && target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')) {
@@ -676,7 +676,6 @@ function CollectionBoard({
     }, COLLECTION_SORT_LONG_PRESS_MS);
   }, [
     clearCollectionSortLongPressTimer,
-    effectiveCollectionViewMode,
     isCollectionSortMode,
     isMiniMode,
     showCollectionSortEntryToast,
@@ -1023,18 +1022,19 @@ function CollectionBoard({
                   <List size={13} />
                 </button>
               </div>
-              <button
-                type="button"
-                className={`collection-sort-toggle ${isCollectionSortMode ? 'active' : 'placeholder'}`}
-                onClick={isCollectionSortMode ? handleFinishCollectionSortMode : undefined}
-                title={isCollectionSortMode ? t('collection.finishSortMode') : ''}
-                aria-label={isCollectionSortMode ? t('collection.finishSortMode') : ''}
-                aria-pressed={isCollectionSortMode}
-                tabIndex={isCollectionSortMode ? 0 : -1}
-              >
-                <ArrowUpDown size={12} />
-                <span>{t('collection.finishSortMode')}</span>
-              </button>
+              {isCollectionSortMode && (
+                <button
+                  type="button"
+                  className="collection-sort-toggle active"
+                  onClick={handleFinishCollectionSortMode}
+                  title={t('collection.finishSortMode')}
+                  aria-label={t('collection.finishSortMode')}
+                  aria-pressed
+                >
+                  <ArrowUpDown size={12} />
+                  <span>{t('collection.finishSortMode')}</span>
+                </button>
+              )}
             </div>
           </div>
         <div className="collection-tag-rail-meta">

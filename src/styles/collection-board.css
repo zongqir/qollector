@@ -276,11 +276,6 @@
   background: color-mix(in srgb, var(--accent-light) 74%, transparent);
 }
 
-.collection-sort-toggle.placeholder {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .collection-tag-rail-meta {
   min-height: 17px;
   display: flex;
