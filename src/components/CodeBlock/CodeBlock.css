@@ -3,7 +3,7 @@
 .code-block {
   position: relative;
   border-radius: 6px;
-  background: #1e1e1e;
+  background: var(--code-block-bg);
   overflow: hidden;
   font-size: 12px;
   line-height: 1.5;
@@ -57,8 +57,8 @@
   right: 6px;
   font-size: 9px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--code-block-badge-fg);
+  background: var(--code-block-badge-bg);
   padding: 1px 5px;
   border-radius: 3px;
   pointer-events: none;
@@ -70,9 +70,9 @@
 .code-truncate-notice {
   padding: 4px 10px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.04);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--code-block-hint-fg);
+  background: var(--code-block-hint-bg);
+  border-top: 1px solid var(--code-block-hint-border);
   text-align: center;
   font-family: inherit;
 }

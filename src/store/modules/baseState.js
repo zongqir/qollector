@@ -1,0 +1,130 @@
+export const createBaseState = ({
+  initialHistorySnapshot,
+  savedFilterViews,
+  workbenchSavedFilterViews,
+  historyStreamEnabled,
+}) => ({
+  // ========== 历史数据 ==========
+  items: initialHistorySnapshot,
+  loading: initialHistorySnapshot.length === 0,
+  hasMore: true,
+  loadingMore: false,
+  itemsRevision: 0,
+  processedItemIds: new Set(),
+  isMemorySuspended: false,
+
+  // ========== 右栏面板状态机 ==========
+  // 'workbench' | 'preview' | 'compare' | 'timeline'
+  panelMode: 'workbench',
+  previewItem: null,
+  previewReturnMode: 'workbench',
+  compareCandidateIds: [],
+  compareItemIds: [],
+
+  // ========== 时间旅行状态 ==========
+  timelineDate: 'today', // 'today' | 'yesterday'
+  timelineItems: [],
+  timelineSummary: null,
+  timelineLoading: false,
+  timelineError: null,
+  timelineSummaryCache: {}, // { 'today': { summary: '...', timestamp: 123456 }, 'yesterday': { summary: '...', timestamp: 123456 } }
+
+  // ========== 搜索/筛选 ==========
+  searchQuery: '',
+  debouncedSearchQuery: '',
+  selectedType: 'all',
+  selectedTags: [],
+  showFavoritesOnly: false,
+  showPinnedOnly: false,
+  showTagFilter: false,
+  tagSearchQuery: '',
+  selectedDateRange: null,
+  showDateFilter: false,
+  customDateStart: '',
+  customDateEnd: '',
+  savedFilterViews,
+  activeFilterViewId: null,
+
+  // ========== 工作区筛选（独立于历史流） ==========
+  workbenchSearchQuery: '',
+  workbenchSelectedType: 'all',
+  workbenchSelectedTags: [],
+  workbenchShowFavoritesOnly: false,
+  workbenchSelectedDateRange: null,
+  workbenchCustomDateStart: '',
+  workbenchCustomDateEnd: '',
+  workbenchSavedFilterViews,
+  workbenchActiveFilterViewId: null,
+
+  // ========== 多选状态 ==========
+  selectedItemIds: [],
+
+  // ========== keyboard focus ==========
+  focusedIndex: -1,
+
+  // ========== UI 状态 ==========
+  copiedItemId: null,
+  copyFeedbackSource: null,
+  copyFeedbackToken: 0,
+  generatingAI: null,
+  ocrProcessing: null,
+  showSettings: false,
+  settingsInitialTab: null,
+  isAlwaysOnTop: false,
+  isMiniMode: false,
+  pinBeforeMini: false,
+  workbenchPanelBeforeMini: null,
+
+  // ========== 配置 ==========
+  aiEnabled: false,
+  ocrEnabled: false,
+  licenseStatus: 'Free',
+  isProUser: false,
+  maxPinnedItems: 10,
+  themeMode: 'system',
+  isLocked: true,
+  hasPassword: false,
+  workbenchPanelEnabled: true,
+  historyStreamEnabled,
+  lowMemoryModeEnabled: false,
+  autoPasteOnDoubleClick: false,
+  lastCopyWasAutoPaste: false,
+  widgetEnabled: false,
+  smartCopyEntryEnabled: false,
+  historyTagShortcutEnabled: true,
+  autoCleanupEnabled: true,
+  cleanupMaxItems: 50000,
+  cleanupMaxAgeDays: 90,
+  startupFavoritesViewEnabled: false,
+
+  // ========== 悬浮预览 ==========
+  hoverPreviewItem: null,
+  hoverPreviewPosition: null,
+
+  // ========== 备注编辑 ==========
+  editingNoteId: null,
+  editNote: '',
+
+  // ========== 标签管理 ==========
+  addingTagItemId: null,
+  newTagInput: '',
+
+  // ========== 编辑弹窗 ==========
+  showEditModal: false,
+  editModalMode: 'new',
+  editingItem: null,
+
+  // ========== Guided Tour ==========
+  tourActive: false,
+  tourStep: 0,
+
+  // ========== 分享 ==========
+  shareModalItem: null,
+  shareResult: null,
+  shareLoading: false,
+  shareError: null,
+  sharePendingConfirm: false,
+  sharePendingData: null,
+  sharePendingProvider: null,
+  shareConfig: null,
+});

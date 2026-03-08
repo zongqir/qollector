@@ -9,7 +9,7 @@
 /* ========== Mask panels (four rectangles around the spotlight hole) ========== */
 .tour-mask-panel {
   position: absolute;
-  background: rgba(0, 0, 0, 0.65);
+  background: color-mix(in srgb, var(--shadow-overlay) 76%, transparent);
   pointer-events: auto;
 }
 
@@ -17,7 +17,11 @@
 .tour-spotlight {
   position: absolute;
   border-radius: 8px;
-  transition: top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease;
+  transition:
+    top var(--motion-widget-expand) var(--ease-standard),
+    left var(--motion-widget-expand) var(--ease-standard),
+    width var(--motion-widget-expand) var(--ease-standard),
+    height var(--motion-widget-expand) var(--ease-standard);
   pointer-events: none;
 }
 
@@ -25,13 +29,13 @@
 .tour-tooltip {
   position: absolute;
   max-width: 320px;
-  background: var(--color-surface, #1e1e2e);
-  color: var(--color-text, #e0e0e0);
+  background: var(--control-panel-bg);
+  color: var(--text-primary);
   border-radius: 12px;
   padding: 18px 20px 14px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--shadow-lg) 66%, transparent);
   z-index: 10002;
-  animation: tooltipIn 0.3s ease;
+  animation: tooltipIn var(--motion-pop) var(--ease-standard);
   pointer-events: auto;
 }
 
@@ -53,7 +57,7 @@
   position: absolute;
   width: 12px;
   height: 12px;
-  background: var(--color-surface, #1e1e2e);
+  background: var(--control-panel-bg);
   transform: rotate(45deg);
 }
 
@@ -90,14 +94,14 @@
   transform: translate(-50%, -50%);
   max-width: 380px;
   width: 90%;
-  background: var(--color-surface, #1e1e2e);
-  color: var(--color-text, #e0e0e0);
+  background: var(--control-panel-bg);
+  color: var(--text-primary);
   border-radius: 16px;
   padding: 28px 28px 20px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 48px color-mix(in srgb, var(--shadow-xl) 72%, transparent);
   z-index: 10002;
   text-align: center;
-  animation: tooltipIn 0.35s ease;
+  animation: tooltipIn var(--motion-slow) var(--ease-standard);
   pointer-events: auto;
 }
 
@@ -115,17 +119,17 @@
   padding: 7px 20px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
-  color: #fff;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 12px;
-  transition: background 0.2s;
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .tour-go-settings-btn:hover {
-  background: #2563eb;
+  background: var(--accent-hover);
 }
 
 /* ========== Navigation ========== */
@@ -144,22 +148,22 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--control-button-bg);
   color: inherit;
-  transition: background 0.2s;
+  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 
 .tour-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--control-button-hover-bg);
 }
 
 .tour-nav-btn.primary {
-  background: #3b82f6;
-  color: #fff;
+  background: var(--accent-color);
+  color: var(--text-on-accent);
 }
 
 .tour-nav-btn.primary:hover {
-  background: #2563eb;
+  background: var(--accent-hover);
 }
 
 .tour-nav-skip {
@@ -170,7 +174,7 @@
   opacity: 0.5;
   font-size: 12px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity var(--motion-fast) var(--ease-standard);
 }
 
 .tour-nav-skip:hover {
@@ -189,12 +193,14 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  transition: background 0.3s, transform 0.3s;
+  background: color-mix(in srgb, var(--text-tertiary) 40%, transparent);
+  transition:
+    background-color var(--motion-base) var(--ease-standard),
+    transform var(--motion-base) var(--ease-standard);
 }
 
 .tour-progress-dot.active {
-  background: #3b82f6;
+  background: var(--accent-color);
   transform: scale(1.3);
 }
 

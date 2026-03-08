@@ -149,6 +149,14 @@
   --color-danger-bg: rgba(255, 59, 48, 0.08);
   --bg-hover: rgba(0, 0, 0, 0.04);
 
+  /* Code block tokens */
+  --code-block-bg: rgba(22, 24, 31, 0.96);
+  --code-block-badge-bg: rgba(255, 255, 255, 0.08);
+  --code-block-badge-fg: rgba(255, 255, 255, 0.45);
+  --code-block-hint-bg: rgba(255, 255, 255, 0.04);
+  --code-block-hint-fg: rgba(255, 255, 255, 0.4);
+  --code-block-hint-border: rgba(255, 255, 255, 0.06);
+
   /* Unified state tokens */
   --state-success-fg: #0a7d3d;
   --state-success-border: rgba(10, 125, 61, 0.3);
@@ -417,6 +425,14 @@
   --color-danger: #ff453a;
   --color-danger-bg: rgba(255, 69, 58, 0.12);
   --bg-hover: rgba(255, 255, 255, 0.06);
+
+  /* Code block tokens */
+  --code-block-bg: rgba(18, 20, 26, 0.96);
+  --code-block-badge-bg: rgba(255, 255, 255, 0.1);
+  --code-block-badge-fg: rgba(255, 255, 255, 0.56);
+  --code-block-hint-bg: rgba(255, 255, 255, 0.05);
+  --code-block-hint-fg: rgba(255, 255, 255, 0.42);
+  --code-block-hint-border: rgba(255, 255, 255, 0.08);
 
   /* Unified state tokens */
   --state-success-fg: #8ef0bb;

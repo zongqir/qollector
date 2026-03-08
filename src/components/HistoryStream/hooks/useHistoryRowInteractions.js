@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { INTERNAL_DRAG_MIME } from '../../../constants/dragDrop';
 import { resolveFilenameStemForItem } from '../../../utils/filenameNaming';
 import { PREVIEW_CLICK_DELAY_MS, openItemPreview } from '../../../utils/previewInteractionPolicy';
 
@@ -207,7 +208,7 @@ export default function useHistoryRowInteractions({
 
     const text = getDragText(item, externalPaths);
     e.dataTransfer.setData('text/plain', text);
-    e.dataTransfer.setData('application/x-qollect-item', JSON.stringify({ id: item.id }));
+    e.dataTransfer.setData(INTERNAL_DRAG_MIME, JSON.stringify({ id: item.id }));
     e.dataTransfer.effectAllowed = 'copyMove';
     switchToWorkbench();
 

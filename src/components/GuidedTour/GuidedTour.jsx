@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import useAppStore from '../../store/useAppStore';
+import { WINDOW_MODE_STORAGE_KEY } from '../../constants/storageKeys';
 import './GuidedTour.css';
 
 const NORMAL_SIZE = { width: 800, height: 600 };
@@ -84,7 +85,7 @@ function GuidedTour() {
       try {
         const appWindow = getCurrentWindow();
         await appWindow.setSize(new LogicalSize(NORMAL_SIZE.width, NORMAL_SIZE.height));
-        localStorage.setItem('qollect-window-mode', 'normal');
+        localStorage.setItem(WINDOW_MODE_STORAGE_KEY, 'normal');
         useAppStore.setState({ isMiniMode: false, workbenchPanelEnabled: true });
       } catch (error) {
         console.error('failed to exit mini mode during tour:', error);

@@ -30,6 +30,10 @@ import PolymorphicPanel from './components/Panel';
 import GuidedTour from './components/GuidedTour/GuidedTour';
 import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 import releaseNotes from './data/release-notes.json';
+import {
+  TOUR_COMPLETED_STORAGE_KEY,
+  WINDOW_MODE_STORAGE_KEY,
+} from './constants/storageKeys';
 
 console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
 
@@ -40,7 +44,6 @@ const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
 
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
-const WINDOW_MODE_STORAGE_KEY = 'qollect-window-mode';
 const WINDOW_MODE_MINI = 'mini';
 const WINDOW_MODE_NORMAL = 'normal';
 const LAYOUT_PRESET_STORAGE_KEY = 'qollect-layout-preset';
@@ -323,7 +326,7 @@ function App() {
 
     // Auto-start guided tour for first-time users
     let tourTimer = null;
-    if (!localStorage.getItem('qollect-tour-completed')) {
+    if (!localStorage.getItem(TOUR_COMPLETED_STORAGE_KEY)) {
       tourTimer = setTimeout(() => startTour(), 1500);
     }
 

@@ -3,10 +3,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
+import { INTERNAL_DRAG_MIME } from './constants/dragDrop';
 import './DragDrop.css';
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']);
-const INTERNAL_DRAG_MIME = 'application/x-qollect-item';
 const EDITABLE_SELECTOR = 'input, textarea, [contenteditable="true"]';
 
 function normalizeUniqueStrings(values) {

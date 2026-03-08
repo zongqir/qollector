@@ -49,6 +49,7 @@ import {
 import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
+import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 import {
   getDateRangeForPreset,
   dateStringToTimestamp,
@@ -718,7 +719,7 @@ function WorkbenchPanel() {
 
   const handleNativeDrop = useCallback(async (e) => {
     e.preventDefault();
-    const qollectData = e.dataTransfer.getData('application/x-qollect-item');
+    const qollectData = e.dataTransfer.getData(INTERNAL_DRAG_MIME);
     if (qollectData) {
       try {
         const { id } = JSON.parse(qollectData);

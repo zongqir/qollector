@@ -1,0 +1,34 @@
+export const createRuntimeActions = (set, clearHistorySnapshot) => ({
+  resetRuntimeStateAfterDataReset: () => {
+    clearHistorySnapshot();
+    set((state) => ({
+      items: [],
+      loading: false,
+      hasMore: true,
+      loadingMore: false,
+      itemsRevision: state.itemsRevision + 1,
+      processedItemIds: new Set(),
+      panelMode: 'workbench',
+      previewItem: null,
+      previewReturnMode: 'workbench',
+      compareCandidateIds: [],
+      compareItemIds: [],
+      hoverPreviewItem: null,
+      hoverPreviewPosition: null,
+      selectedItemIds: [],
+      copiedItemId: null,
+      copyFeedbackSource: null,
+      copyFeedbackToken: state.copyFeedbackToken + 1,
+      generatingAI: null,
+      ocrProcessing: null,
+      editingNoteId: null,
+      editNote: '',
+      addingTagItemId: null,
+      newTagInput: '',
+      showEditModal: false,
+      editingItem: null,
+      isMemorySuspended: false,
+      hasPassword: false,
+    }));
+  },
+});
