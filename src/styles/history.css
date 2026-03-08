@@ -153,8 +153,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   padding: 40px;
+  margin: 10px;
+  border: 1px dashed var(--state-panel-border);
+  border-radius: var(--state-panel-radius);
+  background: var(--state-panel-bg);
 }
 
 .loading-spinner {
@@ -172,7 +176,7 @@
 
 .loading-text {
   font-size: 13px;
-  color: var(--text-tertiary);
+  color: var(--state-panel-text-color);
 }
 
 /* Empty state */
@@ -181,7 +185,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-tertiary);
+  color: var(--state-panel-text-color);
   font-size: 13px;
   padding: 40px;
 }
@@ -191,6 +195,11 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  padding: 20px;
+  min-width: min(320px, 100%);
+  border: 1px dashed var(--state-panel-border);
+  border-radius: var(--state-panel-radius);
+  background: var(--state-panel-bg);
 }
 
 .empty-action-btn {
@@ -1210,6 +1219,7 @@
 
 .compact-card:hover .compact-card-badges .badge-btn,
 .compact-card:focus-within .compact-card-badges .badge-btn,
+.compact-card.keyboard-focused .compact-card-badges .badge-btn,
 .compact-card-badges:has(.active) .badge-btn {
   opacity: 1;
   pointer-events: auto;
@@ -1248,6 +1258,11 @@
 .badge-btn:hover {
   background: var(--btn-hover-bg);
   color: var(--text-primary);
+}
+
+.badge-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 34%, transparent);
 }
 
 .badge-btn.badge-pin.active {
@@ -1472,11 +1487,31 @@
   display: block;
 }
 
+.compact-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.compact-card-note {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .compact-card-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 4px;
   min-width: 0;
 }
 
@@ -1707,36 +1742,34 @@
 }
 
 .compact-card {
-  border-radius: 14px;
+  border-radius: var(--card-shell-radius);
   padding: 11px 12px 10px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  border: 1px solid var(--card-shell-border);
   background:
-    linear-gradient(165deg, color-mix(in srgb, var(--compact-card-bg, var(--bg-card)) 94%, transparent), color-mix(in srgb, var(--compact-card-bg, var(--bg-card)) 78%, transparent));
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--shadow-sm) 66%, transparent);
+    linear-gradient(165deg, color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 94%, transparent), color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 80%, transparent));
+  box-shadow: var(--card-shell-shadow-rest);
   transition: transform var(--motion-snappy) var(--ease-standard), border-color var(--motion-snappy) var(--ease-standard), box-shadow var(--motion-snappy) var(--ease-standard), background-color var(--motion-snappy) var(--ease-standard);
 }
 
 .compact-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--surface-border-strong) 78%, transparent);
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--shadow-md) 62%, transparent);
+  transform: translateY(var(--card-shell-lift-y));
+  border-color: var(--card-shell-border-hover);
+  box-shadow: var(--card-shell-shadow-hover);
 }
 
 .compact-card:active:not(.selected):not(.multi-selected) {
-  transform: translateY(0) scale(0.985);
+  transform: translateY(0) scale(var(--card-shell-press-scale));
 }
 
 .compact-card.selected,
 .compact-card.multi-selected {
-  border-color: color-mix(in srgb, var(--selection-border) 80%, transparent);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent),
-    0 12px 24px color-mix(in srgb, var(--selection-shadow) 62%, transparent);
+  border-color: var(--card-shell-border-selected);
+  box-shadow: var(--card-shell-shadow-selected);
 }
 
 .compact-card.keyboard-focused {
-  outline: 2px solid color-mix(in srgb, var(--accent-color) 82%, transparent);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: var(--card-shell-focus-ring), var(--card-shell-shadow-hover);
 }
 
 .compact-card-header {
@@ -1840,6 +1873,14 @@
   border-radius: 10px;
 }
 
+.compact-card-footer {
+  gap: 6px;
+}
+
+.compact-card-note {
+  color: color-mix(in srgb, var(--text-secondary) 96%, transparent);
+}
+
 .compact-card-tags {
   gap: 5px;
 }
@@ -1856,16 +1897,28 @@
   width: 156px;
   min-width: 156px;
   gap: 3px;
+  transition: opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
 }
 
 .badge-btn {
-  width: 21px;
-  height: 21px;
-  border-radius: 6px;
+  width: var(--card-toolbar-btn-size);
+  height: var(--card-toolbar-btn-size);
+  border-radius: var(--card-toolbar-btn-radius);
+  border: 1px solid var(--card-toolbar-btn-border);
+  background: var(--card-toolbar-btn-bg);
+  color: var(--card-toolbar-btn-color);
+  transition:
+    border-color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    background-color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    box-shadow var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
 }
 
 .badge-btn:hover {
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 65%, transparent);
+  border-color: var(--card-toolbar-btn-hover-border);
+  background: var(--card-toolbar-btn-hover-bg);
+  color: var(--card-toolbar-btn-hover-color);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
 }
 
 .history-stream-helper-text {
@@ -1902,10 +1955,33 @@
   padding-right: 8px;
 }
 
+.app.mini-mode .loading-state {
+  margin: 8px;
+  padding: 18px 10px;
+}
+
+.app.mini-mode .empty {
+  padding: 14px 8px;
+}
+
+.app.mini-mode .empty-content {
+  padding: 14px 10px;
+}
+
 .app.mini-mode .compact-card {
-  border-radius: 10px;
+  border-radius: var(--card-shell-radius-compact);
   padding: 8px 9px;
   box-shadow: none;
+}
+
+.app.mini-mode .compact-card-footer {
+  gap: 4px;
+}
+
+.app.mini-mode .compact-card-note {
+  font-size: 10.5px;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
 }
 
 .app.mini-mode .compact-card-files {
@@ -1970,6 +2046,37 @@
   color: color-mix(in srgb, var(--text-tertiary) 70%, transparent);
 }
 
+.compact-card-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.compact-card-state-chip {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compact-card-state-chip.pin {
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-primary) 14%);
+  border-color: color-mix(in srgb, var(--accent-color) 32%, transparent);
+  background: color-mix(in srgb, var(--accent-light) 70%, transparent);
+}
+
+.compact-card-state-chip.favorite {
+  color: color-mix(in srgb, var(--state-warning-fg) 90%, var(--text-primary) 10%);
+  border-color: color-mix(in srgb, var(--state-warning-border) 68%, transparent);
+  background: color-mix(in srgb, var(--state-warning-bg) 70%, transparent);
+}
+
 .compact-card.selected .compact-card-source,
 .compact-card.multi-selected .compact-card-source {
   color: color-mix(in srgb, var(--text-secondary) 85%, var(--accent-color) 15%);
@@ -1996,6 +2103,11 @@
 }
 
 @container (max-width: 560px) {
+  .empty-content {
+    min-width: 0;
+    width: 100%;
+  }
+
   .compact-card-source {
     max-width: 68px;
     font-size: 9.5px;
@@ -2005,6 +2117,20 @@
   .compact-card-source::before {
     margin-right: 3px;
     opacity: 0.65;
+  }
+
+  .compact-card-state {
+    gap: 3px;
+  }
+
+  .compact-card-state-chip {
+    width: 14px;
+    height: 14px;
+  }
+
+  .compact-card-state-chip svg {
+    width: 8px;
+    height: 8px;
   }
 }
 

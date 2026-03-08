@@ -88,6 +88,7 @@ function WorkbenchPanel() {
   const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
   const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
+  const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
   const selectionAnchorIndexRef = useRef(-1);
   const workbenchTypeWrapperRef = useRef(null);
   const workbenchDateWrapperRef = useRef(null);
@@ -170,6 +171,13 @@ function WorkbenchPanel() {
     }, WORKBENCH_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setWorkbenchTimeTick(Date.now());
+    }, 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1355,6 +1363,7 @@ function WorkbenchPanel() {
                 <SortableWorkbenchCard
                   key={item.id}
                   item={item}
+                  timeTick={workbenchTimeTick}
                   isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
                   isMultiSelected={selectedPinnedIds.includes(item.id)}
                   isSortMode={isWorkbenchSortMode}

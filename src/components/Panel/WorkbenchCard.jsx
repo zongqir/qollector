@@ -1,15 +1,17 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, Folder, ExternalLink, FileText, Palette } from 'lucide-react';
+import { X, Check, Folder, ExternalLink, FileText, Palette, Star } from 'lucide-react';
 import {
   getContentPreview,
+  formatHistoryCardTime,
   getFileList,
   getFileName,
   parseUrl,
   getLinkPreviewTitle,
 } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
-import { getTags } from '../../utils/tagHelpers';
+import { getSourceApp, getTags } from '../../utils/tagHelpers';
+import { getCardTagPreviewLimit } from '../../utils/cardDensity';
 import {
   CARD_BACKGROUND_DEFAULT_ID,
   CARD_BACKGROUND_PRESETS,
@@ -41,6 +43,7 @@ const isFolder = (path) => {
 
 function WorkbenchCard({
   item,
+  timeTick,
   isCopied,
   isMultiSelected,
   isSortMode,
@@ -53,10 +56,21 @@ function WorkbenchCard({
   onOpenItem,
   onSetCardBackground,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
+  const tagPreviewLimit = getCardTagPreviewLimit('workbench');
+  const visibleTags = tags.slice(0, tagPreviewLimit);
+  const hiddenTagsCount = Math.max(tags.length - tagPreviewLimit, 0);
+  const userNote = typeof item.user_note === 'string' ? item.user_note.trim() : '';
+  const sourceApp = getSourceApp(item.metadata);
+  const timeLabel = formatHistoryCardTime(
+    item.updated_at,
+    i18n.language,
+    timeTick,
+    t('item.justNow'),
+  );
   const cardBackground = useMemo(
     () => getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata)),
     [item.metadata],
@@ -211,6 +225,25 @@ function WorkbenchCard({
           <Check size={16} /> {t('item.copied')}
         </div>
       )}
+      <div className="workbench-card-header">
+        <div className="workbench-card-meta">
+          <span className="workbench-card-time">{timeLabel}</span>
+          {sourceApp && (
+            <span className="workbench-card-source" title={sourceApp}>
+              {sourceApp}
+            </span>
+          )}
+        </div>
+        {item.is_favorite && (
+          <span
+            className="workbench-card-state-chip favorite"
+            title={t('item.favorite')}
+            aria-label={t('item.favorite')}
+          >
+            <Star size={10} fill="currentColor" />
+          </span>
+        )}
+      </div>
       <div className="workbench-card-tools" ref={colorPickerRef}>
         <button
           type="button"
@@ -278,16 +311,19 @@ function WorkbenchCard({
       <div className="workbench-card-content">
         {renderContent()}
       </div>
-      {(item.user_note || tags.length > 0) && (
+      {(userNote || tags.length > 0) && (
         <div className="workbench-card-footer">
-          {item.user_note && (
-            <div className="workbench-card-note">{item.user_note}</div>
+          {userNote && (
+            <div className="workbench-card-note" title={userNote}>{userNote}</div>
           )}
-          {tags.length > 0 && (
+          {visibleTags.length > 0 && (
             <div className="workbench-card-tags">
-              {tags.map(tag => (
-                <span key={tag} className="compact-tag">{tag}</span>
+              {visibleTags.map(tag => (
+                <span key={tag} className="workbench-card-tag">{tag}</span>
               ))}
+              {hiddenTagsCount > 0 && (
+                <span className="workbench-card-tag more">+{hiddenTagsCount}</span>
+              )}
             </div>
           )}
         </div>

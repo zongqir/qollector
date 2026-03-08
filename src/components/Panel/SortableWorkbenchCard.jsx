@@ -4,6 +4,7 @@ import WorkbenchCard from './WorkbenchCard';
 
 function SortableWorkbenchCard({
   item,
+  timeTick,
   isCopied,
   isMultiSelected,
   isSortMode,
@@ -61,6 +62,7 @@ function SortableWorkbenchCard({
     >
       <WorkbenchCard
         item={item}
+        timeTick={timeTick}
         isCopied={isCopied}
         isMultiSelected={isMultiSelected}
         isSortMode={isSortMode}

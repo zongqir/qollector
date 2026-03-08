@@ -400,7 +400,8 @@
 }
 
 .compact-card:hover .compact-card-badges .badge-btn,
-.compact-card:focus-within .compact-card-badges .badge-btn {
+.compact-card:focus-within .compact-card-badges .badge-btn,
+.compact-card.keyboard-focused .compact-card-badges .badge-btn {
   transform: translateY(0);
 }
 
@@ -410,6 +411,7 @@
 
 .compact-card:hover .compact-card-badges .badge-btn.badge-color,
 .compact-card:focus-within .compact-card-badges .badge-btn.badge-color,
+.compact-card.keyboard-focused .compact-card-badges .badge-btn.badge-color,
 .compact-card.multi-selected .compact-card-badges .badge-btn.badge-color,
 .compact-card:has(.compact-card-color-picker) .compact-card-badges .badge-btn.badge-color {
   transform: translateY(0);

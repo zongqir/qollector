@@ -13,6 +13,7 @@ import {
 } from '../../utils/formatters';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
+import { getCardTagPreviewLimit } from '../../utils/cardDensity';
 import {
   CARD_BACKGROUND_DEFAULT_ID,
   CARD_BACKGROUND_PRESETS,
@@ -104,6 +105,10 @@ function CompactCard({
   const sourceApp = getSourceApp(item.metadata);
   const tags = getTags(item.tags);
   const userTags = tags.filter(tag => !tag.startsWith('AI:'));
+  const tagPreviewLimit = getCardTagPreviewLimit('history', { isMiniMode });
+  const visibleUserTags = userTags.slice(0, tagPreviewLimit);
+  const hiddenUserTagsCount = Math.max(userTags.length - tagPreviewLimit, 0);
+  const userNote = typeof item.user_note === 'string' ? item.user_note.trim() : '';
   const canDragOut = supportsNativeExternalDrag
     && (
       item.type_ === 'file'
@@ -323,6 +328,28 @@ function CompactCard({
         <span className="compact-card-source" title={sourceApp}>
           {sourceApp}
         </span>
+        {(item.is_pinned || item.is_favorite) && (
+          <div className="compact-card-state">
+            {item.is_pinned && (
+              <span
+                className="compact-card-state-chip pin"
+                title={t('item.pinned')}
+                aria-label={t('item.pinned')}
+              >
+                <Inbox size={9} />
+              </span>
+            )}
+            {item.is_favorite && (
+              <span
+                className="compact-card-state-chip favorite"
+                title={t('item.favorite')}
+                aria-label={t('item.favorite')}
+              >
+                <Star size={9} fill="currentColor" />
+              </span>
+            )}
+          </div>
+        )}
         <div className="compact-card-badges-wrap" ref={colorPickerRef}>
           <div className="compact-card-badges">
             {canDragOut && (
@@ -476,19 +503,28 @@ function CompactCard({
         )}
         {renderContent()}
       </div>
-      {userTags.length > 0 && (
-        <div className="compact-card-tags">
-          {userTags.slice(0, 3).map(tag => (
-            <span
-              key={tag}
-              className="compact-tag clickable"
-              onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-            >
-              {tag}
-            </span>
-          ))}
-          {userTags.length > 3 && (
-            <span className="compact-tag more">+{userTags.length - 3}</span>
+      {(userNote || userTags.length > 0) && (
+        <div className="compact-card-footer">
+          {userNote && (
+            <div className="compact-card-note" title={userNote}>
+              {userNote}
+            </div>
+          )}
+          {visibleUserTags.length > 0 && (
+            <div className="compact-card-tags">
+              {visibleUserTags.map(tag => (
+                <span
+                  key={tag}
+                  className="compact-tag clickable"
+                  onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
+                >
+                  {tag}
+                </span>
+              ))}
+              {hiddenUserTagsCount > 0 && (
+                <span className="compact-tag more">+{hiddenUserTagsCount}</span>
+              )}
+            </div>
           )}
         </div>
       )}

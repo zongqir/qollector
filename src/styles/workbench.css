@@ -173,6 +173,10 @@
   justify-content: center;
   gap: 8px;
   padding: 20px 16px;
+  margin: 10px 16px 12px;
+  border: 1px dashed var(--state-panel-border);
+  border-radius: var(--state-panel-radius);
+  background: var(--state-panel-bg);
 }
 
 .workbench-quick-note {
@@ -354,6 +358,10 @@
   justify-content: center;
   gap: 10px;
   padding: 40px;
+  margin: 10px 16px 12px;
+  border: 1px dashed var(--state-panel-border);
+  border-radius: var(--state-panel-radius);
+  background: var(--state-panel-bg);
 }
 
 .workbench-empty-icon {
@@ -364,26 +372,26 @@
 .workbench-empty-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--state-panel-title-color);
   letter-spacing: -0.02em;
 }
 
 .workbench-empty-hint {
   font-size: 13px;
-  color: var(--text-tertiary);
+  color: var(--state-panel-text-color);
   text-align: center;
   line-height: 1.5;
 }
 
 .workbench-empty-guide {
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--state-panel-text-color);
   text-align: center;
   line-height: 1.6;
   margin-top: 12px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: var(--bg-input);
+  background: var(--state-panel-bg-strong);
 }
 
 /* workbench cards list */
@@ -410,14 +418,22 @@
 }
 
 .workbench-card {
-  background: var(--workbench-card-bg, var(--bg-card));
-  border-radius: 12px;
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--workbench-card-bg, var(--surface-elevated)) 94%, transparent),
+    color-mix(in srgb, var(--workbench-card-bg, var(--surface-muted)) 84%, transparent)
+  );
+  border-radius: var(--card-shell-radius);
   padding: 14px;
   position: relative;
   cursor: pointer;
-  transition: all var(--motion-base) var(--ease-standard);
-  border: 0.5px solid var(--border-light);
-  box-shadow: 0 1px 3px var(--shadow-sm);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+  border: 1px solid var(--card-shell-border);
+  box-shadow: var(--card-shell-shadow-rest);
   break-inside: avoid;
   margin-bottom: 12px;
   outline: none;
@@ -464,22 +480,25 @@
 }
 
 .workbench-card:hover:not(.multi-selected) {
-  background: var(--workbench-card-hover-bg, var(--bg-card-hover));
-  box-shadow: 0 4px 12px var(--shadow-sm);
-  transform: translateY(-2px);
-  border-color: var(--accent-color);
+  background: linear-gradient(
+    168deg,
+    color-mix(in srgb, var(--workbench-card-hover-bg, var(--workbench-card-bg, var(--surface-elevated))) 94%, transparent),
+    color-mix(in srgb, var(--workbench-card-hover-bg, var(--workbench-card-bg, var(--surface-muted))) 84%, transparent)
+  );
+  box-shadow: var(--card-shell-shadow-hover);
+  transform: translateY(var(--card-shell-lift-y));
+  border-color: var(--card-shell-border-hover);
 }
 
 .workbench-card:focus-visible:not(.multi-selected) {
-  background: var(--workbench-card-hover-bg, var(--bg-card-hover));
-  border-color: color-mix(in srgb, var(--accent-color) 82%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 26%, transparent), 0 4px 12px var(--shadow-sm);
+  border-color: var(--card-shell-border-active);
+  box-shadow: var(--card-shell-focus-ring), var(--card-shell-shadow-hover);
 }
 
 .workbench-card.multi-selected {
   background: color-mix(in srgb, var(--selection-bg-strong) 84%, var(--workbench-card-bg, var(--bg-card)) 16%);
-  border-color: var(--selection-border);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--selection-border) 38%, transparent), 0 8px 20px color-mix(in srgb, var(--selection-shadow) 48%, transparent);
+  border-color: var(--card-shell-border-selected);
+  box-shadow: var(--card-shell-shadow-selected);
 }
 
 .workbench-card.multi-selected:hover {
@@ -517,26 +536,94 @@
   align-items: center;
   gap: 4px;
   z-index: 5;
+  transition:
+    opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    transform var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
+}
+
+.workbench-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 18px;
+  margin-bottom: 8px;
+  padding-right: 54px;
+}
+
+.workbench-card-meta {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+
+.workbench-card-time {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.workbench-card-source {
+  min-width: 0;
+  max-width: 120px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workbench-card-source::before {
+  content: '·';
+  margin-right: 5px;
+  color: color-mix(in srgb, var(--text-tertiary) 70%, transparent);
+}
+
+.workbench-card-state-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 84%, transparent);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.workbench-card-state-chip.favorite {
+  color: color-mix(in srgb, var(--state-warning-fg) 90%, var(--text-primary) 10%);
+  border-color: color-mix(in srgb, var(--state-warning-border) 66%, transparent);
+  background: color-mix(in srgb, var(--state-warning-bg) 70%, transparent);
 }
 
 .workbench-card-remove,
 .workbench-card-color {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: var(--btn-hover-bg);
-  color: var(--text-tertiary);
+  width: var(--card-toolbar-btn-size);
+  height: var(--card-toolbar-btn-size);
+  border-radius: var(--card-toolbar-btn-radius);
+  border: 1px solid var(--card-toolbar-btn-border);
+  background: var(--card-toolbar-btn-bg);
+  color: var(--card-toolbar-btn-color);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--motion-fast) var(--ease-standard);
+  transition:
+    border-color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    background-color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    color var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    box-shadow var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
+    transform var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
 }
 
 .workbench-card-color {
-  opacity: 0;
-  pointer-events: none;
+  opacity: var(--card-toolbar-visible-opacity);
+  pointer-events: auto;
 }
 
 .workbench-card-color.tinted {
@@ -544,41 +631,53 @@
 }
 
 .workbench-card-remove {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.workbench-card:hover .workbench-card-remove {
-  opacity: 1;
+  opacity: var(--card-toolbar-visible-opacity);
   pointer-events: auto;
 }
 
-.workbench-card.multi-selected .workbench-card-remove {
-  opacity: 1;
-  pointer-events: auto;
-}
+@media (hover: hover) and (pointer: fine) {
+  .workbench-card-color,
+  .workbench-card-remove {
+    opacity: var(--card-toolbar-hidden-opacity);
+    pointer-events: none;
+    transform: translateY(-1px);
+  }
 
-.workbench-card:hover .workbench-card-color,
-.workbench-card.multi-selected .workbench-card-color,
-.workbench-card:has(.workbench-card-color-picker) .workbench-card-color,
-.workbench-card:focus-within .workbench-card-color {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.workbench-card:focus-within .workbench-card-remove {
-  opacity: 1;
-  pointer-events: auto;
+  .workbench-card:hover .workbench-card-remove,
+  .workbench-card.multi-selected .workbench-card-remove,
+  .workbench-card:focus-visible .workbench-card-remove,
+  .workbench-card:focus-within .workbench-card-remove,
+  .workbench-card:has(.workbench-card-color-picker) .workbench-card-remove,
+  .workbench-card:hover .workbench-card-color,
+  .workbench-card.multi-selected .workbench-card-color,
+  .workbench-card:focus-visible .workbench-card-color,
+  .workbench-card:focus-within .workbench-card-color,
+  .workbench-card:has(.workbench-card-color-picker) .workbench-card-color {
+    opacity: var(--card-toolbar-visible-opacity);
+    pointer-events: auto;
+    transform: translateY(0);
+  }
 }
 
 .workbench-card-remove:hover {
   background: var(--state-error-bg);
   color: var(--state-error-fg);
+  border-color: color-mix(in srgb, var(--state-error-border) 72%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
 }
 
 .workbench-card-color:hover {
-  background: var(--btn-bg);
+  background: var(--card-toolbar-btn-hover-bg);
   color: var(--accent-color);
+  border-color: var(--card-toolbar-btn-hover-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
+}
+
+.workbench-card-remove:focus-visible,
+.workbench-card-color:focus-visible,
+.workbench-card-color-dot:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 34%, transparent);
 }
 
 .workbench-card-color-picker {
@@ -799,22 +898,51 @@
 
 .workbench-card-footer {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .workbench-card-note {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-secondary);
   font-style: normal;
-  line-height: 1.5;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  width: 100%;
 }
 
 .workbench-card-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  width: 100%;
+}
+
+.workbench-card-tag {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
+  color: var(--text-secondary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.workbench-card-tag.more {
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--surface-muted) 58%, transparent);
 }
 
 /* 鏀堕泦绠卞簳閮ㄦ搷浣滄爮 */
@@ -1169,11 +1297,49 @@
   .workbench-more-btn .workbench-more-caret {
     display: none;
   }
+
+  .workbench-empty,
+  .workbench-filter-empty {
+    margin: 8px 12px 10px;
+    padding: 16px 12px;
+  }
+
+  .workbench-card-header {
+    padding-right: 50px;
+  }
+
+  .workbench-card-source {
+    max-width: 88px;
+    font-size: 10px;
+  }
+
+  .workbench-card-state-chip {
+    width: 16px;
+    height: 16px;
+  }
+
+  .workbench-card-state-chip svg {
+    width: 9px;
+    height: 9px;
+  }
+
+  .workbench-card-note {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
 }
 
 @container workbench-panel (max-width: 420px) {
   .workbench-tag-filter-wrapper {
     display: none;
+  }
+
+  .workbench-card-source {
+    display: none;
+  }
+
+  .workbench-card-header {
+    margin-bottom: 6px;
   }
 }
 

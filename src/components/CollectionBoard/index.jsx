@@ -65,6 +65,7 @@ import {
   SORT_MODE_LONG_PRESS_MS,
   shouldIgnoreLongPressTarget,
 } from '../../utils/previewInteractionPolicy';
+import { getCardTagPreviewLimit } from '../../utils/cardDensity';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -514,6 +515,47 @@ function CollectionBoard({
     || normalizedSelectedType !== 'all'
     || Boolean(showPinnedOnly)
     || Boolean(selectedDateRange);
+  const collectionTagPreviewLimit = getCardTagPreviewLimit('collection', {
+    isMiniMode,
+    isListMode: effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST,
+  });
+
+  const renderCollectionCardFooter = (item, itemTags) => {
+    const userNote = typeof item?.user_note === 'string' ? item.user_note.trim() : '';
+    const visibleTags = itemTags.slice(0, collectionTagPreviewLimit);
+    const hiddenTagsCount = Math.max(itemTags.length - collectionTagPreviewLimit, 0);
+    if (!userNote && (isMiniMode || itemTags.length === 0)) return null;
+
+    return (
+      <div className="collection-card-footer">
+        {userNote && (
+          <div className="collection-card-note" title={userNote}>
+            {userNote}
+          </div>
+        )}
+        {!isMiniMode && visibleTags.length > 0 && (
+          <div className="collection-card-tags">
+            {visibleTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={`collection-card-tag ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleRailTag(tag);
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+            {hiddenTagsCount > 0 && (
+              <span className="collection-card-tag more">+{hiddenTagsCount}</span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const setCollectionCardRef = useCallback((id, node) => {
     if (!id) return;
@@ -1367,6 +1409,15 @@ function CollectionBoard({
                             </span>
                             <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
                           </div>
+                          {item.is_pinned && (
+                            <span
+                              className="collection-card-state-chip pin"
+                              title={t('item.pinned')}
+                              aria-label={t('item.pinned')}
+                            >
+                              <Inbox size={10} />
+                            </span>
+                          )}
                         </div>
                         <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                           <button
@@ -1445,26 +1496,7 @@ function CollectionBoard({
                       <div className="collection-card-body">
                         {renderCardBody(item)}
                       </div>
-                      {!isMiniMode && itemTags.length > 0 && (
-                        <div className="collection-card-tags">
-                          {itemTags.slice(0, 6).map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              className={`collection-card-tag ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleRailTag(tag);
-                              }}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                          {itemTags.length > 6 && (
-                            <span className="collection-card-tag more">+{itemTags.length - 6}</span>
-                          )}
-                        </div>
-                      )}
+                      {renderCollectionCardFooter(item, itemTags)}
                       </article>
                     </SortableCollectionItem>
                   );
@@ -1512,6 +1544,15 @@ function CollectionBoard({
                             </span>
                             <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
                           </div>
+                          {item.is_pinned && (
+                            <span
+                              className="collection-card-state-chip pin"
+                              title={t('item.pinned')}
+                              aria-label={t('item.pinned')}
+                            >
+                              <Inbox size={10} />
+                            </span>
+                          )}
                         </div>
                         <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                           <button
@@ -1590,26 +1631,7 @@ function CollectionBoard({
                       <div className="collection-card-body">
                         {renderCardBody(item)}
                       </div>
-                      {!isMiniMode && itemTags.length > 0 && (
-                        <div className="collection-card-tags">
-                          {itemTags.slice(0, 6).map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              className={`collection-card-tag ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleRailTag(tag);
-                              }}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                          {itemTags.length > 6 && (
-                            <span className="collection-card-tag more">+{itemTags.length - 6}</span>
-                          )}
-                        </div>
-                      )}
+                      {renderCollectionCardFooter(item, itemTags)}
                     </article>
                   </StaticCollectionItem>
                 );
