@@ -8,6 +8,89 @@ const resolveSubWindowUrl = (devPath, prodPath = devPath) => (
 );
 
 const isWindowsRuntime = () => navigator.userAgent.toLowerCase().includes('windows');
+const QUICK_INPUT_WINDOW_SIZE_KEY = 'qollect-quick-input-window-size-v1';
+const HISTORY_EDITOR_WINDOW_SIZE_KEY = 'qollect-history-editor-window-size-v1';
+const windowSizePersistenceCleanupByLabel = new Map();
+
+const normalizeSizeNumber = (value, minValue) => {
+  const parsed = Math.round(Number.parseFloat(String(value)));
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(parsed, minValue);
+};
+
+const readStoredWindowSize = (storageKey, fallback, minSize) => {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+
+    const width = normalizeSizeNumber(parsed.width, minSize.minWidth);
+    const height = normalizeSizeNumber(parsed.height, minSize.minHeight);
+    if (width == null || height == null) return fallback;
+
+    return { width, height };
+  } catch {
+    return fallback;
+  }
+};
+
+const persistWindowSize = (storageKey, size, minSize) => {
+  const width = normalizeSizeNumber(size?.width, minSize.minWidth);
+  const height = normalizeSizeNumber(size?.height, minSize.minHeight);
+  if (width == null || height == null) return;
+
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ width, height }));
+  } catch {
+    // Ignore storage failures.
+  }
+};
+
+const bindWindowSizePersistence = (windowLabel, webview, storageKey, minSize) => {
+  if (windowSizePersistenceCleanupByLabel.has(windowLabel)) return;
+
+  let persistTimer = null;
+  const persistCurrentSize = async () => {
+    try {
+      const size = await webview.innerSize();
+      persistWindowSize(storageKey, size, minSize);
+    } catch {
+      // Window might be closing.
+    }
+  };
+
+  webview.onResized(() => {
+    if (persistTimer) {
+      window.clearTimeout(persistTimer);
+    }
+    persistTimer = window.setTimeout(() => {
+      persistTimer = null;
+      void persistCurrentSize();
+    }, 160);
+  }).then((unlisten) => {
+    windowSizePersistenceCleanupByLabel.set(windowLabel, () => {
+      if (persistTimer) {
+        window.clearTimeout(persistTimer);
+        persistTimer = null;
+      }
+      unlisten();
+    });
+  }).catch(() => {
+    if (persistTimer) {
+      window.clearTimeout(persistTimer);
+      persistTimer = null;
+    }
+  });
+
+  webview.once('tauri://destroyed', () => {
+    const cleanup = windowSizePersistenceCleanupByLabel.get(windowLabel);
+    if (typeof cleanup === 'function') {
+      cleanup();
+    }
+    windowSizePersistenceCleanupByLabel.delete(windowLabel);
+  });
+};
 
 const getMonitorAtCursor = async () => {
   const cursor = await cursorPosition();
@@ -118,25 +201,32 @@ export const openImagePreview = async (imagePath, t) => {
 export const QUICK_INPUT_WINDOW_LABEL = 'quick-input';
 
 export const openQuickInputWindow = async (t) => {
+  const minSize = { minWidth: 360, minHeight: 260 };
+  const defaultSize = { width: 460, height: 360 };
+  const rememberedSize = readStoredWindowSize(QUICK_INPUT_WINDOW_SIZE_KEY, defaultSize, minSize);
   const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
   if (existing) {
+    bindWindowSizePersistence(
+      QUICK_INPUT_WINDOW_LABEL,
+      existing,
+      QUICK_INPUT_WINDOW_SIZE_KEY,
+      minSize,
+    );
     await focusWindowSafely(existing);
     return existing;
   }
 
   const useTransparentFrame = isWindowsRuntime();
 
-  const WIN_W = 460;
-  const WIN_H = 360;
-  const pos = await centerOnCursorMonitor(WIN_W, WIN_H);
+  const pos = await centerOnCursorMonitor(rememberedSize.width, rememberedSize.height);
 
   const webview = new WebviewWindow(QUICK_INPUT_WINDOW_LABEL, {
     url: resolveSubWindowUrl('quick-input.html'),
     title: t('quickInput.title'),
-    width: WIN_W,
-    height: WIN_H,
-    minWidth: 360,
-    minHeight: 260,
+    width: rememberedSize.width,
+    height: rememberedSize.height,
+    minWidth: minSize.minWidth,
+    minHeight: minSize.minHeight,
     ...(pos || { center: true }),
     resizable: true,
     alwaysOnTop: true,
@@ -145,6 +235,12 @@ export const openQuickInputWindow = async (t) => {
     shadow: false,
     skipTaskbar: false,
   });
+  bindWindowSizePersistence(
+    QUICK_INPUT_WINDOW_LABEL,
+    webview,
+    QUICK_INPUT_WINDOW_SIZE_KEY,
+    minSize,
+  );
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -188,23 +284,30 @@ export const openHistoryEditorWindow = async (itemId, t) => {
   if (!normalizedItemId || !labelToken) return null;
 
   const label = `${HISTORY_EDITOR_WINDOW_PREFIX}${labelToken}`;
+  const minSize = { minWidth: 420, minHeight: 460 };
+  const defaultSize = { width: 620, height: 620 };
+  const rememberedSize = readStoredWindowSize(HISTORY_EDITOR_WINDOW_SIZE_KEY, defaultSize, minSize);
   const existing = await WebviewWindow.getByLabel(label);
   if (existing) {
+    bindWindowSizePersistence(
+      label,
+      existing,
+      HISTORY_EDITOR_WINDOW_SIZE_KEY,
+      minSize,
+    );
     await focusWindowSafely(existing);
     return existing;
   }
 
-  const WIN_W = 620;
-  const WIN_H = 620;
-  const pos = await centerOnCursorMonitor(WIN_W, WIN_H);
+  const pos = await centerOnCursorMonitor(rememberedSize.width, rememberedSize.height);
 
   const webview = new WebviewWindow(label, {
     url: `${resolveSubWindowUrl('history-editor.html')}?itemId=${encodeURIComponent(normalizedItemId)}`,
     title: t('historyEditor.title'),
-    width: WIN_W,
-    height: WIN_H,
-    minWidth: 420,
-    minHeight: 460,
+    width: rememberedSize.width,
+    height: rememberedSize.height,
+    minWidth: minSize.minWidth,
+    minHeight: minSize.minHeight,
     ...(pos || { center: true }),
     resizable: true,
     alwaysOnTop: true,
@@ -213,6 +316,12 @@ export const openHistoryEditorWindow = async (itemId, t) => {
     shadow: false,
     skipTaskbar: false,
   });
+  bindWindowSizePersistence(
+    label,
+    webview,
+    HISTORY_EDITOR_WINDOW_SIZE_KEY,
+    minSize,
+  );
 
   webview.once('tauri://created', async () => {
     await focusWindowSafely(webview);

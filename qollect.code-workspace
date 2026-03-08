@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../qollect-site"
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#aecba3",
+			"activityBar.background": "#aecba3",
+			"activityBar.foreground": "#15202b",
+			"activityBar.inactiveForeground": "#15202b99",
+			"activityBarBadge.background": "#7081ae",
+			"activityBarBadge.foreground": "#15202b",
+			"commandCenter.border": "#15202b99",
+			"sash.hoverBorder": "#aecba3",
+			"statusBar.background": "#92b883",
+			"statusBar.foreground": "#15202b",
+			"statusBarItem.hoverBackground": "#75a563",
+			"statusBarItem.remoteBackground": "#92b883",
+			"statusBarItem.remoteForeground": "#15202b",
+			"titleBar.activeBackground": "#92b883",
+			"titleBar.activeForeground": "#15202b",
+			"titleBar.inactiveBackground": "#92b88399",
+			"titleBar.inactiveForeground": "#15202b99"
+		},
+		"peacock.color": "#92b883"
+	}
+}

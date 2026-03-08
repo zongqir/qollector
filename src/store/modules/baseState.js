@@ -96,6 +96,7 @@ export const createBaseState = ({
   cleanupMaxItems: 50000,
   cleanupMaxAgeDays: 90,
   startupFavoritesViewEnabled: false,
+  autoLayoutSwitchEnabled: true,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,

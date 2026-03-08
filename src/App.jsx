@@ -185,6 +185,7 @@ function App() {
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
+  const autoLayoutSwitchEnabled = useAppStore(s => s.autoLayoutSwitchEnabled);
   const widgetEnabled = useAppStore(s => s.widgetEnabled);
   const smartCopyEntryEnabled = useAppStore(s => s.smartCopyEntryEnabled);
   const copiedItemId = useAppStore(s => s.copiedItemId);
@@ -237,6 +238,7 @@ function App() {
   const confirmShareUpload = useAppStore(s => s.confirmShareUpload);
   const switchShareProvider = useAppStore(s => s.switchShareProvider);
   const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
+  const autoMiniSwitchPendingRef = useRef(false);
 
   const mapSmartCopyErrorMessage = useCallback((error) => {
     const raw = typeof error === 'string'
@@ -985,6 +987,7 @@ function App() {
 
   useEffect(() => {
     if (!initialWindowModeReady) return undefined;
+    if (!autoLayoutSwitchEnabled) return undefined;
 
     const handleResize = () => {
       // Skip auto mode switching during guided tour
@@ -997,24 +1000,57 @@ function App() {
         // Save current state and close panel
         setWorkbenchPanelBeforeMini(true);
         setWorkbenchPanelEnabled(false);
+        showAppFeedback(t('feedback.autoLayout.panelHidden'), 'info', 1300);
       } else if (width > PANEL_CLOSE_THRESHOLD && workbenchPanelBeforeMini === true && !workbenchPanelEnabled) {
         // Restore panel when window gets bigger
         setWorkbenchPanelEnabled(true);
         setWorkbenchPanelBeforeMini(null);
+        showAppFeedback(t('feedback.autoLayout.panelShown'), 'info', 1300);
       }
 
       // Handle mini mode
-      if (width <= MINI_THRESHOLD && !isMiniMode) {
-        setMiniMode(true);
-      } else if (width > MINI_THRESHOLD && isMiniMode) {
-        setMiniMode(false);
+      if (width <= MINI_THRESHOLD && !isMiniMode && !autoMiniSwitchPendingRef.current) {
+        autoMiniSwitchPendingRef.current = true;
+        setMiniMode(true)
+          .then(() => {
+            showAppFeedback(t('feedback.autoLayout.miniEnabled'), 'info', 1300);
+          })
+          .catch((error) => {
+            console.error('[AutoLayout] enter mini mode failed:', error);
+          })
+          .finally(() => {
+            autoMiniSwitchPendingRef.current = false;
+          });
+      } else if (width > MINI_THRESHOLD && isMiniMode && !autoMiniSwitchPendingRef.current) {
+        autoMiniSwitchPendingRef.current = true;
+        setMiniMode(false)
+          .then(() => {
+            showAppFeedback(t('feedback.autoLayout.miniDisabled'), 'info', 1300);
+          })
+          .catch((error) => {
+            console.error('[AutoLayout] exit mini mode failed:', error);
+          })
+          .finally(() => {
+            autoMiniSwitchPendingRef.current = false;
+          });
       }
     };
     // Apply once on startup so initial layout does not wait for a manual resize.
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [initialWindowModeReady, isMiniMode, workbenchPanelEnabled, workbenchPanelBeforeMini, setMiniMode]);
+  }, [
+    autoLayoutSwitchEnabled,
+    initialWindowModeReady,
+    isMiniMode,
+    setMiniMode,
+    setWorkbenchPanelBeforeMini,
+    setWorkbenchPanelEnabled,
+    showAppFeedback,
+    t,
+    workbenchPanelBeforeMini,
+    workbenchPanelEnabled,
+  ]);
 
   // 窗口置顶
   const toggleWindowAlwaysOnTop = async () => {

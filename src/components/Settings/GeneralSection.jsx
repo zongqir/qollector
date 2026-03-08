@@ -519,6 +519,30 @@ function GeneralSection({
             <span className="toggle-slider" />
           </span>
         </label>
+        <label className="setting-toggle-row">
+          <span className="toggle-label-group">
+            <span className="toggle-label">{t('settings.general.autoLayoutSwitch')}</span>
+            <span className="toggle-desc">{t('settings.general.autoLayoutSwitchHint')}</span>
+          </span>
+          <span className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={generalConfig.auto_layout_switch_enabled !== false}
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                const updated = { ...generalConfig, auto_layout_switch_enabled: checked };
+                setGeneralConfig(updated);
+                useAppStore.setState({ autoLayoutSwitchEnabled: checked });
+                try {
+                  await invoke('update_general_config', { config: updated });
+                } catch (error) {
+                  console.error('save auto_layout_switch config failed:', error);
+                }
+              }}
+            />
+            <span className="toggle-slider" />
+          </span>
+        </label>
       </div>
       {generalConfig.low_memory_mode_enabled && (
         <small className="setting-hint">

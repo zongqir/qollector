@@ -31,9 +31,19 @@ function ShareModal({
   };
 
   const providerNames = Object.keys(FREE_PROVIDERS);
+  const canDismissByBackdrop = !shareLoading && !pendingConfirm;
+
+  const handleOverlayClick = () => {
+    if (providerOpen) {
+      setProviderOpen(false);
+      return;
+    }
+    if (!canDismissByBackdrop) return;
+    onClose?.();
+  };
 
   return (
-    <div className="share-modal-overlay" onClick={onClose}>
+    <div className="share-modal-overlay" onClick={handleOverlayClick}>
       <div className="share-modal" onClick={(e) => e.stopPropagation()}>
         <div className="share-modal-header">
           <Share2 size={16} />

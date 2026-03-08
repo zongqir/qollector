@@ -15,6 +15,8 @@ import {
 } from './utils/cardBackgrounds';
 
 const SAVE_DEBOUNCE_MS = 750;
+const SAVE_SUCCESS_TOAST_VISIBLE_MS = 1300;
+const SAVE_SUCCESS_TOAST_COOLDOWN_MS = 9000;
 const GLASS_OPACITY_KEY = 'qollect-history-editor-glass-opacity';
 const GLASS_DEFAULT = 1.0;
 const GLASS_MIN = 0.3;
@@ -86,6 +88,7 @@ function HistoryEditorWindow() {
   const savingRef = useRef(false);
   const saveQueuedRef = useRef(false);
   const closeAfterSaveRef = useRef(false);
+  const lastSavedToastAtRef = useRef(0);
   const itemHasCustomBackgroundRef = useRef(false);
   const colorTouchedRef = useRef(false);
   const glassTimerRef = useRef(null);
@@ -150,15 +153,27 @@ function HistoryEditorWindow() {
     };
   }, [activeBackgroundPreset, glassOpacity]);
 
-  const markSaved = useCallback(() => {
-    setSaveState('saved');
+  const markSaved = useCallback(({ forceVisible = false } = {}) => {
+    const now = Date.now();
+    const canShowSavedState = forceVisible
+      || (now - lastSavedToastAtRef.current) >= SAVE_SUCCESS_TOAST_COOLDOWN_MS;
+
     if (saveStateTimerRef.current) {
       window.clearTimeout(saveStateTimerRef.current);
     }
+
+    if (!canShowSavedState) {
+      setSaveState('idle');
+      saveStateTimerRef.current = null;
+      return;
+    }
+
+    lastSavedToastAtRef.current = now;
+    setSaveState('saved');
     saveStateTimerRef.current = window.setTimeout(() => {
       setSaveState('idle');
       saveStateTimerRef.current = null;
-    }, 1300);
+    }, SAVE_SUCCESS_TOAST_VISIBLE_MS);
   }, []);
 
   const requestClose = useCallback(async () => {
@@ -520,7 +535,7 @@ function HistoryEditorWindow() {
       setItem(updatedItem);
       setManualTagInput('');
       await emit('clipboard-changed').catch(() => {});
-      markSaved();
+      markSaved({ forceVisible: true });
     } catch (error) {
       const message = parseErrorMessage(error);
       setSaveState('error');
@@ -559,7 +574,7 @@ function HistoryEditorWindow() {
       await invoke('update_item', { item: updatedItem });
       setItem(updatedItem);
       await emit('clipboard-changed').catch(() => {});
-      markSaved();
+      markSaved({ forceVisible: true });
     } catch (error) {
       const message = parseErrorMessage(error);
       setSaveState('error');

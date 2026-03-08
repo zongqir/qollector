@@ -351,6 +351,8 @@
       "lowMemoryMode": "低内存模式",
       "lowMemoryModeHint": "更激进地释放隐藏窗口的 WebView 以降低空闲内存，占用会更低但唤起可能稍慢。",
       "lowMemoryModeNotice": "低内存模式已开启。隐藏窗口会更快释放，下次显示时再重建。",
+      "autoLayoutSwitch": "窗口自适应自动切换",
+      "autoLayoutSwitchHint": "根据窗口宽度自动切换 mini 模式，并自动收起/恢复工作区面板",
       "startTour": "快速引导",
       "startTourHint": "重新查看功能引导",
       "autoCleanup": "自动清理旧数据",
@@ -818,6 +820,7 @@
     "viewList": "列表视图",
     "enterSortMode": "调整顺序",
     "finishSortMode": "完成排序",
+    "dragHandle": "拖拽手柄",
     "releaseThenDragHint": "已进入排序，请松手后拖动",
     "sortModeHint": "排序模式已开启，可拖拽卡片调整顺序",
     "countLabel": "{{count}} 条",
@@ -1086,6 +1089,12 @@
       "left": "已切换到列表模式",
       "right": "已切换到面板模式",
       "all": "已切换到全览模式"
+    },
+    "autoLayout": {
+      "panelHidden": "窗口较窄，已自动隐藏工作区面板",
+      "panelShown": "窗口恢复，已自动显示工作区面板",
+      "miniEnabled": "窗口较窄，已自动切换到迷你模式",
+      "miniDisabled": "窗口恢复，已自动退出迷你模式"
     }
   },
   "smartCopy": {

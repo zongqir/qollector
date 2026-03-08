@@ -5,6 +5,7 @@ import {
   Check,
   FileText,
   Folder,
+  GripVertical,
   Inbox,
   LayoutGrid,
   List,
@@ -812,11 +813,14 @@ function CollectionBoard({
     clearCollectionCardClickTimer();
     setActiveItemId(item.id);
     setOpenColorPickerItemId(null);
+    if (isCollectionSortMode) {
+      return;
+    }
     collectionCardClickTimerRef.current = setTimeout(() => {
       collectionCardClickTimerRef.current = null;
       onOpenPreview?.(item);
     }, PREVIEW_CLICK_DELAY_MS);
-  }, [clearCollectionCardClickTimer, onOpenPreview]);
+  }, [clearCollectionCardClickTimer, isCollectionSortMode, onOpenPreview]);
 
   const handleCollectionCardDoubleClick = useCallback((item, event) => {
     if (!item?.id) return;
@@ -913,6 +917,17 @@ function CollectionBoard({
       }
     }
   ), []);
+
+  useEffect(() => {
+    if (!isCollectionSortMode) return undefined;
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      handleFinishCollectionSortMode();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [handleFinishCollectionSortMode, isCollectionSortMode]);
 
   const handleCollectionCardPointerDownCapture = useCallback((event) => {
     const target = event.target;
@@ -1200,21 +1215,25 @@ function CollectionBoard({
                   <List size={13} />
                 </button>
               </div>
-              {isCollectionSortMode && (
-                <button
-                  type="button"
-                  className="collection-sort-toggle active"
-                  onClick={handleFinishCollectionSortMode}
-                  title={t('collection.finishSortMode')}
-                  aria-label={t('collection.finishSortMode')}
-                  aria-pressed
-                >
-                  <ArrowUpDown size={12} />
-                  <span>{t('collection.finishSortMode')}</span>
-                </button>
-              )}
             </div>
           </div>
+        {isCollectionSortMode && (
+          <div className="collection-sort-banner" role="status" aria-live="polite">
+            <span className="collection-sort-banner-text">{t('collection.sortModeHint')}</span>
+            <span className="collection-sort-banner-key">Esc</span>
+            <button
+              type="button"
+              className="collection-sort-toggle active"
+              onClick={handleFinishCollectionSortMode}
+              title={t('collection.finishSortMode')}
+              aria-label={t('collection.finishSortMode')}
+              aria-pressed
+            >
+              <ArrowUpDown size={12} />
+              <span>{t('collection.finishSortMode')}</span>
+            </button>
+          </div>
+        )}
         <div className="collection-tag-rail-meta">
           {!collectionHintsDismissed && (
             <span className="collection-meta-hint collection-filter-hint">
@@ -1233,9 +1252,6 @@ function CollectionBoard({
           <span>{t('collection.countLabel', { count: collectionItems.length })}</span>
           {selectedCollectionTags.length > 0 && (
             <span>{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</span>
-          )}
-          {isCollectionSortMode && (
-            <span className="collection-meta-hint">{t('collection.sortModeHint')}</span>
           )}
           {activeItem && !collectionHintsDismissed && (
             <span className="collection-active-item">
@@ -1327,6 +1343,7 @@ function CollectionBoard({
                         ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
                         ${item.is_pinned ? 'pinned' : ''}
                         ${activeItemId === item.id ? 'active' : ''}
+                        ${isCollectionSortMode ? 'sort-mode' : ''}
                         ${isCollectionSortMode && collectionSortAnchorItemId === item.id ? 'sort-anchor' : ''}
                         ${hasCustomCardBackground ? 'custom-bg' : ''}
                       `.trim()}
@@ -1338,11 +1355,18 @@ function CollectionBoard({
                       {...getCardCommonProps(item, index)}
                     >
                       <div className="collection-card-head">
-                        <div className="collection-card-meta">
-                          <span className="collection-card-time">
-                            {formatHistoryCardTime(item.updated_at, i18n.language, timeTick, t('item.justNow'))}
-                          </span>
-                          <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
+                        <div className="collection-card-head-left">
+                          {isCollectionSortMode && (
+                            <span className="collection-sort-grip" aria-hidden="true" title={t('collection.dragHandle')}>
+                              <GripVertical size={12} />
+                            </span>
+                          )}
+                          <div className="collection-card-meta">
+                            <span className="collection-card-time">
+                              {formatHistoryCardTime(item.updated_at, i18n.language, timeTick, t('item.justNow'))}
+                            </span>
+                            <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
+                          </div>
                         </div>
                         <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                           <button
@@ -1464,6 +1488,7 @@ function CollectionBoard({
                         ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
                         ${item.is_pinned ? 'pinned' : ''}
                         ${activeItemId === item.id ? 'active' : ''}
+                        ${isCollectionSortMode ? 'sort-mode' : ''}
                         ${isCollectionSortMode && collectionSortAnchorItemId === item.id ? 'sort-anchor' : ''}
                         ${hasCustomCardBackground ? 'custom-bg' : ''}
                       `.trim()}
@@ -1475,11 +1500,18 @@ function CollectionBoard({
                       {...getCardCommonProps(item, index)}
                     >
                       <div className="collection-card-head">
-                        <div className="collection-card-meta">
-                          <span className="collection-card-time">
-                            {formatHistoryCardTime(item.updated_at, i18n.language, timeTick, t('item.justNow'))}
-                          </span>
-                          <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
+                        <div className="collection-card-head-left">
+                          {isCollectionSortMode && (
+                            <span className="collection-sort-grip" aria-hidden="true" title={t('collection.dragHandle')}>
+                              <GripVertical size={12} />
+                            </span>
+                          )}
+                          <div className="collection-card-meta">
+                            <span className="collection-card-time">
+                              {formatHistoryCardTime(item.updated_at, i18n.language, timeTick, t('item.justNow'))}
+                            </span>
+                            <span className="collection-card-source" title={sourceApp}>{sourceApp}</span>
+                          </div>
                         </div>
                         <div className="collection-card-actions" ref={showColorPicker ? colorPickerRef : null}>
                           <button

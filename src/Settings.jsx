@@ -67,6 +67,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.maxPinnedItems'),
           t('settings.general.startupDefaultView'),
           t('settings.general.autoPaste'),
+          t('settings.general.autoLayoutSwitch'),
           t('settings.general.lowMemoryMode'),
           t('settings.general.startTour'),
         ],
@@ -233,6 +234,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     startup_favorites_view_enabled: false,
     autostart_enabled: false,
     low_memory_mode_enabled: false,
+    auto_layout_switch_enabled: true,
     smart_copy_entry_enabled: false,
   });
   const [lockHasPassword, setLockHasPassword] = useState(false);

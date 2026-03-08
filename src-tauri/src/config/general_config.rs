@@ -61,6 +61,9 @@ pub struct GeneralConfig {
     /// Enable aggressive hidden-window webview release to reduce memory usage.
     #[serde(default = "default_low_memory_mode_enabled")]
     pub low_memory_mode_enabled: bool,
+    /// Enable automatic layout switch by window width.
+    #[serde(default = "default_auto_layout_switch_enabled")]
+    pub auto_layout_switch_enabled: bool,
     /// Enable the floating widget window.
     #[serde(default)]
     pub widget_enabled: bool,
@@ -132,6 +135,10 @@ fn default_low_memory_mode_enabled() -> bool {
     false
 }
 
+fn default_auto_layout_switch_enabled() -> bool {
+    true
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -154,6 +161,7 @@ impl Default for GeneralConfig {
             startup_favorites_view_enabled: false,
             autostart_enabled: false,
             low_memory_mode_enabled: default_low_memory_mode_enabled(),
+            auto_layout_switch_enabled: default_auto_layout_switch_enabled(),
             widget_enabled: false,
             smart_copy_entry_enabled: false,
             accent_color: default_accent_color(),

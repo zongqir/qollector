@@ -34,6 +34,7 @@ export const createLoadConfigsAction = ({
       cleanupMaxItems: Math.max(100, Number(generalConfig.cleanup_max_items || 50000)),
       cleanupMaxAgeDays: Math.max(1, Number(generalConfig.cleanup_max_age_days || 90)),
       startupFavoritesViewEnabled: Boolean(generalConfig.startup_favorites_view_enabled),
+      autoLayoutSwitchEnabled: generalConfig.auto_layout_switch_enabled !== false,
       showFavoritesOnly: (
         applyStartupView
         && !state.showFavoritesOnly
