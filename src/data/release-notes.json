@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.0",
+      "publishedAt": "2026-03-09",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-0",
+      "summary": {
+        "zh-CN": "围绕筛选链路、工作区交互与预览体验完成一轮系统升级，稳定性与可控性显著提升。",
+        "en-US": "Delivered a system-wide upgrade across filtering, workbench interactions, and preview ergonomics with stronger reliability and control."
+      },
+      "highlights": {
+        "zh-CN": [
+          "统一历史流、收藏区、工作区的筛选策略，默认优先走后端查询，结果一致性更高。",
+          "新增并完善内部来源复制控制：可关闭 Qollect 来源回流，后端采集链路增加来源拦截兜底。",
+          "删除与移出等高风险操作补齐首击提示与二次确认，显著降低误触删除概率。",
+          "窄窗口与 mini 模式下优化工作区筛选栏、标题栏按钮对齐与触控尺寸，拥挤和错位问题得到修复。",
+          "图片预览体验增强：新增“仅看图片”入口、缩放提示与灯箱滚轮缩放/拖拽，查看大图更顺手。"
+        ],
+        "en-US": [
+          "Unified filtering behavior across history, collection, and workbench with backend-first querying for stronger result consistency.",
+          "Added and hardened internal-source copy controls, including backend ingestion guards when Qollect-origin capture is disabled.",
+          "Improved destructive-action safety with first-click toasts and second-click confirmation for delete/remove flows.",
+          "Refined narrow-window and mini-mode usability by fixing crowded workbench filters, titlebar alignment, and tap-target sizing.",
+          "Enhanced image preview with an \"Image only\" entry, clearer zoom guidance, and lightbox wheel-zoom plus drag panning."
+        ]
+      }
+    },
+    {
       "version": "0.2.7",
       "publishedAt": "2026-03-05",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-2-7",
