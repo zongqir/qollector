@@ -9,6 +9,7 @@ function SortableWorkbenchCard({
   isMultiSelected,
   isSortMode,
   isSortAnchor,
+  isUnpinConfirmArmed,
   isSelectionMode,
   sortableDisabled,
   onUnpin,
@@ -67,6 +68,7 @@ function SortableWorkbenchCard({
         isMultiSelected={isMultiSelected}
         isSortMode={isSortMode}
         isSortAnchor={isSortAnchor}
+        isUnpinConfirmArmed={isUnpinConfirmArmed}
         onUnpin={onUnpin}
         onPointerDownCapture={onPointerDownCapture}
         onClick={onClick}

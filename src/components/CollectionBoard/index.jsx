@@ -1568,12 +1568,12 @@ function CollectionBoard({
       )}
 
       {isBackendBusy && collectionItems.length === 0 ? (
-        <div className="collection-loading state-panel state-panel--loading panel-state-stack panel-state-stack--narrow" role="status" aria-live="polite">
+        <div className="collection-loading state-panel state-panel--loading panel-state-stack" role="status" aria-live="polite">
           <div className="loading-spinner"></div>
           <div className="loading-text state-panel__text panel-state-text">{t('search.searching')}</div>
         </div>
       ) : backendStateError && collectionItems.length === 0 ? (
-        <div className="collection-empty error state-panel state-panel--error panel-state-stack panel-state-stack--narrow" role="status" aria-live="polite">
+        <div className="collection-empty error state-panel state-panel--error panel-state-stack" role="status" aria-live="polite">
           <div className="collection-empty-title state-panel__title panel-state-title">{t('collection.queryFailed')}</div>
           <div className="collection-empty-hint state-panel__hint panel-state-text">{backendStateError}</div>
           <button
@@ -1585,12 +1585,12 @@ function CollectionBoard({
           </button>
         </div>
       ) : collectionItems.length === 0 && !hasCollectionFilter ? (
-        <div className="collection-empty state-panel panel-state-stack panel-state-stack--narrow" role="status" aria-live="polite">
+        <div className="collection-empty state-panel panel-state-stack" role="status" aria-live="polite">
           <div className="collection-empty-title state-panel__title panel-state-title">{t('collection.emptyTitle')}</div>
           <div className="collection-empty-hint state-panel__hint panel-state-text">{t('collection.emptyHint')}</div>
         </div>
       ) : collectionItems.length === 0 ? (
-        <div className="collection-empty state-panel panel-state-stack panel-state-stack--narrow" role="status" aria-live="polite">
+        <div className="collection-empty state-panel panel-state-stack" role="status" aria-live="polite">
           <div className="collection-empty-title state-panel__title panel-state-title">{t('collection.noTagMatch')}</div>
           <div className="collection-empty-hint state-panel__hint panel-state-text">{t('collection.emptyHint')}</div>
         </div>

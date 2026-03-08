@@ -650,6 +650,10 @@
   background: color-mix(in srgb, var(--accent-light) 72%, transparent);
 }
 
+.collection-card:has(.panel-card-action-btn.pin.active) .collection-card-state-chip.pin {
+  display: none;
+}
+
 .collection-sort-grip {
   width: 16px;
   height: 18px;

@@ -231,6 +231,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     auto_cleanup_enabled: true,
     cleanup_max_items: 50000,
     cleanup_max_age_days: 90,
+    copy_qollect_source_items: false,
     startup_favorites_view_enabled: false,
     autostart_enabled: false,
     low_memory_mode_enabled: false,

@@ -2109,6 +2109,11 @@
   color: color-mix(in srgb, var(--text-secondary) 85%, var(--accent-color) 15%);
 }
 
+.compact-card:has(.badge-pin.active) .compact-card-state-chip.pin,
+.compact-card:has(.badge-fav.active) .compact-card-state-chip.favorite {
+  display: none;
+}
+
 .app.mini-mode .history-stream {
   width: 100%;
   min-width: 0;

@@ -994,38 +994,10 @@
 
 @media (max-width: 800px) {
   .panel-summary-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    column-gap: 6px;
     row-gap: 5px;
-  }
-
-  .panel-summary-item--status {
-    grid-column: 1;
-    justify-self: start;
-  }
-
-  .panel-summary-item--count {
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  .panel-summary-row:not(:has(.panel-summary-item--status)) .panel-summary-item--count {
-    grid-column: 1;
-    justify-self: start;
-  }
-
-  .panel-summary-item--primary,
-  .panel-summary-item--feedback,
-  .panel-summary-item--aux {
-    grid-column: 1 / -1;
-  }
-
-  .panel-summary-item--action {
-    grid-column: 2;
-    justify-self: end;
-    margin-left: 0;
   }
 
   .panel-summary-feedback {

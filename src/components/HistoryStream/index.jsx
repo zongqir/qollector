@@ -697,7 +697,13 @@ function HistoryStream({ style }) {
             closeContextMenu();
             return;
           case 'deleteSelected':
-            if (!armDeleteConfirm('deleteSelected')) return;
+            if (!armDeleteConfirm('deleteSelected')) {
+              showQuickAddFeedback({
+                type: 'warning',
+                message: t('item.confirmDelete'),
+              }, 1700);
+              return;
+            }
             await deleteSelectedItems();
             closeContextMenu();
             return;
@@ -768,7 +774,13 @@ function HistoryStream({ style }) {
           closeContextMenu();
           return;
         case 'delete':
-          if (!armDeleteConfirm('delete')) return;
+          if (!armDeleteConfirm('delete')) {
+            showQuickAddFeedback({
+              type: 'warning',
+              message: t('item.confirmDelete'),
+            }, 1700);
+            return;
+          }
           await deleteItem(currentItem);
           closeContextMenu();
           return;
@@ -795,6 +807,7 @@ function HistoryStream({ style }) {
     toggleFavorite,
     togglePin,
     setCollectionHintsDismissed,
+    showQuickAddFeedback,
     openEditModal,
     t,
     handleOpenItem,

@@ -175,6 +175,22 @@ impl ClipboardManager {
 
         // Extract source_app early, before metadata is moved into item constructors
         let source_app = metadata.source_app.clone();
+        let general_config = config_repo
+            .load_general_config()
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+
+        if !general_config.copy_qollect_source_items
+            && Self::is_qollect_managed_source(&source_app)
+        {
+            println!(
+                "[Clipboard] Skip capture for internal source: source_app='{}'",
+                source_app
+            );
+            return Ok(());
+        }
 
         let mut item = match &content {
             ClipboardContent::Text { plain: text, .. } => {
@@ -322,12 +338,6 @@ impl ClipboardManager {
         let mut inserted_new_item = false;
 
         // Evaluate double-copy BEFORE acquiring repo lock so timing is accurate
-        let general_config = config_repo
-            .load_general_config()
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or_default();
         let is_double_copy = Self::should_pin_on_double_copy(
             &double_copy_state,
             &content_hash,
@@ -1992,6 +2002,29 @@ impl ClipboardManager {
 
     fn is_pixpin_source(source_app: &str) -> bool {
         source_app.to_ascii_lowercase().contains("pixpin")
+    }
+
+    fn is_qollect_managed_source(source_app: &str) -> bool {
+        let normalized = source_app.trim().to_ascii_lowercase();
+        let normalized = normalized.strip_suffix(".exe").unwrap_or(&normalized);
+        if normalized.is_empty() || normalized == "unknown" {
+            return false;
+        }
+        let compact: String = normalized
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect();
+
+        normalized.contains("qollect")
+            || normalized.contains("quick input")
+            || normalized.contains("quick-input")
+            || normalized.contains("quick note")
+            || normalized.contains("quick-note")
+            || normalized.contains("快速输入")
+            || normalized.contains("快速笔记")
+            || normalized.contains("快速备注")
+            || compact.contains("quickinput")
+            || compact.contains("quicknote")
     }
 
     fn is_pixpin_capture_path(path: &Path) -> bool {

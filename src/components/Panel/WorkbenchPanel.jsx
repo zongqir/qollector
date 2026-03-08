@@ -69,6 +69,7 @@ import {
   shouldIgnoreLongPressTarget,
   openItemPreview,
 } from '../../utils/previewInteractionPolicy';
+import { isQollectManagedSource } from '../../utils/sourceConstants';
 import {
   buildSearchRequest,
   SEARCH_REQUEST_TRIGGER_MODE,
@@ -101,6 +102,8 @@ function WorkbenchPanel() {
   const [workbenchFilterError, setWorkbenchFilterError] = useState('');
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
+  const [transientWorkbenchToast, setTransientWorkbenchToast] = useState('');
+  const [pendingUnpinItemId, setPendingUnpinItemId] = useState(null);
   const selectionAnchorIndexRef = useRef(-1);
   const workbenchTypeWrapperRef = useRef(null);
   const workbenchDateWrapperRef = useRef(null);
@@ -113,6 +116,8 @@ function WorkbenchPanel() {
   const workbenchSortAnchorRef = useRef(null);
   const workbenchSortLongPressTimerRef = useRef(null);
   const workbenchSortEntryToastTimerRef = useRef(null);
+  const workbenchToastTimerRef = useRef(null);
+  const workbenchUnpinConfirmTimerRef = useRef(null);
   const workbenchSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
 
@@ -144,6 +149,7 @@ function WorkbenchPanel() {
   const selectedDateRange = useAppStore(s => s.workbenchSelectedDateRange);
   const customDateStart = useAppStore(s => s.workbenchCustomDateStart);
   const customDateEnd = useAppStore(s => s.workbenchCustomDateEnd);
+  const copyQollectSourceItems = useAppStore(s => s.copyQollectSourceItems);
   const savedFilterViews = useAppStore(s => s.workbenchSavedFilterViews);
   const activeFilterViewId = useAppStore(s => s.workbenchActiveFilterViewId);
   const setSearchQuery = useAppStore(s => s.setWorkbenchSearchQuery);
@@ -308,6 +314,7 @@ function WorkbenchPanel() {
     allPinnedItems,
     backendFilteredPinnedIds,
   ]);
+
   const workbenchBackendError = workbenchFilterError || workbenchLoadError;
   const isWorkbenchBusy = workbenchLoading || workbenchFiltering;
 
@@ -941,16 +948,71 @@ function WorkbenchPanel() {
     openItemPreview(setPanelMode, item);
   }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
 
-  const handleCardDoubleClick = useCallback((item, event) => {
+  const showTransientToast = useCallback((message, duration = 1800) => {
+    if (!message) return;
+    setTransientWorkbenchToast(message);
+    if (workbenchToastTimerRef.current) {
+      clearTimeout(workbenchToastTimerRef.current);
+    }
+    workbenchToastTimerRef.current = setTimeout(() => {
+      setTransientWorkbenchToast('');
+      workbenchToastTimerRef.current = null;
+    }, duration);
+  }, []);
+
+  const clearPendingUnpinConfirm = useCallback(() => {
+    setPendingUnpinItemId(null);
+    if (workbenchUnpinConfirmTimerRef.current) {
+      clearTimeout(workbenchUnpinConfirmTimerRef.current);
+      workbenchUnpinConfirmTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCardDoubleClick = useCallback(async (item, event) => {
     event.stopPropagation();
     if (isWorkbenchSortMode) return;
     if (selectedPinnedIds.length > 0) return;
-    if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item, 'workbench');
-    } else {
-      handleCopyAndAutoPaste(item, 'workbench');
+
+    const sourceApp = getSourceApp(item?.metadata);
+    if (!copyQollectSourceItems && isQollectManagedSource(sourceApp)) {
+      showTransientToast(t('workbench.copySkippedQollectSource'));
+      return;
     }
-  }, [isWorkbenchSortMode, selectedPinnedIds.length, handleCopyAndAutoPaste, handleCopy]);
+
+    await handleCopy(item, 'workbench');
+  }, [
+    isWorkbenchSortMode,
+    selectedPinnedIds.length,
+    copyQollectSourceItems,
+    showTransientToast,
+    t,
+    handleCopy,
+  ]);
+
+  const handleCardUnpin = useCallback(async (item) => {
+    if (!item?.id) return;
+    if (pendingUnpinItemId !== item.id) {
+      setPendingUnpinItemId(item.id);
+      if (workbenchUnpinConfirmTimerRef.current) {
+        clearTimeout(workbenchUnpinConfirmTimerRef.current);
+      }
+      workbenchUnpinConfirmTimerRef.current = setTimeout(() => {
+        setPendingUnpinItemId((current) => (current === item.id ? null : current));
+        workbenchUnpinConfirmTimerRef.current = null;
+      }, 2200);
+      showTransientToast(t('workbench.removeConfirmHint'));
+      return;
+    }
+
+    clearPendingUnpinConfirm();
+    await togglePin(item);
+  }, [pendingUnpinItemId, clearPendingUnpinConfirm, showTransientToast, t, togglePin]);
+
+  useEffect(() => {
+    if (!pendingUnpinItemId) return;
+    if (pinnedItems.some((item) => item.id === pendingUnpinItemId)) return;
+    clearPendingUnpinConfirm();
+  }, [pendingUnpinItemId, pinnedItems, clearPendingUnpinConfirm]);
 
   const clearPinnedSelection = useCallback(() => {
     setSelectedPinnedIds([]);
@@ -1069,6 +1131,14 @@ function WorkbenchPanel() {
         clearTimeout(workbenchSortEntryToastTimerRef.current);
         workbenchSortEntryToastTimerRef.current = null;
       }
+      if (workbenchToastTimerRef.current) {
+        clearTimeout(workbenchToastTimerRef.current);
+        workbenchToastTimerRef.current = null;
+      }
+      if (workbenchUnpinConfirmTimerRef.current) {
+        clearTimeout(workbenchUnpinConfirmTimerRef.current);
+        workbenchUnpinConfirmTimerRef.current = null;
+      }
     }
   ), []);
 
@@ -1141,7 +1211,10 @@ function WorkbenchPanel() {
             closeContextMenu();
             return;
           case 'deleteSelected':
-            if (!armDeleteConfirm('deleteSelected')) return;
+            if (!armDeleteConfirm('deleteSelected')) {
+              showTransientToast(t('item.confirmDelete'));
+              return;
+            }
             for (const item of selectedPinnedItems) {
               await deleteItem(item);
             }
@@ -1211,7 +1284,10 @@ function WorkbenchPanel() {
           closeContextMenu();
           return;
         case 'delete':
-          if (!armDeleteConfirm('delete')) return;
+          if (!armDeleteConfirm('delete')) {
+            showTransientToast(t('item.confirmDelete'));
+            return;
+          }
           await deleteItem(currentItem);
           closeContextMenu();
           return;
@@ -1239,6 +1315,7 @@ function WorkbenchPanel() {
     togglePin,
     openEditModal,
     t,
+    showTransientToast,
     handleOpenItem,
     handleRevealInFolder,
   ]);
@@ -1311,123 +1388,124 @@ function WorkbenchPanel() {
             </button>
           )}
         </div>
-
-        <TypeFilterControl
-          wrapperRef={workbenchTypeWrapperRef}
-          wrapperClassName="workbench-type-filter-wrapper"
-          isOpen={showWorkbenchTypeFilter}
-          onToggle={toggleWorkbenchTypeFilter}
-          onClose={closeWorkbenchTypeFilter}
-          controlsId={workbenchTypeDropdownId}
-          selectedType={selectedType}
-          selectedTypeIcon={selectedTypeOption.icon}
-          showSelectedTypeText
-          selectedTypeText={t(`search.typeFilter.${selectedType}`)}
-          options={typeFilterOptions}
-          onSelectType={handleWorkbenchTypeChange}
-          typeLabelText={t('toolbar.filterType')}
-          getOptionLabel={(key) => t(`search.typeFilter.${key}`)}
-        />
-
-        <button
-          onClick={() => setShowFavoritesOnly(current => !current)}
-          className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`}
-          title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
-          aria-label={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
-          aria-pressed={showFavoritesOnly}
-        >
-          <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
-        </button>
-
-        {allTags.length > 0 && (
-          <TagFilterControl
-            wrapperRef={workbenchTagWrapperRef}
-            triggerClassName="workbench-tag-filter-wrapper"
-            isOpen={showWorkbenchTagFilter}
-            onToggle={toggleWorkbenchTagFilter}
-            onClose={closeWorkbenchTagFilter}
-            controlsId={workbenchTagDropdownId}
-            listboxId={workbenchTagListboxId}
-            listboxRef={workbenchTagListboxRef}
-            selectedTags={selectedTags}
-            tagSearchQuery={workbenchTagSearchQuery}
-            onTagSearchChange={setWorkbenchTagSearchQuery}
-            onTagSearchInputKeyDown={handleWorkbenchTagSearchInputKeyDown}
-            visibleTagOptions={visibleTagOptions}
-            totalTagOptionsCount={parsedTagOptions.length}
-            onToggleTag={handleToggleWorkbenchTag}
-            onClearTags={() => setSelectedTags([])}
-            labelText={t('toolbar.filterTags')}
-            searchPlaceholderText={t('toolbar.searchTags')}
-            noTagsFoundText={t('toolbar.noTagsFound')}
-            moreTagsHintText={(count) => t('toolbar.moreTagsHint', { count })}
-            clearAllText={t('toolbar.clearAll')}
+        <div className="workbench-filter-actions">
+          <TypeFilterControl
+            wrapperRef={workbenchTypeWrapperRef}
+            wrapperClassName="workbench-type-filter-wrapper"
+            isOpen={showWorkbenchTypeFilter}
+            onToggle={toggleWorkbenchTypeFilter}
+            onClose={closeWorkbenchTypeFilter}
+            controlsId={workbenchTypeDropdownId}
+            selectedType={selectedType}
+            selectedTypeIcon={selectedTypeOption.icon}
+            showSelectedTypeText
+            selectedTypeText={t(`search.typeFilter.${selectedType}`)}
+            options={typeFilterOptions}
+            onSelectType={handleWorkbenchTypeChange}
+            typeLabelText={t('toolbar.filterType')}
+            getOptionLabel={(key) => t(`search.typeFilter.${key}`)}
           />
-        )}
 
-        <DateFilterControl
-          wrapperRef={workbenchDateWrapperRef}
-          isOpen={showWorkbenchDateFilter}
-          onToggle={toggleWorkbenchDateFilter}
-          onClose={closeWorkbenchDateFilter}
-          controlsId={workbenchDateDropdownId}
-          hasSelection={Boolean(selectedDateRange)}
-          badgeText={workbenchDateBadgeText}
-          dateFilterText={t('toolbar.dateFilter')}
-          datePresetOptions={datePresetOptions}
-          selectedDatePreset={selectedDatePreset}
-          onSelectDatePreset={handleSelectWorkbenchDatePreset}
-          selectedDateRange={selectedDateRange}
-          customDateStart={customDateStart}
-          customDateEnd={customDateEnd}
-          onCustomDateStartChange={setCustomDateStart}
-          onCustomDateEndChange={setCustomDateEnd}
-          onApplyCustomDateRange={handleApplyWorkbenchCustomDateRange}
-          onClearDateFilter={handleClearWorkbenchDateFilter}
-          dateStartText={t('toolbar.dateStart')}
-          dateEndText={t('toolbar.dateEnd')}
-          dateApplyText={t('toolbar.dateApply')}
-          clearDateFilterText={t('toolbar.clearDateFilter')}
-        />
-
-        <SavedViewControl
-          wrapperRef={workbenchSavedViewWrapperRef}
-          triggerClassName="workbench-saved-view-wrapper"
-          isOpen={showWorkbenchSavedViews}
-          onToggle={toggleWorkbenchSavedViews}
-          onClose={closeWorkbenchSavedViews}
-          controlsId={workbenchSavedViewDropdownId}
-          savedViews={savedViews}
-          activeFilterViewId={activeFilterViewId}
-          activeSavedView={activeSavedView}
-          savedViewName={workbenchSavedViewName}
-          onSavedViewNameChange={setWorkbenchSavedViewName}
-          onSaveView={handleSaveWorkbenchView}
-          onApplySavedView={applySavedFilterView}
-          onDeleteSavedView={deleteSavedFilterView}
-          onClearActiveSavedView={clearActiveFilterView}
-          titleText={t('search.savedViews.title')}
-          namePlaceholderText={t('search.savedViews.namePlaceholder')}
-          saveCurrentText={t('search.savedViews.saveCurrent')}
-          emptyText={t('search.savedViews.empty')}
-          activeText={t('search.savedViews.active')}
-          deleteText={t('search.savedViews.delete')}
-          clearActiveText={t('search.savedViews.clearActive')}
-        />
-
-        {isWorkbenchSortMode && (
           <button
-            type="button"
-            className="workbench-sort-toggle active"
-            onClick={handleFinishWorkbenchSortMode}
-            title={t('workbench.finishSortMode')}
-            aria-label={t('workbench.finishSortMode')}
-            aria-pressed
+            onClick={() => setShowFavoritesOnly(current => !current)}
+            className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`}
+            title={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+            aria-label={showFavoritesOnly ? t('toolbar.showAll') : t('toolbar.showFavorites')}
+            aria-pressed={showFavoritesOnly}
           >
-            <ArrowUpDown size={12} />
-            <span>{t('workbench.finishSortMode')}</span>
+            <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
           </button>
-        )}
+
+          {allTags.length > 0 && (
+            <TagFilterControl
+              wrapperRef={workbenchTagWrapperRef}
+              triggerClassName="workbench-tag-filter-wrapper"
+              isOpen={showWorkbenchTagFilter}
+              onToggle={toggleWorkbenchTagFilter}
+              onClose={closeWorkbenchTagFilter}
+              controlsId={workbenchTagDropdownId}
+              listboxId={workbenchTagListboxId}
+              listboxRef={workbenchTagListboxRef}
+              selectedTags={selectedTags}
+              tagSearchQuery={workbenchTagSearchQuery}
+              onTagSearchChange={setWorkbenchTagSearchQuery}
+              onTagSearchInputKeyDown={handleWorkbenchTagSearchInputKeyDown}
+              visibleTagOptions={visibleTagOptions}
+              totalTagOptionsCount={parsedTagOptions.length}
+              onToggleTag={handleToggleWorkbenchTag}
+              onClearTags={() => setSelectedTags([])}
+              labelText={t('toolbar.filterTags')}
+              searchPlaceholderText={t('toolbar.searchTags')}
+              noTagsFoundText={t('toolbar.noTagsFound')}
+              moreTagsHintText={(count) => t('toolbar.moreTagsHint', { count })}
+              clearAllText={t('toolbar.clearAll')}
+            />
+          )}
+
+          <DateFilterControl
+            wrapperRef={workbenchDateWrapperRef}
+            isOpen={showWorkbenchDateFilter}
+            onToggle={toggleWorkbenchDateFilter}
+            onClose={closeWorkbenchDateFilter}
+            controlsId={workbenchDateDropdownId}
+            hasSelection={Boolean(selectedDateRange)}
+            badgeText={workbenchDateBadgeText}
+            dateFilterText={t('toolbar.dateFilter')}
+            datePresetOptions={datePresetOptions}
+            selectedDatePreset={selectedDatePreset}
+            onSelectDatePreset={handleSelectWorkbenchDatePreset}
+            selectedDateRange={selectedDateRange}
+            customDateStart={customDateStart}
+            customDateEnd={customDateEnd}
+            onCustomDateStartChange={setCustomDateStart}
+            onCustomDateEndChange={setCustomDateEnd}
+            onApplyCustomDateRange={handleApplyWorkbenchCustomDateRange}
+            onClearDateFilter={handleClearWorkbenchDateFilter}
+            dateStartText={t('toolbar.dateStart')}
+            dateEndText={t('toolbar.dateEnd')}
+            dateApplyText={t('toolbar.dateApply')}
+            clearDateFilterText={t('toolbar.clearDateFilter')}
+          />
+
+          <SavedViewControl
+            wrapperRef={workbenchSavedViewWrapperRef}
+            triggerClassName="workbench-saved-view-wrapper"
+            isOpen={showWorkbenchSavedViews}
+            onToggle={toggleWorkbenchSavedViews}
+            onClose={closeWorkbenchSavedViews}
+            controlsId={workbenchSavedViewDropdownId}
+            savedViews={savedViews}
+            activeFilterViewId={activeFilterViewId}
+            activeSavedView={activeSavedView}
+            savedViewName={workbenchSavedViewName}
+            onSavedViewNameChange={setWorkbenchSavedViewName}
+            onSaveView={handleSaveWorkbenchView}
+            onApplySavedView={applySavedFilterView}
+            onDeleteSavedView={deleteSavedFilterView}
+            onClearActiveSavedView={clearActiveFilterView}
+            titleText={t('search.savedViews.title')}
+            namePlaceholderText={t('search.savedViews.namePlaceholder')}
+            saveCurrentText={t('search.savedViews.saveCurrent')}
+            emptyText={t('search.savedViews.empty')}
+            activeText={t('search.savedViews.active')}
+            deleteText={t('search.savedViews.delete')}
+            clearActiveText={t('search.savedViews.clearActive')}
+          />
+
+          {isWorkbenchSortMode && (
+            <button
+              type="button"
+              className="workbench-sort-toggle active"
+              onClick={handleFinishWorkbenchSortMode}
+              title={t('workbench.finishSortMode')}
+              aria-label={t('workbench.finishSortMode')}
+              aria-pressed
+            >
+              <ArrowUpDown size={12} />
+              <span>{t('workbench.finishSortMode')}</span>
+            </button>
+          )}
+        </div>
       </div>
       {shouldShowWorkbenchSummaryRow && (
         <PanelSummaryRow className="workbench-filter-summary">
@@ -1505,7 +1583,8 @@ function WorkbenchPanel() {
                   isSortAnchor={isWorkbenchSortMode && workbenchSortAnchorItemId === item.id}
                   isSelectionMode={selectedPinnedIds.length > 0}
                   sortableDisabled={!workbenchDragEnabled || selectedPinnedIds.length > 0}
-                  onUnpin={() => togglePin(item)}
+                  isUnpinConfirmArmed={pendingUnpinItemId === item.id}
+                  onUnpin={() => handleCardUnpin(item)}
                   onSetCardRef={(node) => setWorkbenchCardRef(item.id, node)}
                   onCardPointerDown={(event) => handleWorkbenchCardPointerDown(item, event)}
                   onCardPointerMove={handleWorkbenchCardPointerMove}
@@ -1591,11 +1670,13 @@ function WorkbenchPanel() {
           handleUndoClearAll={quickActions.handleUndoClearAll}
         />
       )}
-      {isWorkbenchSortMode && showSortEntryToast && (
+      {(isWorkbenchSortMode && showSortEntryToast) || transientWorkbenchToast ? (
         <div className="workbench-entry-toast" role="status" aria-live="polite">
-          {t('workbench.releaseThenDragHint')}
+          {isWorkbenchSortMode && showSortEntryToast
+            ? t('workbench.releaseThenDragHint')
+            : transientWorkbenchToast}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

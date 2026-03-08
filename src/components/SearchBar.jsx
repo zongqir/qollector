@@ -206,6 +206,7 @@ function SearchBar({
     truncatedSearchQuery,
   ]);
   const shouldShowFilterSummary = !isMiniMode
+    && !hasFavoritesOnly
     && (filterSummaryParts.length > 0 || filterBusy || Boolean(normalizedFilterError));
   const handleClearFilterSummary = useCallback(() => {
     if (normalizedSearchQuery) onSearchChange?.('');

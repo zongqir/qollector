@@ -43,6 +43,9 @@ pub struct GeneralConfig {
     /// Double-click auto-paste: copy and paste to foreground app.
     #[serde(default)]
     pub auto_paste_on_double_click: bool,
+    /// Allow copy actions for items captured from Qollect itself.
+    #[serde(default = "default_copy_qollect_source_items")]
+    pub copy_qollect_source_items: bool,
     /// Enable automatic cleanup of old data.
     #[serde(default = "default_auto_cleanup_enabled")]
     pub auto_cleanup_enabled: bool,
@@ -123,6 +126,10 @@ fn default_auto_cleanup_enabled() -> bool {
     true
 }
 
+fn default_copy_qollect_source_items() -> bool {
+    false
+}
+
 fn default_cleanup_max_items() -> u32 {
     50000
 }
@@ -155,6 +162,7 @@ impl Default for GeneralConfig {
             history_tag_shortcut_enabled: default_history_tag_shortcut_enabled(),
             workbench_panel_enabled: true,
             auto_paste_on_double_click: false,
+            copy_qollect_source_items: default_copy_qollect_source_items(),
             auto_cleanup_enabled: true,
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,

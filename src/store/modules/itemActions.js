@@ -9,14 +9,25 @@ import {
   normalizeCardBackgroundId,
   withCardBackgroundInMetadata,
 } from '../../utils/cardBackgrounds';
+import { getSourceApp } from '../../utils/tagHelpers';
+import { isQollectManagedSource } from '../../utils/sourceConstants';
 import { SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK } from './platformSupport';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemIfNeeded } from './itemHydration';
+
+const shouldSkipInternalSourceCopy = (item, allowInternalCopy) => {
+  if (allowInternalCopy) return false;
+  const sourceApp = getSourceApp(item?.metadata);
+  return isQollectManagedSource(sourceApp);
+};
 
 export const createItemActions = (set, get) => ({
   handleCopy: async (item, source = 'global') => {
     try {
       const itemForCopy = await hydrateItemIfNeeded(item);
+      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems)) {
+        return false;
+      }
       await copyItemToClipboard(itemForCopy);
       pushCopyFeedback(set, {
         itemId: itemForCopy.id,
@@ -24,14 +35,19 @@ export const createItemActions = (set, get) => ({
         autoPaste: false,
         clearAfterMs: 1000,
       });
+      return true;
     } catch (error) {
       console.error('复制失败:', error);
+      return false;
     }
   },
 
   handleCopyAndAutoPaste: async (item, source = 'global') => {
     try {
       const itemForCopy = await hydrateItemIfNeeded(item);
+      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems)) {
+        return false;
+      }
       await copyItemToClipboard(itemForCopy);
       pushCopyFeedback(set, {
         itemId: itemForCopy.id,
@@ -41,12 +57,12 @@ export const createItemActions = (set, get) => ({
       });
 
       if (!SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK || !get().autoPasteOnDoubleClick) {
-        return;
+        return true;
       }
 
       // Only auto-paste for text/html/link types, skip image/file
       if (itemForCopy.type_ === 'image' || itemForCopy.type_ === 'file') {
-        return;
+        return true;
       }
 
       try {
@@ -64,8 +80,10 @@ export const createItemActions = (set, get) => ({
       } catch (error) {
         console.warn('[AutoPaste] Paste simulation failed, copied only:', error);
       }
+      return true;
     } catch (error) {
       console.error('copy/auto-paste failed:', error);
+      return false;
     }
   },
 

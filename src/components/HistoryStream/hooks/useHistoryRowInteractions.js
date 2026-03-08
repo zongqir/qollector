@@ -199,8 +199,8 @@ export default function useHistoryRowInteractions({
 
   const handleDragStart = useCallback((item, e) => {
     const externalPaths = getExternalFilePaths(item);
-    const nativeTextDrag = canDragTextAsFile(item);
-    if (supportsNativeExternalDrag && !e.shiftKey && (externalPaths.length > 0 || nativeTextDrag)) {
+    const shouldUseNativeFileDrag = supportsNativeExternalDrag && !e.shiftKey && externalPaths.length > 0;
+    if (shouldUseNativeFileDrag) {
       e.preventDefault();
       handleStartExternalDrag(item);
       return;
@@ -208,13 +208,14 @@ export default function useHistoryRowInteractions({
 
     const text = getDragText(item, externalPaths);
     e.dataTransfer.setData('text/plain', text);
+    e.dataTransfer.setData('text', text);
     e.dataTransfer.setData(INTERNAL_DRAG_MIME, JSON.stringify({ id: item.id }));
     e.dataTransfer.effectAllowed = 'copyMove';
     switchToWorkbench();
 
     const dragEl = document.createElement('div');
-    dragEl.textContent = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-    dragEl.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;';
+    dragEl.textContent = text.substring(0, 120) + (text.length > 120 ? '...' : '');
+    dragEl.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;max-width:420px;white-space:nowrap;overflow:hidden;';
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 0, 0);
     setTimeout(() => document.body.removeChild(dragEl), 0);

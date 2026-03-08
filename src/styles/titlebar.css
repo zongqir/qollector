@@ -294,6 +294,11 @@
   z-index: 2;
 }
 
+.app:not(.mini-mode) .titlebar-buttons {
+  align-self: center;
+  transform: translateY(-1px);
+}
+
 .titlebar-btn-group {
   display: inline-flex;
   align-items: center;
@@ -646,8 +651,10 @@
 
 .app.mini-mode .titlebar-buttons {
   gap: 2px;
-  padding: 2px;
+  padding: 1px;
   border-radius: 9px;
+  align-self: center;
+  transform: none;
 }
 
 .app.mini-mode .titlebar-btn-group {
@@ -678,8 +685,8 @@
 }
 
 .app.mini-mode .titlebar-btn {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 7px;
 }
 

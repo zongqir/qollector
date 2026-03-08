@@ -600,6 +600,25 @@
   height: 40px;
 }
 
+.density-compact .app:not(.mini-mode) .titlebar {
+  padding: 3px 8px;
+}
+
+.density-compact .app:not(.mini-mode) .titlebar-buttons {
+  padding: 1px;
+}
+
+.density-compact .app:not(.mini-mode) .titlebar-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.density-compact .app:not(.mini-mode) .titlebar-btn-divider {
+  height: 16px;
+  margin: 0 4px;
+}
+
 .density-compact .titlebar-status-pill {
   min-height: 20px;
   padding-inline: 7px;

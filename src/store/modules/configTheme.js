@@ -27,6 +27,7 @@ export const createLoadConfigsAction = ({
       lowMemoryModeEnabled: generalConfig.low_memory_mode_enabled || false,
       autoPasteOnDoubleClick: supportsAutoPasteOnDoubleClick
         && (generalConfig.auto_paste_on_double_click || false),
+      copyQollectSourceItems: Boolean(generalConfig.copy_qollect_source_items),
       widgetEnabled: generalConfig.widget_enabled || false,
       smartCopyEntryEnabled: Boolean(generalConfig.smart_copy_entry_enabled),
       historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,

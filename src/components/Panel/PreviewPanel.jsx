@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import {
@@ -37,6 +37,7 @@ function PreviewPanel() {
   const [showSecondaryTools, setShowSecondaryTools] = useState(false);
   const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
   const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [previewToast, setPreviewToast] = useState('');
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showTimestampConverted, setShowTimestampConverted] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
@@ -44,6 +45,7 @@ function PreviewPanel() {
   const [backendUserTags, setBackendUserTags] = useState([]);
   const toolbarRef = useRef(null);
   const toolbarCopyTimerRef = useRef(null);
+  const previewToastTimerRef = useRef(null);
   const panelRef = useRef(null);
   const contentSelectableRef = useRef(null);
 
@@ -266,6 +268,9 @@ function PreviewPanel() {
       if (toolbarCopyTimerRef.current) {
         clearTimeout(toolbarCopyTimerRef.current);
       }
+      if (previewToastTimerRef.current) {
+        clearTimeout(previewToastTimerRef.current);
+      }
     };
   }, []);
 
@@ -290,6 +295,18 @@ function PreviewPanel() {
   useEffect(() => {
     setShowAIAssistant(false);
   }, [item.id]);
+
+  const showPreviewToast = useCallback((message, duration = 2000) => {
+    if (!message) return;
+    setPreviewToast(message);
+    if (previewToastTimerRef.current) {
+      clearTimeout(previewToastTimerRef.current);
+    }
+    previewToastTimerRef.current = setTimeout(() => {
+      setPreviewToast('');
+      previewToastTimerRef.current = null;
+    }, duration);
+  }, []);
 
   // 鏀堕泦骞跺垏鍥炴敹闆嗙
   const handlePreviewPinToggle = async () => {
@@ -328,7 +345,10 @@ function PreviewPanel() {
         await handleCopyPlainText(item.content, 'preview');
       } else if (item.type_ === 'image') {
         // for image, copy the image itself
-        await handleCopy(item, 'preview');
+        const copied = await handleCopy(item, 'preview');
+        if (!copied) {
+          showPreviewToast(t('workbench.copySkippedQollectSource'));
+        }
       }
     }
   };
@@ -339,9 +359,17 @@ function PreviewPanel() {
       deleteItem(item);
     } else {
       setShowDeleteConfirm(true);
+      showPreviewToast(t('item.confirmDelete'));
       setTimeout(() => setShowDeleteConfirm(false), 3000);
     }
   };
+
+  const handlePreviewCopy = useCallback(async () => {
+    const copied = await handleCopy(item, 'preview');
+    if (!copied) {
+      showPreviewToast(t('workbench.copySkippedQollectSource'));
+    }
+  }, [handleCopy, item, showPreviewToast, t]);
 
   // 淇濆瓨鍐呭缂栬緫
   const handleSaveContent = async () => {
@@ -552,16 +580,44 @@ function PreviewPanel() {
     }
 
     if (item.type_ === 'image' && item.image_paths) {
+      const imageSrc = getImageOriginal(item.image_paths);
+      const openImageOnlyView = () => setLightboxSrc(imageSrc);
       return (
         <div
           ref={contentSelectableRef}
           className="preview-image-content"
-          onDoubleClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
+          onDoubleClick={openImageOnlyView}
           onKeyDown={handleContentKeyDown}
           tabIndex={0}
-          title={t('item.doubleClickToPreview')}
+          title={t('item.imageHoverZoomHint')}
         >
-          <img src={getImageOriginal(item.image_paths)} alt="" />
+          <div className="preview-image-stage">
+            <img src={imageSrc} alt="" />
+            <div className="preview-image-hover-hint">{t('item.imageHoverZoomHint')}</div>
+            <button
+              type="button"
+              className="preview-image-only-btn"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openImageOnlyView();
+              }}
+            >
+              <Maximize2 size={12} />
+              <span>{t('item.imageOnlyView')}</span>
+            </button>
+          </div>
+          <div className="preview-image-inline-actions">
+            <button
+              type="button"
+              className="preview-image-inline-btn"
+              onClick={openImageOnlyView}
+            >
+              <Maximize2 size={12} />
+              <span>{t('item.imageOnlyView')}</span>
+            </button>
+            <span className="preview-image-inline-hint">{t('item.imageLightboxHint')}</span>
+          </div>
           {item.ocr_text && (
             <div className="preview-ocr">
               <div className="ocr-label">{t('item.recognizedText')}</div>
@@ -621,7 +677,7 @@ function PreviewPanel() {
         <div className="preview-nav-actions">
           <button
             className={`preview-action-btn copy-btn ${isCopied ? 'copied' : ''}`}
-            onClick={() => handleCopy(item, 'preview')}
+            onClick={handlePreviewCopy}
             title={t('item.copy')}
           >
             <Copy size={16} />
@@ -640,6 +696,16 @@ function PreviewPanel() {
           >
             <Inbox size={16} />
           </button>
+          {shouldShowSaveImageButton && (
+            <button
+              className="preview-action-btn image-only-btn"
+              onClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
+              title={t('item.imageOnlyView')}
+              aria-label={t('item.imageOnlyView')}
+            >
+              <Maximize2 size={16} />
+            </button>
+          )}
           <span className="preview-nav-action-divider" aria-hidden="true" />
           <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
@@ -675,6 +741,11 @@ function PreviewPanel() {
         {isCopied && (
           <div className="copy-success-toast">
             <Check size={16} /> {t('item.copied')}
+          </div>
+        )}
+        {previewToast && (
+          <div className="preview-action-toast" role="status" aria-live="polite">
+            {previewToast}
           </div>
         )}
         <AIAssistantPanel
@@ -882,6 +953,16 @@ function PreviewPanel() {
               <button className={`preview-tool-btn secondary ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
                 {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
                 <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
+              </button>
+            )}
+            {shouldShowSaveImageButton && (
+              <button
+                className="preview-tool-btn secondary"
+                onClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
+                title={t('item.imageOnlyView')}
+              >
+                <Maximize2 size={14} />
+                <span>{t('item.imageOnlyView')}</span>
               </button>
             )}
             {shouldShowSaveImageButton && (

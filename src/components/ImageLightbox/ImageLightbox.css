@@ -43,6 +43,23 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+.image-lightbox-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  max-width: min(88vw, 780px);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(20, 20, 20, 0.52);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+}
+
 @keyframes lightboxFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

@@ -60,6 +60,7 @@ function WorkbenchCard({
   isMultiSelected,
   isSortMode,
   isSortAnchor,
+  isUnpinConfirmArmed,
   onUnpin,
   onPointerDownCapture,
   onClick,
@@ -284,14 +285,14 @@ function WorkbenchCard({
         </button>
         <button
           type="button"
-          className="workbench-card-remove panel-card-action-btn"
+          className={`workbench-card-remove panel-card-action-btn ${isUnpinConfirmArmed ? 'confirm' : ''}`}
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
           }}
           onClick={(e) => { e.stopPropagation(); onUnpin(); }}
-          title={t('workbench.removeFromWorkbench')}
-          aria-label={t('workbench.removeFromWorkbench')}
+          title={isUnpinConfirmArmed ? t('workbench.confirmRemoveFromWorkbench') : t('workbench.removeFromWorkbench')}
+          aria-label={isUnpinConfirmArmed ? t('workbench.confirmRemoveFromWorkbench') : t('workbench.removeFromWorkbench')}
         >
           <X size={14} />
         </button>
