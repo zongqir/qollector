@@ -145,6 +145,7 @@ function CompactCard({
 
   const cardClasses = [
     'compact-card',
+    'panel-card-shell',
     itemTypeClass,
     isExpandedPreview && 'expanded-inline',
     hasCustomCardBackground && 'custom-bg',
@@ -206,29 +207,29 @@ function CompactCard({
       const visibleCount = isMiniMode ? 1 : 2;
       const visibleFiles = renderableFiles.slice(0, visibleCount);
       return (
-        <div className="compact-card-files">
+        <div className="compact-card-files panel-card-content-files">
           {visibleFiles.map((filePath, index) => {
             const name = getFileName(filePath);
             const isFolder = isFolderPath(filePath);
             const ext = getExt(name);
             return (
-              <div key={`${filePath}-${index}`} className="compact-card-file-item">
+              <div key={`${filePath}-${index}`} className="compact-card-file-item panel-card-file-item">
                 {isFolder ? (
-                  <Folder size={14} className="compact-card-file-icon file-icon-folder" />
+                  <Folder size={14} className="compact-card-file-icon panel-card-file-icon file-icon-folder" />
                 ) : (
-                  <Suspense fallback={<FileText size={14} className="compact-card-file-icon" />}>
-                    <span className="compact-card-file-icon">
+                  <Suspense fallback={<FileText size={14} className="compact-card-file-icon panel-card-file-icon" />}>
+                    <span className="compact-card-file-icon panel-card-file-icon">
                       <FileIconLazy extension={ext} />
                     </span>
                   </Suspense>
                 )}
-                <span className="compact-card-file-name" title={name}>{name}</span>
-                {!isFolder && ext && <span className="compact-card-file-ext">{ext}</span>}
+                <span className="compact-card-file-name panel-card-file-name" title={name}>{name}</span>
+                {!isFolder && ext && <span className="compact-card-file-ext panel-card-file-ext">{ext}</span>}
               </div>
             );
           })}
           {renderableFiles.length > visibleCount && (
-            <div className="compact-card-file-more">+{renderableFiles.length - visibleCount}</div>
+            <div className="compact-card-file-more panel-card-file-more">+{renderableFiles.length - visibleCount}</div>
           )}
         </div>
       );
@@ -236,8 +237,9 @@ function CompactCard({
 
     if (item.type_ === 'image' && item.image_paths) {
       return (
-        <div className="compact-card-image">
+        <div className="compact-card-image panel-card-content-image">
           <img
+            className="panel-card-content-image-media"
             src={getImageThumbnail(item.image_paths)}
             alt=""
             loading="lazy"
@@ -256,7 +258,7 @@ function CompactCard({
           decodedPath = parsed.path;
         }
         return (
-          <div className="compact-card-link">
+          <div className="compact-card-link panel-card-content-link">
             <img
               className="compact-link-favicon"
               src={parsed.favicon}
@@ -265,9 +267,9 @@ function CompactCard({
             />
             <Link size={14} className="compact-link-fallback" style={{ display: 'none' }} />
             <div className="compact-link-info">
-              <span className="compact-link-title">{title || parsed.domain}</span>
-              <span className="compact-link-domain">{parsed.domain}</span>
-              {decodedPath && <span className="compact-link-path">{decodedPath}</span>}
+              <span className="compact-link-title panel-card-link-title">{title || parsed.domain}</span>
+              <span className="compact-link-domain panel-card-link-meta">{parsed.domain}</span>
+              {decodedPath && <span className="compact-link-path panel-card-link-aux">{decodedPath}</span>}
             </div>
           </div>
         );
@@ -275,13 +277,13 @@ function CompactCard({
     }
     if (item.code_language && item.content) {
       return (
-        <Suspense fallback={<div className="compact-card-text">{getContentPreview(item.content)}</div>}>
+        <Suspense fallback={<div className="compact-card-text panel-card-content-text">{getContentPreview(item.content)}</div>}>
           <CodeBlock code={item.content} language={item.code_language} maxLines={3} compact />
         </Suspense>
       );
     }
     return (
-      <div className="compact-card-text">
+      <div className="compact-card-text panel-card-content-text">
         {getContentPreview(item.content)}
       </div>
     );
@@ -298,7 +300,7 @@ function CompactCard({
       draggable="true"
       onDragStart={(e) => onDragStart && onDragStart(item, e)}
     >
-      <div className="compact-card-header">
+      <div className="compact-card-header panel-card-header">
         {isSelectionMode && (
           <button
             type="button"
@@ -321,41 +323,45 @@ function CompactCard({
             </span>
           </button>
         )}
-        <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
-        <span className="compact-card-time">
-          {timeLabel}
-        </span>
-        <span className="compact-card-source" title={sourceApp}>
-          {sourceApp}
-        </span>
-        {(item.is_pinned || item.is_favorite) && (
-          <div className="compact-card-state">
-            {item.is_pinned && (
-              <span
-                className="compact-card-state-chip pin"
-                title={t('item.pinned')}
-                aria-label={t('item.pinned')}
-              >
-                <Inbox size={9} />
-              </span>
-            )}
-            {item.is_favorite && (
-              <span
-                className="compact-card-state-chip favorite"
-                title={t('item.favorite')}
-                aria-label={t('item.favorite')}
-              >
-                <Star size={9} fill="currentColor" />
-              </span>
-            )}
-          </div>
-        )}
+        <div className="compact-card-head-main panel-card-head-main">
+          <span className="compact-card-type-icon panel-card-type-icon" aria-hidden="true">
+            <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
+          </span>
+          <span className="compact-card-time panel-card-time">
+            {timeLabel}
+          </span>
+          <span className="compact-card-source panel-card-source" title={sourceApp}>
+            {sourceApp}
+          </span>
+          {(item.is_pinned || item.is_favorite) && (
+            <div className="compact-card-state panel-card-state">
+              {item.is_pinned && (
+                <span
+                  className="compact-card-state-chip panel-card-state-chip pin"
+                  title={t('item.pinned')}
+                  aria-label={t('item.pinned')}
+                >
+                  <Inbox size={9} />
+                </span>
+              )}
+              {item.is_favorite && (
+                <span
+                  className="compact-card-state-chip panel-card-state-chip favorite"
+                  title={t('item.favorite')}
+                  aria-label={t('item.favorite')}
+                >
+                  <Star size={9} fill="currentColor" />
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <div className="compact-card-badges-wrap" ref={colorPickerRef}>
-          <div className="compact-card-badges">
+          <div className="compact-card-badges panel-card-actions panel-card-actions--hover-reveal">
             {canDragOut && (
               <button
                 type="button"
-                className="badge-btn badge-dragout"
+                className="badge-btn panel-card-action-btn badge-dragout"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -374,7 +380,7 @@ function CompactCard({
             {canOpen && (
               <button
                 type="button"
-                className="badge-btn badge-open"
+                className="badge-btn panel-card-action-btn badge-open"
                 onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
                 title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
                 aria-label={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
@@ -385,7 +391,7 @@ function CompactCard({
             {(item.type_ === 'file' || item.type_ === 'image') && (
               <button
                 type="button"
-                className="badge-btn badge-open"
+                className="badge-btn panel-card-action-btn badge-open"
                 onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
                 title={t('item.revealInFolder')}
                 aria-label={t('item.revealInFolder')}
@@ -396,7 +402,7 @@ function CompactCard({
             {item.type_ !== 'file' && (
               <button
                 type="button"
-                className="badge-btn badge-window"
+                className="badge-btn panel-card-action-btn badge-window"
                 onClick={(e) => {
                   e.stopPropagation();
                   void openHistoryEditorWindow(item.id, t);
@@ -409,7 +415,7 @@ function CompactCard({
             )}
             <button
               type="button"
-              className={`badge-btn badge-color ${hasCustomCardBackground ? 'tinted' : ''}`}
+              className={`badge-btn panel-card-action-btn badge-color ${hasCustomCardBackground ? 'tinted' : ''}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -426,7 +432,7 @@ function CompactCard({
             </button>
             <button
               type="button"
-              className={`badge-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
+              className={`badge-btn panel-card-action-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
               title={t('item.pin', { max: maxPinnedItems || 10 })}
               aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
@@ -435,7 +441,7 @@ function CompactCard({
             </button>
             <button
               type="button"
-              className={`badge-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
+              className={`badge-btn panel-card-action-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
               onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
               title={t('item.favorite')}
               aria-label={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
@@ -495,7 +501,7 @@ function CompactCard({
           )}
         </div>
       )}
-      <div className="compact-card-body">
+      <div className="compact-card-body panel-card-body">
         {isCopied && (
           <div className="copy-success-toast">
             <Check size={16} /> {useAppStore.getState().lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied')}
@@ -504,25 +510,25 @@ function CompactCard({
         {renderContent()}
       </div>
       {(userNote || userTags.length > 0) && (
-        <div className="compact-card-footer">
+        <div className="compact-card-footer panel-card-footer">
           {userNote && (
-            <div className="compact-card-note" title={userNote}>
+            <div className="compact-card-note panel-card-note" title={userNote}>
               {userNote}
             </div>
           )}
           {visibleUserTags.length > 0 && (
-            <div className="compact-card-tags">
+            <div className="compact-card-tags panel-card-tags">
               {visibleUserTags.map(tag => (
                 <span
                   key={tag}
-                  className="compact-tag clickable"
+                  className="compact-tag panel-card-tag clickable"
                   onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
                 >
                   {tag}
                 </span>
               ))}
               {hiddenUserTagsCount > 0 && (
-                <span className="compact-tag more">+{hiddenUserTagsCount}</span>
+                <span className="compact-tag panel-card-tag more">+{hiddenUserTagsCount}</span>
               )}
             </div>
           )}

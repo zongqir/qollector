@@ -41,6 +41,13 @@ import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
 import DateFilterControl from '../shared/DateFilterControl';
 import {
+  PanelSummaryActionButton,
+  PanelSummaryBadge,
+  PanelSummaryFeedback,
+  PanelSummaryRow,
+  PanelSummaryText,
+} from '../shared/PanelSummaryRow';
+import {
   getUserTags as getUserTagsSvc,
   getWorkbenchPinnedItems,
   reorderWorkbenchPinnedItems,
@@ -88,6 +95,8 @@ function WorkbenchPanel() {
   const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
   const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
+  const [workbenchLoading, setWorkbenchLoading] = useState(false);
+  const [workbenchFiltering, setWorkbenchFiltering] = useState(false);
   const [workbenchLoadError, setWorkbenchLoadError] = useState('');
   const [workbenchFilterError, setWorkbenchFilterError] = useState('');
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
@@ -152,6 +161,7 @@ function WorkbenchPanel() {
 
   useEffect(() => {
     let cancelled = false;
+    setWorkbenchLoading(true);
     getWorkbenchPinnedItems()
       .then((results) => {
         if (cancelled) return;
@@ -164,6 +174,11 @@ function WorkbenchPanel() {
           setBackendPinnedItems(null);
           const message = typeof error === 'string' ? error : String(error?.message || error || '');
           setWorkbenchLoadError(message || t('workbench.queryFailed'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setWorkbenchLoading(false);
         }
       });
     return () => {
@@ -250,11 +265,13 @@ function WorkbenchPanel() {
   useEffect(() => {
     if (!workbenchBackendFilterRequest.shouldQueryBackend) {
       setBackendFilteredPinnedIds(null);
+      setWorkbenchFiltering(false);
       setWorkbenchFilterError('');
       return;
     }
 
     let cancelled = false;
+    setWorkbenchFiltering(true);
     const limit = Math.max(600, Math.min(6000, allPinnedItems.length + 400));
     searchItems(workbenchBackendFilterRequest.query, limit, workbenchBackendFilterRequest.filters)
       .then((results) => {
@@ -269,6 +286,11 @@ function WorkbenchPanel() {
           setBackendFilteredPinnedIds(null);
           const message = typeof error === 'string' ? error : String(error?.message || error || '');
           setWorkbenchFilterError(message || t('workbench.queryFailed'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setWorkbenchFiltering(false);
         }
       });
 
@@ -287,6 +309,7 @@ function WorkbenchPanel() {
     backendFilteredPinnedIds,
   ]);
   const workbenchBackendError = workbenchFilterError || workbenchLoadError;
+  const isWorkbenchBusy = workbenchLoading || workbenchFiltering;
 
   const selectedPinnedItems = useMemo(() => {
     if (selectedPinnedIds.length === 0) return [];
@@ -411,6 +434,11 @@ function WorkbenchPanel() {
       ? t('toolbar.dateBadgeCustomRange')
       : datePresets.find(preset => preset.key === selectedDateRange.preset)?.badge || '')
     : '';
+  const truncatedWorkbenchQuery = useMemo(() => {
+    const normalized = typeof searchQuery === 'string' ? searchQuery.trim() : '';
+    if (!normalized) return '';
+    return normalized.length > 18 ? `${normalized.slice(0, 18)}…` : normalized;
+  }, [searchQuery]);
 
   const hasWorkbenchFilters = Boolean(
     searchQuery.trim()
@@ -420,6 +448,39 @@ function WorkbenchPanel() {
     || selectedTags.length > 0
     || activeSavedView
   );
+  const workbenchFilterSummaryParts = useMemo(() => {
+    const parts = [];
+    if (truncatedWorkbenchQuery) {
+      parts.push(t('toolbar.keywordFilterActive', { query: truncatedWorkbenchQuery }));
+    }
+    if (selectedType !== 'all') {
+      parts.push(t('search.empty.filterType', { type: t(`search.typeFilter.${selectedType}`) }));
+    }
+    if (selectedTags.length > 0) {
+      parts.push(t('search.empty.filterTags', { count: selectedTags.length }));
+    }
+    if (selectedDateRange) {
+      parts.push(t('toolbar.dateFilterActive'));
+    }
+    if (showFavoritesOnly) {
+      parts.push(t('search.empty.filterFavorites'));
+    }
+    if (activeSavedView) {
+      parts.push(t('search.savedViews.using', { name: activeSavedView.name }));
+    }
+    return parts;
+  }, [
+    activeSavedView,
+    selectedDateRange,
+    selectedTags.length,
+    selectedType,
+    showFavoritesOnly,
+    t,
+    truncatedWorkbenchQuery,
+  ]);
+  const shouldShowWorkbenchSummaryRow = workbenchFilterSummaryParts.length > 0
+    || Boolean(workbenchBackendError && pinnedItems.length > 0)
+    || (isWorkbenchBusy && pinnedItems.length > 0);
   const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
   const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
 
@@ -1199,23 +1260,23 @@ function WorkbenchPanel() {
     return (
       <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
         {quickNoteSection}
-        <div className={`workbench-empty ${workbenchBackendError ? 'error' : ''}`.trim()}>
-          <div className="workbench-empty-icon">
+        <div className={`workbench-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
+          <div className="workbench-empty-icon panel-state-icon">
             <Package size={48} strokeWidth={1} />
           </div>
-          <div className="workbench-empty-title">
+          <div className="workbench-empty-title state-panel__title panel-state-title">
             {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.emptyTitle')}
           </div>
-          <div className="workbench-empty-hint">
+          <div className="workbench-empty-hint state-panel__hint panel-state-text">
             {workbenchBackendError || t('workbench.emptyHint')}
           </div>
           {!workbenchBackendError && (
-            <div className="workbench-empty-guide">{t('workbench.workspaceGuide')}</div>
+            <div className="workbench-empty-guide state-panel__hint panel-state-text">{t('workbench.workspaceGuide')}</div>
           )}
           {workbenchBackendError && (
             <button
               type="button"
-              className="workbench-retry-btn"
+              className="workbench-retry-btn state-retry-btn panel-state-action-btn"
               onClick={handleRetryWorkbenchLoad}
             >
               {t('workbench.retryLoad')}
@@ -1354,16 +1415,6 @@ function WorkbenchPanel() {
           clearActiveText={t('search.savedViews.clearActive')}
         />
 
-        {hasWorkbenchFilters && (
-          <button
-            className="clear-filter-btn workbench-type-clear-btn"
-            onClick={handleClearWorkbenchFilters}
-            title={t('toolbar.clearAll')}
-          >
-            <X size={12} />
-            <span>{t('toolbar.clearFilter')}</span>
-          </button>
-        )}
         {isWorkbenchSortMode && (
           <button
             type="button"
@@ -1378,28 +1429,63 @@ function WorkbenchPanel() {
           </button>
         )}
       </div>
+      {shouldShowWorkbenchSummaryRow && (
+        <PanelSummaryRow className="workbench-filter-summary">
+          <PanelSummaryBadge className="workbench-filter-count panel-summary-item--count">
+            {t('workbench.countLabel', { count: pinnedItems.length })}
+          </PanelSummaryBadge>
+          {isWorkbenchBusy && (
+            <PanelSummaryBadge className="is-busy panel-summary-item--status">{t('search.searching')}</PanelSummaryBadge>
+          )}
+          {workbenchFilterSummaryParts.length > 0 && (
+            <PanelSummaryText className="workbench-filter-summary-text panel-summary-item--primary">
+              {workbenchFilterSummaryParts.join(' · ')}
+            </PanelSummaryText>
+          )}
+          {workbenchBackendError && pinnedItems.length > 0 && (
+            <PanelSummaryFeedback
+              className="workbench-filter-feedback panel-summary-item--feedback"
+              role="status"
+              ariaLive="polite"
+              title={workbenchBackendError}
+            >
+              {t('workbench.queryFailed')}
+            </PanelSummaryFeedback>
+          )}
+          {hasWorkbenchFilters && (
+            <PanelSummaryActionButton
+              className="clear-filter-btn workbench-summary-clear-btn panel-summary-item--action"
+              onClick={handleClearWorkbenchFilters}
+              title={t('toolbar.clearAll')}
+            >
+              <X size={12} />
+              <span>{t('toolbar.clearFilter')}</span>
+            </PanelSummaryActionButton>
+          )}
+        </PanelSummaryRow>
+      )}
 
       {pinnedItems.length === 0 ? (
-        <div className={`workbench-filter-empty ${workbenchBackendError ? 'error' : ''}`.trim()}>
-          <div className="workbench-empty-icon">
+        <div className={`workbench-filter-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
+          <div className="workbench-empty-icon panel-state-icon">
             <Package size={42} strokeWidth={1} />
           </div>
-          <div className="workbench-empty-title">
+          <div className="workbench-empty-title state-panel__title panel-state-title">
             {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.noFilteredItems')}
           </div>
-          <div className="workbench-empty-hint">
+          <div className="workbench-empty-hint state-panel__hint panel-state-text">
             {workbenchBackendError || t('workbench.emptyHint')}
           </div>
           {workbenchBackendError ? (
             <button
               type="button"
-              className="workbench-retry-btn"
+              className="workbench-retry-btn state-retry-btn panel-state-action-btn"
               onClick={handleRetryWorkbenchLoad}
             >
               {t('workbench.retryLoad')}
             </button>
           ) : (
-            <button className="clear-filter-btn" onClick={handleClearWorkbenchFilters}>
+            <button className="clear-filter-btn panel-state-action-btn" onClick={handleClearWorkbenchFilters}>
               <X size={12} /> {t('toolbar.clearFilter')}
             </button>
           )}

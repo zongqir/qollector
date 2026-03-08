@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, Folder, ExternalLink, FileText, Palette, Star } from 'lucide-react';
+import { X, Check, Folder, ExternalLink, FileText, Palette, Star, Type, Image, Link, Code } from 'lucide-react';
 import {
   getContentPreview,
   formatHistoryCardTime,
@@ -18,6 +18,7 @@ import {
   getCardBackgroundIdFromMetadata,
   getCardBackgroundPreset,
 } from '../../utils/cardBackgrounds';
+import useAppStore from '../../store/useAppStore';
 
 // Lazy load FileIcon to reduce initial bundle size
 const FileIconLazy = lazy(() =>
@@ -41,6 +42,17 @@ const isFolder = (path) => {
   return !name.includes('.');
 };
 
+const CardTypeIcon = ({ type, hasCodeLanguage }) => {
+  const size = 11;
+  if (hasCodeLanguage) return <Code size={size} />;
+  switch (type) {
+    case 'image': return <Image size={size} />;
+    case 'file': return <FileText size={size} />;
+    case 'link': return <Link size={size} />;
+    default: return <Type size={size} />;
+  }
+};
+
 function WorkbenchCard({
   item,
   timeTick,
@@ -57,10 +69,11 @@ function WorkbenchCard({
   onSetCardBackground,
 }) {
   const { t, i18n } = useTranslation();
+  const isMiniMode = useAppStore(s => s.isMiniMode);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const tags = getTags(item.tags).filter(tag => !tag.startsWith('AI:'));
-  const tagPreviewLimit = getCardTagPreviewLimit('workbench');
+  const tagPreviewLimit = getCardTagPreviewLimit('workbench', { isMiniMode });
   const visibleTags = tags.slice(0, tagPreviewLimit);
   const hiddenTagsCount = Math.max(tags.length - tagPreviewLimit, 0);
   const userNote = typeof item.user_note === 'string' ? item.user_note.trim() : '';
@@ -105,14 +118,15 @@ function WorkbenchCard({
   const renderContent = () => {
     if (item.type_ === 'image' && item.image_paths) {
       return (
-        <div className="workbench-card-image">
+        <div className="workbench-card-image panel-card-content-image">
           <img
+            className="panel-card-content-image-media"
             src={getImageOriginal(item.image_paths)}
             alt=""
             loading="lazy"
           />
           {item.ocr_text && (
-            <div className="workbench-card-ocr">
+            <div className="workbench-card-ocr panel-card-image-ocr">
               <div className="ocr-label">{t('item.recognizedText')}</div>
               <div className="ocr-content">{item.ocr_text}</div>
             </div>
@@ -131,7 +145,7 @@ function WorkbenchCard({
           decodedPath = parsed.path;
         }
         return (
-          <div className="workbench-card-link">
+          <div className="workbench-card-link panel-card-content-link">
             <div className="link-header">
               <img
                 className="link-favicon"
@@ -139,15 +153,15 @@ function WorkbenchCard({
                 alt=""
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
-              <span className="link-domain">{parsed.domain}</span>
+              <span className="link-domain panel-card-link-meta">{parsed.domain}</span>
               <ExternalLink
                 size={12}
                 className="link-external"
                 onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
               />
             </div>
-            {title && <div className="link-title">{title}</div>}
-            {decodedPath && <div className="link-path">{decodedPath}</div>}
+            {title && <div className="link-title panel-card-link-title">{title}</div>}
+            {decodedPath && <div className="link-path panel-card-link-aux">{decodedPath}</div>}
           </div>
         );
       }
@@ -156,23 +170,23 @@ function WorkbenchCard({
       const files = getFileList(item.content);
       const isSingle = files.length === 1;
       return (
-        <div className={`workbench-card-files ${isSingle ? 'single-file' : ''}`}>
+        <div className={`workbench-card-files panel-card-content-files ${isSingle ? 'single-file' : ''}`}>
           {files.map((path, idx) => {
             const name = getFileName(path);
             const folder = isFolder(path);
             const ext = getExt(name);
             return (
-              <div key={idx} className="file-item">
+              <div key={idx} className="file-item panel-card-file-item">
                 {folder ? (
-                  <Folder size={isSingle ? 32 : 20} color="#f5c542" fill="#f5c542" className="file-icon" />
+                  <Folder size={isSingle ? 32 : 20} color="#f5c542" fill="#f5c542" className="file-icon panel-card-file-icon" />
                 ) : (
-                  <Suspense fallback={<FileText size={isSingle ? 32 : 20} className="file-icon" />}>
-                    <div className="file-icon" style={{ width: isSingle ? 32 : 20 }}>
+                  <Suspense fallback={<FileText size={isSingle ? 32 : 20} className="file-icon panel-card-file-icon" />}>
+                    <div className="file-icon panel-card-file-icon" style={{ width: isSingle ? 32 : 20 }}>
                       <FileIconLazy extension={ext} />
                     </div>
                   </Suspense>
                 )}
-                <span>{name}</span>
+                <span className="panel-card-file-name">{name}</span>
               </div>
             );
           })}
@@ -181,13 +195,13 @@ function WorkbenchCard({
     }
     if (item.code_language && item.content) {
       return (
-        <Suspense fallback={<div className="workbench-card-text">{getContentPreview(item.content)}</div>}>
+        <Suspense fallback={<div className="workbench-card-text panel-card-content-text">{getContentPreview(item.content)}</div>}>
           <CodeBlock code={item.content} language={item.code_language} maxLines={8} compact />
         </Suspense>
       );
     }
     return (
-      <div className="workbench-card-text">
+      <div className="workbench-card-text panel-card-content-text">
         {getContentPreview(item.content)}
       </div>
     );
@@ -195,6 +209,7 @@ function WorkbenchCard({
 
   const cardClasses = [
     'workbench-card',
+    'panel-card-shell',
     isSortMode && 'sort-enabled',
     isSortAnchor && 'sort-anchor',
     item.is_favorite && 'favorite',
@@ -225,18 +240,23 @@ function WorkbenchCard({
           <Check size={16} /> {t('item.copied')}
         </div>
       )}
-      <div className="workbench-card-header">
-        <div className="workbench-card-meta">
-          <span className="workbench-card-time">{timeLabel}</span>
-          {sourceApp && (
-            <span className="workbench-card-source" title={sourceApp}>
-              {sourceApp}
-            </span>
-          )}
+      <div className="workbench-card-header panel-card-header">
+        <div className="workbench-card-head-main panel-card-head-main">
+          <span className="workbench-card-type-icon panel-card-type-icon" aria-hidden="true">
+            <CardTypeIcon type={item.type_} hasCodeLanguage={Boolean(item.code_language)} />
+          </span>
+          <div className="workbench-card-meta panel-card-meta">
+            <span className="workbench-card-time panel-card-time">{timeLabel}</span>
+            {sourceApp && (
+              <span className="workbench-card-source panel-card-source" title={sourceApp}>
+                {sourceApp}
+              </span>
+            )}
+          </div>
         </div>
         {item.is_favorite && (
           <span
-            className="workbench-card-state-chip favorite"
+            className="workbench-card-state-chip panel-card-state-chip favorite"
             title={t('item.favorite')}
             aria-label={t('item.favorite')}
           >
@@ -244,10 +264,10 @@ function WorkbenchCard({
           </span>
         )}
       </div>
-      <div className="workbench-card-tools" ref={colorPickerRef}>
+      <div className="workbench-card-tools panel-card-actions panel-card-actions--hover-reveal" ref={colorPickerRef}>
         <button
           type="button"
-          className={`workbench-card-color ${hasCustomCardBackground ? 'tinted' : ''}`}
+          className={`workbench-card-color panel-card-action-btn ${hasCustomCardBackground ? 'tinted' : ''}`}
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -264,7 +284,7 @@ function WorkbenchCard({
         </button>
         <button
           type="button"
-          className="workbench-card-remove"
+          className="workbench-card-remove panel-card-action-btn"
           onPointerDown={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -308,21 +328,21 @@ function WorkbenchCard({
           </div>
         )}
       </div>
-      <div className="workbench-card-content">
+      <div className="workbench-card-content panel-card-body">
         {renderContent()}
       </div>
       {(userNote || tags.length > 0) && (
-        <div className="workbench-card-footer">
+        <div className="workbench-card-footer panel-card-footer">
           {userNote && (
-            <div className="workbench-card-note" title={userNote}>{userNote}</div>
+            <div className="workbench-card-note panel-card-note" title={userNote}>{userNote}</div>
           )}
           {visibleTags.length > 0 && (
-            <div className="workbench-card-tags">
+            <div className="workbench-card-tags panel-card-tags">
               {visibleTags.map(tag => (
-                <span key={tag} className="workbench-card-tag">{tag}</span>
+                <span key={tag} className="workbench-card-tag panel-card-tag">{tag}</span>
               ))}
               {hiddenTagsCount > 0 && (
-                <span className="workbench-card-tag more">+{hiddenTagsCount}</span>
+                <span className="workbench-card-tag panel-card-tag more">+{hiddenTagsCount}</span>
               )}
             </div>
           )}

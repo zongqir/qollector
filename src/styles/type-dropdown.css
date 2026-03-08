@@ -39,14 +39,15 @@
 
 .type-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--filter-dropdown-offset));
   right: 0;
   background: var(--control-dropdown-bg);
-  border-radius: 12px;
+  border-radius: var(--filter-dropdown-radius);
   border: 1px solid var(--control-dropdown-border);
   box-shadow: var(--control-dropdown-shadow);
   min-width: 188px;
   max-width: 236px;
+  max-height: var(--filter-dropdown-max-height);
   overflow: hidden;
   z-index: 10000;
   animation: typeDropdownSlide var(--motion-fast) var(--ease-standard);
@@ -67,7 +68,7 @@
 
 .type-dropdown-list {
   padding: 4px;
-  max-height: 240px;
+  max-height: var(--filter-dropdown-list-max-height);
   overflow-y: auto;
 }
 
@@ -75,8 +76,9 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  min-height: var(--filter-dropdown-item-min-height);
   padding: 7px 9px;
-  border-radius: 8px;
+  border-radius: var(--filter-dropdown-item-radius);
   border: 1px solid transparent;
   cursor: pointer;
   transition:
@@ -167,7 +169,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px;
+  padding: var(--filter-dropdown-shell-padding);
   border-top: 1px solid var(--control-dropdown-divider);
   background: var(--control-panel-bg-soft);
 }
@@ -190,4 +192,14 @@
 
 .type-apply-btn:hover {
   background: color-mix(in srgb, var(--control-button-active-bg) 88%, var(--control-button-hover-bg) 12%);
+}
+
+@media (max-height: 560px) {
+  .type-dropdown {
+    max-height: min(320px, calc(100vh - 80px));
+  }
+
+  .type-dropdown-list {
+    max-height: min(220px, calc(100vh - 172px));
+  }
 }

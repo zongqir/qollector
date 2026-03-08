@@ -9,15 +9,16 @@
 
 .date-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--filter-dropdown-offset));
   left: 50%;
   transform: translateX(-50%);
   background: var(--control-dropdown-bg);
-  border-radius: 12px;
+  border-radius: var(--filter-dropdown-radius);
   border: 1px solid var(--control-dropdown-border);
   box-shadow: var(--control-dropdown-shadow);
   min-width: 236px;
   max-width: 320px;
+  max-height: var(--filter-dropdown-max-height);
   overflow: hidden;
   z-index: 10000;
   animation: dateDropdownSlide var(--motion-fast) var(--ease-standard);
@@ -30,7 +31,7 @@
 
 .date-dropdown-presets {
   padding: 6px;
-  max-height: 288px;
+  max-height: var(--filter-dropdown-list-max-height);
   overflow-y: auto;
 }
 
@@ -38,9 +39,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: var(--filter-dropdown-item-min-height);
   padding: 8px 10px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--filter-dropdown-item-radius);
   cursor: pointer;
   transition:
     background-color var(--motion-fast) var(--ease-standard),
@@ -164,7 +166,7 @@
 }
 
 .date-dropdown-footer {
-  padding: 8px 10px;
+  padding: var(--filter-dropdown-shell-padding) 10px;
   border-top: 1px solid var(--control-dropdown-divider);
   background: var(--control-panel-bg-soft);
 }
@@ -176,5 +178,15 @@
     transform: translateX(-50%);
     min-width: 200px;
     max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-height: 560px) {
+  .date-dropdown {
+    max-height: min(320px, calc(100vh - 80px));
+  }
+
+  .date-dropdown-presets {
+    max-height: min(214px, calc(100vh - 180px));
   }
 }

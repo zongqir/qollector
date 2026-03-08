@@ -299,6 +299,8 @@ function HistoryStream({ style }) {
   }, [searchQuery, setDebouncedSearchQuery]);
 
   const [backendSearchResults, setBackendSearchResults] = useState(null);
+  const [backendSearchError, setBackendSearchError] = useState('');
+  const [backendSearchRefreshNonce, setBackendSearchRefreshNonce] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   const [backendGroupCounts, setBackendGroupCounts] = useState(null);
   const [backendUserTags, setBackendUserTags] = useState([]);
@@ -422,6 +424,7 @@ function HistoryStream({ style }) {
   useEffect(() => {
     if (!backendSearchRequest.shouldQueryBackend) {
       setBackendSearchResults(null);
+      setBackendSearchError('');
       setIsSearching(false);
       return;
     }
@@ -430,17 +433,24 @@ function HistoryStream({ style }) {
     const limit = Math.max(800, Math.min(6000, items.length + 400));
     searchItems(backendSearchRequest.query, limit, backendSearchRequest.filters)
       .then((results) => {
-        if (!cancelled) setBackendSearchResults(results);
+        if (!cancelled) {
+          setBackendSearchResults(Array.isArray(results) ? results : []);
+          setBackendSearchError('');
+        }
       })
       .catch((err) => {
         console.error('[History] backend filtered search failed:', err);
-        if (!cancelled) setBackendSearchResults(null);
+        if (!cancelled) {
+          const message = typeof err === 'string' ? err : String(err?.message || err || '');
+          setBackendSearchError(message || t('search.queryFailed'));
+          setBackendSearchResults([]);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsSearching(false);
       });
     return () => { cancelled = true; };
-  }, [backendSearchRequest, items.length, itemsRevision]);
+  }, [backendSearchRequest, items.length, itemsRevision, backendSearchRefreshNonce, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1512,6 +1522,9 @@ function HistoryStream({ style }) {
     onApplySavedView: applySavedFilterView,
     onDeleteSavedView: deleteSavedFilterView,
     onClearActiveSavedView: clearActiveFilterView,
+    resultCount: filteredItems.length,
+    filterBusy: isSearching,
+    filterError: backendSearchError,
   }), [
     searchQuery,
     setSearchQuery,
@@ -1549,6 +1562,9 @@ function HistoryStream({ style }) {
     applySavedFilterView,
     deleteSavedFilterView,
     clearActiveFilterView,
+    filteredItems.length,
+    isSearching,
+    backendSearchError,
   ]);
 
   const isCalmPresetActive = startupFavoritesViewEnabled
@@ -1755,6 +1771,11 @@ function HistoryStream({ style }) {
     handleStreamClick();
   }, [contextMenuState, closeContextMenu, handleStreamClick]);
 
+  const handleRetryHistorySearch = useCallback(() => {
+    setBackendSearchError('');
+    setBackendSearchRefreshNonce((current) => current + 1);
+  }, []);
+
   return (
     <div ref={historyRootRef} className="history-stream" style={style} onClick={handleHistoryStreamClick}>
       <SearchBar {...searchBarProps} />
@@ -1782,14 +1803,14 @@ function HistoryStream({ style }) {
           </div>
         )}
         {loading ? (
-          <div className="loading-state">
+          <div className="loading-state state-panel state-panel--loading panel-state-stack">
             <div className="loading-spinner"></div>
-            <div className="loading-text">{t('app.loading')}</div>
+            <div className="loading-text state-panel__text panel-state-text">{t('app.loading')}</div>
           </div>
         ) : isSearching && !shouldRenderCollectionBoard ? (
-          <div className="loading-state">
+          <div className="loading-state state-panel state-panel--loading panel-state-stack">
             <div className="loading-spinner"></div>
-            <div className="loading-text">{t('search.searching')}</div>
+            <div className="loading-text state-panel__text panel-state-text">{t('search.searching')}</div>
           </div>
         ) : shouldRenderCollectionBoard ? (
           <CollectionBoard
@@ -1811,19 +1832,33 @@ function HistoryStream({ style }) {
             onCopyAndAutoPaste={handleCopyAndAutoPaste}
             maxPinnedItems={maxPinnedItems}
           />
+        ) : backendSearchError && filteredItems.length === 0 ? (
+          <div className="empty empty-diagnostic error" role="status" aria-live="polite">
+            <div className="empty-content state-panel state-panel--error panel-state-stack panel-state-stack--narrow">
+              <div className="empty-title state-panel__title panel-state-title">{t('search.queryFailed')}</div>
+              <div className="empty-detail state-panel__hint panel-state-text">{backendSearchError}</div>
+              <button
+                type="button"
+                className="history-retry-btn state-retry-btn panel-state-action-btn"
+                onClick={handleRetryHistorySearch}
+              >
+                {t('search.retryLoad')}
+              </button>
+            </div>
+          </div>
         ) : filteredItems.length === 0 ? (
           <div className="empty empty-diagnostic" role="status" aria-live="polite">
-            <div className="empty-content">
-              <div className="empty-title">{emptyDiagnostic.title}</div>
+            <div className="empty-content state-panel panel-state-stack panel-state-stack--narrow">
+              <div className="empty-title state-panel__title panel-state-title">{emptyDiagnostic.title}</div>
               {emptyDiagnostic.description && (
-                <div className="empty-detail">{emptyDiagnostic.description}</div>
+                <div className="empty-detail state-panel__hint panel-state-text">{emptyDiagnostic.description}</div>
               )}
               {canAddFromSearch && (
-                <div className="empty-actions-row">
+                <div className="empty-actions-row panel-state-actions">
                   <button
                     ref={addFromSearchButtonRef}
                     type="button"
-                    className="empty-action-btn"
+                    className="empty-action-btn panel-state-action-btn"
                     onClick={addSearchQueryToWorkbench}
                     onKeyDown={handleAddFromSearchActionKeyDown}
                     disabled={quickAddPending}
@@ -1836,10 +1871,10 @@ function HistoryStream({ style }) {
                 </div>
               )}
               {emptyDiagnostic.mode === 'first-use' && (
-                <div className="empty-actions-row">
+                <div className="empty-actions-row panel-state-actions">
                   <button
                     type="button"
-                    className="empty-action-btn"
+                    className="empty-action-btn panel-state-action-btn"
                     onClick={() => openEditModal()}
                     aria-label={t('search.empty.startQuickCapture')}
                   >
@@ -1847,7 +1882,7 @@ function HistoryStream({ style }) {
                   </button>
                   <button
                     type="button"
-                    className="empty-action-btn ghost"
+                    className="empty-action-btn ghost panel-state-action-btn panel-state-action-btn--ghost"
                     onClick={() => startTour()}
                     aria-label={t('search.empty.replayGuide')}
                   >
@@ -1857,10 +1892,10 @@ function HistoryStream({ style }) {
               )}
               {emptyDiagnostic.mode !== 'first-use' && recentUsableSavedView && (
                 <>
-                  <div className="empty-actions-row">
+                  <div className="empty-actions-row panel-state-actions">
                     <button
                       type="button"
-                      className="empty-action-btn"
+                      className="empty-action-btn panel-state-action-btn"
                       onClick={handleRestoreRecentSavedView}
                     >
                       {t('search.empty.restoreRecentView')}
@@ -1868,20 +1903,20 @@ function HistoryStream({ style }) {
                     {emptyDiagnostic.canReset && (
                       <button
                         type="button"
-                        className="empty-action-btn ghost"
+                        className="empty-action-btn ghost panel-state-action-btn panel-state-action-btn--ghost"
                         onClick={handleResetAllFilters}
                       >
                         {t('search.empty.clearAllFilters')}
                       </button>
                     )}
                   </div>
-                  <div className="empty-detail">
+                  <div className="empty-detail state-panel__hint panel-state-text">
                     {t('search.empty.restoreRecentViewHint', { name: recentUsableSavedView.name })}
                   </div>
                 </>
               )}
               {emptyDiagnostic.canReset && !recentUsableSavedView && (
-                <button type="button" className="empty-action-btn" onClick={handleResetAllFilters}>
+                <button type="button" className="empty-action-btn panel-state-action-btn" onClick={handleResetAllFilters}>
                   {t('search.empty.clearAllFilters')}
                 </button>
               )}

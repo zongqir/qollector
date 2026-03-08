@@ -9,6 +9,13 @@ import TagFilterControl from './shared/TagFilterControl';
 import SavedViewControl from './shared/SavedViewControl';
 import TypeFilterControl from './shared/TypeFilterControl';
 import DateFilterControl from './shared/DateFilterControl';
+import {
+  PanelSummaryActionButton,
+  PanelSummaryBadge,
+  PanelSummaryFeedback,
+  PanelSummaryRow,
+  PanelSummaryText,
+} from './shared/PanelSummaryRow';
 
 function SearchBar({
   searchQuery, onSearchChange,
@@ -34,6 +41,9 @@ function SearchBar({
   onApplySavedView,
   onDeleteSavedView,
   onClearActiveSavedView,
+  resultCount,
+  filterBusy = false,
+  filterError = '',
 }) {
   const { t } = useTranslation();
   const searchInputRef = useRef(null);
@@ -137,6 +147,90 @@ function SearchBar({
   const visibleTagOptions = parsedTagOptions.slice(0, 20);
   const savedViews = Array.isArray(savedFilterViews) ? savedFilterViews : [];
   const activeSavedView = savedViews.find(view => view.id === activeFilterViewId) || null;
+  const hasSelectedTags = selectedTags.length > 0;
+  const hasSelectedDate = Boolean(selectedDateRange);
+  const hasActiveSavedView = Boolean(activeSavedView);
+  const hasSelectedType = selectedType !== 'all';
+  const hasFavoritesOnly = Boolean(showFavoritesOnly);
+  const hasPinnedOnly = Boolean(showPinnedOnly);
+  const normalizedFilterError = typeof filterError === 'string' ? filterError.trim() : '';
+  const normalizedSearchQuery = useMemo(
+    () => (typeof searchQuery === 'string' ? searchQuery.trim() : ''),
+    [searchQuery],
+  );
+  const normalizedResultCount = useMemo(() => {
+    const parsed = Number(resultCount);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(0, Math.trunc(parsed));
+  }, [resultCount]);
+  const truncatedSearchQuery = useMemo(() => (
+    normalizedSearchQuery.length > 18
+      ? `${normalizedSearchQuery.slice(0, 18)}...`
+      : normalizedSearchQuery
+  ), [normalizedSearchQuery]);
+  const filterSummaryParts = useMemo(() => {
+    const parts = [];
+    if (truncatedSearchQuery) {
+      parts.push(t('toolbar.keywordFilterActive', { query: truncatedSearchQuery }));
+    }
+    if (hasSelectedType) {
+      parts.push(t('search.empty.filterType', { type: t(`search.typeFilter.${selectedType}`) }));
+    }
+    if (hasSelectedTags) {
+      parts.push(t('search.empty.filterTags', { count: selectedTags.length }));
+    }
+    if (hasSelectedDate) {
+      parts.push(t('toolbar.dateFilterActive'));
+    }
+    if (hasFavoritesOnly) {
+      parts.push(t('search.empty.filterFavorites'));
+    }
+    if (hasPinnedOnly) {
+      parts.push(t('search.empty.filterPinned'));
+    }
+    if (hasActiveSavedView) {
+      parts.push(t('search.savedViews.using', { name: activeSavedView.name }));
+    }
+    return parts;
+  }, [
+    activeSavedView,
+    hasActiveSavedView,
+    hasFavoritesOnly,
+    hasPinnedOnly,
+    hasSelectedDate,
+    hasSelectedTags,
+    hasSelectedType,
+    selectedType,
+    selectedTags.length,
+    t,
+    truncatedSearchQuery,
+  ]);
+  const shouldShowFilterSummary = !isMiniMode
+    && (filterSummaryParts.length > 0 || filterBusy || Boolean(normalizedFilterError));
+  const handleClearFilterSummary = useCallback(() => {
+    if (normalizedSearchQuery) onSearchChange?.('');
+    if (hasSelectedType) onTypeChange?.('all');
+    if (hasSelectedTags) onClearTags?.();
+    if (hasSelectedDate) onClearDateFilter?.();
+    if (hasFavoritesOnly) onToggleFavorites?.();
+    if (hasPinnedOnly) onTogglePinned?.();
+    if (hasActiveSavedView) onClearActiveSavedView?.();
+  }, [
+    hasActiveSavedView,
+    hasFavoritesOnly,
+    hasPinnedOnly,
+    normalizedSearchQuery,
+    hasSelectedDate,
+    hasSelectedTags,
+    hasSelectedType,
+    onSearchChange,
+    onClearActiveSavedView,
+    onClearDateFilter,
+    onClearTags,
+    onToggleFavorites,
+    onTogglePinned,
+    onTypeChange,
+  ]);
   const tagDropdownId = 'search-tag-filter-dropdown';
   const tagListboxId = `${tagDropdownId}-options`;
   const dateDropdownId = 'search-date-filter-dropdown';
@@ -408,38 +502,30 @@ function SearchBar({
         </button>
       </div>
 
-      {/* 筛选状态提示（仅在有标签筛选时显示） */}
-      {selectedTags.length > 0 && (
-        <div className="filter-status">
-          <span className="filter-status-text">
-            {t('toolbar.filteringBy', { count: selectedTags.length })}
-          </span>
-          <button onClick={onClearTags} className="clear-filter-btn" title={t('toolbar.clearAll')}>
-            <X size={12} /> {t('toolbar.clearFilter')}
-          </button>
-        </div>
-      )}
-
-      {selectedDateRange && (
-        <div className="filter-status">
-          <span className="filter-status-text">
-            {t('toolbar.dateFilterActive')}
-          </span>
-          <button onClick={onClearDateFilter} className="clear-filter-btn" title={t('toolbar.clearDateFilter')}>
-            <X size={12} /> {t('toolbar.clearDateFilter')}
-          </button>
-        </div>
-      )}
-
-      {activeSavedView && (
-        <div className="filter-status saved-view-status">
-          <span className="filter-status-text">
-            {t('search.savedViews.using', { name: activeSavedView.name })}
-          </span>
-          <button onClick={onClearActiveSavedView} className="clear-filter-btn" title={t('search.savedViews.clearActive')}>
-            <X size={12} /> {t('search.savedViews.clearActive')}
-          </button>
-        </div>
+      {shouldShowFilterSummary && (
+        <PanelSummaryRow className={`filter-status ${hasActiveSavedView ? 'saved-view-status' : ''}`.trim()}>
+          {filterBusy && (
+            <PanelSummaryBadge className="is-busy panel-summary-item--status">{t('search.searching')}</PanelSummaryBadge>
+          )}
+          {normalizedResultCount !== null && (
+            <PanelSummaryBadge className="panel-summary-item--count">{t('toolbar.resultCount', { count: normalizedResultCount })}</PanelSummaryBadge>
+          )}
+          {filterSummaryParts.length > 0 && (
+            <PanelSummaryText className="filter-status-text panel-summary-item--primary">
+              {filterSummaryParts.join(' · ')}
+            </PanelSummaryText>
+          )}
+          {normalizedFilterError && (
+            <PanelSummaryFeedback className="panel-summary-item--feedback" role="status" ariaLive="polite" title={normalizedFilterError}>
+              {t('search.queryFailed')}
+            </PanelSummaryFeedback>
+          )}
+          {filterSummaryParts.length > 0 && (
+            <PanelSummaryActionButton onClick={handleClearFilterSummary} className="clear-filter-btn panel-summary-item--action" title={t('toolbar.clearAll')}>
+              <X size={12} /> {t('toolbar.clearFilter')}
+            </PanelSummaryActionButton>
+          )}
+        </PanelSummaryRow>
       )}
     </header>
   );
