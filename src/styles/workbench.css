@@ -394,6 +394,38 @@
   background: var(--state-panel-bg-strong);
 }
 
+.workbench-empty.error,
+.workbench-filter-empty.error {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--state-error-border) 72%, transparent);
+  background: color-mix(in srgb, var(--state-error-bg) 56%, var(--state-panel-bg) 44%);
+}
+
+.workbench-empty.error .workbench-empty-title,
+.workbench-filter-empty.error .workbench-empty-title {
+  color: var(--state-error-fg);
+}
+
+.workbench-retry-btn {
+  border: 1px solid color-mix(in srgb, var(--state-error-border) 72%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+  color: var(--state-error-fg);
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.workbench-retry-btn:hover {
+  background: color-mix(in srgb, var(--state-error-bg) 62%, transparent);
+}
+
+.workbench-retry-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 34%, transparent);
+}
+
 /* workbench cards list */
 .workbench-cards {
   flex: 1;
@@ -1302,6 +1334,10 @@
   .workbench-filter-empty {
     margin: 8px 12px 10px;
     padding: 16px 12px;
+  }
+
+  .workbench-retry-btn {
+    width: 100%;
   }
 
   .workbench-card-header {

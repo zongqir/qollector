@@ -88,6 +88,9 @@ function WorkbenchPanel() {
   const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
   const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
   const [backendPinnedItems, setBackendPinnedItems] = useState(null);
+  const [workbenchLoadError, setWorkbenchLoadError] = useState('');
+  const [workbenchFilterError, setWorkbenchFilterError] = useState('');
+  const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
   const selectionAnchorIndexRef = useRef(-1);
   const workbenchTypeWrapperRef = useRef(null);
@@ -153,17 +156,20 @@ function WorkbenchPanel() {
       .then((results) => {
         if (cancelled) return;
         setBackendPinnedItems(Array.isArray(results) ? results : []);
+        setWorkbenchLoadError('');
       })
       .catch((error) => {
         console.error('[Workbench] fetch pinned items failed:', error);
         if (!cancelled) {
           setBackendPinnedItems(null);
+          const message = typeof error === 'string' ? error : String(error?.message || error || '');
+          setWorkbenchLoadError(message || t('workbench.queryFailed'));
         }
       });
     return () => {
       cancelled = true;
     };
-  }, [itemsRevision]);
+  }, [itemsRevision, workbenchRefreshNonce, t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -244,6 +250,7 @@ function WorkbenchPanel() {
   useEffect(() => {
     if (!workbenchBackendFilterRequest.shouldQueryBackend) {
       setBackendFilteredPinnedIds(null);
+      setWorkbenchFilterError('');
       return;
     }
 
@@ -254,16 +261,21 @@ function WorkbenchPanel() {
         if (cancelled) return;
         const ids = new Set((Array.isArray(results) ? results : []).map((item) => item.id));
         setBackendFilteredPinnedIds(ids);
+        setWorkbenchFilterError('');
       })
       .catch((error) => {
         console.error('[Workbench] backend filter search failed:', error);
-        if (!cancelled) setBackendFilteredPinnedIds(null);
+        if (!cancelled) {
+          setBackendFilteredPinnedIds(null);
+          const message = typeof error === 'string' ? error : String(error?.message || error || '');
+          setWorkbenchFilterError(message || t('workbench.queryFailed'));
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [workbenchBackendFilterRequest, allPinnedItems.length, itemsRevision]);
+  }, [workbenchBackendFilterRequest, allPinnedItems.length, itemsRevision, workbenchRefreshNonce, t]);
 
   const pinnedItems = useMemo(() => {
     if (!(backendFilteredPinnedIds instanceof Set)) {
@@ -274,6 +286,7 @@ function WorkbenchPanel() {
     allPinnedItems,
     backendFilteredPinnedIds,
   ]);
+  const workbenchBackendError = workbenchFilterError || workbenchLoadError;
 
   const selectedPinnedItems = useMemo(() => {
     if (selectedPinnedIds.length === 0) return [];
@@ -409,6 +422,12 @@ function WorkbenchPanel() {
   );
   const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
   const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
+
+  const handleRetryWorkbenchLoad = useCallback(() => {
+    setWorkbenchLoadError('');
+    setWorkbenchFilterError('');
+    setWorkbenchRefreshNonce((current) => current + 1);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1180,13 +1199,28 @@ function WorkbenchPanel() {
     return (
       <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
         {quickNoteSection}
-        <div className="workbench-empty">
+        <div className={`workbench-empty ${workbenchBackendError ? 'error' : ''}`.trim()}>
           <div className="workbench-empty-icon">
             <Package size={48} strokeWidth={1} />
           </div>
-          <div className="workbench-empty-title">{t('workbench.emptyTitle')}</div>
-          <div className="workbench-empty-hint">{t('workbench.emptyHint')}</div>
-          <div className="workbench-empty-guide">{t('workbench.workspaceGuide')}</div>
+          <div className="workbench-empty-title">
+            {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.emptyTitle')}
+          </div>
+          <div className="workbench-empty-hint">
+            {workbenchBackendError || t('workbench.emptyHint')}
+          </div>
+          {!workbenchBackendError && (
+            <div className="workbench-empty-guide">{t('workbench.workspaceGuide')}</div>
+          )}
+          {workbenchBackendError && (
+            <button
+              type="button"
+              className="workbench-retry-btn"
+              onClick={handleRetryWorkbenchLoad}
+            >
+              {t('workbench.retryLoad')}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1346,14 +1380,29 @@ function WorkbenchPanel() {
       </div>
 
       {pinnedItems.length === 0 ? (
-        <div className="workbench-filter-empty">
+        <div className={`workbench-filter-empty ${workbenchBackendError ? 'error' : ''}`.trim()}>
           <div className="workbench-empty-icon">
             <Package size={42} strokeWidth={1} />
           </div>
-          <div className="workbench-empty-title">{t('workbench.noFilteredItems')}</div>
-          <button className="clear-filter-btn" onClick={handleClearWorkbenchFilters}>
-            <X size={12} /> {t('toolbar.clearFilter')}
-          </button>
+          <div className="workbench-empty-title">
+            {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.noFilteredItems')}
+          </div>
+          <div className="workbench-empty-hint">
+            {workbenchBackendError || t('workbench.emptyHint')}
+          </div>
+          {workbenchBackendError ? (
+            <button
+              type="button"
+              className="workbench-retry-btn"
+              onClick={handleRetryWorkbenchLoad}
+            >
+              {t('workbench.retryLoad')}
+            </button>
+          ) : (
+            <button className="clear-filter-btn" onClick={handleClearWorkbenchFilters}>
+              <X size={12} /> {t('toolbar.clearFilter')}
+            </button>
+          )}
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

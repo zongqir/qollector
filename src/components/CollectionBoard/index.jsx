@@ -185,6 +185,7 @@ function CollectionBoard({
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendFiltering, setBackendFiltering] = useState(false);
   const [backendError, setBackendError] = useState('');
+  const [collectionRefreshNonce, setCollectionRefreshNonce] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [backendFilteredFavoriteIds, setBackendFilteredFavoriteIds] = useState(null);
   const [showSortEntryToast, setShowSortEntryToast] = useState(false);
@@ -265,7 +266,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [items]);
+  }, [items, collectionRefreshNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -616,6 +617,11 @@ function CollectionBoard({
       }
     });
   }, [backendItems]);
+
+  const handleRetryCollectionLoad = useCallback(() => {
+    setBackendError('');
+    setCollectionRefreshNonce((current) => current + 1);
+  }, []);
 
   const handleOpenTagEditor = useCallback(() => {
     if (!activeItem) {
@@ -1346,6 +1352,18 @@ function CollectionBoard({
         <div className="collection-loading" role="status" aria-live="polite">
           <div className="loading-spinner"></div>
           <div className="loading-text">{t('search.searching')}</div>
+        </div>
+      ) : backendError && collectionItems.length === 0 ? (
+        <div className="collection-empty error" role="status" aria-live="polite">
+          <div className="collection-empty-title">{t('collection.queryFailed')}</div>
+          <div className="collection-empty-hint">{backendError}</div>
+          <button
+            type="button"
+            className="collection-retry-btn"
+            onClick={handleRetryCollectionLoad}
+          >
+            {t('collection.retryLoad')}
+          </button>
         </div>
       ) : collectionItems.length === 0 && !hasCollectionFilter ? (
         <div className="collection-empty" role="status" aria-live="polite">
