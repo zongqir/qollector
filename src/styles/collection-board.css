@@ -650,7 +650,7 @@
   background: color-mix(in srgb, var(--accent-light) 72%, transparent);
 }
 
-.collection-card:has(.panel-card-action-btn.pin.active) .collection-card-state-chip.pin {
+.collection-card:has(.panel-card-action-btn.pin.is-active) .collection-card-state-chip.pin {
   display: none;
 }
 
@@ -714,6 +714,33 @@
   position: relative;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .collection-card .panel-card-actions--hover-reveal {
+    opacity: var(--card-toolbar-hidden-opacity);
+    transform: translateY(var(--card-toolbar-shell-hidden-translate)) scale(var(--card-toolbar-shell-hidden-scale));
+    pointer-events: none;
+    box-shadow: none;
+  }
+
+  .collection-card:is(
+    :hover,
+    :focus-visible,
+    :focus-within,
+    .keyboard-focused,
+    .selected,
+    .multi-selected,
+    .active,
+    .sort-anchor,
+    :has(.compact-card-color-picker),
+    :has(.workbench-card-color-picker)
+  ) .panel-card-actions--hover-reveal {
+    opacity: var(--card-toolbar-visible-opacity);
+    transform: translateY(var(--card-toolbar-shell-visible-translate)) scale(1);
+    pointer-events: auto;
+    box-shadow: var(--card-toolbar-shell-shadow);
+  }
+}
+
 .collection-card-actions > button {
   width: var(--card-toolbar-btn-size);
   height: var(--card-toolbar-btn-size);
@@ -739,25 +766,25 @@
   box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
 }
 
-.collection-card-actions > button.active {
+.collection-card-actions > button.is-active {
   color: color-mix(in srgb, var(--text-primary) 88%, transparent);
   border-color: color-mix(in srgb, var(--surface-border-strong) 62%, transparent);
   background: color-mix(in srgb, var(--surface-elevated) 88%, var(--surface-muted) 12%);
 }
 
-.collection-card-actions > button.pin.active {
+.collection-card-actions > button.pin.is-active {
   color: color-mix(in srgb, var(--accent-color) 88%, var(--text-primary) 12%);
   border-color: color-mix(in srgb, var(--accent-color) 38%, transparent);
   background: color-mix(in srgb, var(--accent-light) 62%, var(--surface-elevated) 38%);
 }
 
-.collection-card-actions > button.favorite.active {
+.collection-card-actions > button.favorite.is-active {
   color: color-mix(in srgb, var(--state-warning-fg) 92%, var(--text-primary) 8%);
   border-color: color-mix(in srgb, var(--state-warning-border) 66%, transparent);
   background: color-mix(in srgb, var(--state-warning-bg) 60%, var(--surface-elevated) 40%);
 }
 
-.collection-card-actions > button.color.active {
+.collection-card-actions > button.color.is-active {
   color: color-mix(in srgb, var(--accent-color) 92%, var(--text-primary) 8%);
 }
 

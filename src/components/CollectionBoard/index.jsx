@@ -1302,7 +1302,7 @@ function CollectionBoard({
           <div className="collection-card-actions panel-card-actions panel-card-actions--hover-reveal" ref={showColorPicker ? colorPickerRef : null}>
             <button
               type="button"
-              className={`panel-card-action-btn ${item.is_pinned ? 'active pin' : 'pin'}`}
+              className={`panel-card-action-btn ${item.is_pinned ? 'is-active pin' : 'pin'}`}
               onClick={(event) => {
                 event.stopPropagation();
                 void handleTogglePin(item);
@@ -1314,7 +1314,7 @@ function CollectionBoard({
             </button>
             <button
               type="button"
-              className={`panel-card-action-btn ${item.is_favorite ? 'active favorite' : 'favorite'}`}
+              className={`panel-card-action-btn ${item.is_favorite ? 'is-active favorite' : 'favorite'}`}
               onClick={(event) => {
                 event.stopPropagation();
                 void handleToggleFavorite(item);
@@ -1326,7 +1326,7 @@ function CollectionBoard({
             </button>
             <button
               type="button"
-              className={`panel-card-action-btn ${hasCustomCardBackground ? 'active color' : 'color'}`}
+              className={`panel-card-action-btn ${hasCustomCardBackground ? 'is-active color' : 'color'}`}
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
