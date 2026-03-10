@@ -206,6 +206,19 @@
   left: auto;
   right: 0;
   transform: none;
+  transform-origin: top right;
+  animation: workbench-filter-dropdown-slide var(--motion-fast) var(--ease-standard);
+}
+
+@keyframes workbench-filter-dropdown-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .workbench-type-clear-btn {
@@ -280,19 +293,73 @@
   background: var(--control-input-bg);
   border: 1px solid var(--control-input-border);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 7px 8px 7px 12px;
   transition: box-shadow var(--motion-base) var(--ease-standard);
 }
 
 .quick-note-collapsed-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
 }
 
 .quick-note-collapsed-row .quick-note-input-wrapper {
   flex: 1;
   min-width: 0;
+}
+
+.quick-note-filter-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.quick-note-filter-toggle-btn:hover {
+  color: var(--text-primary);
+  background: var(--btn-hover-bg);
+}
+
+.quick-note-filter-toggle-btn:not(.is-collapsed) {
+  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-primary));
+  background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
+
+.quick-note-filter-toggle-btn.is-collapsed {
+  color: var(--text-tertiary);
+  background: transparent;
+}
+
+.quick-note-filter-toggle-btn:focus {
+  outline: none;
+}
+
+.quick-note-filter-toggle-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--top-rail-focus-ring);
+}
+
+.quick-note-filter-active-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  box-shadow: 0 0 0 1px var(--control-input-bg);
 }
 
 .quick-note-input-wrapper:focus-within {
@@ -1328,6 +1395,12 @@
 }
 
 @container workbench-panel (max-width: 460px) {
+  .quick-note-filter-toggle-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+  }
+
   .workbench-filter-row {
     margin: 6px 12px 0;
     padding: 6px 8px;
@@ -1537,6 +1610,12 @@
 }
 
 @container workbench-panel (max-width: 420px) {
+  .quick-note-filter-toggle-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
   .workbench-filter-row {
     column-gap: var(--top-rail-mini-control-gap);
     padding-right: 6px;

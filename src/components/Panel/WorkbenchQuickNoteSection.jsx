@@ -1,9 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Send } from 'lucide-react';
+import { Plus, X, Send, Filter } from 'lucide-react';
 
 function WorkbenchQuickNoteSection({
   isExpanded,
   quickNote,
+  hasActiveFilters,
+  isFiltersCollapsed,
+  onToggleFiltersCollapsed,
   onQuickNoteChange,
   onQuickNoteKeyDown,
   onExpandedKeyDown,
@@ -63,6 +66,17 @@ function WorkbenchQuickNoteSection({
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onQuickNoteKeyDown}
             />
+            <button
+              type="button"
+              className={`quick-note-filter-toggle-btn ${isFiltersCollapsed ? 'is-collapsed' : ''}`}
+              onClick={onToggleFiltersCollapsed}
+              title={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
+              aria-label={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
+              aria-expanded={!isFiltersCollapsed}
+            >
+              <Filter size={13} />
+              {hasActiveFilters && <span className="quick-note-filter-active-dot" aria-hidden />}
+            </button>
           </div>
         </div>
       )}

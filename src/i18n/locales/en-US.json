@@ -852,6 +852,8 @@
     "dedupeNoItems": "No workbench items to deduplicate",
     "dedupeNoChanges": "No duplicates found",
     "dedupeDone": "Removed {{count}} duplicate item(s)",
+    "collapseFilters": "Collapse filters",
+    "expandFilters": "Expand filters",
     "finishSortMode": "Done sorting",
     "releaseThenDragHint": "Sort mode on. Release, then drag."
   },

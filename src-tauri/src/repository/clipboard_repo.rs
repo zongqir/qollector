@@ -1238,21 +1238,30 @@ impl ClipboardRepository {
     pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
         if pinned {
             let pinned_at = chrono::Utc::now().timestamp();
+            let mut tx = self.pool.begin().await?;
+            sqlx::query(
+                "UPDATE clipboard_items
+                 SET pin_order = CASE
+                   WHEN pin_order IS NULL OR pin_order <= 0 THEN 2
+                   ELSE pin_order + 1
+                 END
+                 WHERE is_deleted = 0 AND is_pinned = 1 AND id != ?",
+            )
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
             sqlx::query(
                 "UPDATE clipboard_items
                  SET is_pinned = 1,
                      pinned_at = ?,
-                     pin_order = (
-                       SELECT COALESCE(MAX(pin_order), 0) + 1
-                       FROM clipboard_items
-                       WHERE is_deleted = 0 AND is_pinned = 1
-                     )
+                     pin_order = 1
                  WHERE id = ?",
             )
             .bind(pinned_at)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+            tx.commit().await?;
             return Ok(());
         }
 

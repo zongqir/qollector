@@ -821,6 +821,8 @@
     "dedupeNoItems": "当前没有可去重的工作台项",
     "dedupeNoChanges": "未检测到重复项",
     "dedupeDone": "已移除 {{count}} 个重复项",
+    "collapseFilters": "收起筛选",
+    "expandFilters": "展开筛选",
     "finishSortMode": "完成排序",
     "releaseThenDragHint": "已进入排序，请松手后拖动"
   },
