@@ -1974,8 +1974,8 @@
 }
 
 .app.mini-mode .history-stream-row {
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .app.mini-mode .loading-state {
@@ -1997,7 +1997,7 @@
 
 .app.mini-mode .compact-card {
   border-radius: var(--card-shell-radius-compact);
-  padding: 8px 9px;
+  padding: 7px 8px;
   box-shadow: none;
 }
 
@@ -2178,4 +2178,3 @@
     min-height: 34px;
   }
 }
-

@@ -1328,7 +1328,7 @@ function HistoryStream({ style }) {
     onSearchArrowDownNoResults: focusAddFromSearchButton,
   });
 
-  const rowGap = isMiniMode ? 3 : 4;
+  const rowGap = isMiniMode ? 2 : 4;
 
   const handleEndReached = useCallback(() => {
     loadMore();

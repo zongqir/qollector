@@ -223,7 +223,7 @@ function CollectionBoard({
   const collectionCardClickTimerRef = useRef(null);
   const collectionSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
-  const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_LIST : collectionViewMode;
+  const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_CARDS : collectionViewMode;
   const isCollectionSortMode = !isMiniMode && collectionSortMode;
   const shouldUseDndLayout = !isMiniMode && isCollectionSortMode;
   const useCollectionMasonryLayout = !isCollectionSortMode && effectiveCollectionViewMode === COLLECTION_VIEW_MODE_CARDS;
@@ -1093,6 +1093,8 @@ function CollectionBoard({
     handleCollectionCardClick(item, event);
   }, [handleCollectionCardClick]);
 
+  const isCollectionListMode = effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST;
+
   const getCardPointerProps = useCallback((item) => ({
     onPointerDown: (event) => handleCollectionCardPointerHandlers.onPointerDown(event, item),
     onPointerMove: handleCollectionCardPointerHandlers.onPointerMove,
@@ -1232,7 +1234,7 @@ function CollectionBoard({
     if (item.code_language && item.content) {
       return (
         <Suspense fallback={<div className="collection-card-text panel-card-content-text">{getContentPreview(item.content || '')}</div>}>
-          <CodeBlock code={item.content} language={item.code_language} maxLines={6} compact />
+          <CodeBlock code={item.content} language={item.code_language} maxLines={isCollectionListMode ? 3 : 6} compact />
         </Suspense>
       );
     }
@@ -1242,7 +1244,7 @@ function CollectionBoard({
         {getContentPreview(item.content || item.user_note || item.ocr_text || '')}
       </div>
     );
-  }, []);
+  }, [isCollectionListMode]);
 
   const renderCollectionCard = (item, index) => {
     const itemTags = getUserTags(item);

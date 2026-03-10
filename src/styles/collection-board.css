@@ -1112,15 +1112,18 @@
 
 .collection-grid.list-mode {
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .collection-card.list-mode {
-  min-height: 108px;
+  min-height: 0;
+  padding: 8px 9px;
+  gap: 5px;
 }
 
 .collection-card.list-mode .collection-card-head {
   align-items: center;
+  margin-bottom: 3px;
 }
 
 .collection-card.list-mode .collection-card-meta {
@@ -1145,16 +1148,16 @@
 
 .collection-card.list-mode .collection-card-image {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 6px;
   align-items: center;
 }
 
 .collection-card.list-mode .collection-card-image img {
-  width: 84px;
-  height: 58px;
+  width: 70px;
+  height: 48px;
   max-height: none;
-  border-radius: 8px;
+  border-radius: 7px;
   object-fit: cover;
 }
 
@@ -1192,6 +1195,12 @@
   .collection-card {
     min-height: 134px;
     padding: 9px;
+  }
+
+  .collection-card.list-mode {
+    min-height: 0;
+    padding: 7px 8px;
+    gap: 4px;
   }
 
   .collection-tag-editor input {
@@ -1409,8 +1418,8 @@
 }
 
 .app.mini-mode .collection-board {
-  padding: 8px 8px 10px;
-  gap: 8px;
+  padding: 6px 6px 8px;
+  gap: 6px;
   background: transparent;
 }
 
