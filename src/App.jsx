@@ -997,7 +997,16 @@ function App() {
   const syncQuickInputState = useCallback(async () => {
     try {
       const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
-      const nextState = Boolean(existing);
+      let nextState = false;
+      if (existing) {
+        try {
+          // Accessing native window state can fail for stale handles.
+          await existing.isVisible();
+          nextState = true;
+        } catch {
+          nextState = false;
+        }
+      }
       setIsQuickInputOpen(nextState);
       return nextState;
     } catch {

@@ -11,6 +11,7 @@ const isWindowsRuntime = () => navigator.userAgent.toLowerCase().includes('windo
 const QUICK_INPUT_WINDOW_SIZE_KEY = 'qollect-quick-input-window-size-v1';
 const HISTORY_EDITOR_WINDOW_SIZE_KEY = 'qollect-history-editor-window-size-v1';
 const windowSizePersistenceCleanupByLabel = new Map();
+let quickInputOpenPromise = null;
 
 const normalizeSizeNumber = (value, minValue) => {
   const parsed = Math.round(Number.parseFloat(String(value)));
@@ -149,6 +150,16 @@ const focusWindowSafely = async (win) => {
   }
 };
 
+const isWindowHandleUsable = async (win) => {
+  if (!win) return false;
+  try {
+    await win.isVisible();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const openImagePreview = async (imagePath, t) => {
   try {
     let originalPath = imagePath;
@@ -201,10 +212,24 @@ export const openImagePreview = async (imagePath, t) => {
 export const QUICK_INPUT_WINDOW_LABEL = 'quick-input';
 
 export const openQuickInputWindow = async (t) => {
+  if (quickInputOpenPromise) {
+    return quickInputOpenPromise;
+  }
+
+  quickInputOpenPromise = (async () => {
   const minSize = { minWidth: 360, minHeight: 260 };
   const defaultSize = { width: 460, height: 360 };
   const rememberedSize = readStoredWindowSize(QUICK_INPUT_WINDOW_SIZE_KEY, defaultSize, minSize);
-  const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
+  let existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
+  if (existing && !(await isWindowHandleUsable(existing))) {
+    try {
+      await existing.destroy();
+    } catch {
+      // Ignore stale handle cleanup errors.
+    }
+    existing = null;
+  }
+
   if (existing) {
     bindWindowSizePersistence(
       QUICK_INPUT_WINDOW_LABEL,
@@ -268,6 +293,13 @@ export const openQuickInputWindow = async (t) => {
       settle(resolve, webview);
     }, 1600);
   });
+  })();
+
+  try {
+    return await quickInputOpenPromise;
+  } finally {
+    quickInputOpenPromise = null;
+  }
 };
 
 const HISTORY_EDITOR_WINDOW_PREFIX = 'history-editor-';

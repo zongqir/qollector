@@ -47,7 +47,6 @@ function QuickInputWindow() {
   const textareaRef = useRef(null);
   const toastTimerRef = useRef(null);
   const appWindowRef = useRef(getCurrentWindow());
-  const allowCloseRef = useRef(false);
   const colorPanelRef = useRef(null);
   const appWindow = appWindowRef.current;
 
@@ -126,12 +125,10 @@ function QuickInputWindow() {
   }, []);
 
   const requestClose = useCallback(async () => {
-    if (savingRef.current || allowCloseRef.current) return;
-    allowCloseRef.current = true;
+    if (savingRef.current) return;
     try {
       await appWindow.close();
     } catch (error) {
-      allowCloseRef.current = false;
       console.error('Failed to close quick input window:', error);
     }
   }, [appWindow]);
@@ -200,7 +197,6 @@ function QuickInputWindow() {
     let disposed = false;
 
     appWindow.onCloseRequested((event) => {
-      if (allowCloseRef.current) return;
       if (savingRef.current) {
         event.preventDefault?.();
         return;
