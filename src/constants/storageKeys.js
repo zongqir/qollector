@@ -4,3 +4,5 @@ export const FILTER_VIEWS_STORAGE_KEY = 'qollect-filter-views-v1';
 export const WORKBENCH_FILTER_VIEWS_STORAGE_KEY = 'qollect-workbench-filter-views-v1';
 export const TOUR_COMPLETED_STORAGE_KEY = 'qollect-tour-completed';
 export const WINDOW_MODE_STORAGE_KEY = 'qollect-window-mode';
+export const WINDOW_NORMAL_SIZE_STORAGE_KEY = 'qollect-window-normal-size';
+export const LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY = 'qollect-layout-last-all-split-width';

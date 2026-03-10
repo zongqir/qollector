@@ -32,7 +32,9 @@ import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 import releaseNotes from './data/release-notes.json';
 import {
   TOUR_COMPLETED_STORAGE_KEY,
+  LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY,
   WINDOW_MODE_STORAGE_KEY,
+  WINDOW_NORMAL_SIZE_STORAGE_KEY,
 } from './constants/storageKeys';
 
 console.log('[Perf:App] Component definition loaded at', performance.now().toFixed(1), 'ms');
@@ -44,6 +46,8 @@ const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
 
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
+const MINI_THRESHOLD = 450;
+const PANEL_CLOSE_THRESHOLD = 350;
 const WINDOW_MODE_MINI = 'mini';
 const WINDOW_MODE_NORMAL = 'normal';
 const LAYOUT_PRESET_STORAGE_KEY = 'qollect-layout-preset';
@@ -57,8 +61,8 @@ const VIEW_MODE_RIGHT = 'right';
 const VIEW_MODE_ALL = 'all';
 const VIEW_MODE_RESTORE = 'restore';
 const LAYOUT_PRESET_DEFAULT_WIDTHS = {
-  [LAYOUT_PRESET_FLOW]: 360,
-  [LAYOUT_PRESET_DETAIL]: 340,
+  [LAYOUT_PRESET_FLOW]: 320,
+  [LAYOUT_PRESET_DETAIL]: 300,
 };
 const RELEASE_NOTES_SEEN_VERSION_KEY = 'qollect-release-notes-seen-version';
 const RELEASE_NOTES_FALLBACK_URL = 'https://qollect.zongqir.com/changelog';
@@ -136,6 +140,67 @@ const persistLayoutPresetWidths = (widths) => {
     localStorage.setItem(LAYOUT_PRESET_WIDTHS_STORAGE_KEY, JSON.stringify(widths));
   } catch (error) {
     console.warn('[LayoutPreset] persist widths failed:', error);
+  }
+};
+
+const clampNormalWindowWidth = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return NORMAL_SIZE.width;
+  return Math.min(Math.max(Math.round(parsed), 520), 2400);
+};
+
+const clampNormalWindowHeight = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return NORMAL_SIZE.height;
+  return Math.min(Math.max(Math.round(parsed), 420), 1800);
+};
+
+const normalizeNormalWindowSize = (size) => ({
+  width: clampNormalWindowWidth(size?.width),
+  height: clampNormalWindowHeight(size?.height),
+});
+
+const readNormalWindowSize = () => {
+  if (typeof window === 'undefined') return { ...NORMAL_SIZE };
+  try {
+    const raw = localStorage.getItem(WINDOW_NORMAL_SIZE_STORAGE_KEY);
+    if (!raw) return { ...NORMAL_SIZE };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { ...NORMAL_SIZE };
+    return normalizeNormalWindowSize(parsed);
+  } catch (error) {
+    console.warn('[WindowMode] read normal size failed:', error);
+    return { ...NORMAL_SIZE };
+  }
+};
+
+const persistNormalWindowSize = (size) => {
+  if (typeof window === 'undefined' || !size) return;
+  try {
+    localStorage.setItem(WINDOW_NORMAL_SIZE_STORAGE_KEY, JSON.stringify(normalizeNormalWindowSize(size)));
+  } catch (error) {
+    console.warn('[WindowMode] persist normal size failed:', error);
+  }
+};
+
+const readLastAllSplitWidth = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY);
+    if (raw == null) return null;
+    return clampHistoryWidth(raw);
+  } catch (error) {
+    console.warn('[LayoutPreset] read last split failed:', error);
+    return null;
+  }
+};
+
+const persistLastAllSplitWidth = (width) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY, String(clampHistoryWidth(width)));
+  } catch (error) {
+    console.warn('[LayoutPreset] persist last split failed:', error);
   }
 };
 
@@ -610,12 +675,15 @@ function App() {
   // Mini 模式
   const initialLayoutPresetRef = useRef(readLayoutPreset());
   const layoutPresetWidthsRef = useRef(readLayoutPresetWidths());
+  const normalWindowSizeRef = useRef(readNormalWindowSize());
+  const lastAllSplitWidthRef = useRef(readLastAllSplitWidth());
   const [layoutPreset, setLayoutPreset] = useState(initialLayoutPresetRef.current);
   const [leftWidth, setLeftWidth] = useState(() => {
     const preset = initialLayoutPresetRef.current;
     const widths = layoutPresetWidthsRef.current;
     const fallback = LAYOUT_PRESET_DEFAULT_WIDTHS[preset] || LAYOUT_PRESET_DEFAULT_WIDTHS[LAYOUT_PRESET_DEFAULT];
-    return clampHistoryWidth(widths[preset] ?? fallback);
+    const preferredAllWidth = preset === LAYOUT_PRESET_DETAIL ? lastAllSplitWidthRef.current : null;
+    return clampHistoryWidth(widths[preset] ?? preferredAllWidth ?? fallback);
   });
   const leftWidthRef = useRef(leftWidth);
 
@@ -706,28 +774,41 @@ function App() {
     if (!isValidLayoutPreset(preset)) return;
     const normalized = clampHistoryWidth(width);
     const current = layoutPresetWidthsRef.current[preset];
-    if (current === normalized) return;
-    const next = { ...layoutPresetWidthsRef.current, [preset]: normalized };
-    layoutPresetWidthsRef.current = next;
-    persistLayoutPresetWidths(next);
+    if (current !== normalized) {
+      const next = { ...layoutPresetWidthsRef.current, [preset]: normalized };
+      layoutPresetWidthsRef.current = next;
+      persistLayoutPresetWidths(next);
+    }
+    if (preset === LAYOUT_PRESET_DETAIL && lastAllSplitWidthRef.current !== normalized) {
+      lastAllSplitWidthRef.current = normalized;
+      persistLastAllSplitWidth(normalized);
+    }
   }, []);
 
-  const applyLayoutPreset = useCallback((preset) => {
+  const applyLayoutPreset = useCallback((preset, options = {}) => {
     if (!isValidLayoutPreset(preset)) return;
+    const preferredWidth = options?.preferredWidth;
 
     if (workbenchPanelEnabled && showHistoryStream) {
       rememberPresetWidth(layoutPreset, leftWidthRef.current);
     }
 
     const nextShowPanel = preset !== LAYOUT_PRESET_FLOW;
-    const targetWidth = layoutPresetWidthsRef.current[preset] ?? LAYOUT_PRESET_DEFAULT_WIDTHS[preset];
+    const targetWidth = clampHistoryWidth(
+      preferredWidth
+        ?? layoutPresetWidthsRef.current[preset]
+        ?? LAYOUT_PRESET_DEFAULT_WIDTHS[preset]
+    );
 
     setLayoutPreset(preset);
     persistLayoutPreset(preset);
     setWorkbenchPanelBeforeMini(null);
     setHistoryStreamEnabled(true);
     setWorkbenchPanelEnabled(nextShowPanel);
-    setLeftWidth(clampHistoryWidth(targetWidth));
+    setLeftWidth(targetWidth);
+    if (preset === LAYOUT_PRESET_DETAIL) {
+      rememberPresetWidth(preset, targetWidth);
+    }
   }, [
     workbenchPanelEnabled,
     layoutPreset,
@@ -755,22 +836,44 @@ function App() {
     hasDesktopRestoreTargetRef.current = true;
   }, [activeDesktopViewMode, isMiniMode]);
 
-  const setMiniMode = useCallback(async (enterMini) => {
+  const setMiniMode = useCallback(async (enterMini, options = {}) => {
+    const keepCurrentSizeOnExit = options?.keepCurrentSizeOnExit === true;
     const currentMiniMode = useAppStore.getState().isMiniMode;
     if (enterMini === currentMiniMode) return;
-    const targetSize = enterMini ? MINI_SIZE : NORMAL_SIZE;
-    try {
-      const appWindow = getCurrentWindow();
-      await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
-    } catch (error) {
-      console.warn('[WindowMode] setSize failed, fallback to state sync:', error);
+
+    if (enterMini) {
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+      if (currentWidth > MINI_THRESHOLD) {
+        const nextNormalSize = normalizeNormalWindowSize({ width: currentWidth, height: currentHeight });
+        normalWindowSizeRef.current = nextNormalSize;
+        persistNormalWindowSize(nextNormalSize);
+      }
+      if (activeDesktopViewModeRef.current === VIEW_MODE_ALL) {
+        const currentSplit = clampHistoryWidth(leftWidthRef.current);
+        lastAllSplitWidthRef.current = currentSplit;
+        persistLastAllSplitWidth(currentSplit);
+        rememberPresetWidth(LAYOUT_PRESET_DETAIL, currentSplit);
+      }
     }
+
+    const shouldApplySize = enterMini || !keepCurrentSizeOnExit;
+    if (shouldApplySize) {
+      const targetSize = enterMini ? MINI_SIZE : normalWindowSizeRef.current;
+      try {
+        const appWindow = getCurrentWindow();
+        await appWindow.setSize(new LogicalSize(targetSize.width, targetSize.height));
+      } catch (error) {
+        console.warn('[WindowMode] setSize failed, fallback to state sync:', error);
+      }
+    }
+
     localStorage.setItem(
       WINDOW_MODE_STORAGE_KEY,
       enterMini ? WINDOW_MODE_MINI : WINDOW_MODE_NORMAL
     );
     setIsMiniMode(enterMini);
-  }, [setIsMiniMode]);
+  }, [rememberPresetWidth, setIsMiniMode]);
 
   const performViewModeSwitch = useCallback(async (mode) => {
     const currentMiniMode = useAppStore.getState().isMiniMode;
@@ -803,7 +906,7 @@ function App() {
         setWorkbenchPanelEnabled(true);
         setHistoryStreamEnabled(false);
       } else {
-        applyLayoutPreset(LAYOUT_PRESET_DETAIL);
+        applyLayoutPreset(LAYOUT_PRESET_DETAIL, { preferredWidth: lastAllSplitWidthRef.current });
       }
       showAppFeedback(
         restoreMode === VIEW_MODE_LEFT
@@ -845,7 +948,7 @@ function App() {
       if (currentMiniMode) {
         await setMiniMode(false);
       }
-      applyLayoutPreset(LAYOUT_PRESET_DETAIL);
+      applyLayoutPreset(LAYOUT_PRESET_DETAIL, { preferredWidth: lastAllSplitWidthRef.current });
       showAppFeedback(t('feedback.mode.all'), 'info');
     }
   }, [
@@ -951,8 +1054,24 @@ function App() {
     };
   }, [handleSelectViewMode, setPanelMode, showAppFeedback, t]);
 
-  const MINI_THRESHOLD = 450;
-  const PANEL_CLOSE_THRESHOLD = 350;
+  useEffect(() => {
+    if (!initialWindowModeReady || isMiniMode) return undefined;
+
+    const persistCurrentNormalSize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      if (width <= MINI_THRESHOLD) return;
+      const normalized = normalizeNormalWindowSize({ width, height });
+      const current = normalWindowSizeRef.current;
+      if (current.width === normalized.width && current.height === normalized.height) return;
+      normalWindowSizeRef.current = normalized;
+      persistNormalWindowSize(normalized);
+    };
+
+    persistCurrentNormalSize();
+    window.addEventListener('resize', persistCurrentNormalSize);
+    return () => window.removeEventListener('resize', persistCurrentNormalSize);
+  }, [initialWindowModeReady, isMiniMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -961,7 +1080,7 @@ function App() {
       const storedWindowMode = localStorage.getItem(WINDOW_MODE_STORAGE_KEY);
       const mode = storedWindowMode === WINDOW_MODE_NORMAL ? WINDOW_MODE_NORMAL : WINDOW_MODE_MINI;
       const enterMini = mode === WINDOW_MODE_MINI;
-      const targetSize = enterMini ? MINI_SIZE : NORMAL_SIZE;
+      const targetSize = enterMini ? MINI_SIZE : normalWindowSizeRef.current;
 
       try {
         const appWindow = getCurrentWindow();
@@ -1023,7 +1142,7 @@ function App() {
           });
       } else if (width > MINI_THRESHOLD && isMiniMode && !autoMiniSwitchPendingRef.current) {
         autoMiniSwitchPendingRef.current = true;
-        setMiniMode(false)
+        setMiniMode(false, { keepCurrentSizeOnExit: true })
           .then(() => {
             showAppFeedback(t('feedback.autoLayout.miniDisabled'), 'info', 1300);
           })
