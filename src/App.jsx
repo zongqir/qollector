@@ -61,8 +61,12 @@ const VIEW_MODE_RIGHT = 'right';
 const VIEW_MODE_ALL = 'all';
 const VIEW_MODE_RESTORE = 'restore';
 const LAYOUT_PRESET_DEFAULT_WIDTHS = {
-  [LAYOUT_PRESET_FLOW]: 320,
-  [LAYOUT_PRESET_DETAIL]: 300,
+  [LAYOUT_PRESET_FLOW]: 300,
+  [LAYOUT_PRESET_DETAIL]: 280,
+};
+const LAYOUT_PRESET_LEGACY_DEFAULT_WIDTHS = {
+  [LAYOUT_PRESET_FLOW]: 360,
+  [LAYOUT_PRESET_DETAIL]: 340,
 };
 const RELEASE_NOTES_SEEN_VERSION_KEY = 'qollect-release-notes-seen-version';
 const RELEASE_NOTES_FALLBACK_URL = 'https://qollect.zongqir.com/changelog';
@@ -91,6 +95,15 @@ const clampHistoryWidth = (value) => {
   return Math.min(Math.max(Math.round(parsed), 220), 600);
 };
 
+const normalizeLayoutPresetWidth = (preset, value) => {
+  const width = clampHistoryWidth(value);
+  const legacyDefault = LAYOUT_PRESET_LEGACY_DEFAULT_WIDTHS[preset];
+  if (legacyDefault != null && width === legacyDefault) {
+    return LAYOUT_PRESET_DEFAULT_WIDTHS[preset] ?? width;
+  }
+  return width;
+};
+
 const readLayoutPreset = () => {
   if (typeof window === 'undefined') return LAYOUT_PRESET_DEFAULT;
   try {
@@ -113,10 +126,10 @@ const readLayoutPresetWidths = () => {
     if (!parsed || typeof parsed !== 'object') return defaults;
     const next = { ...defaults };
     if (parsed[LAYOUT_PRESET_FLOW] != null) {
-      next[LAYOUT_PRESET_FLOW] = clampHistoryWidth(parsed[LAYOUT_PRESET_FLOW]);
+      next[LAYOUT_PRESET_FLOW] = normalizeLayoutPresetWidth(LAYOUT_PRESET_FLOW, parsed[LAYOUT_PRESET_FLOW]);
     }
     if (parsed[LAYOUT_PRESET_DETAIL] != null) {
-      next[LAYOUT_PRESET_DETAIL] = clampHistoryWidth(parsed[LAYOUT_PRESET_DETAIL]);
+      next[LAYOUT_PRESET_DETAIL] = normalizeLayoutPresetWidth(LAYOUT_PRESET_DETAIL, parsed[LAYOUT_PRESET_DETAIL]);
     }
     return next;
   } catch (error) {
@@ -188,7 +201,7 @@ const readLastAllSplitWidth = () => {
   try {
     const raw = localStorage.getItem(LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY);
     if (raw == null) return null;
-    return clampHistoryWidth(raw);
+    return normalizeLayoutPresetWidth(LAYOUT_PRESET_DETAIL, raw);
   } catch (error) {
     console.warn('[LayoutPreset] read last split failed:', error);
     return null;
@@ -827,21 +840,33 @@ function App() {
   const activeDesktopViewModeRef = useRef(activeDesktopViewMode);
   const lastDesktopViewModeRef = useRef(activeDesktopViewMode);
   const hasDesktopRestoreTargetRef = useRef(false);
+  const miniTransitionTargetRef = useRef(null);
   const viewModeSwitchQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
     activeDesktopViewModeRef.current = activeDesktopViewMode;
-    if (isMiniMode) return;
+    if (isMiniMode || miniTransitionTargetRef.current === true) return;
     lastDesktopViewModeRef.current = activeDesktopViewMode;
     hasDesktopRestoreTargetRef.current = true;
   }, [activeDesktopViewMode, isMiniMode]);
+
+  useEffect(() => {
+    if (miniTransitionTargetRef.current == null) return;
+    if (miniTransitionTargetRef.current === isMiniMode) {
+      miniTransitionTargetRef.current = null;
+    }
+  }, [isMiniMode]);
 
   const setMiniMode = useCallback(async (enterMini, options = {}) => {
     const keepCurrentSizeOnExit = options?.keepCurrentSizeOnExit === true;
     const currentMiniMode = useAppStore.getState().isMiniMode;
     if (enterMini === currentMiniMode) return;
+    miniTransitionTargetRef.current = enterMini;
 
     if (enterMini) {
+      lastDesktopViewModeRef.current = activeDesktopViewModeRef.current;
+      hasDesktopRestoreTargetRef.current = true;
+
       const currentWidth = window.innerWidth;
       const currentHeight = window.innerHeight;
       if (currentWidth > MINI_THRESHOLD) {
@@ -880,8 +905,6 @@ function App() {
 
     if (mode === VIEW_MODE_MINI) {
       if (currentMiniMode) return;
-      lastDesktopViewModeRef.current = activeDesktopViewModeRef.current;
-      hasDesktopRestoreTargetRef.current = true;
       await setMiniMode(true);
       showAppFeedback(t('feedback.mode.mini'), 'info');
       return;
@@ -1113,14 +1136,15 @@ function App() {
       if (useAppStore.getState().tourActive) return;
 
       const width = window.innerWidth;
+      const skipPanelAutoToggle = isMiniMode || miniTransitionTargetRef.current === true;
 
       // Handle panel auto-close/restore
-      if (width <= PANEL_CLOSE_THRESHOLD && workbenchPanelEnabled) {
+      if (!skipPanelAutoToggle && width <= PANEL_CLOSE_THRESHOLD && workbenchPanelEnabled) {
         // Save current state and close panel
         setWorkbenchPanelBeforeMini(true);
         setWorkbenchPanelEnabled(false);
         showAppFeedback(t('feedback.autoLayout.panelHidden'), 'info', 1300);
-      } else if (width > PANEL_CLOSE_THRESHOLD && workbenchPanelBeforeMini === true && !workbenchPanelEnabled) {
+      } else if (!skipPanelAutoToggle && width > PANEL_CLOSE_THRESHOLD && workbenchPanelBeforeMini === true && !workbenchPanelEnabled) {
         // Restore panel when window gets bigger
         setWorkbenchPanelEnabled(true);
         setWorkbenchPanelBeforeMini(null);
