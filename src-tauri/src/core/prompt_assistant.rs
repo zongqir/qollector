@@ -213,9 +213,9 @@ fn is_zh_output_locale(output_locale: &str) -> bool {
 
 fn summarize_output_contract(output_locale: &str) -> String {
     if is_zh_output_locale(output_locale) {
-        "Use this exact markdown structure:\n## 核心事实\n- bullet points only\n## 逻辑脉络\n- bullet points only\n## 最终结论\nOne sentence only\nConstraints:\n- 4 to 7 bullets total across the first two sections.\n- No speculative claims.".to_string()
+        "使用金字塔结构（结论先行）并满足 MECE。\n输出为纯文本，不要 Markdown 标题。\n固定结构：\n1. 结论（先给最终判断，一句话）\n2. MECE 拆解（按互斥且完全穷尽分组，列出关键事实）\n3. 行动建议（给出可执行下一步）\n约束：\n- 各部分信息不重复。\n- 保留原文中的关键名称、数字、约束与时间线。\n- 不要空话，不要自我解释。".to_string()
     } else {
-        "Use this exact markdown structure:\n## Core Facts\n- bullet points only\n## Logic Flow\n- bullet points only\n## Final Takeaway\nOne sentence only\nConstraints:\n- 4 to 7 bullets total across the first two sections.\n- No speculative claims.".to_string()
+        "Use a Pyramid Principle structure (answer first) and keep MECE grouping.\nReturn plain text (no Markdown headings).\nRequired structure:\n1. Conclusion (one-sentence judgment first)\n2. MECE Breakdown (mutually exclusive, collectively exhaustive groups of key facts)\n3. Action Recommendation (clear next step)\nConstraints:\n- Avoid overlap across sections.\n- Preserve key names, numbers, constraints, and chronology from source.\n- No fluff, no self-referential commentary.".to_string()
     }
 }
 
