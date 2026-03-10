@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.1",
+      "publishedAt": "2026-03-11",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-1",
+      "summary": {
+        "zh-CN": "聚焦工作区效率与稳定性，修复关键竞态问题并优化筛选与操作反馈交互。",
+        "en-US": "Focused on workbench efficiency and stability with critical race-condition fixes and smoother filtering/action feedback."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复快速记录窗口在高频开关下的竞态锁死问题，避免无法再次打开或关闭。",
+          "工作区置顶排序调整为“最新置顶优先”，新增项默认出现在前面，符合近期优先的使用习惯。",
+          "工作区筛选入口并入快速笔记输入区，并支持折叠状态记忆，减少顶部空间占用。",
+          "工作区“操作”升级为可配置主操作，一键执行常用动作，减少二次点击路径。",
+          "操作反馈改为悬浮 toast，不再挤压底部按钮区域，交互过程更稳定。"
+        ],
+        "en-US": [
+          "Fixed a rapid open/close race in Quick Input that could lock the window state and block reopen/close actions.",
+          "Updated workbench pin ordering to recency-first so newly pinned items appear at the top by default.",
+          "Merged workbench filter entry into the quick-note input area and persisted collapsed state to save vertical space.",
+          "Upgraded workbench \"Actions\" to a configurable primary action with one-click execution for common tasks.",
+          "Switched operation feedback to floating toasts to prevent bottom action-bar layout jumps."
+        ]
+      }
+    },
+    {
       "version": "0.3.0",
       "publishedAt": "2026-03-09",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-0",
