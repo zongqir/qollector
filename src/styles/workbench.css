@@ -45,6 +45,9 @@
   gap: var(--top-rail-control-gap);
   margin: 8px 16px 0;
   padding: 8px 10px;
+  position: relative;
+  z-index: 60;
+  overflow: visible;
   border: 1px solid var(--panel-rail-glass-border);
   border-radius: 12px;
   background: var(--panel-rail-glass-bg);
@@ -109,6 +112,8 @@
   min-width: max-content;
   margin-left: 2px;
   padding-left: 1px;
+  position: relative;
+  z-index: 2;
 }
 
 .workbench-filter-actions > * {
@@ -194,6 +199,13 @@
 .workbench-tag-filter-wrapper,
 .workbench-saved-view-wrapper {
   flex: 0 0 auto;
+}
+
+.workbench-filter-row .tag-select-wrapper .tag-dropdown,
+.workbench-filter-row .date-select-wrapper .date-dropdown {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .workbench-type-clear-btn {
@@ -484,6 +496,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  position: relative;
+  z-index: 1;
   --workbench-card-column-min: 210px;
   --workbench-card-column-gap: 12px;
   columns: 6 var(--workbench-card-column-min);
@@ -1473,8 +1487,7 @@
     align-items: center;
     column-gap: 6px;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
     scrollbar-width: thin;
   }
 
@@ -1590,4 +1603,3 @@
     animation: none !important;
   }
 }
-

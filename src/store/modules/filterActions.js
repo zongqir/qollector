@@ -7,12 +7,23 @@ import {
   persistWorkbenchSavedFilterViews,
 } from './filterViews';
 
+const resolveBooleanUpdate = (updater, currentValue) => {
+  const nextValue = typeof updater === 'function'
+    ? updater(currentValue)
+    : updater;
+  return Boolean(nextValue);
+};
+
 export const createFilterActions = (set, get) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
   setSelectedType: (t) => set({ selectedType: t }),
   setSelectedTags: (tags) => set({ selectedTags: tags }),
-  setShowFavoritesOnly: (v) => set({ showFavoritesOnly: v }),
-  setShowPinnedOnly: (v) => set({ showPinnedOnly: v }),
+  setShowFavoritesOnly: (v) => set((state) => ({
+    showFavoritesOnly: resolveBooleanUpdate(v, state.showFavoritesOnly),
+  })),
+  setShowPinnedOnly: (v) => set((state) => ({
+    showPinnedOnly: resolveBooleanUpdate(v, state.showPinnedOnly),
+  })),
   setShowTagFilter: (v) => set({ showTagFilter: v }),
   setTagSearchQuery: (q) => set({ tagSearchQuery: q }),
   setSelectedDateRange: (range) => set({ selectedDateRange: range }),
@@ -30,7 +41,9 @@ export const createFilterActions = (set, get) => ({
   setWorkbenchSearchQuery: (q) => set({ workbenchSearchQuery: q }),
   setWorkbenchSelectedType: (t) => set({ workbenchSelectedType: t }),
   setWorkbenchSelectedTags: (tags) => set({ workbenchSelectedTags: tags }),
-  setWorkbenchShowFavoritesOnly: (v) => set({ workbenchShowFavoritesOnly: v }),
+  setWorkbenchShowFavoritesOnly: (v) => set((state) => ({
+    workbenchShowFavoritesOnly: resolveBooleanUpdate(v, state.workbenchShowFavoritesOnly),
+  })),
   setWorkbenchSelectedDateRange: (range) => set({ workbenchSelectedDateRange: range }),
   setWorkbenchCustomDateStart: (v) => set({ workbenchCustomDateStart: v }),
   setWorkbenchCustomDateEnd: (v) => set({ workbenchCustomDateEnd: v }),
