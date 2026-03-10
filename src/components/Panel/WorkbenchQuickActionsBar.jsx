@@ -1,6 +1,7 @@
 import {
   BookmarkPlus,
   Bot,
+  Check,
   ChevronDown,
   Clock,
   FileDown,
@@ -29,14 +30,21 @@ function WorkbenchQuickActionsBar({
   hasSnapshot,
   handleRunQuickOutput,
   handleQuickOutputMenuSelect,
-  handleSaveSnapshot,
-  handleRestoreSnapshot,
-  handleExportWorkbench,
-  handleDedupeWorkbench,
-  handleClearAll,
   handleUndoClearAll,
+  workbenchPrimaryAction,
+  handleRunWorkbenchPrimaryAction,
+  handleSelectWorkbenchPrimaryAction,
 }) {
   const isBusy = quickOutputRunning || activeAction != null;
+  const workbenchActionOptions = [
+    { key: 'snapshot', label: t('workbench.snapshotSave'), icon: BookmarkPlus },
+    { key: 'restore-snapshot', label: t('workbench.snapshotRestore'), icon: History },
+    { key: 'export', label: t('workbench.exportMarkdown'), icon: FileDown },
+    { key: 'dedupe', label: t('workbench.dedupePinned'), icon: Trash2 },
+    { key: 'clear', label: t('workbench.clearAll'), icon: Trash2, danger: true },
+  ];
+  const currentWorkbenchAction = workbenchActionOptions.find((option) => option.key === workbenchPrimaryAction) || workbenchActionOptions[0];
+  const CurrentWorkbenchActionIcon = currentWorkbenchAction.icon;
 
   return (
     <>
@@ -94,67 +102,73 @@ function WorkbenchQuickActionsBar({
           )}
         </div>
 
-        <div className={`workbench-more-menu ${showWorkbenchMoreMenu ? 'open' : ''}`} ref={workbenchMoreMenuRef}>
+        <div className={`workbench-more-menu workbench-split-btn workbench-more-split-btn ${showWorkbenchMoreMenu ? 'open' : ''}`} ref={workbenchMoreMenuRef}>
           <button
-            className={`workbench-btn workbench-more-btn ${showWorkbenchMoreMenu ? 'open' : ''}`}
+            className={`workbench-btn workbench-more-main-btn ${showWorkbenchMoreMenu ? 'open' : ''} ${currentWorkbenchAction.danger ? 'danger' : ''}`.trim()}
+            onClick={handleRunWorkbenchPrimaryAction}
+            disabled={isBusy}
+            title={currentWorkbenchAction.label}
+          >
+            {activeAction === workbenchPrimaryAction
+              ? <Loader2 size={14} className="workbench-btn-spinner" />
+              : <CurrentWorkbenchActionIcon size={14} />}
+            <span>{currentWorkbenchAction.label}</span>
+          </button>
+          <button
+            type="button"
+            className={`workbench-btn workbench-more-toggle-btn ${showWorkbenchMoreMenu ? 'open' : ''}`}
             onClick={() => {
               setShowQuickOutputMenu(false);
               setShowWorkbenchMoreMenu(current => !current);
             }}
             disabled={isBusy}
             title={t('workbench.moreActions')}
+            aria-label={t('workbench.moreActions')}
+            aria-expanded={showWorkbenchMoreMenu}
+            aria-haspopup="menu"
           >
             <SlidersHorizontal size={14} />
-            <span>{t('workbench.moreActions')}</span>
             <ChevronDown size={13} className="workbench-more-caret" />
           </button>
           {showWorkbenchMoreMenu && (
             <div className="workbench-dropdown-menu align-right">
-              <button className="workbench-dropdown-item" onClick={handleSaveSnapshot} disabled={isBusy}>
-                {activeAction === 'snapshot' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <BookmarkPlus size={14} />}
-                <span>{t('workbench.snapshotSave')}</span>
-              </button>
-              <button
-                className="workbench-dropdown-item"
-                onClick={handleRestoreSnapshot}
-                disabled={isBusy || !hasSnapshot}
-              >
-                {activeAction === 'restore-snapshot' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <History size={14} />}
-                <span>{t('workbench.snapshotRestore')}</span>
-              </button>
-              <button className="workbench-dropdown-item" onClick={handleExportWorkbench} disabled={isBusy}>
-                {activeAction === 'export' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <FileDown size={14} />}
-                <span>{t('workbench.exportMarkdown')}</span>
-              </button>
-              <button className="workbench-dropdown-item" onClick={handleDedupeWorkbench} disabled={isBusy}>
-                {activeAction === 'dedupe' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Trash2 size={14} />}
-                <span>{t('workbench.dedupePinned')}</span>
-              </button>
-              <button className="workbench-dropdown-item danger" onClick={handleClearAll} disabled={isBusy}>
-                {activeAction === 'clear' ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Trash2 size={14} />}
-                <span>{t('workbench.clearAll')}</span>
-              </button>
+              {workbenchActionOptions.map((option) => {
+                const OptionIcon = option.icon;
+                const optionDisabled = isBusy || (option.key === 'restore-snapshot' && !hasSnapshot);
+                return (
+                  <button
+                    key={option.key}
+                    className={`workbench-dropdown-item ${option.danger ? 'danger' : ''} ${workbenchPrimaryAction === option.key ? 'active' : ''}`}
+                    onClick={() => handleSelectWorkbenchPrimaryAction(option.key)}
+                    disabled={optionDisabled}
+                  >
+                    {activeAction === option.key ? <Loader2 size={14} className="workbench-btn-spinner" /> : <OptionIcon size={14} />}
+                    <span>{option.label}</span>
+                    {workbenchPrimaryAction === option.key && <Check size={13} className="workbench-dropdown-active-mark" />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
 
-      {feedback && (
-        <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
-          <span>{feedback.text}</span>
-          {feedback.withUndo && lastClearedPinnedIds.length > 0 && (
-            <button
-              type="button"
-              className="workbench-bottom-feedback-undo"
-              onClick={handleUndoClearAll}
-              disabled={isBusy}
-            >
-              {activeAction === 'undo-clear' ? <Loader2 size={12} className="workbench-feedback-spinner" /> : <Undo2 size={12} />}
-              <span>{t('workbench.undo')}</span>
-            </button>
-          )}
-        </div>
-      )}
+        {feedback && (
+          <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
+            <span>{feedback.text}</span>
+            {feedback.withUndo && lastClearedPinnedIds.length > 0 && (
+              <button
+                type="button"
+                className="workbench-bottom-feedback-undo"
+                onClick={handleUndoClearAll}
+                disabled={isBusy}
+              >
+                {activeAction === 'undo-clear' ? <Loader2 size={12} className="workbench-feedback-spinner" /> : <Undo2 size={12} />}
+                <span>{t('workbench.undo')}</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }

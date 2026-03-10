@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
+import { WORKBENCH_PRIMARY_ACTION_STORAGE_KEY } from '../../../constants/storageKeys';
 import {
   getActionExecutionPreset,
   QUICK_OUTPUT_TASKS,
@@ -11,6 +12,8 @@ import {
 const WORKBENCH_SNAPSHOT_STORAGE_KEY = 'qollect.workbench.snapshot.v1';
 const LEGACY_COLLECTION_SNAPSHOT_STORAGE_KEY = 'qollect.collection.snapshot.v1';
 const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
+const WORKBENCH_MORE_ACTION_KEYS = ['snapshot', 'restore-snapshot', 'export', 'dedupe', 'clear'];
+const DEFAULT_WORKBENCH_PRIMARY_ACTION = 'snapshot';
 
 const normalizeText = (value) => String(value || '')
   .replace(/\s+/g, ' ')
@@ -66,6 +69,24 @@ const saveSnapshot = (ids) => {
     ids,
   };
   localStorage.setItem(WORKBENCH_SNAPSHOT_STORAGE_KEY, JSON.stringify(payload));
+};
+
+const readWorkbenchPrimaryAction = () => {
+  try {
+    const raw = localStorage.getItem(WORKBENCH_PRIMARY_ACTION_STORAGE_KEY);
+    if (WORKBENCH_MORE_ACTION_KEYS.includes(raw)) return raw;
+    return DEFAULT_WORKBENCH_PRIMARY_ACTION;
+  } catch {
+    return DEFAULT_WORKBENCH_PRIMARY_ACTION;
+  }
+};
+
+const persistWorkbenchPrimaryAction = (actionKey) => {
+  try {
+    localStorage.setItem(WORKBENCH_PRIMARY_ACTION_STORAGE_KEY, actionKey);
+  } catch {
+    // ignore storage write failures
+  }
 };
 
 const buildExportMarkdown = (items, t) => {
@@ -126,6 +147,7 @@ function useWorkbenchQuickActions({
   const [feedback, setFeedback] = useState(null);
   const [lastClearedPinnedIds, setLastClearedPinnedIds] = useState([]);
   const [hasSnapshot, setHasSnapshot] = useState(() => Boolean(readSnapshot()));
+  const [workbenchPrimaryAction, setWorkbenchPrimaryAction] = useState(() => readWorkbenchPrimaryAction());
   const quickOutputMenuRef = useRef(null);
   const workbenchMoreMenuRef = useRef(null);
 
@@ -452,6 +474,41 @@ function useWorkbenchQuickActions({
     }
   }, [isBusy, lastClearedPinnedIds, items, loadItems, showMessage, t]);
 
+  const runWorkbenchMoreAction = useCallback((actionKey = workbenchPrimaryAction) => {
+    switch (actionKey) {
+      case 'snapshot':
+        return handleSaveSnapshot();
+      case 'restore-snapshot':
+        return handleRestoreSnapshot();
+      case 'export':
+        return handleExportWorkbench();
+      case 'dedupe':
+        return handleDedupeWorkbench();
+      case 'clear':
+        return handleClearAll();
+      default:
+        return Promise.resolve();
+    }
+  }, [
+    workbenchPrimaryAction,
+    handleSaveSnapshot,
+    handleRestoreSnapshot,
+    handleExportWorkbench,
+    handleDedupeWorkbench,
+    handleClearAll,
+  ]);
+
+  const handleRunWorkbenchPrimaryAction = useCallback(() => (
+    runWorkbenchMoreAction(workbenchPrimaryAction)
+  ), [runWorkbenchMoreAction, workbenchPrimaryAction]);
+
+  const handleSelectWorkbenchPrimaryAction = useCallback((actionKey) => {
+    if (!WORKBENCH_MORE_ACTION_KEYS.includes(actionKey)) return;
+    setWorkbenchPrimaryAction(actionKey);
+    persistWorkbenchPrimaryAction(actionKey);
+    runWorkbenchMoreAction(actionKey);
+  }, [runWorkbenchMoreAction]);
+
   return {
     quickOutputTask,
     quickOutputRunning,
@@ -461,6 +518,7 @@ function useWorkbenchQuickActions({
     feedback,
     lastClearedPinnedIds,
     hasSnapshot,
+    workbenchPrimaryAction,
     quickOutputMenuRef,
     workbenchMoreMenuRef,
     quickOutputTasks: QUICK_OUTPUT_TASKS,
@@ -476,6 +534,8 @@ function useWorkbenchQuickActions({
     handleDedupeWorkbench,
     handleClearAll,
     handleUndoClearAll,
+    handleRunWorkbenchPrimaryAction,
+    handleSelectWorkbenchPrimaryAction,
   };
 }
 

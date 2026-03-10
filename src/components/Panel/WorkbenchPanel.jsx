@@ -1700,12 +1700,10 @@ function WorkbenchPanel() {
           hasSnapshot={quickActions.hasSnapshot}
           handleRunQuickOutput={quickActions.handleRunQuickOutput}
           handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
-          handleSaveSnapshot={quickActions.handleSaveSnapshot}
-          handleRestoreSnapshot={quickActions.handleRestoreSnapshot}
-          handleExportWorkbench={quickActions.handleExportWorkbench}
-          handleDedupeWorkbench={quickActions.handleDedupeWorkbench}
-          handleClearAll={quickActions.handleClearAll}
           handleUndoClearAll={quickActions.handleUndoClearAll}
+          workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
+          handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
+          handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
         />
       )}
       {(isWorkbenchSortMode && showSortEntryToast) || transientWorkbenchToast ? (
