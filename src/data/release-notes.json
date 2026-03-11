@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.2",
+      "publishedAt": "2026-03-12",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-2",
+      "summary": {
+        "zh-CN": "进一步收敛历史流与收藏区信息密度，补齐模式切换反馈并优化工作区排序入口体验。",
+        "en-US": "Further tightened history/collection information density, added clearer mode-switch feedback, and refined workbench sort entry behavior."
+      },
+      "highlights": {
+        "zh-CN": [
+          "切换紧凑/宽松密度时新增全局 toast 提示，当前模式状态更明确。",
+          "工作区长按进入排序时会自动展开筛选区，并给出“上方完成、下方拖拽”的操作提示。",
+          "移除历史流日期导航与分组头（如“今天 88”），减少重复信息占位。",
+          "收藏区移除仅展示总数的独立行，只有存在筛选/状态信息时才展示元信息行。"
+        ],
+        "en-US": [
+          "Added global toasts when switching Compact/Cozy density so the active mode is always explicit.",
+          "Long-press sorting in Workbench now auto-expands filters and shows a clearer \"finish above, drag below\" hint.",
+          "Removed history date navigation and group headers (for example \"Today 88\") to reduce redundant vertical usage.",
+          "Removed the collection-only count row and now render the meta row only when there is actual filter/status information."
+        ]
+      }
+    },
+    {
       "version": "0.3.1",
       "publishedAt": "2026-03-11",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-1",

@@ -666,6 +666,12 @@ function CollectionBoard({
 
   const isBackendBusy = backendLoading || backendFiltering;
   const backendStateError = backendFilterError || backendError;
+  const shouldShowCollectionMetaRow = isBackendBusy
+    || hasCollectionFilterSummary
+    || selectedCollectionTags.length > 0
+    || hasCollectionHintMessages
+    || Boolean(tagEditorFeedback)
+    || Boolean(backendStateError);
   const canLoadMore = !isBackendBusy && allFavoriteItems.length > collectionItems.length;
   const handleCollectionGridScroll = useCallback((event) => {
     if (!canLoadMore) return;
@@ -1530,60 +1536,61 @@ function CollectionBoard({
             </button>
           </div>
         )}
-        <PanelSummaryRow className="collection-tag-rail-meta">
-          <PanelSummaryBadge className="collection-meta-count panel-summary-item--count">{t('collection.countLabel', { count: collectionItems.length })}</PanelSummaryBadge>
-          {isBackendBusy && (
-            <PanelSummaryBadge className="is-busy panel-summary-item--status">{t('search.searching')}</PanelSummaryBadge>
-          )}
-          {hasCollectionFilterSummary && (
-            <PanelSummaryText className="collection-filter-summary panel-summary-item--primary">
-              {collectionFilterSummaryParts.join(' · ')}
-            </PanelSummaryText>
-          )}
-          {selectedCollectionTags.length > 0 && (
-            <PanelSummaryBadge className="collection-meta-count panel-summary-item--aux">{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</PanelSummaryBadge>
-          )}
-          {hasCollectionHintMessages && (
-            <PanelSummaryActionButton
-              className={`collection-hints-toggle panel-summary-item--action ${collectionHintsExpanded ? 'active' : ''}`}
-              onClick={handleToggleCollectionHints}
-              aria-expanded={collectionHintsExpanded}
-              title={collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
-            >
-              {collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
-            </PanelSummaryActionButton>
-          )}
-          {selectedCollectionTags.length > 0 && (
-            <PanelSummaryActionButton
-              className="collection-clear-tags-btn panel-summary-item--action"
-              onClick={() => setSelectedCollectionTags([])}
-            >
-              {t('collection.clearTagFilter')}
-            </PanelSummaryActionButton>
-          )}
-          {tagEditorFeedback && (
-            <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback">{tagEditorFeedback}</PanelSummaryFeedback>
-          )}
-          {backendStateError && (
-            <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback" title={backendStateError}>
-              {t('collection.queryFailed')}
-            </PanelSummaryFeedback>
-          )}
-          {hasCollectionHintMessages && collectionHintsExpanded && (
-            <span className="collection-meta-hint collection-hints-summary panel-summary-item--aux">
-              <span className="collection-hints-summary-text">{collectionHintMessages.join(' · ')}</span>
-              <button
-                type="button"
-                className="collection-meta-hint-close"
-                onClick={handleDismissCollectionHints}
-                title={t('collection.hideHints')}
-                aria-label={t('collection.hideHints')}
+        {shouldShowCollectionMetaRow && (
+          <PanelSummaryRow className="collection-tag-rail-meta">
+            {isBackendBusy && (
+              <PanelSummaryBadge className="is-busy panel-summary-item--status">{t('search.searching')}</PanelSummaryBadge>
+            )}
+            {hasCollectionFilterSummary && (
+              <PanelSummaryText className="collection-filter-summary panel-summary-item--primary">
+                {collectionFilterSummaryParts.join(' · ')}
+              </PanelSummaryText>
+            )}
+            {selectedCollectionTags.length > 0 && (
+              <PanelSummaryBadge className="collection-meta-count panel-summary-item--aux">{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</PanelSummaryBadge>
+            )}
+            {hasCollectionHintMessages && (
+              <PanelSummaryActionButton
+                className={`collection-hints-toggle panel-summary-item--action ${collectionHintsExpanded ? 'active' : ''}`}
+                onClick={handleToggleCollectionHints}
+                aria-expanded={collectionHintsExpanded}
+                title={collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
               >
-                <X size={11} />
-              </button>
-            </span>
-          )}
-        </PanelSummaryRow>
+                {collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
+              </PanelSummaryActionButton>
+            )}
+            {selectedCollectionTags.length > 0 && (
+              <PanelSummaryActionButton
+                className="collection-clear-tags-btn panel-summary-item--action"
+                onClick={() => setSelectedCollectionTags([])}
+              >
+                {t('collection.clearTagFilter')}
+              </PanelSummaryActionButton>
+            )}
+            {tagEditorFeedback && (
+              <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback">{tagEditorFeedback}</PanelSummaryFeedback>
+            )}
+            {backendStateError && (
+              <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback" title={backendStateError}>
+                {t('collection.queryFailed')}
+              </PanelSummaryFeedback>
+            )}
+            {hasCollectionHintMessages && collectionHintsExpanded && (
+              <span className="collection-meta-hint collection-hints-summary panel-summary-item--aux">
+                <span className="collection-hints-summary-text">{collectionHintMessages.join(' · ')}</span>
+                <button
+                  type="button"
+                  className="collection-meta-hint-close"
+                  onClick={handleDismissCollectionHints}
+                  title={t('collection.hideHints')}
+                  aria-label={t('collection.hideHints')}
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+          </PanelSummaryRow>
+        )}
         </div>
       )}
 

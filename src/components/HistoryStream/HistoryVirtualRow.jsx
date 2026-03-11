@@ -5,9 +5,6 @@ import InlinePreviewPanel from './InlinePreviewPanel';
 function HistoryVirtualRow({
   item,
   index,
-  groupKey,
-  showGroupHeader,
-  groupCount,
   searchExplain,
   isSelected,
   isMultiSelected,
@@ -16,7 +13,6 @@ function HistoryVirtualRow({
   isExpandedPreview,
   shouldUseHoverPreview,
   rowGap,
-  t,
   copiedItemId,
   copyFeedbackSource,
   timeTick,
@@ -39,7 +35,7 @@ function HistoryVirtualRow({
 
   return (
     <div
-      className={`history-stream-row ${showGroupHeader ? 'group-start' : ''}`}
+      className="history-stream-row"
       data-item-id={item.id}
       style={{ paddingBottom: `${rowGap}px` }}
       onMouseDownCapture={(e) => {
@@ -63,12 +59,6 @@ function HistoryVirtualRow({
       }}
       onDoubleClick={(e) => onCardDoubleClick(item, e)}
     >
-      {showGroupHeader && (
-        <div className="history-group-header" data-group={groupKey}>
-          <span className="history-group-title">{t(`history.groups.${groupKey}`)}</span>
-          <span className="history-group-count">{groupCount}</span>
-        </div>
-      )}
       <CompactCard
         item={item}
         isSelected={cardSelected}

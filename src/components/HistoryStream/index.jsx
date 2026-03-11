@@ -25,7 +25,7 @@ import {
 } from '../../utils/collectionHints';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
-import { getHistoryGroupCounts, getUserTags, searchItems } from '../../services/clipboardService';
+import { getUserTags, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -51,8 +51,6 @@ function detectClientPlatform() {
 }
 
 const SUPPORTS_NATIVE_EXTERNAL_DRAG = ['windows', 'macos'].includes(detectClientPlatform());
-const HISTORY_GROUP_ORDER = ['today', 'yesterday', 'last7', 'older'];
-
 const normalizeText = (value) => (typeof value === 'string' ? value : '');
 const tokenizeSearchQuery = (query) => normalizeText(query).toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
 
@@ -303,7 +301,6 @@ function HistoryStream({ style }) {
   const [backendSearchError, setBackendSearchError] = useState('');
   const [backendSearchRefreshNonce, setBackendSearchRefreshNonce] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
-  const [backendGroupCounts, setBackendGroupCounts] = useState(null);
   const [backendUserTags, setBackendUserTags] = useState([]);
   const [debouncedTagSearchQuery, setDebouncedTagSearchQuery] = useState('');
   const [timeTick, setTimeTick] = useState(() => Date.now());
@@ -890,90 +887,21 @@ function HistoryStream({ style }) {
   }, [filteredItems, searchTerms, t, i18n.language]);
 
   const dayBoundaries = useMemo(() => buildDayBoundaries(timeTick), [timeTick]);
-  const shouldUseBackendGroupCounts = !debouncedSearchQuery.trim()
-    && selectedType === 'all'
-    && selectedTags.length === 0
-    && !showFavoritesOnly
-    && !showPinnedOnly
-    && !selectedDateRange;
-
-  useEffect(() => {
-    if (!shouldUseBackendGroupCounts) {
-      setBackendGroupCounts(null);
-      return;
-    }
-
-    let cancelled = false;
-    getHistoryGroupCounts(
-      dayBoundaries.startToday,
-      dayBoundaries.startYesterday,
-      dayBoundaries.startLast7,
-    )
-      .then((counts) => {
-        if (!cancelled) setBackendGroupCounts(counts);
-      })
-      .catch((error) => {
-        console.error('[History] load group counts failed:', error);
-        if (!cancelled) setBackendGroupCounts(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    shouldUseBackendGroupCounts,
-    dayBoundaries.startToday,
-    dayBoundaries.startYesterday,
-    dayBoundaries.startLast7,
-    itemsRevision,
-  ]);
-
   const historyGrouping = useMemo(() => {
-    const groupByIndex = [];
-    const isGroupStart = [];
     const firstIndexByGroup = {};
-    const countByGroup = {
-      today: 0,
-      yesterday: 0,
-      last7: 0,
-      older: 0,
-    };
 
     filteredItems.forEach((item, index) => {
       const timestamp = Number(item.updated_at || item.created_at || 0);
       const groupKey = getHistoryGroupKey(timestamp, dayBoundaries);
-      groupByIndex[index] = groupKey;
-      countByGroup[groupKey] += 1;
       if (firstIndexByGroup[groupKey] == null) {
         firstIndexByGroup[groupKey] = index;
-        isGroupStart[index] = true;
-      } else {
-        isGroupStart[index] = false;
       }
     });
 
-    if (shouldUseBackendGroupCounts && backendGroupCounts) {
-      countByGroup.today = Number(backendGroupCounts.today ?? countByGroup.today);
-      countByGroup.yesterday = Number(backendGroupCounts.yesterday ?? countByGroup.yesterday);
-      countByGroup.last7 = Number(backendGroupCounts.last7 ?? countByGroup.last7);
-      countByGroup.older = Number(backendGroupCounts.older ?? countByGroup.older);
-    }
-
-    const availableGroups = HISTORY_GROUP_ORDER.filter(groupKey => firstIndexByGroup[groupKey] != null);
     return {
-      groupByIndex,
-      isGroupStart,
       firstIndexByGroup,
-      countByGroup,
-      availableGroups,
     };
-  }, [filteredItems, dayBoundaries, shouldUseBackendGroupCounts, backendGroupCounts]);
-
-  const activeVisibleGroup = useMemo(() => {
-    if (filteredItems.length === 0) return null;
-    const safeIndex = Math.max(0, Math.min(filteredItems.length - 1, visibleRangeStartIndex));
-    return historyGrouping.groupByIndex[safeIndex] || historyGrouping.availableGroups[0] || null;
-  }, [filteredItems.length, visibleRangeStartIndex, historyGrouping]);
+  }, [filteredItems, dayBoundaries]);
 
   const { emptyDiagnostic, handleResetAllFilters } = useHistoryEmptyDiagnostic({
     searchTermsLength: searchTerms.length,
@@ -1335,17 +1263,6 @@ function HistoryStream({ style }) {
     loadMore();
   }, [loadMore]);
 
-  const handleJumpToGroup = useCallback((groupKey) => {
-    const targetIndex = historyGrouping.firstIndexByGroup[groupKey];
-    if (typeof targetIndex !== 'number') return;
-    virtuosoRef.current?.scrollToIndex?.({
-      index: targetIndex,
-      align: 'start',
-      behavior: 'smooth',
-    });
-    setFocusedIndex(targetIndex);
-  }, [historyGrouping, setFocusedIndex]);
-
   const handleRangeChanged = useCallback((range) => {
     const nextStart = Number(range?.startIndex);
     if (!Number.isFinite(nextStart)) return;
@@ -1405,13 +1322,9 @@ function HistoryStream({ style }) {
   const buildRowViewModel = useCallback((index) => {
     const item = filteredItems[index];
     if (!item) return null;
-    const groupKey = historyGrouping.groupByIndex[index];
     return {
       item,
       index,
-      groupKey,
-      showGroupHeader: Boolean(historyGrouping.isGroupStart[index]),
-      groupCount: historyGrouping.countByGroup[groupKey] || 0,
       searchExplain: searchExplainById.get(item.id) || null,
       isSelected: panelMode === 'preview' && previewItem?.id === item.id,
       isExpandedPreview: shouldUseHoverPreview && expandedPreviewItemId === item.id,
@@ -1421,7 +1334,6 @@ function HistoryStream({ style }) {
     };
   }, [
     filteredItems,
-    historyGrouping,
     searchExplainById,
     panelMode,
     previewItem?.id,
@@ -1443,7 +1355,6 @@ function HistoryStream({ style }) {
 
   const rowCommonProps = useMemo(() => ({
     rowGap,
-    t,
     copiedItemId,
     copyFeedbackSource,
     timeTick,
@@ -1462,7 +1373,6 @@ function HistoryStream({ style }) {
     onCardContextMenu: handleCardContextMenu,
   }), [
     rowGap,
-    t,
     copiedItemId,
     copyFeedbackSource,
     timeTick,
@@ -1831,27 +1741,6 @@ function HistoryStream({ style }) {
       <SearchBar {...searchBarProps} />
 
       <div className="history-stream-content">
-        {!shouldRenderCollectionBoard && historyGrouping.availableGroups.length > 1 && (
-          <div className="history-group-jump" onClick={(event) => event.stopPropagation()}>
-            {historyGrouping.availableGroups.map((groupKey) => (
-              <button
-                key={groupKey}
-                type="button"
-                className={`history-group-jump-btn ${activeVisibleGroup === groupKey ? 'active' : ''}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleJumpToGroup(groupKey);
-                }}
-                title={`${t(`history.groups.${groupKey}`)} (${historyGrouping.countByGroup[groupKey]})`}
-                aria-label={`${t(`history.groups.${groupKey}`)} (${historyGrouping.countByGroup[groupKey]})`}
-                aria-pressed={activeVisibleGroup === groupKey}
-              >
-                <span>{t(`history.groups.${groupKey}`)}</span>
-                <span className="history-group-jump-count">{historyGrouping.countByGroup[groupKey]}</span>
-              </button>
-            ))}
-          </div>
-        )}
         {loading ? (
           <div className="loading-state state-panel state-panel--loading panel-state-stack">
             <div className="loading-spinner"></div>
