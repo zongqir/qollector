@@ -4,6 +4,7 @@
 # Does everything: key generation (if needed) -> build -> sign -> upload to GitHub
 
 $ErrorActionPreference = "Stop"
+$env:CI = "true"
 
 $KEY_DIR = "$env:USERPROFILE\.tauri"
 $PRIVATE_KEY_PATH = "$KEY_DIR\clipbox.key"
@@ -28,7 +29,8 @@ if (!(Test-Path $PRIVATE_KEY_PATH)) {
     Write-Step "First run detected - generating signing key pair"
     if (!(Test-Path $KEY_DIR)) { New-Item -ItemType Directory -Path $KEY_DIR | Out-Null }
 
-    npx tauri signer generate -w $PRIVATE_KEY_PATH
+    $bootstrapSigningPassword = if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)) { "" } else { $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD }
+    npx tauri signer generate --ci -p "$bootstrapSigningPassword" -w $PRIVATE_KEY_PATH
     if ($LASTEXITCODE -ne 0) { throw "Key generation failed" }
 
     Write-Ok "Private key: $PRIVATE_KEY_PATH"
@@ -43,15 +45,19 @@ Write-Step "Checking pubkey in $TAURI_CONF"
 $conf = Get-Content $TAURI_CONF -Raw | ConvertFrom-Json -Depth 20
 $currentPubkey = $conf.plugins.updater.pubkey
 
-if ((!$currentPubkey -or $currentPubkey -eq "") -and (Test-Path $PUBLIC_KEY_PATH)) {
+if (Test-Path $PUBLIC_KEY_PATH) {
     $pubkey = (Get-Content $PUBLIC_KEY_PATH -Raw).Trim()
-    $conf.plugins.updater.pubkey = $pubkey
-    $conf | ConvertTo-Json -Depth 20 | Set-Content $TAURI_CONF -Encoding UTF8
-    Write-Ok "Public key written to tauri.conf.json"
-    # Re-read after write
-    $conf = Get-Content $TAURI_CONF -Raw | ConvertFrom-Json -Depth 20
+    if ((!$currentPubkey -or $currentPubkey -eq "") -or ($currentPubkey.Trim() -ne $pubkey)) {
+        $conf.plugins.updater.pubkey = $pubkey
+        $conf | ConvertTo-Json -Depth 20 | Set-Content $TAURI_CONF -Encoding UTF8
+        Write-Ok "Public key synced to tauri.conf.json"
+        # Re-read after write
+        $conf = Get-Content $TAURI_CONF -Raw | ConvertFrom-Json -Depth 20
+    } else {
+        Write-Ok "Public key already configured"
+    }
 } else {
-    Write-Ok "Public key already configured"
+    Write-Warn "Public key file not found: $PUBLIC_KEY_PATH"
 }
 
 $version = $conf.version
@@ -137,9 +143,8 @@ if (Test-Path $RELEASE_NOTES_PATH) {
 # ===== Step 3: Load signing key =====
 Write-Step "Loading signing key"
 $env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content $PRIVATE_KEY_PATH -Raw).Trim()
-if (!$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-    $pwd = Read-Host "Signing key password (Enter if none)"
-    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $pwd
+if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)) {
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 }
 Write-Ok "Signing key loaded"
 
