@@ -9,7 +9,6 @@ import {
   FileDown,
   History,
   Loader2,
-  SlidersHorizontal,
   Trash2,
   Undo2
 } from 'lucide-react';
@@ -182,7 +181,6 @@ function WorkbenchQuickActionsBar({
               aria-haspopup="menu"
               tabIndex={measurementMode ? -1 : undefined}
             >
-              <SlidersHorizontal size={14} />
               <ChevronDown size={13} className="workbench-more-caret" />
             </button>
             {showWorkbenchMoreMenu && (
