@@ -47,6 +47,7 @@ function TitleBar({
   isMiniMode,
   currentViewMode,
   onSelectViewMode,
+  onDensityModeChange,
 }) {
   const { t } = useTranslation();
   const panelMode = useAppStore(s => s.panelMode);
@@ -78,6 +79,16 @@ function TitleBar({
   useEffect(() => () => {
     clearTimeout(hideTimerRef.current);
   }, []);
+
+  const handleToggleDensity = useCallback(() => {
+    setDensityMode((prev) => {
+      const next = prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT;
+      if (next !== prev) {
+        onDensityModeChange?.(next);
+      }
+      return next;
+    });
+  }, [onDensityModeChange]);
 
   useEffect(() => {
     const isEditableElement = (target) => {
@@ -114,13 +125,13 @@ function TitleBar({
       if (key !== 'd') return;
       event.preventDefault();
       if (key === 'd') {
-        setDensityMode(prev => (prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT));
+        handleToggleDensity();
       }
     };
 
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [isMiniMode, onSelectViewMode]);
+  }, [handleToggleDensity, isMiniMode, onSelectViewMode]);
 
   useEffect(() => {
     const appWindow = getCurrentWindow();
@@ -160,10 +171,6 @@ function TitleBar({
     clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setShowIndicator(false), 800);
   }, []);
-
-  const handleToggleDensity = () => {
-    setDensityMode(prev => (prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT));
-  };
 
   const modeBadgeText = (!isMiniMode && panelMode === 'timeline')
     ? t('titlebar.modeTimeline')

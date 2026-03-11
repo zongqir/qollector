@@ -238,6 +238,10 @@
       "right": "Switched to Panel mode",
       "all": "Switched to Overview mode"
     },
+    "density": {
+      "compact": "Switched to Compact density",
+      "cozy": "Switched to Cozy density"
+    },
     "autoLayout": {
       "panelHidden": "Window narrowed. Workbench panel hidden automatically.",
       "panelShown": "Window restored. Workbench panel shown automatically.",

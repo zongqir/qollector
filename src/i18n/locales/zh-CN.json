@@ -1108,6 +1108,10 @@
       "right": "已切换到面板模式",
       "all": "已切换到全览模式"
     },
+    "density": {
+      "compact": "已切换到紧凑模式",
+      "cozy": "已切换到宽松模式"
+    },
     "autoLayout": {
       "panelHidden": "窗口较窄，已自动隐藏工作区面板",
       "panelShown": "窗口恢复，已自动显示工作区面板",

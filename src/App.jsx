@@ -994,6 +994,16 @@ function App() {
       .then(() => performViewModeSwitch(mode));
   }, [performViewModeSwitch]);
 
+  const handleDensityModeChange = useCallback((nextDensityMode) => {
+    showAppFeedback(
+      nextDensityMode === 'compact'
+        ? t('feedback.density.compact')
+        : t('feedback.density.cozy'),
+      'info',
+      1200,
+    );
+  }, [showAppFeedback, t]);
+
   const syncQuickInputState = useCallback(async () => {
     try {
       const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
@@ -1332,6 +1342,7 @@ function App() {
         isMiniMode={isMiniMode}
         currentViewMode={activeViewMode}
         onSelectViewMode={handleSelectViewMode}
+        onDensityModeChange={handleDensityModeChange}
       />
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
