@@ -77,6 +77,7 @@ import {
   PanelSummaryRow,
   PanelSummaryText,
 } from '../shared/PanelSummaryRow';
+import WorkbenchInlineEditor from '../Panel/WorkbenchInlineEditor';
 
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -397,7 +398,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [collectionBackendFilterRequest, backendItems.length, items, t]);
+  }, [collectionBackendFilterRequest, backendItems.length, items, t, collectionRefreshNonce]);
 
   const orderedFavoriteItems = useMemo(
     () => backendItems.filter(item => item.is_favorite !== false),
@@ -593,6 +594,14 @@ function CollectionBoard({
     || normalizedSelectedType !== 'all'
     || Boolean(showPinnedOnly)
     || Boolean(selectedDateRange);
+  const shouldShowCollectionInlineEditor = hasCollectionFilter
+    && !isCollectionSortMode
+    && collectionItems.length > 0
+    && collectionItems.length <= 2;
+  const collectionInlineEditorItems = useMemo(
+    () => (shouldShowCollectionInlineEditor ? collectionItems.slice(0, 2) : []),
+    [collectionItems, shouldShowCollectionInlineEditor],
+  );
   const collectionTagPreviewLimit = getCardTagPreviewLimit('collection', {
     isMiniMode,
     isListMode: effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST,
@@ -757,6 +766,15 @@ function CollectionBoard({
     setBackendItems((current) => current.map((candidate) => (
       candidate.id === targetId ? { ...candidate, ...patch } : candidate
     )));
+  }, []);
+
+  const handleCollectionInlineEditorPatched = useCallback((updatedItem) => {
+    if (!updatedItem?.id) return;
+    patchCollectionItem(updatedItem.id, updatedItem);
+  }, [patchCollectionItem]);
+
+  const handleRefreshCollectionInlineEditorItems = useCallback(() => {
+    setCollectionRefreshNonce((current) => current + 1);
   }, []);
 
   const handleTogglePin = useCallback(async (item) => {
@@ -1629,6 +1647,15 @@ function CollectionBoard({
             <div className="collection-load-more-hint">{t('collection.loadingMore')}</div>
           )}
         </div>
+      )}
+      {shouldShowCollectionInlineEditor && (
+        <WorkbenchInlineEditor
+          items={collectionInlineEditorItems}
+          activeItemId={activeItemId}
+          onActiveItemChange={setActiveItemId}
+          onItemPatched={handleCollectionInlineEditorPatched}
+          onRefreshItems={handleRefreshCollectionInlineEditorItems}
+        />
       )}
       {showSortEntryToast && (
         <div className="collection-entry-toast" role="status" aria-live="polite">

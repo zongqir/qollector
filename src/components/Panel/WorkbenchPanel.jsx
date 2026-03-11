@@ -29,6 +29,7 @@ import {
 import useAppStore from '../../store/useAppStore';
 import SortableWorkbenchCard from './SortableWorkbenchCard';
 import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
+import WorkbenchInlineEditor from './WorkbenchInlineEditor';
 import WorkbenchMultiSelectBar from './WorkbenchMultiSelectBar';
 import WorkbenchQuickActionsBar from './WorkbenchQuickActionsBar';
 import HistoryContextMenu from '../HistoryStream/HistoryContextMenu';
@@ -123,6 +124,7 @@ function WorkbenchPanel() {
   const [workbenchFilterError, setWorkbenchFilterError] = useState('');
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
+  const [workbenchInlineEditorActiveItemId, setWorkbenchInlineEditorActiveItemId] = useState(null);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
   const [transientWorkbenchToast, setTransientWorkbenchToast] = useState('');
   const [pendingUnpinItemId, setPendingUnpinItemId] = useState(null);
@@ -512,10 +514,42 @@ function WorkbenchPanel() {
     || (isWorkbenchBusy && pinnedItems.length > 0);
   const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
   const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
+  const shouldShowWorkbenchInlineEditor = hasWorkbenchFilters
+    && !isWorkbenchSortMode
+    && selectedPinnedIds.length === 0
+    && pinnedItems.length > 0
+    && pinnedItems.length <= 2;
+  const workbenchInlineEditorItems = useMemo(
+    () => (shouldShowWorkbenchInlineEditor ? pinnedItems.slice(0, 2) : []),
+    [pinnedItems, shouldShowWorkbenchInlineEditor],
+  );
 
   const handleRetryWorkbenchLoad = useCallback(() => {
     setWorkbenchLoadError('');
     setWorkbenchFilterError('');
+    setWorkbenchRefreshNonce((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
+    if (workbenchInlineEditorItems.length === 0) {
+      setWorkbenchInlineEditorActiveItemId(null);
+      return;
+    }
+    if (workbenchInlineEditorItems.some((item) => item.id === workbenchInlineEditorActiveItemId)) {
+      return;
+    }
+    setWorkbenchInlineEditorActiveItemId(workbenchInlineEditorItems[0].id);
+  }, [workbenchInlineEditorItems, workbenchInlineEditorActiveItemId]);
+
+  const handleWorkbenchInlineEditorPatched = useCallback((updatedItem) => {
+    if (!updatedItem?.id) return;
+    setBackendPinnedItems((current) => {
+      if (!Array.isArray(current)) return current;
+      return current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item));
+    });
+  }, []);
+
+  const handleRefreshWorkbenchInlineEditorItems = useCallback(() => {
     setWorkbenchRefreshNonce((current) => current + 1);
   }, []);
 
@@ -1640,6 +1674,16 @@ function WorkbenchPanel() {
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {shouldShowWorkbenchInlineEditor && (
+        <WorkbenchInlineEditor
+          items={workbenchInlineEditorItems}
+          activeItemId={workbenchInlineEditorActiveItemId}
+          onActiveItemChange={setWorkbenchInlineEditorActiveItemId}
+          onItemPatched={handleWorkbenchInlineEditorPatched}
+          onRefreshItems={handleRefreshWorkbenchInlineEditorItems}
+        />
       )}
 
       <HistoryContextMenu

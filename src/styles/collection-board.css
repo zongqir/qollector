@@ -478,6 +478,15 @@
   align-content: start;
 }
 
+.collection-board > .workbench-inline-editor {
+  margin: 0 2px 2px;
+}
+
+.collection-board > .workbench-inline-editor .workbench-inline-note-input {
+  min-height: 56px;
+  max-height: 104px;
+}
+
 .collection-grid-item {
   min-width: 0;
 }
@@ -1187,6 +1196,12 @@
 }
 
 @container (max-width: 560px) {
+  .collection-board > .workbench-inline-editor {
+    margin: 0;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
   .collection-grid {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -1273,6 +1288,12 @@
 }
 
 @container (max-width: 420px) {
+  .collection-board > .workbench-inline-editor {
+    margin: 0;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
   .collection-board {
     padding: 8px 8px 10px;
     gap: 8px;
@@ -1421,6 +1442,12 @@
   padding: 6px 6px 8px;
   gap: 6px;
   background: transparent;
+}
+
+.app.mini-mode .collection-board > .workbench-inline-editor {
+  margin: 0;
+  padding: 8px;
+  border-radius: 10px;
 }
 
 .app.mini-mode .collection-tag-rail-wrap {

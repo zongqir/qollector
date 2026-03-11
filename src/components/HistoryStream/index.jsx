@@ -9,6 +9,7 @@ import CollectionBoard from '../CollectionBoard';
 import HistoryVirtualRow from './HistoryVirtualRow';
 import HistoryContextMenu from './HistoryContextMenu';
 import MultiSelectBar from './MultiSelectBar';
+import WorkbenchInlineEditor from '../Panel/WorkbenchInlineEditor';
 import useHistoryEmptyDiagnostic from './hooks/useHistoryEmptyDiagnostic';
 import useHistoryBatchActions from './hooks/useHistoryBatchActions';
 import useHistoryContextMenu from './hooks/useHistoryContextMenu';
@@ -1364,6 +1365,42 @@ function HistoryStream({ style }) {
   const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const showJumpToLatest = filteredItems.length > 0 && visibleRangeStartIndex > 6 && selectedCount === 0;
   const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
+  const shouldShowHistoryInlineEditor = !isCollectionMode
+    && backendSearchRequest.shouldQueryBackend
+    && selectedCount === 0
+    && filteredItems.length > 0
+    && filteredItems.length <= 2
+    && !loading
+    && !isSearching;
+  const historyInlineEditorItems = useMemo(
+    () => (shouldShowHistoryInlineEditor ? filteredItems.slice(0, 2) : []),
+    [filteredItems, shouldShowHistoryInlineEditor],
+  );
+
+  const [historyInlineEditorActiveItemId, setHistoryInlineEditorActiveItemId] = useState(null);
+
+  useEffect(() => {
+    if (historyInlineEditorItems.length === 0) {
+      setHistoryInlineEditorActiveItemId(null);
+      return;
+    }
+    if (historyInlineEditorItems.some((item) => item.id === historyInlineEditorActiveItemId)) {
+      return;
+    }
+    setHistoryInlineEditorActiveItemId(historyInlineEditorItems[0].id);
+  }, [historyInlineEditorItems, historyInlineEditorActiveItemId]);
+
+  const handleHistoryInlineEditorPatched = useCallback((updatedItem) => {
+    if (!updatedItem?.id) return;
+    setBackendSearchResults((current) => {
+      if (!Array.isArray(current)) return current;
+      return current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item));
+    });
+  }, []);
+
+  const handleRefreshHistoryInlineEditorItems = useCallback(() => {
+    setBackendSearchRefreshNonce((current) => current + 1);
+  }, []);
 
   const buildRowViewModel = useCallback((index) => {
     const item = filteredItems[index];
@@ -1946,6 +1983,15 @@ function HistoryStream({ style }) {
             endReached={handleEndReached}
             rangeChanged={handleRangeChanged}
             increaseViewportBy={{ top: 200, bottom: 400 }}
+          />
+        )}
+        {shouldShowHistoryInlineEditor && (
+          <WorkbenchInlineEditor
+            items={historyInlineEditorItems}
+            activeItemId={historyInlineEditorActiveItemId}
+            onActiveItemChange={setHistoryInlineEditorActiveItemId}
+            onItemPatched={handleHistoryInlineEditorPatched}
+            onRefreshItems={handleRefreshHistoryInlineEditorItems}
           />
         )}
         {!shouldRenderCollectionBoard && showJumpToLatest && (

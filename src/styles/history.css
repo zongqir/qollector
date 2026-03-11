@@ -75,6 +75,9 @@
 
 .history-stream-content {
   flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -321,7 +324,19 @@
 }
 
 .history-stream-virtuoso {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.history-stream-content > .workbench-inline-editor {
+  margin: 8px 10px 10px;
+  z-index: 12;
+}
+
+.history-stream-content > .workbench-inline-editor .workbench-inline-note-input {
+  min-height: 56px;
+  max-height: 104px;
 }
 
 .history-stream-scroller {
@@ -1355,6 +1370,12 @@
 }
 
 @container (max-width: 520px) {
+  .history-stream-content > .workbench-inline-editor {
+    margin: 6px 8px 8px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
   .history-stream-row {
     padding-left: 8px;
     padding-right: 8px;
@@ -1976,6 +1997,12 @@
 .app.mini-mode .history-stream-row {
   padding-left: 6px;
   padding-right: 6px;
+}
+
+.app.mini-mode .history-stream-content > .workbench-inline-editor {
+  margin: 6px 6px 8px;
+  padding: 8px;
+  border-radius: 10px;
 }
 
 .app.mini-mode .loading-state {
