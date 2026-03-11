@@ -1331,21 +1331,30 @@ impl ClipboardRepository {
     pub async fn set_favorite(&self, id: &str, favorite: bool) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now().timestamp();
         if favorite {
+            let mut tx = self.pool.begin().await?;
+            sqlx::query(
+                "UPDATE clipboard_items
+                 SET favorite_order = CASE
+                   WHEN favorite_order IS NULL OR favorite_order <= 0 THEN 2
+                   ELSE favorite_order + 1
+                 END
+                 WHERE is_deleted = 0 AND is_favorite = 1 AND id != ?",
+            )
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
             sqlx::query(
                 "UPDATE clipboard_items
                  SET is_favorite = 1,
-                     favorite_order = (
-                       SELECT COALESCE(MAX(favorite_order), 0) + 1
-                       FROM clipboard_items
-                       WHERE is_deleted = 0 AND is_favorite = 1
-                     ),
+                     favorite_order = 1,
                      updated_at = ?
                  WHERE id = ?",
             )
             .bind(now)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+            tx.commit().await?;
             return Ok(());
         }
 

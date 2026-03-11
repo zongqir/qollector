@@ -195,24 +195,42 @@ export const createItemActions = (set, get) => ({
     try {
       await invoke('toggle_favorite_item', { id: item.id });
       const newFavorite = !item.is_favorite;
-      const nextFavoriteOrder = newFavorite
-        ? get().items.reduce((maxOrder, candidate) => {
-          const value = Number(candidate.favorite_order);
-          if (!candidate.is_favorite || !Number.isFinite(value)) return maxOrder;
-          return value > maxOrder ? value : maxOrder;
-        }, 0) + 1
-        : null;
-      set((state) => ({
-        items: state.items.map((it) =>
-          it.id === item.id
-            ? { ...it, is_favorite: newFavorite, favorite_order: nextFavoriteOrder }
-            : it
-        ),
-        previewItem: state.previewItem?.id === item.id
-          ? { ...state.previewItem, is_favorite: newFavorite, favorite_order: nextFavoriteOrder }
-          : state.previewItem,
-        itemsRevision: state.itemsRevision + 1,
-      }));
+      set((state) => {
+        const shiftFavoriteOrder = (candidate) => {
+          if (!newFavorite || candidate?.id === item.id || !candidate?.is_favorite) {
+            return candidate;
+          }
+          const currentOrder = Number(candidate.favorite_order);
+          const nextOrder = Number.isFinite(currentOrder) && currentOrder > 0
+            ? currentOrder + 1
+            : 2;
+          return { ...candidate, favorite_order: nextOrder };
+        };
+
+        const nextItems = state.items.map((it) => {
+          if (it.id === item.id) {
+            return { ...it, is_favorite: newFavorite, favorite_order: newFavorite ? 1 : null };
+          }
+          return shiftFavoriteOrder(it);
+        });
+
+        let nextPreviewItem = state.previewItem;
+        if (nextPreviewItem?.id === item.id) {
+          nextPreviewItem = {
+            ...nextPreviewItem,
+            is_favorite: newFavorite,
+            favorite_order: newFavorite ? 1 : null,
+          };
+        } else if (nextPreviewItem) {
+          nextPreviewItem = shiftFavoriteOrder(nextPreviewItem);
+        }
+
+        return {
+          items: nextItems,
+          previewItem: nextPreviewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
     }
