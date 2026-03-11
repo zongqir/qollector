@@ -171,6 +171,11 @@
   gap: 8px;
 }
 
+.workbench-panel.workbench-panel--compact-bottom-bar {
+  padding: 8px 8px 4px;
+  gap: 4px;
+}
+
 .timeline-header,
 .timeline-date-switcher,
 .timeline-content,

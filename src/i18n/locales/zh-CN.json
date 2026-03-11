@@ -824,7 +824,7 @@
     "collapseFilters": "收起筛选",
     "expandFilters": "展开筛选",
     "finishSortMode": "完成排序",
-    "releaseThenDragHint": "已进入排序，请松手后拖动"
+    "releaseThenDragHint": "已进入排序：下方拖拽调整顺序，上方点击“完成排序”结束"
   },
   "collection": {
     "longTermStorageHint": "收藏区用于长期保存重要内容，便于后续随时回看和复用。",

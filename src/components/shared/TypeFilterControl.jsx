@@ -13,6 +13,7 @@ function TypeFilterControl({
   selectedType,
   selectedTypeIcon,
   showSelectedTypeText = false,
+  showChevron = true,
   selectedTypeText = '',
   options,
   onSelectType,
@@ -39,7 +40,9 @@ function TypeFilterControl({
         {showSelectedTypeText && (
           <span className="type-select-text">{selectedTypeText}</span>
         )}
-        <ChevronDown size={12} className={`type-select-arrow ${isOpen ? 'open' : ''}`} />
+        {showChevron && (
+          <ChevronDown size={12} className={`type-select-arrow ${isOpen ? 'open' : ''}`} />
+        )}
       </FilterTriggerButton>
       {isOpen && (
         <FilterDropdown

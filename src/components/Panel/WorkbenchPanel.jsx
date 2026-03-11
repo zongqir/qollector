@@ -2,8 +2,12 @@ import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } fr
 import { useTranslation } from 'react-i18next';
 import {
   ArrowUpDown,
+  Bookmark,
+  Calendar,
+  ChevronDown,
   Package,
   Star,
+  Tag,
   X,
   Type,
   Image,
@@ -79,6 +83,11 @@ import { WORKBENCH_FILTER_COLLAPSED_STORAGE_KEY } from '../../constants/storageK
 
 const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
 const WORKBENCH_FILTER_COLLAPSE_DEFAULT = false;
+const WORKBENCH_FILTER_SEARCH_SIZER_WIDTH = 108;
+const WORKBENCH_BOTTOM_BAR_LAYOUT = {
+  LABEL: 'label',
+  COMPACT: 'compact',
+};
 
 const readWorkbenchFilterCollapsed = () => {
   if (typeof window === 'undefined') return WORKBENCH_FILTER_COLLAPSE_DEFAULT;
@@ -89,6 +98,8 @@ const readWorkbenchFilterCollapsed = () => {
     return WORKBENCH_FILTER_COLLAPSE_DEFAULT;
   }
 };
+
+const measureNodeWidth = (node) => Math.ceil(node?.getBoundingClientRect?.().width || 0);
 
 const persistWorkbenchFilterCollapsed = (collapsed) => {
   if (typeof window === 'undefined') return;
@@ -122,6 +133,8 @@ function WorkbenchPanel() {
   const [workbenchFiltering, setWorkbenchFiltering] = useState(false);
   const [workbenchLoadError, setWorkbenchLoadError] = useState('');
   const [workbenchFilterError, setWorkbenchFilterError] = useState('');
+  const [shouldCollapseWorkbenchFilterText, setShouldCollapseWorkbenchFilterText] = useState(false);
+  const [workbenchBottomBarLayout, setWorkbenchBottomBarLayout] = useState(WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL);
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
   const [workbenchInlineEditorActiveItemId, setWorkbenchInlineEditorActiveItemId] = useState(null);
@@ -134,6 +147,12 @@ function WorkbenchPanel() {
   const workbenchTagWrapperRef = useRef(null);
   const workbenchSavedViewWrapperRef = useRef(null);
   const workbenchTagListboxRef = useRef(null);
+  const workbenchFilterRowRef = useRef(null);
+  const workbenchFilterFullSizerRef = useRef(null);
+  const workbenchFilterIconSizerRef = useRef(null);
+  const workbenchBottomBarRef = useRef(null);
+  const workbenchBottomBarLabelSizerRef = useRef(null);
+  const workbenchBottomBarIconSizerRef = useRef(null);
   const quickNoteSubmittingRef = useRef(false);
   const workbenchCardsRef = useRef(null);
   const workbenchCardRefsRef = useRef(new Map());
@@ -946,10 +965,17 @@ function WorkbenchPanel() {
       }
       setWorkbenchSortAnchorItemId(item.id);
       setWorkbenchSortMode(true);
+      setIsWorkbenchFiltersCollapsed((current) => {
+        if (!current) return current;
+        dismissOpenDropdowns();
+        persistWorkbenchFilterCollapsed(false);
+        return false;
+      });
       showWorkbenchSortEntryToast();
     }, SORT_MODE_LONG_PRESS_MS);
   }, [
     clearWorkbenchSortLongPressTimer,
+    dismissOpenDropdowns,
     isWorkbenchSortMode,
     selectedPinnedIds.length,
     showWorkbenchSortEntryToast,
@@ -1245,6 +1271,74 @@ function WorkbenchPanel() {
     t,
   });
 
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined' || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    let rafId = 0;
+    const scheduleLayoutUpdate = () => {
+      window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(() => {
+        const filterRowWidth = workbenchFilterRowRef.current?.clientWidth || 0;
+        const filterFullWidth = measureNodeWidth(workbenchFilterFullSizerRef.current);
+        const filterIconWidth = measureNodeWidth(workbenchFilterIconSizerRef.current);
+
+        if (filterRowWidth > 0 && filterFullWidth > 0 && filterIconWidth > 0) {
+          const nextShouldCollapseFilterText = filterFullWidth > filterRowWidth;
+          setShouldCollapseWorkbenchFilterText((current) => (
+            current === nextShouldCollapseFilterText ? current : nextShouldCollapseFilterText
+          ));
+        }
+
+        const bottomBarWidth = workbenchBottomBarRef.current?.clientWidth || 0;
+        const bottomBarLabelWidth = measureNodeWidth(workbenchBottomBarLabelSizerRef.current);
+        const bottomBarIconWidth = measureNodeWidth(workbenchBottomBarIconSizerRef.current);
+
+        if (bottomBarWidth > 0 && bottomBarLabelWidth > 0 && bottomBarIconWidth > 0) {
+          const nextBottomBarLayout = bottomBarLabelWidth <= bottomBarWidth
+            ? WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL
+            : WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT;
+          setWorkbenchBottomBarLayout((current) => (
+            current === nextBottomBarLayout ? current : nextBottomBarLayout
+          ));
+        }
+      });
+    };
+
+    scheduleLayoutUpdate();
+
+    const observer = new ResizeObserver(() => {
+      scheduleLayoutUpdate();
+    });
+
+    [
+      workbenchPanelRef.current,
+      workbenchFilterRowRef.current,
+      workbenchFilterFullSizerRef.current,
+      workbenchFilterIconSizerRef.current,
+      workbenchBottomBarRef.current,
+      workbenchBottomBarLabelSizerRef.current,
+      workbenchBottomBarIconSizerRef.current,
+    ].forEach((node) => {
+      if (node) observer.observe(node);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [
+    allTags.length,
+    i18n.language,
+    isWorkbenchFiltersCollapsed,
+    isWorkbenchSortMode,
+    quickActions.quickOutputTask,
+    quickActions.workbenchPrimaryAction,
+    selectedPinnedIds.length,
+    selectedType,
+  ]);
+
   const handleContextMenuAction = useCallback(async (actionKey) => {
     const currentItem = contextMenuState?.item;
     if (!currentItem) return;
@@ -1387,6 +1481,62 @@ function WorkbenchPanel() {
     handleRevealInFolder,
   ]);
 
+  const workbenchFilterRowClassName = `workbench-filter-row ${shouldCollapseWorkbenchFilterText ? 'workbench-filter-row--adaptive-icon' : ''}`.trim();
+  const workbenchPanelClassName = `workbench-panel ${selectedPinnedIds.length === 0 && workbenchBottomBarLayout === WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT ? 'workbench-panel--compact-bottom-bar' : ''}`.trim();
+  const renderWorkbenchFilterActionSizer = (iconOnly = false) => (
+    <div className="workbench-filter-actions">
+      <button
+        type="button"
+        className={`header-icon-btn filter-trigger-btn type-select-btn ${selectedType !== 'all' ? 'active has-selection' : ''}`.trim()}
+        tabIndex={-1}
+      >
+        {selectedTypeOption.icon}
+        {!iconOnly && <span className="type-select-text">{t(`search.typeFilter.${selectedType}`)}</span>}
+        {!iconOnly && <ChevronDown size={12} className="type-select-arrow" />}
+      </button>
+
+      <button
+        type="button"
+        className={`header-icon-btn ${showFavoritesOnly ? 'active fav-active' : ''}`.trim()}
+        tabIndex={-1}
+      >
+        <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
+      </button>
+
+      {allTags.length > 0 && (
+        <button type="button" className="header-icon-btn filter-trigger-btn" tabIndex={-1}>
+          <Tag size={15} />
+          {selectedTags.length > 0 && <span className="icon-btn-badge">{selectedTags.length}</span>}
+        </button>
+      )}
+
+      <button
+        type="button"
+        className={`header-icon-btn filter-trigger-btn ${selectedDateRange ? 'active' : ''}`.trim()}
+        tabIndex={-1}
+      >
+        <Calendar size={15} />
+        {selectedDateRange && <span className={`icon-btn-badge date-badge ${String(workbenchDateBadgeText || '').length > 3 ? 'date-badge-wide' : ''}`.trim()}>{workbenchDateBadgeText}</span>}
+      </button>
+
+      <button
+        type="button"
+        className={`header-icon-btn filter-trigger-btn saved-view-btn ${activeSavedView ? 'active' : ''}`.trim()}
+        tabIndex={-1}
+      >
+        <Bookmark size={15} />
+        {savedViews.length > 0 && <span className="icon-btn-badge">{Math.min(savedViews.length, 99)}</span>}
+      </button>
+
+      {isWorkbenchSortMode && (
+        <button type="button" className="workbench-sort-toggle active" tabIndex={-1}>
+          <ArrowUpDown size={12} />
+          {!iconOnly && <span>{t('workbench.finishSortMode')}</span>}
+        </button>
+      )}
+    </div>
+  );
+
   const quickNoteSection = (
     <WorkbenchQuickNoteSection
       isExpanded={isExpanded}
@@ -1405,7 +1555,7 @@ function WorkbenchPanel() {
 
   if (allPinnedItems.length === 0) {
     return (
-      <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+      <div className={workbenchPanelClassName} ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
         {quickNoteSection}
         <div className={`workbench-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
           <div className="workbench-empty-icon panel-state-icon">
@@ -1435,10 +1585,10 @@ function WorkbenchPanel() {
   }
 
   return (
-    <div className="workbench-panel" ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+    <div className={workbenchPanelClassName} ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
       {quickNoteSection}
       {!isWorkbenchFiltersCollapsed && (
-        <div className="workbench-filter-row">
+        <div className={workbenchFilterRowClassName} ref={workbenchFilterRowRef}>
           <div className="workbench-search-box">
             <input
               type="text"
@@ -1469,7 +1619,8 @@ function WorkbenchPanel() {
               controlsId={workbenchTypeDropdownId}
               selectedType={selectedType}
               selectedTypeIcon={selectedTypeOption.icon}
-              showSelectedTypeText
+              showSelectedTypeText={!shouldCollapseWorkbenchFilterText}
+              showChevron={!shouldCollapseWorkbenchFilterText}
               selectedTypeText={t(`search.typeFilter.${selectedType}`)}
               options={typeFilterOptions}
               onSelectType={handleWorkbenchTypeChange}
@@ -1573,7 +1724,7 @@ function WorkbenchPanel() {
                 aria-pressed
               >
                 <ArrowUpDown size={12} />
-                <span>{t('workbench.finishSortMode')}</span>
+                {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.finishSortMode')}</span>}
               </button>
             )}
           </div>
@@ -1748,8 +1899,86 @@ function WorkbenchPanel() {
           workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
           handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
           handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
+          layoutMode={workbenchBottomBarLayout}
+          barRef={workbenchBottomBarRef}
         />
       )}
+      <div className="workbench-adaptive-sizers" aria-hidden="true">
+        {!isWorkbenchFiltersCollapsed && (
+          <>
+            <div className="workbench-filter-row workbench-filter-row--sizer" ref={workbenchFilterFullSizerRef}>
+              <div
+                className="workbench-search-box workbench-search-box--sizer"
+                style={{ '--workbench-filter-search-sizer-width': `${WORKBENCH_FILTER_SEARCH_SIZER_WIDTH}px` }}
+              >
+                <div className="workbench-search-input workbench-search-input--sizer" />
+              </div>
+              {renderWorkbenchFilterActionSizer(false)}
+            </div>
+            <div className="workbench-filter-row workbench-filter-row--sizer workbench-filter-row--adaptive-icon" ref={workbenchFilterIconSizerRef}>
+              <div
+                className="workbench-search-box workbench-search-box--sizer"
+                style={{ '--workbench-filter-search-sizer-width': `${WORKBENCH_FILTER_SEARCH_SIZER_WIDTH}px` }}
+              >
+                <div className="workbench-search-input workbench-search-input--sizer" />
+              </div>
+              {renderWorkbenchFilterActionSizer(true)}
+            </div>
+          </>
+        )}
+        <WorkbenchQuickActionsBar
+          t={t}
+          setPanelMode={() => {}}
+          quickOutputTask={quickActions.quickOutputTask}
+          quickOutputRunning={false}
+          showQuickOutputMenu={false}
+          setShowQuickOutputMenu={() => {}}
+          quickOutputMenuRef={null}
+          quickOutputTasks={quickActions.quickOutputTasks}
+          showWorkbenchMoreMenu={false}
+          setShowWorkbenchMoreMenu={() => {}}
+          workbenchMoreMenuRef={null}
+          activeAction={null}
+          feedback={null}
+          lastClearedPinnedIds={[]}
+          hasSnapshot={quickActions.hasSnapshot}
+          handleRunQuickOutput={() => {}}
+          handleQuickOutputMenuSelect={() => {}}
+          handleUndoClearAll={() => {}}
+          workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
+          handleRunWorkbenchPrimaryAction={() => {}}
+          handleSelectWorkbenchPrimaryAction={() => {}}
+          layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL}
+          measurementMode
+          barRef={workbenchBottomBarLabelSizerRef}
+        />
+        <WorkbenchQuickActionsBar
+          t={t}
+          setPanelMode={() => {}}
+          quickOutputTask={quickActions.quickOutputTask}
+          quickOutputRunning={false}
+          showQuickOutputMenu={false}
+          setShowQuickOutputMenu={() => {}}
+          quickOutputMenuRef={null}
+          quickOutputTasks={quickActions.quickOutputTasks}
+          showWorkbenchMoreMenu={false}
+          setShowWorkbenchMoreMenu={() => {}}
+          workbenchMoreMenuRef={null}
+          activeAction={null}
+          feedback={null}
+          lastClearedPinnedIds={[]}
+          hasSnapshot={quickActions.hasSnapshot}
+          handleRunQuickOutput={() => {}}
+          handleQuickOutputMenuSelect={() => {}}
+          handleUndoClearAll={() => {}}
+          workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
+          handleRunWorkbenchPrimaryAction={() => {}}
+          handleSelectWorkbenchPrimaryAction={() => {}}
+          layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT}
+          measurementMode
+          barRef={workbenchBottomBarIconSizerRef}
+        />
+      </div>
       {(isWorkbenchSortMode && showSortEntryToast) || transientWorkbenchToast ? (
         <div className="workbench-entry-toast" role="status" aria-live="polite">
           {isWorkbenchSortMode && showSortEntryToast

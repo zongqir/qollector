@@ -855,7 +855,7 @@
     "collapseFilters": "Collapse filters",
     "expandFilters": "Expand filters",
     "finishSortMode": "Done sorting",
-    "releaseThenDragHint": "Sort mode on. Release, then drag."
+    "releaseThenDragHint": "Sort mode on: drag cards below to reorder, then click \"Done sorting\" above."
   },
   "collection": {
     "longTermStorageHint": "Collection is for long-term storage, so important items stay easy to revisit and reuse.",

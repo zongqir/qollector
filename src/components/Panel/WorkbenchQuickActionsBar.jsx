@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import {
   BookmarkPlus,
   Bot,
@@ -34,8 +36,12 @@ function WorkbenchQuickActionsBar({
   workbenchPrimaryAction,
   handleRunWorkbenchPrimaryAction,
   handleSelectWorkbenchPrimaryAction,
+  layoutMode = 'full',
+  measurementMode = false,
+  barRef = null,
 }) {
   const isBusy = quickOutputRunning || activeAction != null;
+  const useCompactLayout = layoutMode === 'compact';
   const workbenchActionOptions = [
     { key: 'snapshot', label: t('workbench.snapshotSave'), icon: BookmarkPlus },
     { key: 'restore-snapshot', label: t('workbench.snapshotRestore'), icon: History },
@@ -45,21 +51,34 @@ function WorkbenchQuickActionsBar({
   ];
   const currentWorkbenchAction = workbenchActionOptions.find((option) => option.key === workbenchPrimaryAction) || workbenchActionOptions[0];
   const CurrentWorkbenchActionIcon = currentWorkbenchAction.icon;
+  const bottomBarClassName = `workbench-bottom-bar workbench-bottom-bar--${layoutMode} ${measurementMode ? 'workbench-bottom-bar--sizer' : ''}`.trim();
+
+  useEffect(() => {
+    if (measurementMode || !useCompactLayout) return;
+    setShowQuickOutputMenu(false);
+    setShowWorkbenchMoreMenu(false);
+  }, [
+    measurementMode,
+    setShowQuickOutputMenu,
+    setShowWorkbenchMoreMenu,
+    useCompactLayout,
+  ]);
 
   return (
     <>
-      <div className="workbench-bottom-bar">
+      <div className={bottomBarClassName} aria-hidden={measurementMode || undefined} ref={barRef}>
         <button
           className="workbench-btn timeline-btn"
           onClick={() => setPanelMode('timeline')}
           title={t('workbench.timeTravel')}
           disabled={isBusy}
+          tabIndex={measurementMode ? -1 : undefined}
         >
           <Clock size={14} />
-          <span>{t('workbench.timeTravel')}</span>
+          <span className="workbench-btn-label">{t('workbench.timeTravel')}</span>
         </button>
 
-        <div className={`workbench-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
+        {useCompactLayout ? (
           <button
             className="workbench-btn quick-output-main-btn"
             onClick={() => handleRunQuickOutput(quickOutputTask)}
@@ -67,90 +86,127 @@ function WorkbenchQuickActionsBar({
             title={t('workbench.quickOutputRunTitle', {
               task: t(`aiAssistant.tasks.${quickOutputTask}`),
             })}
+            tabIndex={measurementMode ? -1 : undefined}
           >
             {quickOutputRunning ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Bot size={14} />}
-            <span>{t('workbench.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
+            <span className="workbench-btn-label">{t('workbench.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
           </button>
-          <button
-            type="button"
-            className="workbench-btn quick-output-toggle-btn"
-            onClick={() => {
-              setShowWorkbenchMoreMenu(false);
-              setShowQuickOutputMenu(current => !current);
-            }}
-            disabled={isBusy}
-            title={t('workbench.quickOutputSelectTitle')}
-            aria-label={t('workbench.quickOutputSelectTitle')}
-            aria-expanded={showQuickOutputMenu}
-            aria-haspopup="menu"
-          >
-            <ChevronDown size={14} />
-          </button>
-          {showQuickOutputMenu && (
-            <div className="workbench-dropdown-menu">
-              {quickOutputTasks.map((taskType) => (
-                <button
-                  key={taskType}
-                  className={`workbench-dropdown-item ${quickOutputTask === taskType ? 'active' : ''}`}
-                  onClick={() => handleQuickOutputMenuSelect(taskType)}
-                  disabled={isBusy}
-                >
-                  <span>{t(`aiAssistant.tasks.${taskType}`)}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className={`workbench-split-btn ${showQuickOutputMenu ? 'open' : ''}`} ref={quickOutputMenuRef}>
+            <button
+              className="workbench-btn quick-output-main-btn"
+              onClick={() => handleRunQuickOutput(quickOutputTask)}
+              disabled={isBusy}
+              title={t('workbench.quickOutputRunTitle', {
+                task: t(`aiAssistant.tasks.${quickOutputTask}`),
+              })}
+              tabIndex={measurementMode ? -1 : undefined}
+            >
+              {quickOutputRunning ? <Loader2 size={14} className="workbench-btn-spinner" /> : <Bot size={14} />}
+              <span className="workbench-btn-label">{t('workbench.quickOutputTaskLabel', { task: t(`aiAssistant.tasks.${quickOutputTask}`) })}</span>
+            </button>
+            <button
+              type="button"
+              className="workbench-btn quick-output-toggle-btn"
+              onClick={() => {
+                setShowWorkbenchMoreMenu(false);
+                setShowQuickOutputMenu(current => !current);
+              }}
+              disabled={isBusy}
+              title={t('workbench.quickOutputSelectTitle')}
+              aria-label={t('workbench.quickOutputSelectTitle')}
+              aria-expanded={showQuickOutputMenu}
+              aria-haspopup="menu"
+              tabIndex={measurementMode ? -1 : undefined}
+            >
+              <ChevronDown size={14} />
+            </button>
+            {showQuickOutputMenu && (
+              <div className="workbench-dropdown-menu">
+                {quickOutputTasks.map((taskType) => (
+                  <button
+                    key={taskType}
+                    className={`workbench-dropdown-item ${quickOutputTask === taskType ? 'active' : ''}`}
+                    onClick={() => handleQuickOutputMenuSelect(taskType)}
+                    disabled={isBusy}
+                  >
+                    <span>{t(`aiAssistant.tasks.${taskType}`)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-        <div className={`workbench-more-menu workbench-split-btn workbench-more-split-btn ${showWorkbenchMoreMenu ? 'open' : ''}`} ref={workbenchMoreMenuRef}>
+        {useCompactLayout ? (
           <button
-            className={`workbench-btn workbench-more-main-btn ${showWorkbenchMoreMenu ? 'open' : ''} ${currentWorkbenchAction.danger ? 'danger' : ''}`.trim()}
+            className={`workbench-btn workbench-more-main-btn ${currentWorkbenchAction.danger ? 'danger' : ''}`.trim()}
             onClick={handleRunWorkbenchPrimaryAction}
             disabled={isBusy}
             title={currentWorkbenchAction.label}
+            tabIndex={measurementMode ? -1 : undefined}
           >
             {activeAction === workbenchPrimaryAction
               ? <Loader2 size={14} className="workbench-btn-spinner" />
               : <CurrentWorkbenchActionIcon size={14} />}
-            <span>{currentWorkbenchAction.label}</span>
+            <span className="workbench-btn-label">{currentWorkbenchAction.label}</span>
           </button>
-          <button
-            type="button"
-            className={`workbench-btn workbench-more-toggle-btn ${showWorkbenchMoreMenu ? 'open' : ''}`}
-            onClick={() => {
-              setShowQuickOutputMenu(false);
-              setShowWorkbenchMoreMenu(current => !current);
-            }}
-            disabled={isBusy}
-            title={t('workbench.moreActions')}
-            aria-label={t('workbench.moreActions')}
-            aria-expanded={showWorkbenchMoreMenu}
-            aria-haspopup="menu"
+        ) : (
+          <div
+            className={`workbench-more-menu workbench-split-btn workbench-more-split-btn ${showWorkbenchMoreMenu ? 'open' : ''}`.trim()}
+            ref={workbenchMoreMenuRef}
           >
-            <SlidersHorizontal size={14} />
-            <ChevronDown size={13} className="workbench-more-caret" />
-          </button>
-          {showWorkbenchMoreMenu && (
-            <div className="workbench-dropdown-menu align-right">
-              {workbenchActionOptions.map((option) => {
-                const OptionIcon = option.icon;
-                const optionDisabled = isBusy || (option.key === 'restore-snapshot' && !hasSnapshot);
-                return (
-                  <button
-                    key={option.key}
-                    className={`workbench-dropdown-item ${option.danger ? 'danger' : ''} ${workbenchPrimaryAction === option.key ? 'active' : ''}`}
-                    onClick={() => handleSelectWorkbenchPrimaryAction(option.key)}
-                    disabled={optionDisabled}
-                  >
-                    {activeAction === option.key ? <Loader2 size={14} className="workbench-btn-spinner" /> : <OptionIcon size={14} />}
-                    <span>{option.label}</span>
-                    {workbenchPrimaryAction === option.key && <Check size={13} className="workbench-dropdown-active-mark" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+            <button
+              className={`workbench-btn workbench-more-main-btn ${showWorkbenchMoreMenu ? 'open' : ''} ${currentWorkbenchAction.danger ? 'danger' : ''}`.trim()}
+              onClick={handleRunWorkbenchPrimaryAction}
+              disabled={isBusy}
+              title={currentWorkbenchAction.label}
+              tabIndex={measurementMode ? -1 : undefined}
+            >
+              {activeAction === workbenchPrimaryAction
+                ? <Loader2 size={14} className="workbench-btn-spinner" />
+                : <CurrentWorkbenchActionIcon size={14} />}
+              <span className="workbench-btn-label">{currentWorkbenchAction.label}</span>
+            </button>
+            <button
+              type="button"
+              className={`workbench-btn workbench-more-toggle-btn ${showWorkbenchMoreMenu ? 'open' : ''}`}
+              onClick={() => {
+                setShowQuickOutputMenu(false);
+                setShowWorkbenchMoreMenu(current => !current);
+              }}
+              disabled={isBusy}
+              title={t('workbench.moreActions')}
+              aria-label={t('workbench.moreActions')}
+              aria-expanded={showWorkbenchMoreMenu}
+              aria-haspopup="menu"
+              tabIndex={measurementMode ? -1 : undefined}
+            >
+              <SlidersHorizontal size={14} />
+              <ChevronDown size={13} className="workbench-more-caret" />
+            </button>
+            {showWorkbenchMoreMenu && (
+              <div className="workbench-dropdown-menu align-right">
+                {workbenchActionOptions.map((option) => {
+                  const OptionIcon = option.icon;
+                  const optionDisabled = isBusy || (option.key === 'restore-snapshot' && !hasSnapshot);
+                  return (
+                    <button
+                      key={option.key}
+                      className={`workbench-dropdown-item ${option.danger ? 'danger' : ''} ${workbenchPrimaryAction === option.key ? 'active' : ''}`}
+                      onClick={() => handleSelectWorkbenchPrimaryAction(option.key)}
+                      disabled={optionDisabled}
+                    >
+                      {activeAction === option.key ? <Loader2 size={14} className="workbench-btn-spinner" /> : <OptionIcon size={14} />}
+                      <span>{option.label}</span>
+                      {workbenchPrimaryAction === option.key && <Check size={13} className="workbench-dropdown-active-mark" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {feedback && (
           <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
@@ -163,7 +219,7 @@ function WorkbenchQuickActionsBar({
                 disabled={isBusy}
               >
                 {activeAction === 'undo-clear' ? <Loader2 size={12} className="workbench-feedback-spinner" /> : <Undo2 size={12} />}
-                <span>{t('workbench.undo')}</span>
+                <span className="workbench-btn-label">{t('workbench.undo')}</span>
               </button>
             )}
           </div>

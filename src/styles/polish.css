@@ -1206,6 +1206,31 @@
   font-size: 12px;
 }
 
+.density-compact .workbench-bottom-bar.workbench-bottom-bar--compact {
+  gap: 3px;
+  padding: 0 6px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+}
+
+.density-compact .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
+  min-height: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.density-compact .workbench-bottom-bar.workbench-bottom-bar--label {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.density-compact .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
+  min-height: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
 .density-compact .workbench-more-btn {
   padding: 6px 8px;
 }
@@ -1410,6 +1435,31 @@
   font-size: 13.5px;
 }
 
+.density-cozy .workbench-bottom-bar.workbench-bottom-bar--compact {
+  gap: 3px;
+  padding: 0 6px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+}
+
+.density-cozy .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
+  min-height: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.density-cozy .workbench-bottom-bar.workbench-bottom-bar--label {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.density-cozy .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
+  min-height: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
 .density-cozy .workbench-more-btn {
   padding: 8px 12px;
 }
@@ -1604,9 +1654,59 @@
   font-size: 11px;
 }
 
+.density-compact .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--compact {
+  gap: 3px;
+  padding: 0 6px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+}
+
+.density-compact .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
+  min-height: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.density-compact .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--label {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.density-compact .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
+  min-height: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
 .density-cozy .app.mini-mode .workbench-btn {
   min-height: 29px;
   font-size: 11.5px;
+}
+
+.density-cozy .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--compact {
+  gap: 3px;
+  padding: 0 6px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+}
+
+.density-cozy .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
+  min-height: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.density-cozy .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--label {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.density-cozy .app.mini-mode .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
+  min-height: 28px;
+  height: 28px;
+  font-size: 11px;
 }
 
 .density-compact .history-group-header {
