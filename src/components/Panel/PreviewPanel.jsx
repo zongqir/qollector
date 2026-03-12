@@ -975,7 +975,7 @@ function PreviewPanel() {
                 <span>{t('item.saveAs')}</span>
               </button>
             )}
-            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && !item.has_raw_formats && (
+            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
               <button className="preview-tool-btn secondary" onClick={handleStartEditContent}>
                 <Edit2 size={14} />
                 <span>{t('panel.editContent')}</span>
