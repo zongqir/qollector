@@ -208,7 +208,10 @@ function HistoryStream({ style }) {
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
   const searchQuery = useAppStore(s => s.searchQuery);
+  const collectionSearchQuery = useAppStore(s => s.collectionSearchQuery);
   const debouncedSearchQuery = useAppStore(s => s.debouncedSearchQuery);
+  const historyRecentSearches = useAppStore(s => s.historyRecentSearches);
+  const collectionRecentSearches = useAppStore(s => s.collectionRecentSearches);
   const selectedType = useAppStore(s => s.selectedType);
   const selectedTags = useAppStore(s => s.selectedTags);
   const showFavoritesOnly = useAppStore(s => s.showFavoritesOnly);
@@ -230,6 +233,13 @@ function HistoryStream({ style }) {
   const itemsRevision = useAppStore(s => s.itemsRevision);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
+  const setCollectionSearchQuery = useAppStore(s => s.setCollectionSearchQuery);
+  const addHistoryRecentSearch = useAppStore(s => s.addHistoryRecentSearch);
+  const removeHistoryRecentSearch = useAppStore(s => s.removeHistoryRecentSearch);
+  const clearHistoryRecentSearches = useAppStore(s => s.clearHistoryRecentSearches);
+  const addCollectionRecentSearch = useAppStore(s => s.addCollectionRecentSearch);
+  const removeCollectionRecentSearch = useAppStore(s => s.removeCollectionRecentSearch);
+  const clearCollectionRecentSearches = useAppStore(s => s.clearCollectionRecentSearches);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const setSelectedTags = useAppStore(s => s.setSelectedTags);
   const setShowFavoritesOnly = useAppStore(s => s.setShowFavoritesOnly);
@@ -286,6 +296,8 @@ function HistoryStream({ style }) {
   const previewItemId = previewItem?.id;
   const shouldUseHoverPreview = isMiniMode || !workbenchPanelEnabled;
   const isCollectionMode = showFavoritesOnly;
+  const activeTopSearchQuery = isCollectionMode ? collectionSearchQuery : searchQuery;
+  const activeTopRecentSearches = isCollectionMode ? collectionRecentSearches : historyRecentSearches;
 
   const virtuosoRef = useRef(null);
 
@@ -296,6 +308,21 @@ function HistoryStream({ style }) {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, setDebouncedSearchQuery]);
+
+  useEffect(() => {
+    const normalizedQuery = typeof debouncedSearchQuery === 'string' ? debouncedSearchQuery.trim() : '';
+    if (!normalizedQuery) return;
+    addHistoryRecentSearch(normalizedQuery);
+  }, [addHistoryRecentSearch, debouncedSearchQuery]);
+
+  useEffect(() => {
+    const normalizedCollectionQuery = typeof collectionSearchQuery === 'string' ? collectionSearchQuery.trim() : '';
+    if (!isCollectionMode || !normalizedCollectionQuery) return;
+    const timer = window.setTimeout(() => {
+      addCollectionRecentSearch(normalizedCollectionQuery);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [addCollectionRecentSearch, collectionSearchQuery, isCollectionMode]);
 
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [backendSearchError, setBackendSearchError] = useState('');
@@ -1446,8 +1473,20 @@ function HistoryStream({ style }) {
   }, [isMiniMode, setPanelMode, setWorkbenchPanelEnabled, workbenchPanelEnabled]);
 
   const searchBarProps = useMemo(() => ({
-    searchQuery,
-    onSearchChange: setSearchQuery,
+    searchQuery: activeTopSearchQuery,
+    onSearchChange: isCollectionMode ? setCollectionSearchQuery : setSearchQuery,
+    recentSearches: activeTopRecentSearches,
+    onApplyRecentSearch: (query) => {
+      if (isCollectionMode) {
+        setCollectionSearchQuery(query);
+        addCollectionRecentSearch(query);
+        return;
+      }
+      setSearchQuery(query);
+      addHistoryRecentSearch(query);
+    },
+    onClearRecentSearches: isCollectionMode ? clearCollectionRecentSearches : clearHistoryRecentSearches,
+    onRemoveRecentSearch: isCollectionMode ? removeCollectionRecentSearch : removeHistoryRecentSearch,
     selectedType,
     onTypeChange: setSelectedType,
     showFavoritesOnly,
@@ -1486,8 +1525,17 @@ function HistoryStream({ style }) {
     filterBusy: isSearching,
     filterError: backendSearchError,
   }), [
-    searchQuery,
+    activeTopSearchQuery,
     setSearchQuery,
+    setCollectionSearchQuery,
+    activeTopRecentSearches,
+    addHistoryRecentSearch,
+    addCollectionRecentSearch,
+    clearHistoryRecentSearches,
+    clearCollectionRecentSearches,
+    removeHistoryRecentSearch,
+    removeCollectionRecentSearch,
+    isCollectionMode,
     selectedType,
     setSelectedType,
     showFavoritesOnly,
@@ -1754,7 +1802,7 @@ function HistoryStream({ style }) {
         ) : shouldRenderCollectionBoard ? (
           <CollectionBoard
             items={filteredItems}
-            searchQuery={debouncedSearchQuery}
+            searchQuery={collectionSearchQuery}
             selectedType={selectedType}
             selectedDateRange={selectedDateRange}
             isMiniMode={isMiniMode}
@@ -1881,6 +1929,7 @@ function HistoryStream({ style }) {
             onActiveItemChange={setHistoryInlineEditorActiveItemId}
             onItemPatched={handleHistoryInlineEditorPatched}
             onRefreshItems={handleRefreshHistoryInlineEditorItems}
+            onToggleFavorite={toggleFavorite}
           />
         )}
         {!shouldRenderCollectionBoard && showJumpToLatest && (

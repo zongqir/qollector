@@ -19,22 +19,31 @@ import {
   createUiActions,
   createWorkbenchActions,
   SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK,
+  readCollectionRecentSearches,
   clearHistorySnapshot,
+  readHistoryRecentSearches,
   readHistorySnapshot,
   readHistoryStreamEnabled,
   readSavedFilterViews,
+  readWorkbenchRecentSearches,
   readWorkbenchSavedFilterViews,
 } from './modules';
 
 const initialHistorySnapshot = readHistorySnapshot();
+const initialHistoryRecentSearches = readHistoryRecentSearches();
+const initialCollectionRecentSearches = readCollectionRecentSearches();
 const initialSavedFilterViews = readSavedFilterViews();
+const initialWorkbenchRecentSearches = readWorkbenchRecentSearches();
 const initialWorkbenchSavedFilterViews = readWorkbenchSavedFilterViews();
 const initialHistoryStreamEnabled = readHistoryStreamEnabled();
 
 const useAppStore = create((set, get) => ({
   ...createBaseState({
     initialHistorySnapshot,
+    historyRecentSearches: initialHistoryRecentSearches,
+    collectionRecentSearches: initialCollectionRecentSearches,
     savedFilterViews: initialSavedFilterViews,
+    workbenchRecentSearches: initialWorkbenchRecentSearches,
     workbenchSavedFilterViews: initialWorkbenchSavedFilterViews,
     historyStreamEnabled: initialHistoryStreamEnabled,
   }),

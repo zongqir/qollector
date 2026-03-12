@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers } from 'lucide-react';
+import { Clock3, X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers } from 'lucide-react';
 import { parseSystemTag } from '../utils/tagHelpers';
 import useEscapeDismiss from './hooks/useEscapeDismiss';
 import useClickOutsideDismiss from './hooks/useClickOutsideDismiss';
@@ -19,6 +19,7 @@ import {
 
 function SearchBar({
   searchQuery, onSearchChange,
+  recentSearches = [], onApplyRecentSearch, onClearRecentSearches, onRemoveRecentSearch,
   selectedType, onTypeChange,
   showFavoritesOnly, onToggleFavorites,
   showPinnedOnly, onTogglePinned,
@@ -47,6 +48,8 @@ function SearchBar({
 }) {
   const { t } = useTranslation();
   const searchInputRef = useRef(null);
+  const searchBoxRef = useRef(null);
+  const shouldToggleRecentSearchesOnClickRef = useRef(false);
   const tagListboxRef = useRef(null);
   const tagWrapperRef = useRef(null);
   const dateWrapperRef = useRef(null);
@@ -55,6 +58,8 @@ function SearchBar({
   const [showTypeFilter, setShowTypeFilter] = useState(false);
   const [showSavedViews, setShowSavedViews] = useState(false);
   const [savedViewName, setSavedViewName] = useState('');
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [activeRecentSearchIndex, setActiveRecentSearchIndex] = useState(-1);
 
   useEffect(() => {
     const focusSearchInput = () => {
@@ -78,6 +83,14 @@ function SearchBar({
     };
   }, []);
 
+  useClickOutsideDismiss({
+    isOpen: showRecentSearches,
+    wrapperRef: searchBoxRef,
+    onDismiss: () => {
+      setShowRecentSearches(false);
+      setActiveRecentSearchIndex(-1);
+    },
+  });
   useClickOutsideDismiss({
     isOpen: showTagFilter,
     wrapperRef: tagWrapperRef,
@@ -158,6 +171,14 @@ function SearchBar({
     () => (typeof searchQuery === 'string' ? searchQuery.trim() : ''),
     [searchQuery],
   );
+  const normalizedRecentSearches = useMemo(() => (
+    Array.isArray(recentSearches)
+      ? recentSearches
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean)
+      : []
+  ), [recentSearches]);
+  const canShowRecentSearches = normalizedSearchQuery.length === 0 && normalizedRecentSearches.length > 0;
   const normalizedResultCount = useMemo(() => {
     const parsed = Number(resultCount);
     if (!Number.isFinite(parsed)) return null;
@@ -261,6 +282,14 @@ function SearchBar({
       setShowSavedViews(false);
     }
   }, [showSavedViews]);
+  const closeRecentSearches = useCallback(() => {
+    setShowRecentSearches(false);
+    setActiveRecentSearchIndex(-1);
+  }, []);
+  const openRecentSearches = useCallback(() => {
+    if (!canShowRecentSearches) return;
+    setShowRecentSearches(true);
+  }, [canShowRecentSearches]);
 
   const coordinatedDropdowns = useMemo(() => ({
     saved: {
@@ -294,6 +323,25 @@ function SearchBar({
     showTagFilter,
     onToggleTagFilter,
     closeTagFilter,
+  ]);
+
+  useEffect(() => {
+    if (!showRecentSearches) {
+      setActiveRecentSearchIndex(-1);
+      return;
+    }
+    if (!canShowRecentSearches) {
+      closeRecentSearches();
+      return;
+    }
+    setActiveRecentSearchIndex((current) => (
+      current >= normalizedRecentSearches.length ? normalizedRecentSearches.length - 1 : current
+    ));
+  }, [
+    canShowRecentSearches,
+    closeRecentSearches,
+    normalizedRecentSearches.length,
+    showRecentSearches,
   ]);
 
   const {
@@ -340,21 +388,172 @@ function SearchBar({
     }
   };
 
+  const applyRecentSearch = useCallback((query) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery) return;
+    onApplyRecentSearch?.(normalizedQuery);
+    closeRecentSearches();
+    window.requestAnimationFrame(() => {
+      const input = searchInputRef.current;
+      if (!input) return;
+      input.focus();
+      const cursor = normalizedQuery.length;
+      input.setSelectionRange?.(cursor, cursor);
+    });
+  }, [closeRecentSearches, onApplyRecentSearch]);
+
+  const handleSearchInputChange = useCallback((event) => {
+    const nextValue = event.target.value;
+    onSearchChange?.(nextValue);
+    if (nextValue.trim()) {
+      closeRecentSearches();
+      return;
+    }
+    openRecentSearches();
+  }, [closeRecentSearches, onSearchChange, openRecentSearches]);
+
+  const handleSearchInputMouseDown = useCallback(() => {
+    const input = searchInputRef.current;
+    shouldToggleRecentSearchesOnClickRef.current = Boolean(
+      input
+      && document.activeElement === input
+      && canShowRecentSearches
+      && showRecentSearches
+    );
+  }, [canShowRecentSearches, showRecentSearches]);
+
+  const handleSearchInputClick = useCallback(() => {
+    if (shouldToggleRecentSearchesOnClickRef.current) {
+      closeRecentSearches();
+      shouldToggleRecentSearchesOnClickRef.current = false;
+      return;
+    }
+    openRecentSearches();
+  }, [closeRecentSearches, openRecentSearches]);
+
+  const handleSearchInputKeyDown = useCallback((event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
+
+    if (canShowRecentSearches) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setShowRecentSearches(true);
+        setActiveRecentSearchIndex((current) => {
+          if (current < 0) return 0;
+          return Math.min(current + 1, normalizedRecentSearches.length - 1);
+        });
+        return;
+      }
+
+      if (event.key === 'ArrowUp' && showRecentSearches) {
+        event.preventDefault();
+        setActiveRecentSearchIndex((current) => {
+          if (current <= 0) return normalizedRecentSearches.length - 1;
+          return current - 1;
+        });
+        return;
+      }
+
+      if (event.key === 'Enter' && showRecentSearches && activeRecentSearchIndex >= 0) {
+        event.preventDefault();
+        applyRecentSearch(normalizedRecentSearches[activeRecentSearchIndex]);
+        return;
+      }
+    }
+
+    if (event.key === 'Escape' && showRecentSearches) {
+      event.preventDefault();
+      closeRecentSearches();
+      return;
+    }
+
+    onSearchKeyDown?.(event);
+  }, [
+    activeRecentSearchIndex,
+    applyRecentSearch,
+    canShowRecentSearches,
+    closeRecentSearches,
+    normalizedRecentSearches,
+    onSearchKeyDown,
+    showRecentSearches,
+  ]);
+
   return (
     <header className="header" onClick={(e) => e.stopPropagation()}>
       {/* 主行：搜索 + 收藏 + 标签筛选 + 类型筛选 + 设置 */}
       <div className="header-row">
-        <div className="search-box">
+        <div className="search-box" ref={searchBoxRef}>
           <input
             id="history-search-input"
             ref={searchInputRef}
             type="text"
             placeholder={t('search.placeholder')}
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onKeyDown={onSearchKeyDown}
+            onChange={handleSearchInputChange}
+            onMouseDown={handleSearchInputMouseDown}
+            onClick={handleSearchInputClick}
+            onKeyDown={handleSearchInputKeyDown}
             className="search-input"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
           />
+          {showRecentSearches && canShowRecentSearches && (
+            <div className="search-recent-dropdown" role="listbox" aria-label={t('search.recent.title')}>
+              <div className="search-recent-header">
+                <div className="search-recent-title">
+                  <Clock3 size={12} />
+                  <span>{t('search.recent.title')}</span>
+                </div>
+                <button
+                  type="button"
+                  className="search-recent-clear-btn"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onClearRecentSearches?.();
+                    closeRecentSearches();
+                  }}
+                >
+                  {t('search.recent.clearAll')}
+                </button>
+              </div>
+              <div className="search-recent-list">
+                {normalizedRecentSearches.map((query, index) => (
+                  <div
+                    key={query}
+                    className={`search-recent-item ${activeRecentSearchIndex === index ? 'active' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="search-recent-apply-btn"
+                      onMouseEnter={() => setActiveRecentSearchIndex(index)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => applyRecentSearch(query)}
+                    >
+                      <Clock3 size={12} />
+                      <span className="search-recent-query">{query}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="search-recent-remove-btn"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onRemoveRecentSearch?.(query);
+                        if (normalizedRecentSearches.length <= 1) {
+                          closeRecentSearches();
+                        }
+                      }}
+                      title={t('search.recent.remove')}
+                      aria-label={t('search.recent.remove')}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {searchQuery && (
             <button
               type="button"

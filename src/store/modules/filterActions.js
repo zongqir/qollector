@@ -6,6 +6,13 @@ import {
   persistSavedFilterViews,
   persistWorkbenchSavedFilterViews,
 } from './filterViews';
+import {
+  persistCollectionRecentSearches,
+  persistHistoryRecentSearches,
+  persistWorkbenchRecentSearches,
+  recordHistoryRecentSearch,
+  removeHistoryRecentSearch,
+} from './searchHistory';
 
 const resolveBooleanUpdate = (updater, currentValue) => {
   const nextValue = typeof updater === 'function'
@@ -16,6 +23,65 @@ const resolveBooleanUpdate = (updater, currentValue) => {
 
 export const createFilterActions = (set, get) => ({
   setSearchQuery: (q) => set({ searchQuery: q }),
+  setCollectionSearchQuery: (q) => set({ collectionSearchQuery: q }),
+  addHistoryRecentSearch: (query) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery) return [];
+
+    let nextEntries = [];
+    set((state) => {
+      nextEntries = recordHistoryRecentSearch(state.historyRecentSearches, normalizedQuery);
+      persistHistoryRecentSearches(nextEntries);
+      return {
+        historyRecentSearches: nextEntries,
+      };
+    });
+    return nextEntries;
+  },
+  removeHistoryRecentSearch: (query) => {
+    set((state) => {
+      const nextEntries = removeHistoryRecentSearch(state.historyRecentSearches, query);
+      persistHistoryRecentSearches(nextEntries);
+      return {
+        historyRecentSearches: nextEntries,
+      };
+    });
+  },
+  clearHistoryRecentSearches: () => set(() => {
+    persistHistoryRecentSearches([]);
+    return {
+      historyRecentSearches: [],
+    };
+  }),
+  addCollectionRecentSearch: (query) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery) return [];
+
+    let nextEntries = [];
+    set((state) => {
+      nextEntries = recordHistoryRecentSearch(state.collectionRecentSearches, normalizedQuery);
+      persistCollectionRecentSearches(nextEntries);
+      return {
+        collectionRecentSearches: nextEntries,
+      };
+    });
+    return nextEntries;
+  },
+  removeCollectionRecentSearch: (query) => {
+    set((state) => {
+      const nextEntries = removeHistoryRecentSearch(state.collectionRecentSearches, query);
+      persistCollectionRecentSearches(nextEntries);
+      return {
+        collectionRecentSearches: nextEntries,
+      };
+    });
+  },
+  clearCollectionRecentSearches: () => set(() => {
+    persistCollectionRecentSearches([]);
+    return {
+      collectionRecentSearches: [],
+    };
+  }),
   setSelectedType: (t) => set({ selectedType: t }),
   setSelectedTags: (tags) => set({ selectedTags: tags }),
   setShowFavoritesOnly: (v) => set((state) => ({
@@ -39,6 +105,35 @@ export const createFilterActions = (set, get) => ({
   setActiveFilterViewId: (id) => set({ activeFilterViewId: id || null }),
   clearActiveFilterView: () => set({ activeFilterViewId: null }),
   setWorkbenchSearchQuery: (q) => set({ workbenchSearchQuery: q }),
+  addWorkbenchRecentSearch: (query) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery) return [];
+
+    let nextEntries = [];
+    set((state) => {
+      nextEntries = recordHistoryRecentSearch(state.workbenchRecentSearches, normalizedQuery);
+      persistWorkbenchRecentSearches(nextEntries);
+      return {
+        workbenchRecentSearches: nextEntries,
+      };
+    });
+    return nextEntries;
+  },
+  removeWorkbenchRecentSearch: (query) => {
+    set((state) => {
+      const nextEntries = removeHistoryRecentSearch(state.workbenchRecentSearches, query);
+      persistWorkbenchRecentSearches(nextEntries);
+      return {
+        workbenchRecentSearches: nextEntries,
+      };
+    });
+  },
+  clearWorkbenchRecentSearches: () => set(() => {
+    persistWorkbenchRecentSearches([]);
+    return {
+      workbenchRecentSearches: [],
+    };
+  }),
   setWorkbenchSelectedType: (t) => set({ workbenchSelectedType: t }),
   setWorkbenchSelectedTags: (tags) => set({ workbenchSelectedTags: tags }),
   setWorkbenchShowFavoritesOnly: (v) => set((state) => ({

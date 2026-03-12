@@ -54,6 +54,11 @@
     "searching": "Searching...",
     "queryFailed": "Backend filtering failed. Please retry.",
     "retryLoad": "Reload",
+    "recent": {
+      "title": "Recent Searches",
+      "clearAll": "Clear",
+      "remove": "Remove search"
+    },
     "typeFilter": {
       "all": "All",
       "text": "Text",

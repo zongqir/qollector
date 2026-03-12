@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2, Tag, X } from 'lucide-react';
+import { Check, Loader2, Star, Tag, X } from 'lucide-react';
 import { formatHistoryCardTime, getContentPreview } from '../../utils/formatters';
 import { getTags, hasReservedTagPrefix } from '../../utils/tagHelpers';
 
@@ -11,11 +11,13 @@ function WorkbenchInlineEditor({
   onActiveItemChange,
   onItemPatched,
   onRefreshItems,
+  onToggleFavorite,
 }) {
   const { t, i18n } = useTranslation();
   const [noteDraft, setNoteDraft] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [favoritePending, setFavoritePending] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
   const activeItem = useMemo(
@@ -39,6 +41,11 @@ function WorkbenchInlineEditor({
     return () => window.clearTimeout(timer);
   }, [feedback]);
 
+  const hasNoteChanges = useMemo(
+    () => String(activeItem?.user_note || '') !== noteDraft,
+    [activeItem?.user_note, noteDraft],
+  );
+
   const persistItem = useCallback(async (nextFields) => {
     if (!activeItem) return false;
     const updatedItem = {
@@ -54,8 +61,7 @@ function WorkbenchInlineEditor({
 
   const handleSaveNote = useCallback(async () => {
     if (!activeItem || busy) return;
-    const normalizedCurrent = String(activeItem.user_note || '');
-    if (normalizedCurrent === noteDraft) return;
+    if (!hasNoteChanges) return;
     setBusy(true);
     try {
       await persistItem({ user_note: noteDraft });
@@ -66,7 +72,31 @@ function WorkbenchInlineEditor({
     } finally {
       setBusy(false);
     }
-  }, [activeItem, busy, noteDraft, persistItem, t]);
+  }, [activeItem, busy, hasNoteChanges, noteDraft, persistItem, t]);
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (!activeItem || favoritePending) return;
+    setFavoritePending(true);
+    const nextFavoriteStateFallback = !activeItem.is_favorite;
+
+    try {
+      const result = onToggleFavorite
+        ? await onToggleFavorite(activeItem)
+        : await invoke('toggle_favorite_item', { id: activeItem.id }).then(() => nextFavoriteStateFallback);
+      const nextFavoriteState = typeof result === 'boolean' ? result : nextFavoriteStateFallback;
+      onItemPatched?.({
+        ...activeItem,
+        is_favorite: nextFavoriteState,
+        favorite_order: nextFavoriteState ? 1 : null,
+        updated_at: Math.floor(Date.now() / 1000),
+      });
+    } catch (error) {
+      const message = typeof error === 'string' ? error : (error?.message || String(error));
+      setFeedback({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
+    } finally {
+      setFavoritePending(false);
+    }
+  }, [activeItem, favoritePending, onItemPatched, onToggleFavorite, t]);
 
   const handleAddTag = useCallback(async () => {
     if (!activeItem || busy) return;
@@ -119,9 +149,39 @@ function WorkbenchInlineEditor({
   return (
     <div className="workbench-inline-editor">
       <div className="workbench-inline-editor-header">
-        <div className="workbench-inline-editor-title">{t('item.editNoteAndTags')}</div>
-        <div className="workbench-inline-editor-active-time">
-          {formatHistoryCardTime(activeItem.updated_at, i18n.language, Date.now(), t('item.justNow'))}
+        <div className="workbench-inline-editor-title-group">
+          <div className="workbench-inline-editor-title">{t('item.editNoteAndTags')}</div>
+          <div className="workbench-inline-editor-active-time">
+            {formatHistoryCardTime(activeItem.updated_at, i18n.language, Date.now(), t('item.justNow'))}
+          </div>
+        </div>
+        <div className="workbench-inline-editor-actions">
+          <button
+            type="button"
+            className={`workbench-inline-header-btn favorite ${activeItem.is_favorite ? 'is-active' : ''}`}
+            onClick={handleToggleFavorite}
+            disabled={favoritePending}
+            title={activeItem.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+            aria-label={activeItem.is_favorite ? t('item.unfavorite') : t('item.favorite')}
+          >
+            {favoritePending ? (
+              <Loader2 size={13} className="workbench-feedback-spinner" />
+            ) : (
+              <Star size={13} fill={activeItem.is_favorite ? 'currentColor' : 'none'} />
+            )}
+            <span>{activeItem.is_favorite ? t('item.favorited') : t('item.favorite')}</span>
+          </button>
+          <button
+            type="button"
+            className="workbench-inline-header-btn save"
+            onClick={handleSaveNote}
+            disabled={busy || !hasNoteChanges}
+            title={t('edit.save')}
+            aria-label={t('edit.save')}
+          >
+            {busy ? <Loader2 size={13} className="workbench-feedback-spinner" /> : <Check size={13} />}
+            <span>{t('edit.save')}</span>
+          </button>
         </div>
       </div>
 
@@ -148,16 +208,13 @@ function WorkbenchInlineEditor({
           onChange={(event) => setNoteDraft(event.target.value)}
           placeholder={t('edit.notePlaceholder')}
           disabled={busy}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+              event.preventDefault();
+              handleSaveNote();
+            }
+          }}
         />
-        <button
-          type="button"
-          className="workbench-inline-save-btn"
-          onClick={handleSaveNote}
-          disabled={busy}
-        >
-          {busy ? <Loader2 size={13} className="workbench-feedback-spinner" /> : <Check size={13} />}
-          <span>{t('edit.save')}</span>
-        </button>
       </div>
 
       <div className="workbench-inline-tags-row">

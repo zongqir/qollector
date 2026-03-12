@@ -57,10 +57,25 @@ export { createSelectionActions } from './selectionActions';
 export { createShareActions } from './shareActions';
 export { getShareCache, saveShareCache } from './shareCache';
 export {
+  MAX_HISTORY_RECENT_SEARCHES,
+  normalizeHistoryRecentSearches,
+  readHistoryRecentSearches,
+  readCollectionRecentSearches,
+  readWorkbenchRecentSearches,
+  persistHistoryRecentSearches,
+  persistCollectionRecentSearches,
+  persistWorkbenchRecentSearches,
+  recordHistoryRecentSearch,
+  removeHistoryRecentSearch,
+} from './searchHistory';
+export {
+  COLLECTION_RECENT_SEARCHES_STORAGE_KEY,
   HISTORY_SNAPSHOT_STORAGE_KEY,
   HISTORY_STREAM_ENABLED_STORAGE_KEY,
   FILTER_VIEWS_STORAGE_KEY,
+  HISTORY_RECENT_SEARCHES_STORAGE_KEY,
   WORKBENCH_FILTER_VIEWS_STORAGE_KEY,
+  WORKBENCH_RECENT_SEARCHES_STORAGE_KEY,
   TOUR_COMPLETED_STORAGE_KEY,
 } from '../../constants/storageKeys';
 export { createTagActions } from './tagActions';

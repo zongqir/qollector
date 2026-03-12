@@ -5,6 +5,7 @@ import {
   Bookmark,
   Calendar,
   ChevronDown,
+  Clock3,
   Package,
   Star,
   Tag,
@@ -125,6 +126,8 @@ function WorkbenchPanel() {
   const [workbenchSavedViewName, setWorkbenchSavedViewName] = useState('');
   const [workbenchTagSearchQuery, setWorkbenchTagSearchQuery] = useState('');
   const [debouncedWorkbenchTagSearchQuery, setDebouncedWorkbenchTagSearchQuery] = useState('');
+  const [showWorkbenchRecentSearches, setShowWorkbenchRecentSearches] = useState(false);
+  const [activeWorkbenchRecentSearchIndex, setActiveWorkbenchRecentSearchIndex] = useState(-1);
   const [backendWorkbenchUserTags, setBackendWorkbenchUserTags] = useState([]);
   const [workbenchDebouncedSearchQuery, setWorkbenchDebouncedSearchQuery] = useState('');
   const [backendFilteredPinnedIds, setBackendFilteredPinnedIds] = useState(null);
@@ -146,6 +149,9 @@ function WorkbenchPanel() {
   const workbenchDateWrapperRef = useRef(null);
   const workbenchTagWrapperRef = useRef(null);
   const workbenchSavedViewWrapperRef = useRef(null);
+  const workbenchSearchBoxRef = useRef(null);
+  const workbenchSearchInputRef = useRef(null);
+  const shouldToggleWorkbenchRecentSearchesOnClickRef = useRef(false);
   const workbenchTagListboxRef = useRef(null);
   const workbenchFilterRowRef = useRef(null);
   const workbenchFilterFullSizerRef = useRef(null);
@@ -186,6 +192,7 @@ function WorkbenchPanel() {
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
   const openEditModal = useAppStore(s => s.openEditModal);
   const searchQuery = useAppStore(s => s.workbenchSearchQuery);
+  const workbenchRecentSearches = useAppStore(s => s.workbenchRecentSearches);
   const selectedType = useAppStore(s => s.workbenchSelectedType);
   const selectedTags = useAppStore(s => s.workbenchSelectedTags);
   const showFavoritesOnly = useAppStore(s => s.workbenchShowFavoritesOnly);
@@ -196,6 +203,9 @@ function WorkbenchPanel() {
   const savedFilterViews = useAppStore(s => s.workbenchSavedFilterViews);
   const activeFilterViewId = useAppStore(s => s.workbenchActiveFilterViewId);
   const setSearchQuery = useAppStore(s => s.setWorkbenchSearchQuery);
+  const addWorkbenchRecentSearch = useAppStore(s => s.addWorkbenchRecentSearch);
+  const removeWorkbenchRecentSearch = useAppStore(s => s.removeWorkbenchRecentSearch);
+  const clearWorkbenchRecentSearches = useAppStore(s => s.clearWorkbenchRecentSearches);
   const setSelectedType = useAppStore(s => s.setWorkbenchSelectedType);
   const setSelectedTags = useAppStore(s => s.setWorkbenchSelectedTags);
   const setShowFavoritesOnly = useAppStore(s => s.setWorkbenchShowFavoritesOnly);
@@ -241,6 +251,14 @@ function WorkbenchPanel() {
     }, WORKBENCH_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  useEffect(() => {
+    const normalizedQuery = typeof workbenchDebouncedSearchQuery === 'string'
+      ? workbenchDebouncedSearchQuery.trim()
+      : '';
+    if (!normalizedQuery) return;
+    addWorkbenchRecentSearch(normalizedQuery);
+  }, [addWorkbenchRecentSearch, workbenchDebouncedSearchQuery]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -489,6 +507,17 @@ function WorkbenchPanel() {
     if (!normalized) return '';
     return normalized.length > 18 ? `${normalized.slice(0, 18)}…` : normalized;
   }, [searchQuery]);
+  const normalizedWorkbenchRecentSearches = useMemo(() => (
+    Array.isArray(workbenchRecentSearches)
+      ? workbenchRecentSearches
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean)
+      : []
+  ), [workbenchRecentSearches]);
+  const canShowWorkbenchRecentSearches = useMemo(
+    () => searchQuery.trim().length === 0 && normalizedWorkbenchRecentSearches.length > 0,
+    [normalizedWorkbenchRecentSearches.length, searchQuery],
+  );
 
   const hasWorkbenchFilters = Boolean(
     searchQuery.trim()
@@ -830,6 +859,14 @@ function WorkbenchPanel() {
   }, [pinnedItems.length, workbenchSortMode, handleFinishWorkbenchSortMode]);
 
   useClickOutsideDismiss({
+    isOpen: showWorkbenchRecentSearches,
+    wrapperRef: workbenchSearchBoxRef,
+    onDismiss: () => {
+      setShowWorkbenchRecentSearches(false);
+      setActiveWorkbenchRecentSearchIndex(-1);
+    },
+  });
+  useClickOutsideDismiss({
     isOpen: showWorkbenchTypeFilter,
     wrapperRef: workbenchTypeWrapperRef,
     onDismiss: () => setShowWorkbenchTypeFilter(false),
@@ -851,6 +888,124 @@ function WorkbenchPanel() {
   });
 
   useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
+
+  useEffect(() => {
+    if (!showWorkbenchRecentSearches) {
+      setActiveWorkbenchRecentSearchIndex(-1);
+      return;
+    }
+    if (!canShowWorkbenchRecentSearches) {
+      setShowWorkbenchRecentSearches(false);
+      setActiveWorkbenchRecentSearchIndex(-1);
+      return;
+    }
+    setActiveWorkbenchRecentSearchIndex((current) => (
+      current >= normalizedWorkbenchRecentSearches.length
+        ? normalizedWorkbenchRecentSearches.length - 1
+        : current
+    ));
+  }, [
+    canShowWorkbenchRecentSearches,
+    normalizedWorkbenchRecentSearches.length,
+    showWorkbenchRecentSearches,
+  ]);
+
+  const closeWorkbenchRecentSearches = useCallback(() => {
+    setShowWorkbenchRecentSearches(false);
+    setActiveWorkbenchRecentSearchIndex(-1);
+  }, []);
+
+  const openWorkbenchRecentSearches = useCallback(() => {
+    if (!canShowWorkbenchRecentSearches) return;
+    setShowWorkbenchRecentSearches(true);
+  }, [canShowWorkbenchRecentSearches]);
+
+  const applyWorkbenchRecentSearch = useCallback((query) => {
+    const normalizedQuery = String(query || '').trim();
+    if (!normalizedQuery) return;
+    setSearchQuery(normalizedQuery);
+    addWorkbenchRecentSearch(normalizedQuery);
+    closeWorkbenchRecentSearches();
+    window.requestAnimationFrame(() => {
+      const input = workbenchSearchInputRef.current;
+      if (!input) return;
+      input.focus();
+      const cursor = normalizedQuery.length;
+      input.setSelectionRange?.(cursor, cursor);
+    });
+  }, [addWorkbenchRecentSearch, closeWorkbenchRecentSearches, setSearchQuery]);
+
+  const handleWorkbenchSearchChange = useCallback((event) => {
+    const nextValue = event.target.value;
+    setSearchQuery(nextValue);
+    if (nextValue.trim()) {
+      closeWorkbenchRecentSearches();
+      return;
+    }
+    openWorkbenchRecentSearches();
+  }, [closeWorkbenchRecentSearches, openWorkbenchRecentSearches, setSearchQuery]);
+
+  const handleWorkbenchSearchMouseDown = useCallback(() => {
+    const input = workbenchSearchInputRef.current;
+    shouldToggleWorkbenchRecentSearchesOnClickRef.current = Boolean(
+      input
+      && document.activeElement === input
+      && canShowWorkbenchRecentSearches
+      && showWorkbenchRecentSearches
+    );
+  }, [canShowWorkbenchRecentSearches, showWorkbenchRecentSearches]);
+
+  const handleWorkbenchSearchClick = useCallback(() => {
+    if (shouldToggleWorkbenchRecentSearchesOnClickRef.current) {
+      closeWorkbenchRecentSearches();
+      shouldToggleWorkbenchRecentSearchesOnClickRef.current = false;
+      return;
+    }
+    openWorkbenchRecentSearches();
+  }, [closeWorkbenchRecentSearches, openWorkbenchRecentSearches]);
+
+  const handleWorkbenchSearchKeyDown = useCallback((event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
+
+    if (canShowWorkbenchRecentSearches) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setShowWorkbenchRecentSearches(true);
+        setActiveWorkbenchRecentSearchIndex((current) => {
+          if (current < 0) return 0;
+          return Math.min(current + 1, normalizedWorkbenchRecentSearches.length - 1);
+        });
+        return;
+      }
+
+      if (event.key === 'ArrowUp' && showWorkbenchRecentSearches) {
+        event.preventDefault();
+        setActiveWorkbenchRecentSearchIndex((current) => {
+          if (current <= 0) return normalizedWorkbenchRecentSearches.length - 1;
+          return current - 1;
+        });
+        return;
+      }
+
+      if (event.key === 'Enter' && showWorkbenchRecentSearches && activeWorkbenchRecentSearchIndex >= 0) {
+        event.preventDefault();
+        applyWorkbenchRecentSearch(normalizedWorkbenchRecentSearches[activeWorkbenchRecentSearchIndex]);
+        return;
+      }
+    }
+
+    if (event.key === 'Escape' && showWorkbenchRecentSearches) {
+      event.preventDefault();
+      closeWorkbenchRecentSearches();
+    }
+  }, [
+    activeWorkbenchRecentSearchIndex,
+    applyWorkbenchRecentSearch,
+    canShowWorkbenchRecentSearches,
+    closeWorkbenchRecentSearches,
+    normalizedWorkbenchRecentSearches,
+    showWorkbenchRecentSearches,
+  ]);
 
   const isComposingKeyEvent = useCallback(
     (event) => event.nativeEvent?.isComposing || event.isComposing || event.keyCode === 229,
@@ -1589,14 +1744,77 @@ function WorkbenchPanel() {
       {quickNoteSection}
       {!isWorkbenchFiltersCollapsed && (
         <div className={workbenchFilterRowClassName} ref={workbenchFilterRowRef}>
-          <div className="workbench-search-box">
+          <div className="workbench-search-box" ref={workbenchSearchBoxRef}>
             <input
               type="text"
+              ref={workbenchSearchInputRef}
               className="workbench-search-input"
               placeholder={t('search.placeholder')}
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={handleWorkbenchSearchChange}
+              onMouseDown={handleWorkbenchSearchMouseDown}
+              onClick={handleWorkbenchSearchClick}
+              onKeyDown={handleWorkbenchSearchKeyDown}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
             />
+            {showWorkbenchRecentSearches && canShowWorkbenchRecentSearches && (
+              <div className="search-recent-dropdown" role="listbox" aria-label={t('search.recent.title')}>
+                <div className="search-recent-header">
+                  <div className="search-recent-title">
+                    <Clock3 size={12} />
+                    <span>{t('search.recent.title')}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="search-recent-clear-btn"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      clearWorkbenchRecentSearches();
+                      closeWorkbenchRecentSearches();
+                    }}
+                  >
+                    {t('search.recent.clearAll')}
+                  </button>
+                </div>
+                <div className="search-recent-list">
+                  {normalizedWorkbenchRecentSearches.map((query, index) => (
+                    <div
+                      key={query}
+                      className={`search-recent-item ${activeWorkbenchRecentSearchIndex === index ? 'active' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className="search-recent-apply-btn"
+                        onMouseEnter={() => setActiveWorkbenchRecentSearchIndex(index)}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => applyWorkbenchRecentSearch(query)}
+                      >
+                        <Clock3 size={12} />
+                        <span className="search-recent-query">{query}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="search-recent-remove-btn"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          removeWorkbenchRecentSearch(query);
+                          if (normalizedWorkbenchRecentSearches.length <= 1) {
+                            closeWorkbenchRecentSearches();
+                          }
+                        }}
+                        title={t('search.recent.remove')}
+                        aria-label={t('search.recent.remove')}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {searchQuery && (
               <button
                 type="button"
@@ -1834,6 +2052,7 @@ function WorkbenchPanel() {
           onActiveItemChange={setWorkbenchInlineEditorActiveItemId}
           onItemPatched={handleWorkbenchInlineEditorPatched}
           onRefreshItems={handleRefreshWorkbenchInlineEditorItems}
+          onToggleFavorite={toggleFavorite}
         />
       )}
 

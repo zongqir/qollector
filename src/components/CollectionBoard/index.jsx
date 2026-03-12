@@ -813,8 +813,10 @@ function CollectionBoard({
       // Keep the card visible in current collection session even after un-favorite,
       // and only update star state immediately.
       patchCollectionItem(item.id, { is_favorite: nextFavoriteState });
+      return nextFavoriteState;
     } catch (error) {
       console.error('[CollectionBoard] toggle favorite failed:', error);
+      return item.is_favorite;
     }
   }, [onToggleFavorite, patchCollectionItem]);
 
@@ -1662,6 +1664,7 @@ function CollectionBoard({
           onActiveItemChange={setActiveItemId}
           onItemPatched={handleCollectionInlineEditorPatched}
           onRefreshItems={handleRefreshCollectionInlineEditorItems}
+          onToggleFavorite={handleToggleFavorite}
         />
       )}
       {showSortEntryToast && (

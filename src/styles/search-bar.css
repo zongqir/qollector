@@ -23,6 +23,123 @@
   min-width: 64px;
 }
 
+.search-recent-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--control-dropdown-border);
+  border-radius: 12px;
+  background: var(--control-dropdown-bg);
+  box-shadow: var(--control-dropdown-shadow);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.search-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.search-recent-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.search-recent-clear-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+
+.search-recent-clear-btn:hover {
+  color: var(--text-primary);
+}
+
+.search-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.search-recent-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
+  transition:
+    border-color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.search-recent-item.active {
+  border-color: var(--control-dropdown-item-active-border);
+  background: var(--control-dropdown-item-active-bg);
+}
+
+.search-recent-apply-btn,
+.search-recent-remove-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.search-recent-apply-btn {
+  min-width: 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.search-recent-query {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-recent-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+  color: var(--text-tertiary);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard);
+}
+
+.search-recent-remove-btn:hover {
+  background: color-mix(in srgb, var(--state-error-bg) 80%, transparent);
+  color: var(--state-error-fg);
+}
+
 .search-input {
   width: 100%;
   padding: 7px 30px 7px 12px;
@@ -391,6 +508,24 @@
   width: 15px;
   height: 15px;
   right: 4px;
+}
+
+.app.mini-mode .search-recent-dropdown {
+  top: calc(100% + 4px);
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.app.mini-mode .search-recent-apply-btn {
+  min-height: 28px;
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.app.mini-mode .search-recent-remove-btn {
+  width: 24px;
+  height: 24px;
 }
 
 .app.mini-mode .header-icon-btn {

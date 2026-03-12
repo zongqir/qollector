@@ -54,6 +54,11 @@
     "searching": "搜索中...",
     "queryFailed": "后端筛选失败，请稍后重试",
     "retryLoad": "重新加载",
+    "recent": {
+      "title": "最近搜索",
+      "clearAll": "清空",
+      "remove": "移除此搜索"
+    },
     "typeFilter": {
       "all": "全部",
       "text": "文本",

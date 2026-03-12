@@ -1,6 +1,9 @@
 export const createBaseState = ({
   initialHistorySnapshot,
+  historyRecentSearches,
+  collectionRecentSearches,
   savedFilterViews,
+  workbenchRecentSearches,
   workbenchSavedFilterViews,
   historyStreamEnabled,
 }) => ({
@@ -32,6 +35,9 @@ export const createBaseState = ({
   // ========== 搜索/筛选 ==========
   searchQuery: '',
   debouncedSearchQuery: '',
+  historyRecentSearches,
+  collectionSearchQuery: '',
+  collectionRecentSearches,
   selectedType: 'all',
   selectedTags: [],
   showFavoritesOnly: false,
@@ -47,6 +53,7 @@ export const createBaseState = ({
 
   // ========== 工作区筛选（独立于历史流） ==========
   workbenchSearchQuery: '',
+  workbenchRecentSearches,
   workbenchSelectedType: 'all',
   workbenchSelectedTags: [],
   workbenchShowFavoritesOnly: false,

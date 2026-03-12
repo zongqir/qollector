@@ -228,11 +228,20 @@ export const createItemActions = (set, get) => ({
         return {
           items: nextItems,
           previewItem: nextPreviewItem,
+          editingItem: state.editingItem?.id === item.id
+            ? {
+              ...state.editingItem,
+              is_favorite: newFavorite,
+              favorite_order: newFavorite ? 1 : null,
+            }
+            : state.editingItem,
           itemsRevision: state.itemsRevision + 1,
         };
       });
+      return newFavorite;
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+      return item.is_favorite;
     }
   },
 
