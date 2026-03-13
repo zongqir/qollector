@@ -35,6 +35,12 @@ function PreviewPanel() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
   const [showSecondaryTools, setShowSecondaryTools] = useState(false);
+  const [panelMetrics, setPanelMetrics] = useState({ width: 0, height: 0 });
+  const [previewNoteState, setPreviewNoteState] = useState({
+    isExpanded: false,
+    canExpand: false,
+    hasExpandedOverflow: false,
+  });
   const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [previewToast, setPreviewToast] = useState('');
@@ -173,6 +179,30 @@ function PreviewPanel() {
     return true;
   }, []);
 
+  useEffect(() => {
+    const panelEl = panelRef.current;
+    if (!panelEl) return undefined;
+
+    const updatePanelMetrics = () => {
+      const rect = panelEl.getBoundingClientRect();
+      setPanelMetrics({
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      });
+    };
+
+    updatePanelMetrics();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updatePanelMetrics);
+      return () => window.removeEventListener('resize', updatePanelMetrics);
+    }
+
+    const observer = new ResizeObserver(updatePanelMetrics);
+    observer.observe(panelEl);
+    return () => observer.disconnect();
+  }, []);
+
   // Check if toolbar needs compact mode (when buttons would wrap to multiple lines)
   useEffect(() => {
     if (!toolbarRef.current) return;
@@ -295,6 +325,24 @@ function PreviewPanel() {
   useEffect(() => {
     setShowAIAssistant(false);
   }, [item.id]);
+
+  useEffect(() => {
+    setPreviewNoteState({
+      isExpanded: false,
+      canExpand: false,
+      hasExpandedOverflow: false,
+    });
+  }, [item.id]);
+
+  useEffect(() => {
+    if (showAIAssistant || isEditingContent) {
+      setPreviewNoteState({
+        isExpanded: false,
+        canExpand: false,
+        hasExpandedOverflow: false,
+      });
+    }
+  }, [showAIAssistant, isEditingContent]);
 
   const showPreviewToast = useCallback((message, duration = 2000) => {
     if (!message) return;
@@ -658,8 +706,27 @@ function PreviewPanel() {
     );
   };
 
+  const isNoteEditing = editingNoteId === item.id;
+  const shouldUseNoteFocusLayout = (
+    previewNoteState.hasExpandedOverflow
+    && (
+      isToolbarCompact
+      || (panelMetrics.height > 0 && panelMetrics.height < 680)
+    )
+  ) || (
+    isNoteEditing
+    && (
+      isToolbarCompact
+      || (panelMetrics.height > 0 && panelMetrics.height < 620)
+    )
+  );
+  const isNoteFocusMode = !showAIAssistant
+    && !isEditingContent
+    && shouldUseNoteFocusLayout
+    && (previewNoteState.isExpanded || isNoteEditing);
+
   return (
-    <div className={`preview-panel ${previewTypeClass}`} ref={panelRef}>
+    <div className={`preview-panel ${previewTypeClass} ${isNoteFocusMode ? 'note-focus-mode' : ''}`} ref={panelRef}>
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
         <div className="preview-nav-main">
@@ -718,70 +785,74 @@ function PreviewPanel() {
       </div>
 
       {/* 鏍囩鍖?*/}
-      <div className="preview-tags-section">
-        <ItemTags
-          item={item}
-          selectedTags={selectedTags}
-          onTagClick={handleTagClick}
-          addingTagItemId={addingTagItemId}
-          newTagInput={newTagInput}
-          onNewTagInputChange={setNewTagInput}
-          onTagInputKeyDown={handleTagInputKeyDown}
-          onStartAddTag={startAddTag}
-          onCancelAddTag={cancelAddTag}
-          onAddTagToItem={addTagToItem}
-          filteredUserTags={filteredUserTags}
-          hideTypeTag
-          singleRow
-        />
-      </div>
+      {!isNoteFocusMode && (
+        <div className="preview-tags-section">
+          <ItemTags
+            item={item}
+            selectedTags={selectedTags}
+            onTagClick={handleTagClick}
+            addingTagItemId={addingTagItemId}
+            newTagInput={newTagInput}
+            onNewTagInputChange={setNewTagInput}
+            onTagInputKeyDown={handleTagInputKeyDown}
+            onStartAddTag={startAddTag}
+            onCancelAddTag={cancelAddTag}
+            onAddTagToItem={addTagToItem}
+            filteredUserTags={filteredUserTags}
+            hideTypeTag
+            singleRow
+          />
+        </div>
+      )}
 
       {/* 鍐呭鍖?*/}
-      <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
-        {isCopied && (
-          <div className="copy-success-toast">
-            <Check size={16} /> {t('item.copied')}
-          </div>
-        )}
-        {previewToast && (
-          <div className="preview-action-toast" role="status" aria-live="polite">
-            {previewToast}
-          </div>
-        )}
-        <AIAssistantPanel
-          open={showAIAssistant}
-          sourceText={assistantSourceText}
-          sourceType={item.type_}
-          onClose={() => setShowAIAssistant(false)}
-        />
-        {!showAIAssistant && !isEditingContent && pureColorPreview && (
-          <div className="preview-color-card">
-            <div
-              className="preview-color-card-swatch"
-              style={{ backgroundColor: pureColorPreview.previewCss }}
-            />
-            <div className="preview-color-card-values">
-              <div className="preview-color-card-row">
-                <span className="preview-color-card-label">HEX</span>
-                <code>{pureColorPreview.hex}</code>
-              </div>
-              <div className="preview-color-card-row">
-                <span className="preview-color-card-label">RGB</span>
-                <code>{pureColorPreview.rgb}</code>
-              </div>
-              <div className="preview-color-card-row">
-                <span className="preview-color-card-label">HSL</span>
-                <code>{pureColorPreview.hsl}</code>
+      {!isNoteFocusMode && (
+        <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
+          {isCopied && (
+            <div className="copy-success-toast">
+              <Check size={16} /> {t('item.copied')}
+            </div>
+          )}
+          {previewToast && (
+            <div className="preview-action-toast" role="status" aria-live="polite">
+              {previewToast}
+            </div>
+          )}
+          <AIAssistantPanel
+            open={showAIAssistant}
+            sourceText={assistantSourceText}
+            sourceType={item.type_}
+            onClose={() => setShowAIAssistant(false)}
+          />
+          {!showAIAssistant && !isEditingContent && pureColorPreview && (
+            <div className="preview-color-card">
+              <div
+                className="preview-color-card-swatch"
+                style={{ backgroundColor: pureColorPreview.previewCss }}
+              />
+              <div className="preview-color-card-values">
+                <div className="preview-color-card-row">
+                  <span className="preview-color-card-label">HEX</span>
+                  <code>{pureColorPreview.hex}</code>
+                </div>
+                <div className="preview-color-card-row">
+                  <span className="preview-color-card-label">RGB</span>
+                  <code>{pureColorPreview.rgb}</code>
+                </div>
+                <div className="preview-color-card-row">
+                  <span className="preview-color-card-label">HSL</span>
+                  <code>{pureColorPreview.hsl}</code>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {!showAIAssistant && renderContent()}
-      </div>
+          )}
+          {!showAIAssistant && renderContent()}
+        </div>
+      )}
 
       {/* 澶囨敞鍖?- 鍐呭涓嬫柟锛屼綔涓烘壒娉?*/}
       {!showAIAssistant && !isEditingContent && (
-        <div className="preview-note-section">
+        <div className={`preview-note-section ${isNoteFocusMode ? 'is-focus-mode' : ''}`}>
           <NoteDisplay
             item={item}
             editingNoteId={editingNoteId}
@@ -790,6 +861,9 @@ function PreviewPanel() {
             onStartEditNote={startEditNote}
             onSaveNote={saveNote}
             onCancelNoteEdit={cancelNoteEdit}
+            variant="preview"
+            focusMode={isNoteFocusMode}
+            onPreviewStateChange={setPreviewNoteState}
           />
           {!item.user_note && editingNoteId !== item.id && (
             <button className="preview-add-note-btn" onClick={() => startEditNote(item)}>
@@ -801,7 +875,7 @@ function PreviewPanel() {
       )}
 
       {/* 鍏冧俊鎭?- 搴曢儴鍙傝€?*/}
-      {!showAIAssistant && !isEditingContent && (
+      {!showAIAssistant && !isEditingContent && !isNoteFocusMode && (
         <div className="preview-meta">
           {pureColorPreview && (
             <span className="preview-meta-color">
@@ -823,171 +897,173 @@ function PreviewPanel() {
       )}
 
       {/* 宸ュ叿鏍?*/}
-      <div
-        ref={toolbarRef}
-        className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''} ${showSecondaryTools ? 'show-secondary' : ''}`}
-      >
-        {isEditingContent ? (
-          <>
-            <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
-            <button className="preview-tool-btn" onClick={() => setIsEditingContent(false)}>
-              <span>{t('panel.cancelEdit')}</span>
-            </button>
-            <button className="preview-tool-btn active" onClick={handleSaveContent}>
-              <Check size={14} />
-              <span>{t('panel.saveContent')}</span>
-            </button>
-          </>
-        ) : (
-          <>
-            {item.has_raw_formats && item.content && (
+      {!isNoteFocusMode && (
+        <div
+          ref={toolbarRef}
+          className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''} ${showSecondaryTools ? 'show-secondary' : ''}`}
+        >
+          {isEditingContent ? (
+            <>
+              <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
+              <button className="preview-tool-btn" onClick={() => setIsEditingContent(false)}>
+                <span>{t('panel.cancelEdit')}</span>
+              </button>
+              <button className="preview-tool-btn active" onClick={handleSaveContent}>
+                <Check size={14} />
+                <span>{t('panel.saveContent')}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {item.has_raw_formats && item.content && (
+                <button
+                  className={`preview-tool-btn secondary ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
+                  onClick={() => runToolbarCopyAction('plain-text', () => handleCopyPlainText(item.content, 'preview'))}
+                >
+                  {copiedToolbarAction === 'plain-text' ? <Check size={14} /> : <FileText size={14} />}
+                  <span>{copiedToolbarAction === 'plain-text' ? t('item.copied') : t('item.copyPlainText')}</span>
+                </button>
+              )}
+              {isJson && (
+                <button
+                  className={`preview-tool-btn secondary ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
+                  onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
+                >
+                  {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
+                  <span>{copiedToolbarAction === 'json' ? t('item.copied') : t('item.formatJsonCopy')}</span>
+                </button>
+              )}
+              {pureColorPreview && (
+                <button
+                  className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
+                  onClick={() => runToolbarCopyAction('hex', () => handleCopyPlainText(pureColorPreview.hex, 'preview'))}
+                  title={t('item.copyHex')}
+                >
+                  {copiedToolbarAction === 'hex' ? <Check size={14} /> : <Palette size={14} />}
+                  <span>{t('item.copyHex')}</span>
+                  <span className="compact-label">HEX</span>
+                </button>
+              )}
+              {pureColorPreview && (
+                <button
+                  className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
+                  onClick={() => runToolbarCopyAction('rgb', () => handleCopyPlainText(pureColorPreview.rgb, 'preview'))}
+                  title={t('item.copyRgb')}
+                >
+                  {copiedToolbarAction === 'rgb' ? <Check size={14} /> : <Palette size={14} />}
+                  <span>{t('item.copyRgb')}</span>
+                  <span className="compact-label">RGB</span>
+                </button>
+              )}
+              {pureColorPreview && (
+                <button
+                  className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
+                  onClick={() => runToolbarCopyAction('hsl', () => handleCopyPlainText(pureColorPreview.hsl, 'preview'))}
+                  title={t('item.copyHsl')}
+                >
+                  {copiedToolbarAction === 'hsl' ? <Check size={14} /> : <Palette size={14} />}
+                  <span>{t('item.copyHsl')}</span>
+                  <span className="compact-label">HSL</span>
+                </button>
+              )}
+              {shouldShowTimestampConvertButton && (
+                <button
+                  className={`preview-tool-btn secondary ${showTimestampConverted ? 'active' : ''}`}
+                  onClick={() => setShowTimestampConverted((prev) => !prev)}
+                  title={t('item.convertTimestamp')}
+                >
+                  <Clock3 size={14} />
+                  <span>{t('item.convertTimestamp')}</span>
+                </button>
+              )}
+              {shouldShowAIButton && (
+                <button
+                  className={`preview-tool-btn ${aiLocked ? 'locked' : ''}`}
+                  onClick={() => aiLocked ? useAppStore.getState().setShowSettings(true, 'license') : generateAITags(item)}
+                  disabled={!aiLocked && generatingAI === item.id}
+                  title={aiLocked ? t('license.proFeature') : undefined}
+                >
+                  {aiLocked ? <Lock size={14} /> : <Sparkles size={14} />}
+                  <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
+                </button>
+              )}
               <button
-                className={`preview-tool-btn secondary ${copiedToolbarAction === 'plain-text' ? 'copied' : ''}`}
-                onClick={() => runToolbarCopyAction('plain-text', () => handleCopyPlainText(item.content, 'preview'))}
+                className={`preview-tool-btn ${showAIAssistant ? 'active' : ''}`}
+                onClick={() => setShowAIAssistant(prev => !prev)}
+                disabled={!canUseAIAssistant}
+                title={!canUseAIAssistant ? t('aiAssistant.noInput') : t('aiAssistant.open')}
               >
-                {copiedToolbarAction === 'plain-text' ? <Check size={14} /> : <FileText size={14} />}
-                <span>{copiedToolbarAction === 'plain-text' ? t('item.copied') : t('item.copyPlainText')}</span>
+                <Bot size={14} />
+                <span>{t('aiAssistant.open')}</span>
               </button>
-            )}
-            {isJson && (
-              <button
-                className={`preview-tool-btn secondary ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
-                onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
-              >
-                {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
-                <span>{copiedToolbarAction === 'json' ? t('item.copied') : t('item.formatJsonCopy')}</span>
+              {shouldShowOCRButton && (
+                <button
+                  className={`preview-tool-btn ${ocrLocked ? 'locked' : ''}`}
+                  onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true, 'license') : handleOCR(item)}
+                  disabled={!ocrLocked && ocrProcessing === item.id}
+                  title={ocrLocked ? t('license.proFeature') : undefined}
+                >
+                  {ocrLocked ? <Lock size={14} /> : <Search size={14} />}
+                  <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
+                </button>
+              )}
+              {isToolbarCompact && (
+                <button
+                  className={`preview-tool-btn tool-more-btn ${showSecondaryTools ? 'active' : ''}`}
+                  onClick={() => setShowSecondaryTools(prev => !prev)}
+                  title={t('workbench.moreActions')}
+                  aria-pressed={showSecondaryTools}
+                >
+                  <MoreHorizontal size={14} />
+                  <span>{t('workbench.moreActions')}</span>
+                </button>
+              )}
+              {shouldShowOpenButton && (
+                <button className={`preview-tool-btn secondary ${openFeedback === 'open' ? 'clicked-feedback' : ''}`} onClick={handleOpen} title={openButtonTitle}>
+                  {openFeedback === 'open' ? <Check size={14} /> : <ExternalLink size={14} />}
+                  <span>{openFeedback === 'open' ? t('item.opened') : t('item.open')}</span>
+                </button>
+              )}
+              {shouldShowRevealButton && (
+                <button className={`preview-tool-btn secondary ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
+                  {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
+                  <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
+                </button>
+              )}
+              {shouldShowSaveImageButton && (
+                <button
+                  className="preview-tool-btn secondary"
+                  onClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
+                  title={t('item.imageOnlyView')}
+                >
+                  <Maximize2 size={14} />
+                  <span>{t('item.imageOnlyView')}</span>
+                </button>
+              )}
+              {shouldShowSaveImageButton && (
+                <button
+                  className="preview-tool-btn secondary"
+                  onClick={() => handleSaveImageAs(item)}
+                  title={t('item.saveImageAs')}
+                >
+                  <Download size={14} />
+                  <span>{t('item.saveAs')}</span>
+                </button>
+              )}
+              {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
+                <button className="preview-tool-btn secondary" onClick={handleStartEditContent}>
+                  <Edit2 size={14} />
+                  <span>{t('panel.editContent')}</span>
+                </button>
+              )}
+              <button className="preview-tool-btn secondary" onClick={() => openShareModal(item)}>
+                <Share2 size={14} />
+                <span>{t('share.button')}</span>
               </button>
-            )}
-            {pureColorPreview && (
-              <button
-                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
-                onClick={() => runToolbarCopyAction('hex', () => handleCopyPlainText(pureColorPreview.hex, 'preview'))}
-                title={t('item.copyHex')}
-              >
-                {copiedToolbarAction === 'hex' ? <Check size={14} /> : <Palette size={14} />}
-                <span>{t('item.copyHex')}</span>
-                <span className="compact-label">HEX</span>
-              </button>
-            )}
-            {pureColorPreview && (
-              <button
-                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'rgb' ? 'copied' : ''}`}
-                onClick={() => runToolbarCopyAction('rgb', () => handleCopyPlainText(pureColorPreview.rgb, 'preview'))}
-                title={t('item.copyRgb')}
-              >
-                {copiedToolbarAction === 'rgb' ? <Check size={14} /> : <Palette size={14} />}
-                <span>{t('item.copyRgb')}</span>
-                <span className="compact-label">RGB</span>
-              </button>
-            )}
-            {pureColorPreview && (
-              <button
-                className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hsl' ? 'copied' : ''}`}
-                onClick={() => runToolbarCopyAction('hsl', () => handleCopyPlainText(pureColorPreview.hsl, 'preview'))}
-                title={t('item.copyHsl')}
-              >
-                {copiedToolbarAction === 'hsl' ? <Check size={14} /> : <Palette size={14} />}
-                <span>{t('item.copyHsl')}</span>
-                <span className="compact-label">HSL</span>
-              </button>
-            )}
-            {shouldShowTimestampConvertButton && (
-              <button
-                className={`preview-tool-btn secondary ${showTimestampConverted ? 'active' : ''}`}
-                onClick={() => setShowTimestampConverted((prev) => !prev)}
-                title={t('item.convertTimestamp')}
-              >
-                <Clock3 size={14} />
-                <span>{t('item.convertTimestamp')}</span>
-              </button>
-            )}
-            {shouldShowAIButton && (
-              <button
-                className={`preview-tool-btn ${aiLocked ? 'locked' : ''}`}
-                onClick={() => aiLocked ? useAppStore.getState().setShowSettings(true, 'license') : generateAITags(item)}
-                disabled={!aiLocked && generatingAI === item.id}
-                title={aiLocked ? t('license.proFeature') : undefined}
-              >
-                {aiLocked ? <Lock size={14} /> : <Sparkles size={14} />}
-                <span>{generatingAI === item.id ? t('item.generating') : t('item.aiTag')}</span>
-              </button>
-            )}
-            <button
-              className={`preview-tool-btn ${showAIAssistant ? 'active' : ''}`}
-              onClick={() => setShowAIAssistant(prev => !prev)}
-              disabled={!canUseAIAssistant}
-              title={!canUseAIAssistant ? t('aiAssistant.noInput') : t('aiAssistant.open')}
-            >
-              <Bot size={14} />
-              <span>{t('aiAssistant.open')}</span>
-            </button>
-            {shouldShowOCRButton && (
-              <button
-                className={`preview-tool-btn ${ocrLocked ? 'locked' : ''}`}
-                onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true, 'license') : handleOCR(item)}
-                disabled={!ocrLocked && ocrProcessing === item.id}
-                title={ocrLocked ? t('license.proFeature') : undefined}
-              >
-                {ocrLocked ? <Lock size={14} /> : <Search size={14} />}
-                <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
-              </button>
-            )}
-            {isToolbarCompact && (
-              <button
-                className={`preview-tool-btn tool-more-btn ${showSecondaryTools ? 'active' : ''}`}
-                onClick={() => setShowSecondaryTools(prev => !prev)}
-                title={t('workbench.moreActions')}
-                aria-pressed={showSecondaryTools}
-              >
-                <MoreHorizontal size={14} />
-                <span>{t('workbench.moreActions')}</span>
-              </button>
-            )}
-            {shouldShowOpenButton && (
-              <button className={`preview-tool-btn secondary ${openFeedback === 'open' ? 'clicked-feedback' : ''}`} onClick={handleOpen} title={openButtonTitle}>
-                {openFeedback === 'open' ? <Check size={14} /> : <ExternalLink size={14} />}
-                <span>{openFeedback === 'open' ? t('item.opened') : t('item.open')}</span>
-              </button>
-            )}
-            {shouldShowRevealButton && (
-              <button className={`preview-tool-btn secondary ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
-                {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
-                <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
-              </button>
-            )}
-            {shouldShowSaveImageButton && (
-              <button
-                className="preview-tool-btn secondary"
-                onClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
-                title={t('item.imageOnlyView')}
-              >
-                <Maximize2 size={14} />
-                <span>{t('item.imageOnlyView')}</span>
-              </button>
-            )}
-            {shouldShowSaveImageButton && (
-              <button
-                className="preview-tool-btn secondary"
-                onClick={() => handleSaveImageAs(item)}
-                title={t('item.saveImageAs')}
-              >
-                <Download size={14} />
-                <span>{t('item.saveAs')}</span>
-              </button>
-            )}
-            {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
-              <button className="preview-tool-btn secondary" onClick={handleStartEditContent}>
-                <Edit2 size={14} />
-                <span>{t('panel.editContent')}</span>
-              </button>
-            )}
-            <button className="preview-tool-btn secondary" onClick={() => openShareModal(item)}>
-              <Share2 size={14} />
-              <span>{t('share.button')}</span>
-            </button>
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
