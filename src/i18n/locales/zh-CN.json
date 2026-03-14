@@ -782,7 +782,7 @@
     "renameSuccess": "已重命名为“{{name}}”",
     "deleteSuccess": "已删除“{{name}}”工作台",
     "quickNotePlaceholder": "输入笔记，回车添加到工作台...",
-    "quickNotePlaceholderWithTarget": "记到“{{name}}”工作台，回车添加...",
+    "quickNotePlaceholderWithTarget": "记到“{{name}}”，回车添加...",
     "expandedNotePlaceholder": "在这里写下你的想法...",
     "expandedNotePlaceholderWithTarget": "在“{{name}}”工作台里写下你的想法...",
     "expandedNoteSubmit": "添加到工作台",

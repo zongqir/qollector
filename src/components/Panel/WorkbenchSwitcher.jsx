@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Check,
   ChevronDown,
+  Layers,
   MoreHorizontal,
   Plus,
 } from 'lucide-react';
@@ -51,6 +52,7 @@ function WorkbenchSwitcher({
         disabled={disabled}
         tabIndex={measurementMode ? -1 : undefined}
       >
+        {isToolbarVariant && <Layers size={14} className="workbench-switcher-trigger-icon" />}
         <span className="workbench-switcher-trigger-label">{triggerLabel}</span>
         <ChevronDown size={12} className="workbench-switcher-trigger-caret" />
       </button>
