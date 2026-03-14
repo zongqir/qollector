@@ -681,6 +681,20 @@ function CollectionBoard({
     setBackendLimit(current => current + COLLECTION_QUERY_PAGE_SIZE);
   }, [canLoadMore]);
 
+  const handleCollectionTagRailWheel = useCallback((event) => {
+    const target = event.currentTarget;
+    if (!target) return;
+
+    const canScrollHorizontally = target.scrollWidth > target.clientWidth + 4;
+    if (!canScrollHorizontally) return;
+
+    const delta = Math.abs(event.deltaX) > 0.5 ? event.deltaX : event.deltaY;
+    if (Math.abs(delta) < 0.5) return;
+
+    target.scrollLeft += delta;
+    event.preventDefault();
+  }, []);
+
   const collectionDragEnabled = collectionItems.length > 1 && shouldUseDndLayout;
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1414,89 +1428,94 @@ function CollectionBoard({
       {!isMiniMode && (
         <div className="collection-tag-rail-wrap">
           <div className="collection-toolbar-row">
-            <div className="collection-tag-rail" role="toolbar" aria-label={t('collection.title')}>
-            <div className="collection-tag-search" onClick={(event) => event.stopPropagation()}>
-              <Search size={12} />
-              <input
-                type="text"
-                value={collectionTagQuery}
-                onChange={(event) => setCollectionTagQuery(event.target.value)}
-                placeholder={t('collection.searchTagsPlaceholder')}
-                aria-label={t('collection.searchTagsPlaceholder')}
-              />
-              {collectionTagQuery && (
-                <button
-                  type="button"
-                  className="collection-tag-search-clear"
-                  onClick={() => setCollectionTagQuery('')}
-                  title={t('toolbar.clearFilter')}
-                  aria-label={t('toolbar.clearFilter')}
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-            <button
-              type="button"
-              className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
-              onClick={() => setSelectedCollectionTags([])}
+            <div
+              className="collection-tag-rail"
+              role="toolbar"
+              aria-label={t('collection.title')}
+              onWheel={handleCollectionTagRailWheel}
             >
-              {t('collection.allTags')}
-              <span className="collection-tag-chip-count">{allCollectionTags.length}</span>
-            </button>
-            {visibleCollectionTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                className={`collection-tag-chip ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
-                onClick={() => toggleRailTag(tag)}
-              >
-                {tag}
-                <span className="collection-tag-chip-count">{collectionTagCounts.get(tag) || 0}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              className="collection-tag-chip add"
-              onClick={handleOpenTagEditor}
-              title={t('item.addTag')}
-              aria-label={t('item.addTag')}
-            >
-              <Plus size={12} />
-            </button>
-            {showTagEditor && (
-              <div className="collection-tag-editor" onClick={(event) => event.stopPropagation()}>
+              <div className="collection-tag-search" onClick={(event) => event.stopPropagation()}>
+                <Search size={12} />
                 <input
                   type="text"
-                  value={draftTag}
-                  onChange={(event) => setDraftTag(event.target.value)}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder={t('collection.addTagPlaceholder')}
-                  autoFocus
+                  value={collectionTagQuery}
+                  onChange={(event) => setCollectionTagQuery(event.target.value)}
+                  placeholder={t('collection.searchTagsPlaceholder')}
+                  aria-label={t('collection.searchTagsPlaceholder')}
                 />
-                <button
-                  type="button"
-                  className="confirm"
-                  onClick={() => void submitTag()}
-                  disabled={tagEditorBusy || !normalizeTag(draftTag)}
-                  title={t('collection.confirmAddTag')}
-                  aria-label={t('collection.confirmAddTag')}
-                >
-                  <Check size={12} />
-                </button>
-                <button
-                  type="button"
-                  className="cancel"
-                  onClick={closeTagEditor}
-                  title={t('collection.cancelAddTag')}
-                  aria-label={t('collection.cancelAddTag')}
-                >
-                  <X size={12} />
-                </button>
+                {collectionTagQuery && (
+                  <button
+                    type="button"
+                    className="collection-tag-search-clear"
+                    onClick={() => setCollectionTagQuery('')}
+                    title={t('toolbar.clearFilter')}
+                    aria-label={t('toolbar.clearFilter')}
+                  >
+                    <X size={11} />
+                  </button>
+                )}
               </div>
-            )}
+              <button
+                type="button"
+                className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
+                onClick={() => setSelectedCollectionTags([])}
+              >
+                {t('collection.allTags')}
+                <span className="collection-tag-chip-count">{allCollectionTags.length}</span>
+              </button>
+              {visibleCollectionTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`collection-tag-chip ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                  onClick={() => toggleRailTag(tag)}
+                >
+                  {tag}
+                  <span className="collection-tag-chip-count">{collectionTagCounts.get(tag) || 0}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="collection-tag-chip add"
+                onClick={handleOpenTagEditor}
+                title={t('item.addTag')}
+                aria-label={t('item.addTag')}
+              >
+                <Plus size={12} />
+              </button>
+              {showTagEditor && (
+                <div className="collection-tag-editor" onClick={(event) => event.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={draftTag}
+                    onChange={(event) => setDraftTag(event.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder={t('collection.addTagPlaceholder')}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="confirm"
+                    onClick={() => void submitTag()}
+                    disabled={tagEditorBusy || !normalizeTag(draftTag)}
+                    title={t('collection.confirmAddTag')}
+                    aria-label={t('collection.confirmAddTag')}
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    className="cancel"
+                    onClick={closeTagEditor}
+                    title={t('collection.cancelAddTag')}
+                    aria-label={t('collection.cancelAddTag')}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="collection-toolbar-actions">
+            <div className="collection-toolbar-actions collection-toolbar-actions--floating">
               <div className="collection-view-toggle" role="group" aria-label={t('collection.viewToggle')}>
                 <button
                   type="button"
@@ -1549,7 +1568,15 @@ function CollectionBoard({
               </PanelSummaryText>
             )}
             {selectedCollectionTags.length > 0 && (
-              <PanelSummaryBadge className="collection-meta-count panel-summary-item--aux">{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</PanelSummaryBadge>
+              <span className="collection-tag-selection-summary">
+                <PanelSummaryBadge className="collection-meta-count">{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</PanelSummaryBadge>
+                <PanelSummaryActionButton
+                  className="collection-clear-tags-btn"
+                  onClick={() => setSelectedCollectionTags([])}
+                >
+                  {t('collection.clearTagFilter')}
+                </PanelSummaryActionButton>
+              </span>
             )}
             {hasCollectionHintMessages && (
               <PanelSummaryActionButton
@@ -1559,14 +1586,6 @@ function CollectionBoard({
                 title={collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
               >
                 {collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
-              </PanelSummaryActionButton>
-            )}
-            {selectedCollectionTags.length > 0 && (
-              <PanelSummaryActionButton
-                className="collection-clear-tags-btn panel-summary-item--action"
-                onClick={() => setSelectedCollectionTags([])}
-              >
-                {t('collection.clearTagFilter')}
               </PanelSummaryActionButton>
             )}
             {tagEditorFeedback && (

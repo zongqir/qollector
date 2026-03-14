@@ -149,6 +149,16 @@
   color: color-mix(in srgb, var(--accent-color) 94%, var(--text-primary) 6%);
 }
 
+@container (max-width: 420px) {
+  .history-stream-helper-text--collection-only {
+    display: none;
+  }
+
+  .history-stream-helper-line--collection {
+    display: none;
+  }
+}
+
 /* Loading state */
 .loading-state {
   flex: 1;

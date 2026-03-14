@@ -1985,10 +1985,10 @@ function HistoryStream({ style }) {
       />
 
       {shouldShowBottomHelper && (
-        <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''}`.trim()}>
+        <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''} ${showFavoritesOnly && !isCalmPresetActive ? 'history-stream-helper-text--collection-only' : ''}`.trim()}>
           <div className="history-stream-helper-main">
             {showFavoritesOnly && (
-              <div className="history-stream-helper-line">
+              <div className="history-stream-helper-line history-stream-helper-line--collection">
                 {t('collection.longTermStorageHint')}
               </div>
             )}
