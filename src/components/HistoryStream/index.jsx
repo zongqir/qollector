@@ -205,6 +205,8 @@ function HistoryStream({ style }) {
 
   const items = useAppStore(s => s.items);
   const loading = useAppStore(s => s.loading);
+  const loadingMore = useAppStore(s => s.loadingMore);
+  const historyLoadStopReason = useAppStore(s => s.historyLoadStopReason);
   const searchQuery = useAppStore(s => s.searchQuery);
   const collectionSearchQuery = useAppStore(s => s.collectionSearchQuery);
   const debouncedSearchQuery = useAppStore(s => s.debouncedSearchQuery);
@@ -1375,7 +1377,29 @@ function HistoryStream({ style }) {
   const selectedCount = selectedItemIds.length;
   const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
   const showJumpToLatest = filteredItems.length > 0 && visibleRangeStartIndex > 6 && selectedCount === 0;
+  const shouldShowLoadGuard = !isCollectionMode
+    && !loading
+    && !loadingMore
+    && historyLoadStopReason === 'memory-cap'
+    && filteredItems.length > 0
+    && activeTopSearchQuery.trim().length === 0;
   const computeItemKey = useCallback((index) => filteredItems[index]?.id ?? index, [filteredItems]);
+
+  const HistoryListFooter = useCallback(() => {
+    if (!shouldShowLoadGuard) return null;
+    return (
+      <div className="history-load-guard state-panel" role="status" aria-live="polite">
+        <div className="history-load-guard-message">{t('search.loadGuard.message')}</div>
+        <button
+          type="button"
+          className="history-load-guard-action"
+          onClick={focusSearchInput}
+        >
+          {t('search.loadGuard.action')}
+        </button>
+      </div>
+    );
+  }, [focusSearchInput, shouldShowLoadGuard, t]);
 
   const buildRowViewModel = useCallback((index) => {
     const item = filteredItems[index];
@@ -1895,7 +1919,7 @@ function HistoryStream({ style }) {
           <Virtuoso
             ref={virtuosoRef}
             className="history-stream-virtuoso"
-            components={{ Scroller: VirtuosoScroller }}
+            components={{ Scroller: VirtuosoScroller, Footer: HistoryListFooter }}
             totalCount={filteredItems.length}
             computeItemKey={computeItemKey}
             itemContent={renderVirtualRow}

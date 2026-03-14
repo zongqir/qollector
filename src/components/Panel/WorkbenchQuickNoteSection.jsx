@@ -11,6 +11,7 @@ function WorkbenchQuickNoteSection({
   quickNote,
   quickNotePlaceholder,
   expandedNotePlaceholder,
+  workbenchSwitcher = null,
   hasActiveFilters,
   isFiltersCollapsed,
   onToggleFiltersCollapsed,
@@ -85,6 +86,11 @@ function WorkbenchQuickNoteSection({
               {hasActiveFilters && <span className="quick-note-filter-active-dot" aria-hidden />}
             </button>
           </div>
+          {workbenchSwitcher ? (
+            <div className="quick-note-switcher-slot">
+              {workbenchSwitcher}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

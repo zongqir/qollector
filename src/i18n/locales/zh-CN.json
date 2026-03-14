@@ -54,6 +54,10 @@
     "searching": "搜索中...",
     "queryFailed": "后端筛选失败，请稍后重试",
     "retryLoad": "重新加载",
+    "loadGuard": {
+      "message": "已经看了不少记录，试试搜一下关键词，找起来会更快。",
+      "action": "去搜索"
+    },
     "recent": {
       "title": "最近搜索",
       "clearAll": "清空",

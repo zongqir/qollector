@@ -34,6 +34,7 @@ export const createDataLoadingActions = (set, get) => ({
       set((state) => ({
         items: mergedItems,
         hasMore: result.length >= pageSize,
+        historyLoadStopReason: null,
         itemsRevision: state.itemsRevision + 1,
       }));
       persistHistorySnapshot(mergedItems);
@@ -83,6 +84,7 @@ export const createDataLoadingActions = (set, get) => ({
       let mergedItemsSnapshot = null;
       set((state) => {
         let merged = mergeUniqueById(state.items, more);
+        const reachedMemoryCap = merged.length >= memoryCap && more.length >= pageSize;
         if (merged.length > memoryCap) {
           merged = merged.slice(0, memoryCap);
         }
@@ -90,6 +92,9 @@ export const createDataLoadingActions = (set, get) => ({
         return {
           items: merged,
           hasMore: more.length >= pageSize && merged.length < memoryCap,
+          historyLoadStopReason: reachedMemoryCap
+            ? 'memory-cap'
+            : (more.length >= pageSize ? null : 'exhausted'),
         };
       });
       if (mergedItemsSnapshot) {
@@ -125,6 +130,7 @@ export const createDataLoadingActions = (set, get) => ({
       items: [],
       hasMore: true,
       loadingMore: false,
+      historyLoadStopReason: null,
       itemsRevision: state.itemsRevision + 1,
       processedItemIds: new Set(),
       panelMode: 'workbench',
@@ -147,6 +153,7 @@ export const createDataLoadingActions = (set, get) => ({
       items: snapshot,
       hasMore: true,
       loadingMore: false,
+      historyLoadStopReason: null,
       loading: snapshot.length === 0,
     });
     console.log('[MemorySuspend] restoring list state after window became visible');

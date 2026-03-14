@@ -54,6 +54,10 @@
     "searching": "Searching...",
     "queryFailed": "Backend filtering failed. Please retry.",
     "retryLoad": "Reload",
+    "loadGuard": {
+      "message": "You've browsed quite a few records. Try searching with keywords to find things faster.",
+      "action": "Search"
+    },
     "recent": {
       "title": "Recent Searches",
       "clearAll": "Clear",

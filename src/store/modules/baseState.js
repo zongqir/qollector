@@ -14,6 +14,7 @@ export const createBaseState = ({
   loading: initialHistorySnapshot.length === 0,
   hasMore: true,
   loadingMore: false,
+  historyLoadStopReason: null,
   itemsRevision: 0,
   processedItemIds: new Set(),
   isMemorySuspended: false,

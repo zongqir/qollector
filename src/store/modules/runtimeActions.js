@@ -6,6 +6,7 @@ export const createRuntimeActions = (set, clearHistorySnapshot) => ({
       loading: false,
       hasMore: true,
       loadingMore: false,
+      historyLoadStopReason: null,
       itemsRevision: state.itemsRevision + 1,
       processedItemIds: new Set(),
       panelMode: 'workbench',

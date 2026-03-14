@@ -1896,23 +1896,6 @@ function WorkbenchPanel() {
     </div>
   );
 
-  const quickNoteSection = (
-    <WorkbenchQuickNoteSection
-      isExpanded={isExpanded}
-      quickNote={quickNote}
-      quickNotePlaceholder={t('workbench.quickNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
-      expandedNotePlaceholder={t('workbench.expandedNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
-      hasActiveFilters={hasWorkbenchFilters}
-      isFiltersCollapsed={isWorkbenchFiltersCollapsed}
-      onToggleFiltersCollapsed={handleToggleWorkbenchFiltersCollapsed}
-      onQuickNoteChange={setQuickNote}
-      onQuickNoteKeyDown={handleQuickNoteSubmit}
-      onExpandedKeyDown={handleExpandedNoteKeyDown}
-      onExpandedSubmit={handleExpandedSubmit}
-      onCollapse={() => setIsExpanded(false)}
-      onExpand={() => setIsExpanded(true)}
-    />
-  );
   const toolbarWorkbenchSwitcher = (
     <WorkbenchSwitcher
       variant="toolbar"
@@ -1933,26 +1916,22 @@ function WorkbenchPanel() {
       onDeleteWorkbench={handleDeleteActiveWorkbench}
     />
   );
-
-  const toolbarWorkbenchSwitcherSizer = (
-    <WorkbenchSwitcher
-      variant="toolbar"
-      activeWorkbenchName={activeWorkbenchLabel}
-      activeWorkbenchShortName={activeWorkbenchToolbarLabel}
-      accentColor={activeWorkbenchAccent}
-      workbenchOptions={workbenchSwitcherOptions}
-      isOpen={false}
-      isManageMenuOpen={false}
-      disabled
-      canManageActiveWorkbench={false}
-      switcherRef={null}
-      onToggle={() => {}}
-      onSelectWorkbench={() => {}}
-      onCreateWorkbench={() => {}}
-      onToggleManageMenu={() => {}}
-      onRenameWorkbench={() => {}}
-      onDeleteWorkbench={() => {}}
-      measurementMode
+  const quickNoteSection = (
+    <WorkbenchQuickNoteSection
+      isExpanded={isExpanded}
+      quickNote={quickNote}
+      quickNotePlaceholder={t('workbench.quickNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
+      expandedNotePlaceholder={t('workbench.expandedNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
+      workbenchSwitcher={toolbarWorkbenchSwitcher}
+      hasActiveFilters={hasWorkbenchFilters}
+      isFiltersCollapsed={isWorkbenchFiltersCollapsed}
+      onToggleFiltersCollapsed={handleToggleWorkbenchFiltersCollapsed}
+      onQuickNoteChange={setQuickNote}
+      onQuickNoteKeyDown={handleQuickNoteSubmit}
+      onExpandedKeyDown={handleExpandedNoteKeyDown}
+      onExpandedSubmit={handleExpandedSubmit}
+      onCollapse={() => setIsExpanded(false)}
+      onExpand={() => setIsExpanded(true)}
     />
   );
 
@@ -1988,9 +1967,6 @@ function WorkbenchPanel() {
               {t('workbench.retryLoad')}
             </button>
           )}
-        </div>
-        <div className="workbench-bottom-area workbench-bottom-area--empty">
-          {toolbarWorkbenchSwitcher}
         </div>
       </div>
     );
@@ -2320,7 +2296,6 @@ function WorkbenchPanel() {
             workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
             handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
             handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
-            workbenchSwitcher={toolbarWorkbenchSwitcher}
             layoutMode={workbenchBottomBarLayout}
             barRef={workbenchBottomBarRef}
           />
@@ -2371,7 +2346,6 @@ function WorkbenchPanel() {
           workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
           handleRunWorkbenchPrimaryAction={() => {}}
           handleSelectWorkbenchPrimaryAction={() => {}}
-          workbenchSwitcher={toolbarWorkbenchSwitcherSizer}
           layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL}
           measurementMode
           barRef={workbenchBottomBarLabelSizerRef}
@@ -2398,7 +2372,6 @@ function WorkbenchPanel() {
           workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
           handleRunWorkbenchPrimaryAction={() => {}}
           handleSelectWorkbenchPrimaryAction={() => {}}
-          workbenchSwitcher={toolbarWorkbenchSwitcherSizer}
           layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT}
           measurementMode
           barRef={workbenchBottomBarIconSizerRef}
