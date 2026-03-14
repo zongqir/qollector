@@ -4,7 +4,6 @@ import { getVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { LogicalSize } from '@tauri-apps/api/dpi';
 import { invoke } from '@tauri-apps/api/core';
-import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
@@ -12,21 +11,19 @@ import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
 import { prewarmCodeLanguageDetection } from './services/codeDetectionService';
 import {
-  QUICK_INPUT_WINDOW_LABEL,
-  openQuickInputWindow,
   openWidgetWindow,
   closeWidgetWindow,
 } from './services/windowService';
 import { runSmartCopyCaptureWorkflow } from './services/smartCopyWorkflowService';
 import {
   QUICK_INPUT_OPEN_WORKBENCH_EVENT,
-  QUICK_INPUT_WINDOW_STATE_EVENT,
   QUICK_NOTE_SAVED_EVENT,
 } from './services/quickNoteService';
 import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
+import QuickNoteOverlay from './components/QuickNoteOverlay';
 import GuidedTour from './components/GuidedTour/GuidedTour';
 import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 import releaseNotes from './data/release-notes.json';
@@ -1033,67 +1030,18 @@ function App() {
     );
   }, [showAppFeedback, t]);
 
-  const syncQuickInputState = useCallback(async () => {
-    try {
-      const existing = await WebviewWindow.getByLabel(QUICK_INPUT_WINDOW_LABEL);
-      let nextState = false;
-      if (existing) {
-        try {
-          // Accessing native window state can fail for stale handles.
-          await existing.isVisible();
-          nextState = true;
-        } catch {
-          nextState = false;
-        }
-      }
-      setIsQuickInputOpen(nextState);
-      return nextState;
-    } catch {
-      setIsQuickInputOpen(false);
-      return false;
-    }
+  const handleOpenQuickInput = useCallback(() => {
+    setIsQuickInputOpen((prev) => !prev);
   }, []);
 
-  const handleOpenQuickInput = useCallback(() => {
-    openQuickInputWindow(t)
-      .then(() => {
-        void syncQuickInputState();
-      })
-      .catch((error) => {
-        void syncQuickInputState();
-        console.error(t('quickInput.failed', { error }));
-      });
-  }, [syncQuickInputState, t]);
+  const handleCloseQuickInput = useCallback(() => {
+    setIsQuickInputOpen(false);
+  }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    const syncIfMounted = async () => {
-      if (cancelled) return;
-      await syncQuickInputState();
-    };
-
-    void syncIfMounted();
-    const unlistenPromise = listen(QUICK_INPUT_WINDOW_STATE_EVENT, () => {
-      void syncIfMounted();
-    });
-
-    return () => {
-      cancelled = true;
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, [syncQuickInputState]);
-
-  useEffect(() => {
-    if (!isQuickInputOpen) return undefined;
-
-    const timer = window.setInterval(() => {
-      void syncQuickInputState();
-    }, 1200);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [isQuickInputOpen, syncQuickInputState]);
+  const handleQuickInputSaved = useCallback(() => {
+    setIsQuickInputOpen(false);
+    showAppFeedback(t('editModal.savedToast'), 'success', 1200);
+  }, [showAppFeedback, t]);
 
   useEffect(() => {
     const unlistenPromise = listen(QUICK_INPUT_OPEN_WORKBENCH_EVENT, async () => {
@@ -1311,7 +1259,7 @@ function App() {
 
   return (
     <div
-      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''}`}
+      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
       role="application"
       aria-label={t('app.title')}
     >
@@ -1372,6 +1320,13 @@ function App() {
         currentViewMode={activeViewMode}
         onSelectViewMode={handleSelectViewMode}
         onDensityModeChange={handleDensityModeChange}
+      />
+
+      <QuickNoteOverlay
+        isOpen={isQuickInputOpen}
+        isMiniMode={isMiniMode}
+        onClose={handleCloseQuickInput}
+        onSaved={handleQuickInputSaved}
       />
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>

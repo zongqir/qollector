@@ -122,6 +122,23 @@ body {
   box-shadow: 0 8px 18px var(--shadow-sm);
 }
 
+.app.quick-note-open {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.app.quick-note-open::before,
+.app.quick-note-open::after {
+  opacity: 0;
+}
+
+.app.quick-note-open > :not(.quick-note-overlay) {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .app-feedback-toast {
   position: fixed;
   right: 14px;

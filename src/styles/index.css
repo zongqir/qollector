@@ -3,6 +3,7 @@
 @import './workspace.css';
 @import './titlebar.css';
 @import './quick-input.css';
+@import './quick-note-overlay.css';
 @import './search-bar.css';
 @import './collection-board.css';
 @import './type-dropdown.css';
