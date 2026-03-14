@@ -1475,7 +1475,7 @@
   gap: 8px;
   min-height: 18px;
   margin-bottom: 6px;
-  padding-right: 52px;
+  padding-right: 78px;
 }
 
 .workbench-card-head-main {
@@ -1547,6 +1547,7 @@
   background: color-mix(in srgb, var(--state-warning-bg) 70%, transparent);
 }
 
+.workbench-card-dragout,
 .workbench-card-remove,
 .workbench-card-color {
   width: var(--card-toolbar-btn-size);
@@ -1566,6 +1567,13 @@
     box-shadow var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
     opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
     transform var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
+}
+
+.workbench-card-dragout:hover {
+  background: var(--card-toolbar-btn-hover-bg);
+  color: var(--accent-color);
+  border-color: var(--card-toolbar-btn-hover-border);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--shadow-sm) 60%, transparent);
 }
 
 .workbench-card-color.tinted {
@@ -1593,6 +1601,7 @@
 }
 
 .workbench-card-remove:focus-visible,
+.workbench-card-dragout:focus-visible,
 .workbench-card-color:focus-visible,
 .workbench-card-color-dot:focus-visible {
   outline: none;
@@ -1634,6 +1643,21 @@
   transform: scale(1.05);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .workbench-card .workbench-card-tools.panel-card-actions--hover-reveal {
+    transform: none;
+  }
+
+  .workbench-card:is(
+    :hover,
+    :focus-visible,
+    :focus-within,
+    :has(.workbench-card-color-picker)
+  ) .workbench-card-tools.panel-card-actions--hover-reveal {
+    transform: none;
+  }
+}
+
 .workbench-card-color-dot.active {
   border-color: var(--accent-color);
 }
@@ -1660,7 +1684,7 @@
 }
 
 .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 52px;
+  padding-right: 78px;
 }
 
 .workbench-card-text {
@@ -2429,7 +2453,7 @@
   }
 
   .workbench-card-header {
-    padding-right: 50px;
+    padding-right: 76px;
   }
 
   .workbench-card-source {

@@ -1460,12 +1460,12 @@
 }
 
 @container (max-width: 420px) {
-  .badge-btn.badge-dragout {
+  .badge-btn.badge-window {
     display: none;
   }
 }
 
-@container (max-width: 260px) {
+@container (max-width: 320px) {
   .badge-btn.badge-open,
   .badge-btn.badge-window {
     display: none;

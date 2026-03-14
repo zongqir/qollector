@@ -798,11 +798,6 @@
     :hover,
     :focus-visible,
     :focus-within,
-    .keyboard-focused,
-    .selected,
-    .multi-selected,
-    .active,
-    .sort-anchor,
     :has(.compact-card-color-picker),
     :has(.workbench-card-color-picker)
   ) .panel-card-actions--hover-reveal {

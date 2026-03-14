@@ -25,6 +25,8 @@ function SortableWorkbenchCard({
   onContextMenu,
   onOpenItem,
   onSetCardBackground,
+  supportsNativeExternalDrag,
+  onStartExternalDrag,
 }) {
   const {
     attributes,
@@ -76,6 +78,8 @@ function SortableWorkbenchCard({
         onContextMenu={onContextMenu}
         onOpenItem={onOpenItem}
         onSetCardBackground={onSetCardBackground}
+        supportsNativeExternalDrag={supportsNativeExternalDrag}
+        onStartExternalDrag={onStartExternalDrag}
       />
     </div>
   );

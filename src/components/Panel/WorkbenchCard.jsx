@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, Folder, ExternalLink, FileText, Palette, Star, Type, Image, Link, Code } from 'lucide-react';
+import { X, Check, Folder, ExternalLink, FileText, Palette, Star, Type, Image, Link, Code, GripVertical } from 'lucide-react';
 import {
   getContentPreview,
   formatHistoryCardTime,
@@ -68,6 +68,8 @@ function WorkbenchCard({
   onContextMenu,
   onOpenItem,
   onSetCardBackground,
+  supportsNativeExternalDrag,
+  onStartExternalDrag,
 }) {
   const { t, i18n } = useTranslation();
   const isMiniMode = useAppStore(s => s.isMiniMode);
@@ -90,6 +92,12 @@ function WorkbenchCard({
     [item.metadata],
   );
   const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
+  const canDragOut = supportsNativeExternalDrag
+    && (
+      (item?.type_ === 'text' && typeof item.content === 'string' && item.content.trim().length > 0)
+      || item?.type_ === 'file'
+      || item?.type_ === 'image'
+    );
 
   useEffect(() => {
     if (!showColorPicker) return undefined;
@@ -280,6 +288,26 @@ function WorkbenchCard({
         )}
       </div>
       <div className="workbench-card-tools panel-card-actions panel-card-actions--hover-reveal" ref={colorPickerRef}>
+        {canDragOut && (
+          <button
+            type="button"
+            className="workbench-card-dragout panel-card-action-btn"
+            draggable={false}
+            data-longpress-ignore="true"
+            onPointerDown={stopActionPointerDown}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onStartExternalDrag?.(item);
+            }}
+            onDragStart={preventActionDrag}
+            onClick={stopActionClick}
+            title={t('toolbar.dragToApp')}
+            aria-label={t('toolbar.dragToApp')}
+          >
+            <GripVertical size={13} />
+          </button>
+        )}
         <button
           type="button"
           className={`workbench-card-color panel-card-action-btn ${hasCustomCardBackground ? 'tinted' : ''}`}

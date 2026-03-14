@@ -762,14 +762,8 @@
     :hover,
     :focus-visible,
     :focus-within,
-    .keyboard-focused,
-    .selected,
-    .multi-selected,
-    .active,
-    .sort-anchor,
     :has(.compact-card-color-picker),
-    :has(.workbench-card-color-picker),
-    :has(.panel-card-action-btn.active)
+    :has(.workbench-card-color-picker)
   ) .panel-card-actions--hover-reveal {
     opacity: var(--card-toolbar-visible-opacity);
     transform: translateY(var(--card-toolbar-shell-visible-translate)) scale(1);

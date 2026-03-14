@@ -38,7 +38,7 @@ const PROFILE_MAP = Object.freeze({
       tone: 'direct',
       length: 'short',
       extraInstruction:
-        'Prioritize mechanism, contradiction, and an executable principle instead of restating details.',
+        'Prioritize mechanism, contradiction, and one executable principle instead of restating details. Return plain text only, avoid Markdown structure, and make the wording understandable to non-experts.',
     },
   },
   translate: {

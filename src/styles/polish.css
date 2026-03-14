@@ -1165,7 +1165,7 @@
 .density-compact .workbench-card-header {
   gap: 6px;
   margin-bottom: 4px;
-  padding-right: 46px;
+  padding-right: 78px;
 }
 
 .density-compact .workbench-card-meta {
@@ -1201,7 +1201,7 @@
 }
 
 .density-compact .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 46px;
+  padding-right: 78px;
 }
 
 .density-compact .workbench-card-text {
@@ -1426,11 +1426,11 @@
 
 .density-cozy .workbench-card-header {
   margin-bottom: 7px;
-  padding-right: 58px;
+  padding-right: 78px;
 }
 
 .density-cozy .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 58px;
+  padding-right: 78px;
 }
 
 .density-cozy .workbench-card-text {
@@ -1637,12 +1637,12 @@
 
 .density-compact .app.mini-mode .workbench-card-header {
   margin-bottom: 2px;
-  padding-right: 34px;
+  padding-right: 72px;
 }
 
 .density-cozy .app.mini-mode .workbench-card-header {
   margin-bottom: 3px;
-  padding-right: 38px;
+  padding-right: 76px;
 }
 
 .density-compact .app.mini-mode .workbench-card-content {
@@ -1654,11 +1654,11 @@
 }
 
 .density-compact .app.mini-mode .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 34px;
+  padding-right: 72px;
 }
 
 .density-cozy .app.mini-mode .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 38px;
+  padding-right: 76px;
 }
 
 .density-compact .app.mini-mode .workbench-card-text {

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowUpDown,
@@ -72,6 +73,7 @@ import {
   shouldIgnoreLongPressTarget,
   openItemPreview,
 } from '../../utils/previewInteractionPolicy';
+import { resolveFilenameStemForItem } from '../../utils/filenameNaming';
 import { isQollectManagedSource } from '../../utils/sourceConstants';
 import {
   buildSearchRequest,
@@ -86,6 +88,49 @@ const WORKBENCH_BOTTOM_BAR_LAYOUT = {
   LABEL: 'label',
   COMPACT: 'compact',
 };
+
+function detectClientPlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const raw = (
+    navigator.userAgentData?.platform
+    || navigator.platform
+    || navigator.userAgent
+    || ''
+  ).toLowerCase();
+  if (raw.includes('win')) return 'windows';
+  if (raw.includes('mac')) return 'macos';
+  if (raw.includes('linux')) return 'linux';
+  return 'other';
+}
+
+const SUPPORTS_NATIVE_EXTERNAL_DRAG = ['windows', 'macos'].includes(detectClientPlatform());
+
+function getExternalFilePaths(item) {
+  if (item.type_ === 'file' && item.content) {
+    return item.content
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  if (item.type_ === 'image' && item.image_paths) {
+    try {
+      const paths = JSON.parse(item.image_paths);
+      const original = paths.original || paths.raw;
+      return original ? [original] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+function canDragTextAsFile(item) {
+  return item?.type_ === 'text'
+    && typeof item.content === 'string'
+    && item.content.trim().length > 0;
+}
 
 const readWorkbenchFilterCollapsed = () => {
   if (typeof window === 'undefined') return WORKBENCH_FILTER_COLLAPSE_DEFAULT;
@@ -1398,6 +1443,32 @@ function WorkbenchPanel() {
     handleCopyAndAutoPaste,
   ]);
 
+  const handleStartExternalDrag = useCallback(async (item) => {
+    if (!SUPPORTS_NATIVE_EXTERNAL_DRAG) return;
+
+    try {
+      if (canDragTextAsFile(item)) {
+        await invoke('start_native_text_drag', {
+          content: item.content,
+          language: item.code_language || null,
+          filenameStem: resolveFilenameStemForItem(item),
+          operation: 'copy',
+        });
+        return;
+      }
+
+      const paths = getExternalFilePaths(item);
+      if (paths.length === 0) return;
+
+      await invoke('start_native_file_drag', {
+        paths,
+        operation: 'copy',
+      });
+    } catch (error) {
+      console.error('workbench native drag out failed:', error);
+    }
+  }, []);
+
   const handleCardUnpin = useCallback(async (item) => {
     if (!item?.id) return;
     if (pendingUnpinItemId !== item.id) {
@@ -2250,6 +2321,8 @@ function WorkbenchPanel() {
                   onContextMenu={(event) => handleCardContextMenu(item, index, event)}
                   onOpenItem={handleOpenItem}
                   onSetCardBackground={setCardBackground}
+                  supportsNativeExternalDrag={SUPPORTS_NATIVE_EXTERNAL_DRAG}
+                  onStartExternalDrag={handleStartExternalDrag}
                 />
               ))}
             </div>

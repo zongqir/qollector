@@ -221,9 +221,9 @@ fn summarize_output_contract(output_locale: &str) -> String {
 
 fn extract_output_contract(output_locale: &str) -> String {
     if is_zh_output_locale(output_locale) {
-        "Use this exact markdown structure:\n## 底层机制\nOne sentence\n## 核心矛盾\nOne sentence in the form \"A vs B\"\n## 可执行原则\n1. Imperative sentence\n2. Imperative sentence\nConstraints:\n- Do not recap anecdotes or minor facts.\n- Each sentence should be concise and decision-oriented.".to_string()
+        "输出为纯文本，不要 Markdown 标题，不要项目符号，不要编号列表，不要代码块。\n请直接写成一小段外行也能看懂的话，依次说清：\n1. 这件事背后的关键机制是什么。\n2. 真正的核心矛盾是什么。\n3. 最值得执行的一条原则或下一步是什么。\n约束：\n- 不要复述琐碎细节、案例枝节或表面描述。\n- 可以保留关键名词，但优先用通俗表达解释清楚。\n- 整体控制在 3 到 5 句，短、直白、可执行。".to_string()
     } else {
-        "Use this exact markdown structure:\n## Underlying Mechanism\nOne sentence\n## Core Contradiction\nOne sentence in the form \"A vs B\"\n## Actionable Principle\n1. Imperative sentence\n2. Imperative sentence\nConstraints:\n- Do not recap anecdotes or minor facts.\n- Each sentence should be concise and decision-oriented.".to_string()
+        "Return plain text only. Do not use Markdown headings, bullet lists, numbered lists, or code blocks.\nWrite one short, non-technical paragraph that a non-expert can understand, covering in order:\n1. the key mechanism underneath the issue,\n2. the real core contradiction,\n3. the single most useful principle or next step.\nConstraints:\n- Do not recap anecdotes, minor facts, or surface details.\n- Keep important terms when necessary, but explain them in plain language.\n- Keep it to 3 to 5 sentences, concise and actionable.".to_string()
     }
 }
 
