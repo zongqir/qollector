@@ -108,6 +108,20 @@ function WorkbenchCard({
     setShowColorPicker(false);
   }, [item, onSetCardBackground]);
 
+  const stopActionPointerDown = useCallback((event) => {
+    event.stopPropagation();
+  }, []);
+
+  const stopActionClick = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const preventActionDrag = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
   const handleCardKeyDown = useCallback((event) => {
     if (event.target !== event.currentTarget) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -269,13 +283,13 @@ function WorkbenchCard({
         <button
           type="button"
           className={`workbench-card-color panel-card-action-btn ${hasCustomCardBackground ? 'tinted' : ''}`}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
+          draggable={false}
+          data-longpress-ignore="true"
+          onPointerDown={stopActionPointerDown}
+          onMouseDown={stopActionPointerDown}
+          onDragStart={preventActionDrag}
           onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            stopActionClick(e);
             setShowColorPicker(prev => !prev);
           }}
           title={t('item.cardBackground.button')}
@@ -286,11 +300,15 @@ function WorkbenchCard({
         <button
           type="button"
           className={`workbench-card-remove panel-card-action-btn ${isUnpinConfirmArmed ? 'confirm' : ''}`}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
+          draggable={false}
+          data-longpress-ignore="true"
+          onPointerDown={stopActionPointerDown}
+          onMouseDown={stopActionPointerDown}
+          onDragStart={preventActionDrag}
+          onClick={(e) => {
+            stopActionClick(e);
+            onUnpin();
           }}
-          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
           title={isUnpinConfirmArmed ? t('workbench.confirmRemoveFromWorkbench') : t('workbench.removeFromWorkbench')}
           aria-label={isUnpinConfirmArmed ? t('workbench.confirmRemoveFromWorkbench') : t('workbench.removeFromWorkbench')}
         >
@@ -299,10 +317,8 @@ function WorkbenchCard({
         {showColorPicker && (
           <div
             className="workbench-card-color-picker"
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onPointerDown={stopActionPointerDown}
+            onMouseDown={stopActionPointerDown}
             onClick={(e) => e.stopPropagation()}
           >
             {CARD_BACKGROUND_PRESETS.map((preset) => {
@@ -316,9 +332,13 @@ function WorkbenchCard({
                   style={!isDefault ? { '--card-color-dot': preset.dot } : undefined}
                   title={t(preset.labelKey)}
                   aria-label={t(preset.labelKey)}
+                  draggable={false}
+                  data-longpress-ignore="true"
+                  onPointerDown={stopActionPointerDown}
+                  onMouseDown={stopActionPointerDown}
+                  onDragStart={preventActionDrag}
                   onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    stopActionClick(e);
                     handleBackgroundSelect(preset.id);
                   }}
                 >

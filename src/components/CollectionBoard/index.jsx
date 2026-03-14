@@ -999,7 +999,7 @@ function CollectionBoard({
 
   const handleCollectionCardDoubleClick = useCallback((item, event) => {
     if (!item?.id) return;
-    if (shouldIgnoreCardDoubleClickTarget(event.target)) {
+    if (shouldIgnoreCardDoubleClickTarget(event.target, event.currentTarget)) {
       event.stopPropagation();
       return;
     }

@@ -167,8 +167,8 @@
 
 .timeline-panel,
 .workbench-panel {
-  padding: 8px;
-  gap: 8px;
+  padding: 4px 8px 8px;
+  gap: 2px;
 }
 
 .workbench-panel.workbench-panel--docked-bottom-bar {
@@ -176,8 +176,8 @@
 }
 
 .workbench-panel.workbench-panel--compact-bottom-bar {
-  padding: 8px 8px 4px;
-  gap: 4px;
+  padding: 4px 8px 4px;
+  gap: 2px;
 }
 
 .workbench-panel.workbench-panel--compact-bottom-bar.workbench-panel--docked-bottom-bar {

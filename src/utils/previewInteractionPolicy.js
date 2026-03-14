@@ -18,9 +18,15 @@ export const shouldIgnoreLongPressTarget = (target) => {
   return target instanceof Element && Boolean(target.closest(LONG_PRESS_IGNORE_SELECTOR));
 };
 
-export const shouldIgnoreCardDoubleClickTarget = (target) => {
+export const shouldIgnoreCardDoubleClickTarget = (target, currentTarget = null) => {
   if (typeof Element === 'undefined') return false;
-  return target instanceof Element && Boolean(target.closest(DOUBLE_CLICK_IGNORE_SELECTOR));
+  if (!(target instanceof Element)) return false;
+  const ignoredTarget = target.closest(DOUBLE_CLICK_IGNORE_SELECTOR);
+  if (!ignoredTarget) return false;
+  if (currentTarget instanceof Element && ignoredTarget === currentTarget) {
+    return false;
+  }
+  return true;
 };
 
 export const openItemPreview = (setPanelMode, item, options) => {

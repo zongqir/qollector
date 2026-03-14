@@ -1273,6 +1273,17 @@ function WorkbenchPanel() {
   ]);
 
   const handleCardPointerDownCapture = useCallback((item, index, event) => {
+    const target = event.target;
+    if (
+      target instanceof Element
+      && (
+        target.closest('button, input, textarea, select, a, [data-longpress-ignore="true"]')
+        || target.closest('.workbench-card-color-picker')
+      )
+    ) {
+      event.stopPropagation();
+      return;
+    }
     if (!(event.ctrlKey || event.metaKey || event.shiftKey)) return;
     clearWorkbenchSortLongPressTimer();
     workbenchSortLongPressPointerRef.current.pointerId = null;
@@ -1302,6 +1313,18 @@ function WorkbenchPanel() {
   }, [clearWorkbenchSortLongPressTimer, pinnedItems]);
 
   const handleCardClick = useCallback((item, index, event) => {
+    const target = event.target;
+    if (
+      target instanceof Element
+      && (
+        shouldIgnoreLongPressTarget(target)
+        || target.closest('.workbench-card-color-picker')
+      )
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (suppressNextCardClickRef.current) {
       suppressNextCardClickRef.current = false;
       event.preventDefault();
@@ -1348,7 +1371,7 @@ function WorkbenchPanel() {
   }, []);
 
   const handleCardDoubleClick = useCallback(async (item, event) => {
-    if (shouldIgnoreCardDoubleClickTarget(event.target)) {
+    if (shouldIgnoreCardDoubleClickTarget(event.target, event.currentTarget)) {
       event.stopPropagation();
       return;
     }

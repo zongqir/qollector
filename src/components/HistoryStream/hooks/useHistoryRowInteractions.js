@@ -187,7 +187,7 @@ export default function useHistoryRowInteractions({
   ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
-    const shouldIgnore = shouldIgnoreCardDoubleClickTarget(e.target);
+    const shouldIgnore = shouldIgnoreCardDoubleClickTarget(e.target, e.currentTarget);
     if (shouldIgnore) {
       e.stopPropagation();
       return;
