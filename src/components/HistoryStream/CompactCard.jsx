@@ -79,7 +79,6 @@ function CompactCard({
   isCopied,
   timeTick,
   searchExplain,
-  onDragStart,
   supportsNativeExternalDrag,
   onStartExternalDrag,
   onTogglePin,
@@ -89,6 +88,7 @@ function CompactCard({
   onSetCardBackground,
   onTagClick,
   onToggleMultiSelect,
+  onDoubleClick,
 }) {
   const { t, i18n } = useTranslation();
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
@@ -157,15 +157,6 @@ function CompactCard({
     event.preventDefault();
     event.stopPropagation();
   }, []);
-
-  const handleCardDragStart = useCallback((event) => {
-    const target = event.target;
-    if (target instanceof Element && target.closest('.panel-card-action-btn')) {
-      event.preventDefault();
-      return;
-    }
-    onDragStart?.(item, event);
-  }, [item, onDragStart]);
 
   const cardClasses = [
     'compact-card',
@@ -321,8 +312,7 @@ function CompactCard({
         ...(hasCustomCardBackground ? { '--compact-card-accent': cardBackground.accent } : {}),
       }}
       title={`${formatDate(item.updated_at, i18n.language)} - ${getSourceApp(item.metadata)}`}
-      draggable="true"
-      onDragStart={handleCardDragStart}
+      onDoubleClick={onDoubleClick}
     >
       <div className="compact-card-header panel-card-header">
         {isSelectionMode && (

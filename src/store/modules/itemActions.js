@@ -16,17 +16,18 @@ import { SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK } from './platformSupport';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemIfNeeded } from './itemHydration';
 
-const shouldSkipInternalSourceCopy = (item, allowInternalCopy) => {
+const shouldSkipInternalSourceCopy = (item, allowInternalCopy, options = {}) => {
+  if (options?.bypassInternalSourceProtection) return false;
   if (allowInternalCopy) return false;
   const sourceApp = getSourceApp(item?.metadata);
   return isQollectManagedSource(sourceApp);
 };
 
 export const createItemActions = (set, get) => ({
-  handleCopy: async (item, source = 'global') => {
+  handleCopy: async (item, source = 'global', options = {}) => {
     try {
       const itemForCopy = await hydrateItemIfNeeded(item);
-      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems)) {
+      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems, options)) {
         return false;
       }
       await copyItemToClipboard(itemForCopy);
@@ -43,10 +44,10 @@ export const createItemActions = (set, get) => ({
     }
   },
 
-  handleCopyAndAutoPaste: async (item, source = 'global') => {
+  handleCopyAndAutoPaste: async (item, source = 'global', options = {}) => {
     try {
       const itemForCopy = await hydrateItemIfNeeded(item);
-      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems)) {
+      if (shouldSkipInternalSourceCopy(itemForCopy, get().copyQollectSourceItems, options)) {
         return false;
       }
       await copyItemToClipboard(itemForCopy);

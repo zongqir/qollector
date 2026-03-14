@@ -214,6 +214,21 @@ impl ClipboardItem {
         true
     }
 
+    fn bare_url_host_candidate(text: &str) -> &str {
+        let authority_end = text
+            .find(['/', '?', '#'])
+            .unwrap_or(text.len());
+        let authority = &text[..authority_end];
+
+        if let Some((host, port)) = authority.rsplit_once(':') {
+            if !host.is_empty() && !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()) {
+                return host;
+            }
+        }
+
+        authority
+    }
+
     fn is_supported_link_scheme(scheme: &str) -> bool {
         matches!(scheme, "http" | "https" | "ftp" | "ftps" | "ws" | "wss")
     }
@@ -255,6 +270,11 @@ impl ClipboardItem {
 
         // 2) 裸域名 / 无协议链接（如 mp.weixin.qq.com、tmp.link/abc）
         if !Self::is_bare_url_candidate(trimmed) {
+            return false;
+        }
+
+        let bare_host = Self::bare_url_host_candidate(trimmed);
+        if !Self::is_valid_link_host(bare_host) {
             return false;
         }
 
@@ -446,6 +466,22 @@ mod tests {
 
         // Explicit URL with user info is still a valid URL.
         assert!(ClipboardItem::is_url("https://user:pass@example.com/path"));
+    }
+
+    #[test]
+    fn rejects_bare_decimal_hosts_that_url_parser_normalizes_to_ipv4() {
+        assert!(!ClipboardItem::is_url("123456"));
+        assert!(!ClipboardItem::is_url("123456/path"));
+        assert!(!ClipboardItem::is_url("4294967295"));
+        assert!(!ClipboardItem::is_url("123456:80"));
+    }
+
+    #[test]
+    fn keeps_bare_domain_and_ipv4_hosts() {
+        assert!(ClipboardItem::is_url("docs.rs/serde"));
+        assert!(ClipboardItem::is_url("www.qq.com"));
+        assert!(ClipboardItem::is_url("127.0.0.1"));
+        assert!(ClipboardItem::is_url("127.0.0.1:5173"));
     }
 }
 

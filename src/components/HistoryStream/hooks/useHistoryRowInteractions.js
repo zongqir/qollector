@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { INTERNAL_DRAG_MIME } from '../../../constants/dragDrop';
 import { resolveFilenameStemForItem } from '../../../utils/filenameNaming';
 import {
   PREVIEW_CLICK_DELAY_MS,
   openItemPreview,
   shouldIgnoreCardDoubleClickTarget,
 } from '../../../utils/previewInteractionPolicy';
+import { getSourceApp } from '../../../utils/tagHelpers';
+
+const HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS = 420;
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -27,13 +29,6 @@ function getExternalFilePaths(item) {
   }
 
   return [];
-}
-
-function getDragText(item, externalPaths) {
-  if (item.type_ === 'text') return item.content || '';
-  if (item.type_ === 'file') return item.content || externalPaths.join('\n');
-  if (item.type_ === 'image') return item.ocr_text || externalPaths[0] || item.content || '';
-  return item.content || '';
 }
 
 function canDragTextAsFile(item) {
@@ -64,6 +59,7 @@ export default function useHistoryRowInteractions({
   switchToWorkbench,
 }) {
   const clickTimerRef = useRef(null);
+  const lastClickRef = useRef({ itemId: null, timestamp: 0 });
 
   useEffect(() => () => {
     if (clickTimerRef.current) {
@@ -71,6 +67,15 @@ export default function useHistoryRowInteractions({
       clickTimerRef.current = null;
     }
   }, []);
+
+  const triggerHistoryDoubleClickAction = useCallback((item) => {
+    clearExpandedPreview();
+    if (item.type_ === 'image' || item.type_ === 'file') {
+      handleCopy(item, 'history', { bypassInternalSourceProtection: true });
+      return;
+    }
+    handleCopyAndAutoPaste(item, 'history', { bypassInternalSourceProtection: true });
+  }, [clearExpandedPreview, handleCopy, handleCopyAndAutoPaste]);
 
   const handleCardClick = useCallback((item, index, e) => {
     e.stopPropagation();
@@ -125,6 +130,28 @@ export default function useHistoryRowInteractions({
       clickTimerRef.current = null;
     }
 
+    const now = Date.now();
+    const isFallbackDoubleClick = (
+      e.detail === 1
+      && lastClickRef.current.itemId === item.id
+      && now - lastClickRef.current.timestamp <= HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS
+    );
+    lastClickRef.current = {
+      itemId: item.id,
+      timestamp: now,
+    };
+
+    if (isFallbackDoubleClick) {
+      e.preventDefault();
+      triggerHistoryDoubleClickAction(item);
+      return;
+    }
+
+    if (filteredItems.length === 1) {
+      clearExpandedPreview();
+      return;
+    }
+
     if (shouldUseHoverPreview) {
       if (expandedPreviewItemId === item.id) {
         clearExpandedPreview();
@@ -133,14 +160,14 @@ export default function useHistoryRowInteractions({
       clickTimerRef.current = setTimeout(() => {
         setExpandedPreviewItemId(item.id);
         clickTimerRef.current = null;
-      }, 250);
+      }, HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS);
       return;
     }
 
     clickTimerRef.current = setTimeout(() => {
       openItemPreview(setPanelMode, item);
       clickTimerRef.current = null;
-    }, PREVIEW_CLICK_DELAY_MS);
+    }, HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS);
   }, [
     filteredItems,
     selectionAnchorIndexRef,
@@ -157,27 +184,25 @@ export default function useHistoryRowInteractions({
     clearExpandedPreview,
     setExpandedPreviewItemId,
     setPanelMode,
+    triggerHistoryDoubleClickAction,
   ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
-    if (shouldIgnoreCardDoubleClickTarget(e.target)) {
+    const shouldIgnore = shouldIgnoreCardDoubleClickTarget(e.target);
+    if (shouldIgnore) {
       e.stopPropagation();
       return;
     }
     e.stopPropagation();
     e.preventDefault();
+    lastClickRef.current = { itemId: null, timestamp: 0 };
     window.getSelection()?.removeAllRanges();
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    clearExpandedPreview();
-    if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item, 'history');
-    } else {
-      handleCopyAndAutoPaste(item, 'history');
-    }
-  }, [handleCopyAndAutoPaste, handleCopy, clearExpandedPreview]);
+    triggerHistoryDoubleClickAction(item);
+  }, [triggerHistoryDoubleClickAction]);
 
   const handleStartExternalDrag = useCallback(async (item) => {
     if (!supportsNativeExternalDrag) return;
@@ -205,30 +230,6 @@ export default function useHistoryRowInteractions({
     }
   }, [supportsNativeExternalDrag]);
 
-  const handleDragStart = useCallback((item, e) => {
-    const externalPaths = getExternalFilePaths(item);
-    const shouldUseNativeFileDrag = supportsNativeExternalDrag && !e.shiftKey && externalPaths.length > 0;
-    if (shouldUseNativeFileDrag) {
-      e.preventDefault();
-      handleStartExternalDrag(item);
-      return;
-    }
-
-    const text = getDragText(item, externalPaths);
-    e.dataTransfer.setData('text/plain', text);
-    e.dataTransfer.setData('text', text);
-    e.dataTransfer.setData(INTERNAL_DRAG_MIME, JSON.stringify({ id: item.id }));
-    e.dataTransfer.effectAllowed = 'copyMove';
-    switchToWorkbench();
-
-    const dragEl = document.createElement('div');
-    dragEl.textContent = text.substring(0, 120) + (text.length > 120 ? '...' : '');
-    dragEl.style.cssText = 'position:absolute;top:-999px;padding:4px 8px;background:#333;color:#fff;border-radius:4px;font-size:12px;max-width:420px;white-space:nowrap;overflow:hidden;';
-    document.body.appendChild(dragEl);
-    e.dataTransfer.setDragImage(dragEl, 0, 0);
-    setTimeout(() => document.body.removeChild(dragEl), 0);
-  }, [supportsNativeExternalDrag, handleStartExternalDrag, switchToWorkbench]);
-
   const handleStreamClick = useCallback(() => {
     if (selectedItemIds.length > 0) {
       clearSelection();
@@ -247,7 +248,6 @@ export default function useHistoryRowInteractions({
     handleCardClick,
     handleCardDoubleClick,
     handleStartExternalDrag,
-    handleDragStart,
     handleStreamClick,
   };
 }

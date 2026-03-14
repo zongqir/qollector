@@ -1014,10 +1014,10 @@ function CollectionBoard({
 
     if (isCollectionSortMode) return;
     if (item.type_ === 'image' || item.type_ === 'file') {
-      onCopy?.(item, 'collection');
+      onCopy?.(item, 'collection', { bypassInternalSourceProtection: true });
       return;
     }
-    onCopyAndAutoPaste?.(item, 'collection');
+    onCopyAndAutoPaste?.(item, 'collection', { bypassInternalSourceProtection: true });
   }, [
     clearCollectionSortLongPressTimer,
     clearCollectionCardClickTimer,

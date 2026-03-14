@@ -1348,24 +1348,15 @@ function WorkbenchPanel() {
     if (isWorkbenchSortMode) return;
     if (selectedPinnedIds.length > 0) return;
 
-    const sourceApp = getSourceApp(item?.metadata);
-    if (!copyQollectSourceItems && isQollectManagedSource(sourceApp)) {
-      showTransientToast(t('workbench.copySkippedQollectSource'));
-      return;
-    }
-
     if (item?.type_ === 'image' || item?.type_ === 'file') {
-      await handleCopy(item, 'workbench');
+      await handleCopy(item, 'workbench', { bypassInternalSourceProtection: true });
       return;
     }
 
-    await handleCopyAndAutoPaste(item, 'workbench');
+    await handleCopyAndAutoPaste(item, 'workbench', { bypassInternalSourceProtection: true });
   }, [
     isWorkbenchSortMode,
     selectedPinnedIds.length,
-    copyQollectSourceItems,
-    showTransientToast,
-    t,
     handleCopy,
     handleCopyAndAutoPaste,
   ]);

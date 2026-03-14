@@ -1460,6 +1460,8 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   letter-spacing: 0.004em;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .compact-card-link {
@@ -1499,6 +1501,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .compact-link-domain {
@@ -1508,6 +1512,8 @@
   opacity: 0.9;
   white-space: nowrap;
   letter-spacing: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .compact-link-path {
@@ -1517,6 +1523,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   letter-spacing: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .compact-card-image {
@@ -1552,6 +1560,8 @@
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .compact-card-tags {

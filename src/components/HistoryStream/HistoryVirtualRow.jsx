@@ -19,7 +19,6 @@ function HistoryVirtualRow({
   onCardClick,
   onCardDoubleClick,
   onCardContextMenu,
-  onDragStart,
   onStartExternalDrag,
   onTogglePin,
   onToggleFavorite,
@@ -57,7 +56,6 @@ function HistoryVirtualRow({
         e.stopPropagation();
         onCardContextMenu?.(item, index, e);
       }}
-      onDoubleClick={(e) => onCardDoubleClick(item, e)}
     >
       <CompactCard
         item={item}
@@ -69,7 +67,6 @@ function HistoryVirtualRow({
         isCopied={copiedItemId === item.id && copyFeedbackSource === 'history'}
         timeTick={timeTick}
         searchExplain={searchExplain}
-        onDragStart={onDragStart}
         supportsNativeExternalDrag={supportsNativeExternalDrag}
         onStartExternalDrag={onStartExternalDrag}
         onTogglePin={onTogglePin}
@@ -79,6 +76,7 @@ function HistoryVirtualRow({
         onSetCardBackground={onSetCardBackground}
         onTagClick={onTagClick}
         onToggleMultiSelect={() => onToggleMultiSelect?.(item, index)}
+        onDoubleClick={(e) => onCardDoubleClick(item, e)}
       />
       {shouldUseHoverPreview && isExpandedPreview && (
         <InlinePreviewPanel item={item} onRequestClose={() => onCloseInlinePreview?.(item.id)} />

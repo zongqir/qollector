@@ -1240,7 +1240,6 @@ function HistoryStream({ style }) {
     handleCardClick,
     handleCardDoubleClick,
     handleStartExternalDrag,
-    handleDragStart,
     handleStreamClick,
   } = useHistoryRowInteractions({
     filteredItems,
@@ -1355,7 +1354,6 @@ function HistoryStream({ style }) {
     copiedItemId,
     copyFeedbackSource,
     timeTick,
-    onDragStart: handleDragStart,
     supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
     onStartExternalDrag: handleStartExternalDrag,
     onTogglePin: togglePin,
@@ -1373,7 +1371,6 @@ function HistoryStream({ style }) {
     copiedItemId,
     copyFeedbackSource,
     timeTick,
-    handleDragStart,
     handleStartExternalDrag,
     togglePin,
     toggleFavorite,
