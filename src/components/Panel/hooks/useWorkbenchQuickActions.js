@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 import { WORKBENCH_PRIMARY_ACTION_STORAGE_KEY } from '../../../constants/storageKeys';
+import { pinItem, toggleItemPin } from '../../../services/clipboardService';
 import {
   getActionExecutionPreset,
   QUICK_OUTPUT_TASKS,
@@ -129,6 +130,7 @@ function useWorkbenchQuickActions({
   aiEnabled,
   uiLanguage,
   selectionMode,
+  activeWorkbenchId,
   addQuickNote,
   loadItems,
   setPanelMode,
@@ -334,10 +336,10 @@ function useWorkbenchQuickActions({
       const toPin = snapshotIds.filter(id => !currentPinnedSet.has(id));
 
       for (const id of toUnpin) {
-        await invoke('toggle_pin_item', { id, maxPinned: 999 });
+        await toggleItemPin(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
       for (const id of toPin) {
-        await invoke('toggle_pin_item', { id, maxPinned: 999 });
+        await pinItem(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
 
       await loadItems();
@@ -352,7 +354,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [isBusy, closeMenus, items, pinnedItems, loadItems, setPanelMode, showMessage, t]);
+  }, [activeWorkbenchId, isBusy, closeMenus, items, pinnedItems, loadItems, setPanelMode, showMessage, t]);
 
   const handleExportWorkbench = useCallback(async () => {
     if (isBusy) return;
@@ -411,7 +413,7 @@ function useWorkbenchQuickActions({
       }
 
       for (const id of duplicateIds) {
-        await invoke('toggle_pin_item', { id, maxPinned: 999 });
+        await toggleItemPin(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
 
       await loadItems();
@@ -422,7 +424,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [isBusy, closeMenus, pinnedItems, loadItems, showMessage, t]);
+  }, [activeWorkbenchId, isBusy, closeMenus, pinnedItems, loadItems, showMessage, t]);
 
   const handleClearAll = useCallback(async () => {
     if (isBusy || pinnedItems.length === 0) return;
@@ -435,7 +437,7 @@ function useWorkbenchQuickActions({
     setActiveAction('clear');
     try {
       for (const item of pinnedItems) {
-        await invoke('toggle_pin_item', { id: item.id, maxPinned: 999 });
+        await toggleItemPin(item.id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
       await loadItems();
       setPanelMode('workbench');
@@ -451,7 +453,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [isBusy, pinnedItems, closeMenus, t, loadItems, setPanelMode, showMessage]);
+  }, [activeWorkbenchId, isBusy, pinnedItems, closeMenus, t, loadItems, setPanelMode, showMessage]);
 
   const handleUndoClearAll = useCallback(async () => {
     if (isBusy || lastClearedPinnedIds.length === 0) return;
@@ -461,7 +463,7 @@ function useWorkbenchQuickActions({
       for (const id of lastClearedPinnedIds) {
         const candidate = itemMap.get(id);
         if (!candidate || candidate.is_pinned) continue;
-        await invoke('toggle_pin_item', { id, maxPinned: 999 });
+        await pinItem(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
       await loadItems();
       setLastClearedPinnedIds([]);
@@ -472,7 +474,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [isBusy, lastClearedPinnedIds, items, loadItems, showMessage, t]);
+  }, [activeWorkbenchId, isBusy, lastClearedPinnedIds, items, loadItems, showMessage, t]);
 
   const runWorkbenchMoreAction = useCallback((actionKey = workbenchPrimaryAction) => {
     switch (actionKey) {

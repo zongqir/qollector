@@ -3,6 +3,7 @@ import { generateAITagsForItem } from '../../services/aiService';
 import {
   copyItemToClipboard,
   deleteItem as deleteItemSvc,
+  toggleItemPin,
 } from '../../services/clipboardService';
 import {
   getCardBackgroundIdFromMetadata,
@@ -103,8 +104,11 @@ export const createItemActions = (set, get) => ({
 
   togglePin: async (item) => {
     try {
-      const { maxPinnedItems } = get();
-      const nextPinnedState = await invoke('toggle_pin_item', { id: item.id, maxPinned: maxPinnedItems });
+      const { maxPinnedItems, activeWorkbenchId } = get();
+      const nextPinnedState = await toggleItemPin(item.id, {
+        maxPinned: maxPinnedItems,
+        workbenchId: activeWorkbenchId,
+      });
       const now = Math.floor(Date.now() / 1000);
 
       set((state) => {
@@ -112,7 +116,9 @@ export const createItemActions = (set, get) => ({
         const unpinnedByLimitIds = new Set();
 
         if (nextPinnedState === true) {
-          const alreadyPinned = state.items.filter((it) => it.is_pinned && it.id !== item.id);
+          const alreadyPinned = state.items.filter(
+            (it) => it.is_pinned && it.id !== item.id && it.workbench_id === activeWorkbenchId,
+          );
           const overflow = alreadyPinned.length + 1 - maxPinnedItems;
           if (overflow > 0) {
             const oldestPinned = [...alreadyPinned]
@@ -128,7 +134,12 @@ export const createItemActions = (set, get) => ({
         }
 
         const maxPinOrder = state.items.reduce((maxOrder, candidate) => {
-          if (!candidate.is_pinned || candidate.id === item.id || unpinnedByLimitIds.has(candidate.id)) {
+          if (
+            !candidate.is_pinned
+            || candidate.id === item.id
+            || unpinnedByLimitIds.has(candidate.id)
+            || candidate.workbench_id !== activeWorkbenchId
+          ) {
             return maxOrder;
           }
           const value = Number(candidate.pin_order);
@@ -144,6 +155,7 @@ export const createItemActions = (set, get) => ({
               is_pinned: nextPinnedState,
               pinned_at: nextPinnedState ? now : null,
               pin_order: nextPinnedState ? nextPinOrder : null,
+              workbench_id: nextPinnedState ? activeWorkbenchId : null,
               updated_at: now,
             };
           }
@@ -154,6 +166,7 @@ export const createItemActions = (set, get) => ({
               is_pinned: false,
               pinned_at: null,
               pin_order: null,
+              workbench_id: null,
               updated_at: now,
             };
           }
@@ -168,6 +181,7 @@ export const createItemActions = (set, get) => ({
             is_pinned: nextPinnedState,
             pinned_at: nextPinnedState ? now : null,
             pin_order: nextPinnedState ? nextPinOrder : null,
+            workbench_id: nextPinnedState ? activeWorkbenchId : null,
             updated_at: now,
           };
         } else if (previewItem && unpinnedByLimitIds.has(previewItem.id)) {
@@ -176,6 +190,7 @@ export const createItemActions = (set, get) => ({
             is_pinned: false,
             pinned_at: null,
             pin_order: null,
+            workbench_id: null,
             updated_at: now,
           };
         }

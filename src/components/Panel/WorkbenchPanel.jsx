@@ -34,6 +34,7 @@ import {
 import useAppStore from '../../store/useAppStore';
 import SortableWorkbenchCard from './SortableWorkbenchCard';
 import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
+import WorkbenchSwitcher from './WorkbenchSwitcher';
 import WorkbenchInlineEditor from './WorkbenchInlineEditor';
 import WorkbenchMultiSelectBar from './WorkbenchMultiSelectBar';
 import WorkbenchQuickActionsBar from './WorkbenchQuickActionsBar';
@@ -141,6 +142,8 @@ function WorkbenchPanel() {
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
   const [workbenchInlineEditorActiveItemId, setWorkbenchInlineEditorActiveItemId] = useState(null);
+  const [showWorkbenchSwitcher, setShowWorkbenchSwitcher] = useState(false);
+  const [showWorkbenchManageMenu, setShowWorkbenchManageMenu] = useState(false);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
   const [transientWorkbenchToast, setTransientWorkbenchToast] = useState('');
   const [pendingUnpinItemId, setPendingUnpinItemId] = useState(null);
@@ -151,6 +154,7 @@ function WorkbenchPanel() {
   const workbenchSavedViewWrapperRef = useRef(null);
   const workbenchSearchBoxRef = useRef(null);
   const workbenchSearchInputRef = useRef(null);
+  const workbenchSwitcherRef = useRef(null);
   const shouldToggleWorkbenchRecentSearchesOnClickRef = useRef(false);
   const workbenchTagListboxRef = useRef(null);
   const workbenchFilterRowRef = useRef(null);
@@ -193,6 +197,9 @@ function WorkbenchPanel() {
   const openEditModal = useAppStore(s => s.openEditModal);
   const searchQuery = useAppStore(s => s.workbenchSearchQuery);
   const workbenchRecentSearches = useAppStore(s => s.workbenchRecentSearches);
+  const workbenches = useAppStore(s => s.workbenches);
+  const activeWorkbenchId = useAppStore(s => s.activeWorkbenchId);
+  const workbenchStateLoaded = useAppStore(s => s.workbenchStateLoaded);
   const selectedType = useAppStore(s => s.workbenchSelectedType);
   const selectedTags = useAppStore(s => s.workbenchSelectedTags);
   const showFavoritesOnly = useAppStore(s => s.workbenchShowFavoritesOnly);
@@ -217,11 +224,66 @@ function WorkbenchPanel() {
   const applySavedFilterView = useAppStore(s => s.applyWorkbenchSavedFilterView);
   const deleteSavedFilterView = useAppStore(s => s.deleteWorkbenchSavedFilterView);
   const clearActiveFilterView = useAppStore(s => s.clearWorkbenchActiveFilterView);
+  const loadWorkbenches = useAppStore(s => s.loadWorkbenches);
+  const setActiveWorkbenchId = useAppStore(s => s.setActiveWorkbenchId);
+  const createWorkbench = useAppStore(s => s.createWorkbench);
+  const renameWorkbench = useAppStore(s => s.renameWorkbench);
+  const deleteWorkbench = useAppStore(s => s.deleteWorkbench);
+
+  const activeWorkbench = useMemo(
+    () => workbenches.find((workbench) => workbench.id === activeWorkbenchId)
+      || workbenches.find((workbench) => workbench.is_default)
+      || null,
+    [workbenches, activeWorkbenchId],
+  );
+
+  const getWorkbenchDisplayName = useCallback((workbench) => {
+    if (workbench?.is_default) return t('workbench.defaultWorkbench');
+    const normalizedName = String(workbench?.name || '').trim();
+    return normalizedName || t('workbench.defaultWorkbench');
+  }, [t]);
+
+  const getCompactWorkbenchDisplayName = useCallback((workbench) => {
+    if (workbench?.is_default) return t('workbench.defaultBadge');
+    const fullLabel = getWorkbenchDisplayName(workbench);
+    if (!fullLabel) return t('workbench.defaultBadge');
+    const isCjkLabel = /[\u3400-\u9fff]/.test(fullLabel);
+    if (isCjkLabel) {
+      return fullLabel.length > 2 ? `${fullLabel.slice(0, 2)}…` : fullLabel;
+    }
+    return fullLabel.length > 4 ? `${fullLabel.slice(0, 4)}…` : fullLabel;
+  }, [getWorkbenchDisplayName, t]);
+
+  const activeWorkbenchLabel = useMemo(
+    () => getWorkbenchDisplayName(activeWorkbench),
+    [activeWorkbench, getWorkbenchDisplayName],
+  );
+
+  const activeWorkbenchShortLabel = useMemo(
+    () => getCompactWorkbenchDisplayName(activeWorkbench),
+    [activeWorkbench, getCompactWorkbenchDisplayName],
+  );
+
+  const workbenchSwitcherOptions = useMemo(() => (
+    workbenches.map((workbench) => ({
+      id: workbench.id,
+      label: getWorkbenchDisplayName(workbench),
+      isDefault: Boolean(workbench.is_default),
+      isActive: workbench.id === (activeWorkbenchId || activeWorkbench?.id),
+    }))
+  ), [workbenches, getWorkbenchDisplayName, activeWorkbenchId, activeWorkbench]);
 
   useEffect(() => {
+    loadWorkbenches().catch((error) => {
+      console.error('[Workbench] load workbenches failed:', error);
+    });
+  }, [loadWorkbenches]);
+
+  useEffect(() => {
+    if (!workbenchStateLoaded) return undefined;
     let cancelled = false;
     setWorkbenchLoading(true);
-    getWorkbenchPinnedItems()
+    getWorkbenchPinnedItems(activeWorkbenchId || undefined)
       .then((results) => {
         if (cancelled) return;
         setBackendPinnedItems(Array.isArray(results) ? results : []);
@@ -243,7 +305,7 @@ function WorkbenchPanel() {
     return () => {
       cancelled = true;
     };
-  }, [itemsRevision, workbenchRefreshNonce, t]);
+  }, [activeWorkbenchId, itemsRevision, workbenchRefreshNonce, t, workbenchStateLoaded]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -298,13 +360,13 @@ function WorkbenchPanel() {
 
   const pinnedBaseItems = useMemo(() => {
     if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
-    return [...items.filter(item => item.is_pinned)].sort((left, right) => {
+    return [...items.filter(item => item.is_pinned && item.workbench_id === activeWorkbenchId)].sort((left, right) => {
       const leftOrder = Number.isFinite(Number(left?.pin_order)) ? Number(left.pin_order) : Number.MAX_SAFE_INTEGER;
       const rightOrder = Number.isFinite(Number(right?.pin_order)) ? Number(right.pin_order) : Number.MAX_SAFE_INTEGER;
       if (leftOrder !== rightOrder) return leftOrder - rightOrder;
       return Number(right?.pinned_at || 0) - Number(left?.pinned_at || 0);
     });
-  }, [backendPinnedItems, items]);
+  }, [activeWorkbenchId, backendPinnedItems, items]);
 
   const allPinnedItems = useMemo(() => pinnedBaseItems, [pinnedBaseItems]);
 
@@ -315,7 +377,10 @@ function WorkbenchPanel() {
       selectedTags,
       showFavoritesOnly,
       selectedDateRange,
-      baseFilters: { is_pinned: true },
+      baseFilters: {
+        is_pinned: true,
+        ...(activeWorkbenchId ? { workbench_id: activeWorkbenchId } : {}),
+      },
       triggerMode: SEARCH_REQUEST_TRIGGER_MODE.ADDITIONAL_STRUCTURED_FILTER,
       t,
     });
@@ -325,6 +390,7 @@ function WorkbenchPanel() {
     showFavoritesOnly,
     selectedTags,
     selectedDateRange,
+    activeWorkbenchId,
     t,
     i18n.language,
   ]);
@@ -653,16 +719,16 @@ function WorkbenchPanel() {
     const nextOrderedItems = arrayMove(allPinnedItems, oldIndex, newIndex);
     const orderedIds = nextOrderedItems.map(item => item.id);
     setBackendPinnedItems(nextOrderedItems);
-    reorderWorkbenchPinnedItems(orderedIds).catch(async (error) => {
+    reorderWorkbenchPinnedItems(orderedIds, activeWorkbenchId || undefined).catch(async (error) => {
       console.error('[Workbench] persist pinned order failed:', error);
       try {
-        const latest = await getWorkbenchPinnedItems();
+        const latest = await getWorkbenchPinnedItems(activeWorkbenchId || undefined);
         setBackendPinnedItems(Array.isArray(latest) ? latest : []);
       } catch (refreshError) {
         console.error('[Workbench] refresh pinned items after reorder failed:', refreshError);
       }
     });
-  }, [allPinnedItems, isWorkbenchSortMode]);
+  }, [activeWorkbenchId, allPinnedItems, isWorkbenchSortMode]);
 
   const handleWorkbenchTypeChange = useCallback((nextType) => {
     setSelectedType(nextType);
@@ -757,6 +823,23 @@ function WorkbenchPanel() {
       return next;
     });
   }, [dismissOpenDropdowns]);
+
+  const closeWorkbenchSwitcherOverlays = useCallback(() => {
+    setShowWorkbenchManageMenu(false);
+    setShowWorkbenchSwitcher(false);
+  }, []);
+
+  const handleToggleWorkbenchSwitcher = useCallback(() => {
+    dismissOpenDropdowns();
+    setShowWorkbenchRecentSearches(false);
+    setActiveWorkbenchRecentSearchIndex(-1);
+    setShowWorkbenchManageMenu(false);
+    setShowWorkbenchSwitcher((current) => !current);
+  }, [dismissOpenDropdowns]);
+
+  const handleToggleWorkbenchManageMenu = useCallback(() => {
+    setShowWorkbenchManageMenu((current) => !current);
+  }, []);
 
   const handleSelectWorkbenchDatePreset = useCallback((preset) => {
     if (preset === 'custom') {
@@ -886,8 +969,29 @@ function WorkbenchPanel() {
     wrapperRef: workbenchSavedViewWrapperRef,
     onDismiss: () => setShowWorkbenchSavedViews(false),
   });
+  useClickOutsideDismiss({
+    isOpen: showWorkbenchSwitcher || showWorkbenchManageMenu,
+    wrapperRef: workbenchSwitcherRef,
+    onDismiss: closeWorkbenchSwitcherOverlays,
+  });
 
-  useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
+  const dismissTopLevelOverlays = useCallback(() => {
+    if (showWorkbenchSwitcher || showWorkbenchManageMenu) {
+      closeWorkbenchSwitcherOverlays();
+      return;
+    }
+    dismissOpenDropdowns();
+  }, [
+    closeWorkbenchSwitcherOverlays,
+    dismissOpenDropdowns,
+    showWorkbenchManageMenu,
+    showWorkbenchSwitcher,
+  ]);
+
+  useEscapeDismiss(
+    hasOpenDropdown || showWorkbenchSwitcher || showWorkbenchManageMenu,
+    dismissTopLevelOverlays,
+  );
 
   useEffect(() => {
     if (!showWorkbenchRecentSearches) {
@@ -1012,6 +1116,18 @@ function WorkbenchPanel() {
     [],
   );
 
+  const showTransientToast = useCallback((message, duration = 1800) => {
+    if (!message) return;
+    setTransientWorkbenchToast(message);
+    if (workbenchToastTimerRef.current) {
+      clearTimeout(workbenchToastTimerRef.current);
+    }
+    workbenchToastTimerRef.current = setTimeout(() => {
+      setTransientWorkbenchToast('');
+      workbenchToastTimerRef.current = null;
+    }, duration);
+  }, []);
+
   const handleQuickNoteSubmit = useCallback(async (e) => {
     if (isComposingKeyEvent(e)) return;
     if (e.key === 'Enter' && !e.shiftKey && quickNote.trim()) {
@@ -1022,8 +1138,11 @@ function WorkbenchPanel() {
         await addQuickNote(quickNote);
         setQuickNote('');
         setIsExpanded(false);
+        showTransientToast(t('workbench.quickNoteAddedToWorkbench', { name: activeWorkbenchLabel }));
       } catch (error) {
         console.error('[Workbench] quick note add failed:', error);
+        const message = typeof error === 'string' ? error : String(error?.message || error || '');
+        showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
       } finally {
         quickNoteSubmittingRef.current = false;
       }
@@ -1031,7 +1150,7 @@ function WorkbenchPanel() {
     if (e.key === 'Escape') {
       setIsExpanded(false);
     }
-  }, [quickNote, addQuickNote, isComposingKeyEvent]);
+  }, [quickNote, addQuickNote, isComposingKeyEvent, showTransientToast, t, activeWorkbenchLabel]);
 
   const handleExpandedSubmit = useCallback(async () => {
     if (!quickNote.trim()) return;
@@ -1041,12 +1160,15 @@ function WorkbenchPanel() {
       await addQuickNote(quickNote);
       setQuickNote('');
       setIsExpanded(false);
+      showTransientToast(t('workbench.quickNoteAddedToWorkbench', { name: activeWorkbenchLabel }));
     } catch (error) {
       console.error('[Workbench] expanded quick note add failed:', error);
+      const message = typeof error === 'string' ? error : String(error?.message || error || '');
+      showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
     } finally {
       quickNoteSubmittingRef.current = false;
     }
-  }, [quickNote, addQuickNote]);
+  }, [quickNote, addQuickNote, showTransientToast, t, activeWorkbenchLabel]);
 
   const handleNativeDragOver = useCallback((e) => {
     e.preventDefault();
@@ -1195,18 +1317,6 @@ function WorkbenchPanel() {
     selectionAnchorIndexRef.current = index;
     openItemPreview(setPanelMode, item);
   }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
-
-  const showTransientToast = useCallback((message, duration = 1800) => {
-    if (!message) return;
-    setTransientWorkbenchToast(message);
-    if (workbenchToastTimerRef.current) {
-      clearTimeout(workbenchToastTimerRef.current);
-    }
-    workbenchToastTimerRef.current = setTimeout(() => {
-      setTransientWorkbenchToast('');
-      workbenchToastTimerRef.current = null;
-    }, duration);
-  }, []);
 
   const clearPendingUnpinConfirm = useCallback(() => {
     setPendingUnpinItemId(null);
@@ -1400,6 +1510,77 @@ function WorkbenchPanel() {
     }
   }, [quickNote, handleExpandedSubmit, isComposingKeyEvent]);
 
+  const handleSelectWorkbench = useCallback((workbenchId) => {
+    const nextWorkbenchId = String(workbenchId || '').trim();
+    closeWorkbenchSwitcherOverlays();
+    if (!nextWorkbenchId || nextWorkbenchId === activeWorkbenchId) return;
+    const targetWorkbench = workbenches.find((workbench) => workbench.id === nextWorkbenchId);
+    setActiveWorkbenchId(nextWorkbenchId);
+    setSelectedPinnedIds([]);
+    setBackendPinnedItems(null);
+    setBackendFilteredPinnedIds(null);
+    setPanelMode('workbench');
+    handleFinishWorkbenchSortMode();
+    if (workbenchCardsRef.current) {
+      workbenchCardsRef.current.scrollTop = 0;
+    }
+    showTransientToast(t('workbench.switchSuccess', { name: getWorkbenchDisplayName(targetWorkbench) }));
+  }, [
+    activeWorkbenchId,
+    closeWorkbenchSwitcherOverlays,
+    getWorkbenchDisplayName,
+    handleFinishWorkbenchSortMode,
+    workbenchCardsRef,
+    setActiveWorkbenchId,
+    setPanelMode,
+    showTransientToast,
+    t,
+    workbenches,
+  ]);
+
+  const handleCreateWorkbench = useCallback(async () => {
+    closeWorkbenchSwitcherOverlays();
+    const nextName = window.prompt(t('workbench.createPrompt'), '');
+    if (!nextName || !nextName.trim()) return;
+    try {
+      await createWorkbench(nextName.trim());
+      showTransientToast(t('workbench.createSuccess', { name: nextName.trim() }));
+    } catch (error) {
+      const message = typeof error === 'string' ? error : String(error?.message || error || '');
+      showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
+    }
+  }, [closeWorkbenchSwitcherOverlays, createWorkbench, showTransientToast, t]);
+
+  const handleRenameActiveWorkbench = useCallback(async () => {
+    if (!activeWorkbench || activeWorkbench.is_default) return;
+    closeWorkbenchSwitcherOverlays();
+    const currentName = String(activeWorkbench.name || '').trim();
+    const nextName = window.prompt(t('workbench.renamePrompt'), currentName);
+    if (!nextName || !nextName.trim() || nextName.trim() === currentName) return;
+    try {
+      await renameWorkbench(activeWorkbench.id, nextName.trim());
+      showTransientToast(t('workbench.renameSuccess', { name: nextName.trim() }));
+    } catch (error) {
+      const message = typeof error === 'string' ? error : String(error?.message || error || '');
+      showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
+    }
+  }, [activeWorkbench, closeWorkbenchSwitcherOverlays, renameWorkbench, showTransientToast, t]);
+
+  const handleDeleteActiveWorkbench = useCallback(async () => {
+    if (!activeWorkbench || activeWorkbench.is_default) return;
+    closeWorkbenchSwitcherOverlays();
+    const workbenchName = String(activeWorkbench.name || '').trim();
+    const confirmed = window.confirm(t('workbench.deleteConfirm', { name: workbenchName }));
+    if (!confirmed) return;
+    try {
+      await deleteWorkbench(activeWorkbench.id);
+      showTransientToast(t('workbench.deleteSuccess', { name: workbenchName }));
+    } catch (error) {
+      const message = typeof error === 'string' ? error : String(error?.message || error || '');
+      showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
+    }
+  }, [activeWorkbench, closeWorkbenchSwitcherOverlays, deleteWorkbench, showTransientToast, t]);
+
   const batchActions = useWorkbenchBatchActions({
     selectedPinnedItems,
     selectedCount: selectedPinnedIds.length,
@@ -1409,6 +1590,7 @@ function WorkbenchPanel() {
     batchAiSourceText,
     itemsRevision,
     uiLanguage: i18n.language,
+    activeWorkbenchId,
     maxPinnedItems,
     loadItems,
     t,
@@ -1420,6 +1602,7 @@ function WorkbenchPanel() {
     aiEnabled,
     uiLanguage: i18n.language,
     selectionMode: selectedPinnedIds.length > 0,
+    activeWorkbenchId,
     addQuickNote,
     loadItems,
     setPanelMode,
@@ -1696,6 +1879,8 @@ function WorkbenchPanel() {
     <WorkbenchQuickNoteSection
       isExpanded={isExpanded}
       quickNote={quickNote}
+      quickNotePlaceholder={t('workbench.quickNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
+      expandedNotePlaceholder={t('workbench.expandedNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
       hasActiveFilters={hasWorkbenchFilters}
       isFiltersCollapsed={isWorkbenchFiltersCollapsed}
       onToggleFiltersCollapsed={handleToggleWorkbenchFiltersCollapsed}
@@ -1707,17 +1892,41 @@ function WorkbenchPanel() {
       onExpand={() => setIsExpanded(true)}
     />
   );
+  const floatingWorkbenchSwitcher = (
+    <WorkbenchSwitcher
+      variant="floating"
+      activeWorkbenchName={activeWorkbenchLabel}
+      workbenchOptions={workbenchSwitcherOptions}
+      isOpen={showWorkbenchSwitcher}
+      isManageMenuOpen={showWorkbenchManageMenu}
+      disabled={!workbenchStateLoaded || workbenches.length === 0}
+      canManageActiveWorkbench={Boolean(activeWorkbench && !activeWorkbench.is_default)}
+      switcherRef={workbenchSwitcherRef}
+      onToggle={handleToggleWorkbenchSwitcher}
+      onSelectWorkbench={handleSelectWorkbench}
+      onCreateWorkbench={handleCreateWorkbench}
+      onToggleManageMenu={handleToggleWorkbenchManageMenu}
+      onRenameWorkbench={handleRenameActiveWorkbench}
+      onDeleteWorkbench={handleDeleteActiveWorkbench}
+    />
+  );
 
   if (allPinnedItems.length === 0) {
     return (
-      <div className={workbenchPanelClassName} ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+      <div
+        className={workbenchPanelClassName}
+        ref={workbenchPanelRef}
+        tabIndex={-1}
+        onDragOver={handleNativeDragOver}
+        onDrop={handleNativeDrop}
+      >
         {quickNoteSection}
         <div className={`workbench-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
           <div className="workbench-empty-icon panel-state-icon">
             <Package size={48} strokeWidth={1} />
           </div>
           <div className="workbench-empty-title state-panel__title panel-state-title">
-            {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.emptyTitle')}
+            {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.emptyTitleForWorkbench', { name: activeWorkbenchLabel })}
           </div>
           <div className="workbench-empty-hint state-panel__hint panel-state-text">
             {workbenchBackendError || t('workbench.emptyHint')}
@@ -1735,12 +1944,21 @@ function WorkbenchPanel() {
             </button>
           )}
         </div>
+        <div className="workbench-bottom-area workbench-bottom-area--empty">
+          {floatingWorkbenchSwitcher}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={workbenchPanelClassName} ref={workbenchPanelRef} tabIndex={-1} onDragOver={handleNativeDragOver} onDrop={handleNativeDrop}>
+    <div
+      className={workbenchPanelClassName}
+      ref={workbenchPanelRef}
+      tabIndex={-1}
+      onDragOver={handleNativeDragOver}
+      onDrop={handleNativeDrop}
+    >
       {quickNoteSection}
       {!isWorkbenchFiltersCollapsed && (
         <div className={workbenchFilterRowClassName} ref={workbenchFilterRowRef}>
@@ -2064,64 +2282,66 @@ function WorkbenchPanel() {
         enableQuickPaste={autoPasteOnDoubleClick}
         onAction={handleContextMenuAction}
       />
-
-      {selectedPinnedIds.length > 0 ? (
-        <WorkbenchMultiSelectBar
-          selectedCount={selectedPinnedIds.length}
-          showBatchTagEditor={batchActions.showBatchTagEditor}
-          onToggleBatchTagEditor={batchActions.handleToggleBatchTagEditor}
-          batchTagPending={batchActions.batchTagPending}
-          batchFlagPending={batchActions.batchFlagPending}
-          batchAiRunningTask={batchActions.batchAiRunningTask}
-          onBatchFavoriteToggle={batchActions.handleBatchFavoriteToggle}
-          allSelectedAreFavorite={allSelectedAreFavorite}
-          onBatchPinToggle={batchActions.handleBatchPinToggle}
-          allSelectedArePinned={allSelectedArePinned}
-          onMergeCopy={batchActions.handleMergeCopySelected}
-          canRunBatchAi={canRunBatchAi}
-          onBatchAiAction={batchActions.handleBatchAiAction}
-          onClearSelection={clearPinnedSelection}
-          batchTagEditorRef={batchActions.batchTagEditorRef}
-          batchTagInput={batchActions.batchTagInput}
-          onBatchTagInputChange={batchActions.handleBatchTagInputChange}
-          onBatchTagInputKeyDown={batchActions.handleBatchTagInputKeyDown}
-          canApplyBatchTag={batchActions.canApplyBatchTag}
-          onApplyBatchTag={batchActions.applyBatchTag}
-          activeBatchTagSuggestion={batchActions.activeBatchTagSuggestion}
-          onCloseBatchTagEditor={batchActions.closeBatchTagEditor}
-          filteredBatchTagSuggestions={batchActions.filteredBatchTagSuggestions}
-          batchTagSuggestionsRef={batchActions.batchTagSuggestionsRef}
-          batchTagActiveSuggestionIndex={batchActions.batchTagActiveSuggestionIndex}
-          setBatchTagActiveSuggestionIndex={batchActions.setBatchTagActiveSuggestionIndex}
-          multiSelectFeedback={batchActions.multiSelectFeedback}
-        />
-      ) : (
-        <WorkbenchQuickActionsBar
-          t={t}
-          setPanelMode={setPanelMode}
-          quickOutputTask={quickActions.quickOutputTask}
-          quickOutputRunning={quickActions.quickOutputRunning}
-          showQuickOutputMenu={quickActions.showQuickOutputMenu}
-          setShowQuickOutputMenu={quickActions.setShowQuickOutputMenu}
-          quickOutputMenuRef={quickActions.quickOutputMenuRef}
-          quickOutputTasks={quickActions.quickOutputTasks}
-          showWorkbenchMoreMenu={quickActions.showWorkbenchMoreMenu}
-          setShowWorkbenchMoreMenu={quickActions.setShowWorkbenchMoreMenu}
-          workbenchMoreMenuRef={quickActions.workbenchMoreMenuRef}
-          activeAction={quickActions.activeAction}
-          feedback={quickActions.feedback}
-          lastClearedPinnedIds={quickActions.lastClearedPinnedIds}
-          hasSnapshot={quickActions.hasSnapshot}
-          handleRunQuickOutput={quickActions.handleRunQuickOutput}
-          handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
-          handleUndoClearAll={quickActions.handleUndoClearAll}
-          workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
-          handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
-          handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
-          layoutMode={workbenchBottomBarLayout}
-          barRef={workbenchBottomBarRef}
-        />
-      )}
+      <div className="workbench-bottom-area">
+        {selectedPinnedIds.length > 0 ? (
+          <WorkbenchMultiSelectBar
+            selectedCount={selectedPinnedIds.length}
+            showBatchTagEditor={batchActions.showBatchTagEditor}
+            onToggleBatchTagEditor={batchActions.handleToggleBatchTagEditor}
+            batchTagPending={batchActions.batchTagPending}
+            batchFlagPending={batchActions.batchFlagPending}
+            batchAiRunningTask={batchActions.batchAiRunningTask}
+            onBatchFavoriteToggle={batchActions.handleBatchFavoriteToggle}
+            allSelectedAreFavorite={allSelectedAreFavorite}
+            onBatchPinToggle={batchActions.handleBatchPinToggle}
+            allSelectedArePinned={allSelectedArePinned}
+            onMergeCopy={batchActions.handleMergeCopySelected}
+            canRunBatchAi={canRunBatchAi}
+            onBatchAiAction={batchActions.handleBatchAiAction}
+            onClearSelection={clearPinnedSelection}
+            batchTagEditorRef={batchActions.batchTagEditorRef}
+            batchTagInput={batchActions.batchTagInput}
+            onBatchTagInputChange={batchActions.handleBatchTagInputChange}
+            onBatchTagInputKeyDown={batchActions.handleBatchTagInputKeyDown}
+            canApplyBatchTag={batchActions.canApplyBatchTag}
+            onApplyBatchTag={batchActions.applyBatchTag}
+            activeBatchTagSuggestion={batchActions.activeBatchTagSuggestion}
+            onCloseBatchTagEditor={batchActions.closeBatchTagEditor}
+            filteredBatchTagSuggestions={batchActions.filteredBatchTagSuggestions}
+            batchTagSuggestionsRef={batchActions.batchTagSuggestionsRef}
+            batchTagActiveSuggestionIndex={batchActions.batchTagActiveSuggestionIndex}
+            setBatchTagActiveSuggestionIndex={batchActions.setBatchTagActiveSuggestionIndex}
+            multiSelectFeedback={batchActions.multiSelectFeedback}
+          />
+        ) : (
+          <WorkbenchQuickActionsBar
+            t={t}
+            setPanelMode={setPanelMode}
+            quickOutputTask={quickActions.quickOutputTask}
+            quickOutputRunning={quickActions.quickOutputRunning}
+            showQuickOutputMenu={quickActions.showQuickOutputMenu}
+            setShowQuickOutputMenu={quickActions.setShowQuickOutputMenu}
+            quickOutputMenuRef={quickActions.quickOutputMenuRef}
+            quickOutputTasks={quickActions.quickOutputTasks}
+            showWorkbenchMoreMenu={quickActions.showWorkbenchMoreMenu}
+            setShowWorkbenchMoreMenu={quickActions.setShowWorkbenchMoreMenu}
+            workbenchMoreMenuRef={quickActions.workbenchMoreMenuRef}
+            activeAction={quickActions.activeAction}
+            feedback={quickActions.feedback}
+            lastClearedPinnedIds={quickActions.lastClearedPinnedIds}
+            hasSnapshot={quickActions.hasSnapshot}
+            handleRunQuickOutput={quickActions.handleRunQuickOutput}
+            handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
+            handleUndoClearAll={quickActions.handleUndoClearAll}
+            workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
+            handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
+            handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
+            layoutMode={workbenchBottomBarLayout}
+            barRef={workbenchBottomBarRef}
+          />
+        )}
+        {floatingWorkbenchSwitcher}
+      </div>
       <div className="workbench-adaptive-sizers" aria-hidden="true">
         {!isWorkbenchFiltersCollapsed && (
           <>

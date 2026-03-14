@@ -1,5 +1,5 @@
 use crate::core::clipboard_manager::ClipboardManager;
-use crate::core::models::{ClipboardItem, SearchFilters};
+use crate::core::models::{ClipboardItem, SearchFilters, Workbench};
 use crate::window_lifecycle::{
     cancel_main_window_release, hide_main_window_with_release, MAIN_WINDOW_LABEL,
 };
@@ -42,9 +42,10 @@ pub async fn get_more_items(
 #[tauri::command]
 pub async fn get_workbench_pinned_items(
     manager: State<'_, Arc<ClipboardManager>>,
+    workbench_id: Option<String>,
 ) -> Result<Vec<ClipboardItem>, String> {
     manager
-        .get_workbench_pinned_items()
+        .get_workbench_pinned_items(workbench_id.as_deref())
         .await
         .map_err(|e| e.to_string())
 }
@@ -52,12 +53,45 @@ pub async fn get_workbench_pinned_items(
 #[tauri::command]
 pub async fn reorder_workbench_pinned_items(
     manager: State<'_, Arc<ClipboardManager>>,
+    workbench_id: Option<String>,
     ordered_ids: Vec<String>,
 ) -> Result<(), String> {
     manager
-        .reorder_workbench_pinned_items(&ordered_ids)
+        .reorder_workbench_pinned_items(workbench_id.as_deref(), &ordered_ids)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_workbenches(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<Vec<Workbench>, String> {
+    manager.get_workbenches().await
+}
+
+#[tauri::command]
+pub async fn create_workbench(
+    manager: State<'_, Arc<ClipboardManager>>,
+    name: String,
+) -> Result<Workbench, String> {
+    manager.create_workbench(&name).await
+}
+
+#[tauri::command]
+pub async fn rename_workbench(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+    name: String,
+) -> Result<(), String> {
+    manager.rename_workbench(&id, &name).await
+}
+
+#[tauri::command]
+pub async fn delete_workbench(
+    manager: State<'_, Arc<ClipboardManager>>,
+    id: String,
+) -> Result<String, String> {
+    manager.delete_workbench(&id).await
 }
 
 #[tauri::command]
@@ -132,9 +166,10 @@ pub async fn toggle_pin_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
     max_pinned: Option<usize>,
+    workbench_id: Option<String>,
 ) -> Result<bool, String> {
     manager
-        .toggle_pin(&id, max_pinned.unwrap_or(10))
+        .toggle_pin(&id, max_pinned.unwrap_or(10), workbench_id.as_deref())
         .await
         .map_err(|e| e.to_string())
 }
@@ -144,9 +179,10 @@ pub async fn pin_item(
     manager: State<'_, Arc<ClipboardManager>>,
     id: String,
     max_pinned: Option<usize>,
+    workbench_id: Option<String>,
 ) -> Result<bool, String> {
     manager
-        .pin_item(&id, max_pinned.unwrap_or(10))
+        .pin_item(&id, max_pinned.unwrap_or(10), workbench_id.as_deref())
         .await
         .map_err(|e| e.to_string())
 }

@@ -1,7 +1,7 @@
 use crate::ai::{AIConfig, AIService};
 use crate::core::models::{
     ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
-    WindowMetadata,
+    WindowMetadata, Workbench,
 };
 use crate::ocr::OcrService;
 use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
@@ -274,6 +274,7 @@ impl ClipboardManager {
                     pinned_at: None,
                     pin_order: None,
                     favorite_order: None,
+                    workbench_id: None,
                     created_at: now,
                     updated_at: now,
                     has_raw_formats: false,
@@ -417,7 +418,10 @@ impl ClipboardManager {
             let repo_lock = repo.lock().await;
             if let Some(existing) = repo_lock.find_by_id(&item_id).await? {
                 if !existing.is_pinned {
-                    let pinned_items = repo_lock.get_pinned_items().await?;
+                    let default_workbench_id = repo_lock.ensure_default_workbench().await?;
+                    let pinned_items = repo_lock
+                        .get_pinned_items_in_workbench(&default_workbench_id)
+                        .await?;
                     println!(
                         "[DoubleCopyPin] item_id={} pinned_count={} max_pinned_items={}",
                         item_id,
@@ -433,7 +437,9 @@ impl ClipboardManager {
                             repo_lock.unpin(&oldest_pinned.id).await?;
                         }
                     }
-                    repo_lock.set_pinned(&item_id, true).await?;
+                    repo_lock
+                        .set_pinned(&item_id, true, Some(&default_workbench_id))
+                        .await?;
                     let _ = app_handle.emit("clipboard-changed", ());
                 }
             }
@@ -1098,17 +1104,75 @@ impl ClipboardManager {
         repo.get_recent_paged(limit, offset).await
     }
 
-    pub async fn get_workbench_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    pub async fn get_workbenches(&self) -> Result<Vec<Workbench>, String> {
         let repo = self.repository.lock().await;
-        repo.get_workbench_pinned_items().await
+        repo.list_workbenches().await.map_err(|e| e.to_string())
+    }
+
+    pub async fn create_workbench(&self, name: &str) -> Result<Workbench, String> {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return Err("工作台名称不能为空".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        let workbenches = repo.list_workbenches().await.map_err(|e| e.to_string())?;
+        if workbenches.len() >= 5 {
+            return Err("工作台数量已达上限".to_string());
+        }
+
+        repo.create_workbench(trimmed).await.map_err(|e| e.to_string())
+    }
+
+    pub async fn rename_workbench(&self, id: &str, name: &str) -> Result<(), String> {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return Err("工作台名称不能为空".to_string());
+        }
+
+        let repo = self.repository.lock().await;
+        let Some(workbench) = repo.find_workbench_by_id(id).await.map_err(|e| e.to_string())? else {
+            return Err("工作台不存在".to_string());
+        };
+        if workbench.is_default {
+            return Err("默认工作台不支持重命名".to_string());
+        }
+
+        repo.rename_workbench(id, trimmed)
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    pub async fn delete_workbench(&self, id: &str) -> Result<String, String> {
+        let repo = self.repository.lock().await;
+        let Some(workbench) = repo.find_workbench_by_id(id).await.map_err(|e| e.to_string())? else {
+            return Err("工作台不存在".to_string());
+        };
+        if workbench.is_default {
+            return Err("默认工作台不可删除".to_string());
+        }
+
+        repo.delete_workbench(id).await.map_err(|e| e.to_string())
+    }
+
+    pub async fn get_workbench_pinned_items(
+        &self,
+        workbench_id: Option<&str>,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let repo = self.repository.lock().await;
+        let resolved_workbench_id = self.resolve_workbench_id(&repo, workbench_id).await?;
+        repo.get_workbench_pinned_items(&resolved_workbench_id).await
     }
 
     pub async fn reorder_workbench_pinned_items(
         &self,
+        workbench_id: Option<&str>,
         ordered_ids: &[String],
     ) -> Result<(), sqlx::Error> {
         let repo = self.repository.lock().await;
-        repo.reorder_workbench_pinned_items(ordered_ids).await
+        let resolved_workbench_id = self.resolve_workbench_id(&repo, workbench_id).await?;
+        repo.reorder_workbench_pinned_items(&resolved_workbench_id, ordered_ids)
+            .await
     }
 
     pub async fn get_collection_favorite_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
@@ -1468,48 +1532,72 @@ impl ClipboardManager {
         repo.update_ocr_text(id, ocr_text).await
     }
 
-    pub async fn toggle_pin(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
+    pub async fn toggle_pin(
+        &self,
+        id: &str,
+        max_pinned: usize,
+        workbench_id: Option<&str>,
+    ) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
         if let Some(item) = repo.find_by_id(id).await? {
             let new_pinned_state = !item.is_pinned;
 
             if new_pinned_state {
-                let pinned_items = repo.get_pinned_items().await?;
+                let resolved_workbench_id = self
+                    .resolve_item_target_workbench_id(&repo, &item, workbench_id)
+                    .await?;
+                let pinned_items = repo
+                    .get_pinned_items_in_workbench(&resolved_workbench_id)
+                    .await?;
                 if pinned_items.len() >= max_pinned {
                     if let Some(oldest_pinned) = pinned_items.first() {
                         println!(
-                            "Pinned limit reached ({}), unpinning oldest item: {}",
-                            max_pinned, oldest_pinned.id
+                            "Pinned limit reached ({}) in workbench {}, unpinning oldest item: {}",
+                            max_pinned, resolved_workbench_id, oldest_pinned.id
                         );
                         repo.unpin(&oldest_pinned.id).await?;
                     }
                 }
+
+                repo.set_pinned(id, true, Some(&resolved_workbench_id)).await?;
+                return Ok(true);
             }
 
-            repo.set_pinned(id, new_pinned_state).await?;
+            repo.set_pinned(id, false, None).await?;
             Ok(new_pinned_state)
         } else {
             Err(sqlx::Error::RowNotFound)
         }
     }
 
-    pub async fn pin_item(&self, id: &str, max_pinned: usize) -> Result<bool, sqlx::Error> {
+    pub async fn pin_item(
+        &self,
+        id: &str,
+        max_pinned: usize,
+        workbench_id: Option<&str>,
+    ) -> Result<bool, sqlx::Error> {
         let repo = self.repository.lock().await;
 
         if let Some(item) = repo.find_by_id(id).await? {
-            if item.is_pinned {
+            let resolved_workbench_id = self
+                .resolve_item_target_workbench_id(&repo, &item, workbench_id)
+                .await?;
+
+            if item.is_pinned && item.workbench_id.as_deref() == Some(resolved_workbench_id.as_str()) {
                 return Ok(true);
             }
 
-            let pinned_items = repo.get_pinned_items().await?;
+            let pinned_items = repo
+                .get_pinned_items_in_workbench(&resolved_workbench_id)
+                .await?;
             if pinned_items.len() >= max_pinned {
                 if let Some(oldest_pinned) = pinned_items.first() {
                     repo.unpin(&oldest_pinned.id).await?;
                 }
             }
 
-            repo.set_pinned(id, true).await?;
+            repo.set_pinned(id, true, Some(&resolved_workbench_id)).await?;
             Ok(true)
         } else {
             Err(sqlx::Error::RowNotFound)
@@ -1527,6 +1615,46 @@ impl ClipboardManager {
         } else {
             Err(sqlx::Error::RowNotFound)
         }
+    }
+
+    async fn resolve_workbench_id(
+        &self,
+        repo: &ClipboardRepository,
+        requested_workbench_id: Option<&str>,
+    ) -> Result<String, sqlx::Error> {
+        if let Some(workbench_id) = requested_workbench_id.map(str::trim).filter(|id| !id.is_empty()) {
+            if repo.find_workbench_by_id(workbench_id).await?.is_some() {
+                return Ok(workbench_id.to_string());
+            }
+        }
+
+        repo.ensure_default_workbench().await
+    }
+
+    async fn resolve_item_target_workbench_id(
+        &self,
+        repo: &ClipboardRepository,
+        item: &ClipboardItem,
+        requested_workbench_id: Option<&str>,
+    ) -> Result<String, sqlx::Error> {
+        if let Some(workbench_id) = requested_workbench_id.map(str::trim).filter(|id| !id.is_empty()) {
+            if repo.find_workbench_by_id(workbench_id).await?.is_some() {
+                return Ok(workbench_id.to_string());
+            }
+        }
+
+        if let Some(existing_workbench_id) = item
+            .workbench_id
+            .as_deref()
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+        {
+            if repo.find_workbench_by_id(existing_workbench_id).await?.is_some() {
+                return Ok(existing_workbench_id.to_string());
+            }
+        }
+
+        repo.ensure_default_workbench().await
     }
 
     pub fn update_ai_config(&self, config: AIConfig) {
@@ -1980,6 +2108,7 @@ impl ClipboardManager {
             pinned_at: None,
             pin_order: None,
             favorite_order: None,
+            workbench_id: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
@@ -2190,14 +2319,18 @@ impl ClipboardManager {
                     return Ok(item.id);
                 }
 
-                let pinned_items = repo.get_pinned_items().await?;
+                let default_workbench_id = repo.ensure_default_workbench().await?;
+                let pinned_items = repo
+                    .get_pinned_items_in_workbench(&default_workbench_id)
+                    .await?;
                 if pinned_items.len() >= max_pinned {
                     if let Some(oldest) = pinned_items.first() {
                         repo.unpin(&oldest.id).await?;
                     }
                 }
 
-                repo.set_pinned(&item.id, true).await?;
+                repo.set_pinned(&item.id, true, Some(&default_workbench_id))
+                    .await?;
                 return Ok(item.id);
             }
             drop(repo);

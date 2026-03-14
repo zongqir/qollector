@@ -38,6 +38,10 @@ pub struct ClipboardItem {
     #[serde(default)]
     #[sqlx(default)]
     pub favorite_order: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[sqlx(default)]
+    pub workbench_id: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
     #[sqlx(default)]
@@ -113,6 +117,7 @@ impl ClipboardItem {
             pinned_at: None,
             pin_order: None,
             favorite_order: None,
+            workbench_id: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
@@ -295,6 +300,7 @@ impl ClipboardItem {
             pinned_at: None,
             pin_order: None,
             favorite_order: None,
+            workbench_id: None,
             created_at: now,
             updated_at: now,
             has_raw_formats: false,
@@ -379,7 +385,18 @@ pub struct SearchFilters {
     pub date_range: Option<DateRange>,
     pub is_pinned: Option<bool>,
     pub is_favorite: Option<bool>,
+    pub workbench_id: Option<String>,
     pub require_code_language: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Workbench {
+    pub id: String,
+    pub name: String,
+    pub is_default: bool,
+    pub sort_order: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[cfg(test)]
@@ -443,6 +460,7 @@ impl Default for SearchFilters {
             date_range: None,
             is_pinned: None,
             is_favorite: None,
+            workbench_id: None,
             require_code_language: None,
         }
     }

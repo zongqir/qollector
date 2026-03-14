@@ -1,5 +1,5 @@
 use crate::core::models::{
-    ClipboardItem, SearchFilters, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
+    ClipboardItem, SearchFilters, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot, Workbench,
 };
 use crate::core::tokenizer;
 use crate::lan_sync::PairedSyncDevice;
@@ -22,6 +22,7 @@ pub struct ClipboardRepository {
 const LIGHT_CONTENT_PREVIEW_CHARS: i32 = 4000;
 const LIGHT_OCR_PREVIEW_CHARS: i32 = 3000;
 const SYNC_GLOBAL_SLOT_ID: &str = "global";
+const DEFAULT_WORKBENCH_NAME: &str = "default";
 
 fn escape_sql_literal(value: &str) -> String {
     value.replace('\'', "''")
@@ -155,6 +156,7 @@ fn append_common_search_filters(
     code_language_column: &str,
     pinned_column: &str,
     favorite_column: &str,
+    workbench_column: &str,
     tags_column: &str,
     metadata_column: &str,
     created_at_column: &str,
@@ -189,6 +191,13 @@ fn append_common_search_filters(
             favorite_column,
             if is_favorite { 1 } else { 0 }
         ));
+    }
+
+    if let Some(workbench_id) = &filters.workbench_id {
+        let escaped = escape_sql_literal(workbench_id.trim());
+        if !escaped.is_empty() {
+            sql.push_str(&format!(" AND {} = '{}'", workbench_column, escaped));
+        }
     }
 
     if let Some(selected_tag_clause) =
@@ -231,7 +240,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 6;
+    const CURRENT_SCHEMA_VERSION: i64 = 7;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -286,6 +295,11 @@ impl ClipboardRepository {
             self.migrate_v5_to_v6().await?;
             self.set_schema_version(6).await?;
             println!("[Schema] migrated to version 6");
+        }
+        if db_version < 7 {
+            self.migrate_v6_to_v7().await?;
+            self.set_schema_version(7).await?;
+            println!("[Schema] migrated to version 7");
         }
 
         Ok(())
@@ -555,6 +569,53 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    /// V6 -> V7: Add multi-workbench support.
+    async fn migrate_v6_to_v7(&self) -> Result<(), sqlx::Error> {
+        let _ = sqlx::query("ALTER TABLE clipboard_items ADD COLUMN workbench_id TEXT")
+            .execute(&self.pool)
+            .await;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS workbenches (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_clipboard_items_workbench_id ON clipboard_items(workbench_id)",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_workbenches_sort_order ON workbenches(sort_order)",
+        )
+        .execute(&self.pool)
+        .await?;
+
+        let default_workbench_id = self.ensure_default_workbench().await?;
+
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET workbench_id = ?
+             WHERE is_deleted = 0 AND is_pinned = 1 AND (workbench_id IS NULL OR TRIM(workbench_id) = '')",
+        )
+        .bind(&default_workbench_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
     async fn user_tag_exists_in_active_items(&self, tag: &str) -> Result<bool, sqlx::Error> {
         let exists: i64 = sqlx::query_scalar(
             r#"
@@ -611,8 +672,8 @@ impl ClipboardRepository {
                 id, type, content, original_content, content_hash,
                 image_paths, ocr_text, code_language, embedding, tags, user_note,
                 metadata, is_pinned, is_favorite, is_deleted,
-                pinned_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                pinned_at, workbench_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(&item.id)
@@ -631,6 +692,7 @@ impl ClipboardRepository {
         .bind(item.is_favorite)
         .bind(item.is_deleted)
         .bind(item.pinned_at)
+        .bind(&item.workbench_id)
         .bind(item.created_at)
         .bind(item.updated_at)
         .execute(&self.pool)
@@ -683,7 +745,7 @@ impl ClipboardRepository {
                     END as ocr_text,
                     code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at,
+                    pinned_at, workbench_id, created_at, updated_at,
                     EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
                     CASE
                         WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
@@ -728,7 +790,7 @@ impl ClipboardRepository {
                     END as ocr_text,
                     code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at,
+                    pinned_at, workbench_id, created_at, updated_at,
                     EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
                     CASE
                         WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
@@ -927,7 +989,7 @@ impl ClipboardRepository {
                     END as ocr_text,
                     code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at,
+                    pinned_at, workbench_id, created_at, updated_at,
                     EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
                     CASE
                         WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
@@ -949,6 +1011,7 @@ impl ClipboardRepository {
             "code_language",
             "is_pinned",
             "is_favorite",
+            "workbench_id",
             "tags",
             "metadata",
             "created_at",
@@ -999,7 +1062,7 @@ impl ClipboardRepository {
                     END as ocr_text,
                     code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at,
+                    pinned_at, workbench_id, created_at, updated_at,
                     EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
                     CASE
                         WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}
@@ -1021,6 +1084,7 @@ impl ClipboardRepository {
             "code_language",
             "is_pinned",
             "is_favorite",
+            "workbench_id",
             "tags",
             "metadata",
             "created_at",
@@ -1050,7 +1114,7 @@ impl ClipboardRepository {
             UPDATE clipboard_items SET
                 content = CASE WHEN ? THEN ? ELSE content END,
                 tags = ?, user_note = ?, code_language = ?, metadata = ?,
-                is_pinned = ?, is_favorite = ?, pinned_at = ?, updated_at = ?
+                is_pinned = ?, is_favorite = ?, pinned_at = ?, workbench_id = ?, updated_at = ?
             WHERE id = ?
             "#,
         )
@@ -1063,6 +1127,7 @@ impl ClipboardRepository {
         .bind(item.is_pinned)
         .bind(item.is_favorite)
         .bind(item.pinned_at)
+        .bind(&item.workbench_id)
         .bind(item.updated_at)
         .bind(&item.id)
         .execute(&self.pool)
@@ -1179,6 +1244,170 @@ impl ClipboardRepository {
         Ok(item)
     }
 
+    pub async fn ensure_default_workbench(&self) -> Result<String, sqlx::Error> {
+        if let Some(existing_id) = sqlx::query_scalar::<_, String>(
+            "SELECT id FROM workbenches WHERE is_default = 1 ORDER BY sort_order ASC, created_at ASC LIMIT 1",
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        {
+            return Ok(existing_id);
+        }
+
+        let now = chrono::Utc::now().timestamp();
+        let workbench_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO workbenches (id, name, is_default, sort_order, created_at, updated_at)
+             VALUES (?, ?, 1, 1, ?, ?)",
+        )
+        .bind(&workbench_id)
+        .bind(DEFAULT_WORKBENCH_NAME)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(workbench_id)
+    }
+
+    pub async fn get_default_workbench(&self) -> Result<Workbench, sqlx::Error> {
+        let default_id = self.ensure_default_workbench().await?;
+        self.find_workbench_by_id(&default_id)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
+    }
+
+    pub async fn find_workbench_by_id(&self, id: &str) -> Result<Option<Workbench>, sqlx::Error> {
+        let workbench = sqlx::query_as::<_, Workbench>(
+            "SELECT * FROM workbenches WHERE id = ? LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(workbench)
+    }
+
+    pub async fn list_workbenches(&self) -> Result<Vec<Workbench>, sqlx::Error> {
+        self.ensure_default_workbench().await?;
+        let workbenches = sqlx::query_as::<_, Workbench>(
+            "SELECT * FROM workbenches
+             ORDER BY is_default DESC, sort_order ASC, created_at ASC, id ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(workbenches)
+    }
+
+    pub async fn create_workbench(&self, name: &str) -> Result<Workbench, sqlx::Error> {
+        let trimmed_name = name.trim();
+        let now = chrono::Utc::now().timestamp();
+        let workbench_id = uuid::Uuid::new_v4().to_string();
+        let next_sort_order = sqlx::query_scalar::<_, Option<i64>>(
+            "SELECT MAX(sort_order) FROM workbenches",
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .unwrap_or(0)
+            + 1;
+
+        sqlx::query(
+            "INSERT INTO workbenches (id, name, is_default, sort_order, created_at, updated_at)
+             VALUES (?, ?, 0, ?, ?, ?)",
+        )
+        .bind(&workbench_id)
+        .bind(trimmed_name)
+        .bind(next_sort_order)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(Workbench {
+            id: workbench_id,
+            name: trimmed_name.to_string(),
+            is_default: false,
+            sort_order: next_sort_order,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    pub async fn rename_workbench(&self, id: &str, name: &str) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query(
+            "UPDATE workbenches
+             SET name = ?, updated_at = ?
+             WHERE id = ? AND is_default = 0",
+        )
+        .bind(name.trim())
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn delete_workbench(&self, id: &str) -> Result<String, sqlx::Error> {
+        let default_workbench_id = self.ensure_default_workbench().await?;
+        if id == default_workbench_id {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        let source_exists = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM workbenches WHERE id = ? AND is_default = 0",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await?;
+        if source_exists == 0 {
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET workbench_id = ?
+             WHERE workbench_id = ? AND is_deleted = 0",
+        )
+        .bind(&default_workbench_id)
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+
+        let merged_ids = sqlx::query_scalar::<_, String>(
+            "SELECT id FROM clipboard_items
+             WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ?
+             ORDER BY
+               CASE WHEN pin_order IS NULL OR pin_order <= 0 THEN 1 ELSE 0 END ASC,
+               pin_order ASC,
+               pinned_at DESC,
+               created_at DESC,
+               id DESC",
+        )
+        .bind(&default_workbench_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        for (idx, item_id) in merged_ids.iter().enumerate() {
+            sqlx::query("UPDATE clipboard_items SET pin_order = ? WHERE id = ?")
+                .bind((idx as i64) + 1)
+                .bind(item_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        sqlx::query("DELETE FROM workbenches WHERE id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(default_workbench_id)
+    }
+
     /// 获取所有置顶项,按置顶时间排序(最早的在前)
     pub async fn get_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
@@ -1190,11 +1419,30 @@ impl ClipboardRepository {
         Ok(items)
     }
 
-    /// Return pinned items in persisted workbench order.
-    pub async fn get_workbench_pinned_items(&self) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+    pub async fn get_pinned_items_in_workbench(
+        &self,
+        workbench_id: &str,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT * FROM clipboard_items
-             WHERE is_deleted = 0 AND is_pinned = 1
+             WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ?
+             ORDER BY pinned_at ASC, created_at ASC, id ASC",
+        )
+        .bind(workbench_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items)
+    }
+
+    /// Return pinned items in persisted workbench order.
+    pub async fn get_workbench_pinned_items(
+        &self,
+        workbench_id: &str,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            "SELECT * FROM clipboard_items
+             WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ?
              ORDER BY
                CASE WHEN pin_order IS NULL OR pin_order <= 0 THEN 1 ELSE 0 END ASC,
                pin_order ASC,
@@ -1202,6 +1450,7 @@ impl ClipboardRepository {
                created_at DESC,
                id DESC",
         )
+        .bind(workbench_id)
         .fetch_all(&self.pool)
         .await?;
 
@@ -1228,15 +1477,25 @@ impl ClipboardRepository {
 
     /// 取消指定项的置顶状态
     pub async fn unpin(&self, id: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("UPDATE clipboard_items SET is_pinned = 0, pinned_at = NULL, pin_order = NULL WHERE id = ?")
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET is_pinned = 0, pinned_at = NULL, pin_order = NULL, workbench_id = NULL
+             WHERE id = ?",
+        )
             .bind(id)
             .execute(&self.pool)
             .await?;
         Ok(())
     }
 
-    pub async fn set_pinned(&self, id: &str, pinned: bool) -> Result<(), sqlx::Error> {
+    pub async fn set_pinned(
+        &self,
+        id: &str,
+        pinned: bool,
+        workbench_id: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
         if pinned {
+            let target_workbench_id = workbench_id.ok_or(sqlx::Error::RowNotFound)?;
             let pinned_at = chrono::Utc::now().timestamp();
             let mut tx = self.pool.begin().await?;
             sqlx::query(
@@ -1245,8 +1504,9 @@ impl ClipboardRepository {
                    WHEN pin_order IS NULL OR pin_order <= 0 THEN 2
                    ELSE pin_order + 1
                  END
-                 WHERE is_deleted = 0 AND is_pinned = 1 AND id != ?",
+                 WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ? AND id != ?",
             )
+            .bind(target_workbench_id)
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -1254,10 +1514,12 @@ impl ClipboardRepository {
                 "UPDATE clipboard_items
                  SET is_pinned = 1,
                      pinned_at = ?,
-                     pin_order = 1
+                     pin_order = 1,
+                     workbench_id = ?
                  WHERE id = ?",
             )
             .bind(pinned_at)
+            .bind(target_workbench_id)
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -1267,7 +1529,7 @@ impl ClipboardRepository {
 
         sqlx::query(
             "UPDATE clipboard_items
-             SET is_pinned = 0, pinned_at = NULL, pin_order = NULL
+             SET is_pinned = 0, pinned_at = NULL, pin_order = NULL, workbench_id = NULL
              WHERE id = ?",
         )
         .bind(id)
@@ -1279,10 +1541,11 @@ impl ClipboardRepository {
 
     pub async fn reorder_workbench_pinned_items(
         &self,
+        workbench_id: &str,
         ordered_ids: &[String],
     ) -> Result<(), sqlx::Error> {
         let existing_ids = self
-            .get_workbench_pinned_items()
+            .get_workbench_pinned_items(workbench_id)
             .await?
             .into_iter()
             .map(|item| item.id)
@@ -1942,6 +2205,7 @@ impl ClipboardRepository {
             "ci.code_language",
             "ci.is_pinned",
             "ci.is_favorite",
+            "ci.workbench_id",
             "ci.tags",
             "ci.metadata",
             "ci.created_at",
@@ -1963,7 +2227,7 @@ impl ClipboardRepository {
                       END as ocr_text,
                       ci.code_language, NULL as embedding, ci.tags, ci.user_note,
                       ci.metadata, ci.is_pinned, ci.is_favorite, ci.is_deleted,
-                      ci.pinned_at, ci.created_at, ci.updated_at,
+                      ci.pinned_at, ci.workbench_id, ci.created_at, ci.updated_at,
                       EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = ci.id) as has_raw_formats,
                       CASE
                           WHEN ci.content IS NOT NULL AND LENGTH(ci.content) > {content_limit}
@@ -2018,7 +2282,7 @@ impl ClipboardRepository {
                     END as ocr_text,
                     code_language, NULL as embedding, tags, user_note,
                     metadata, is_pinned, is_favorite, is_deleted,
-                    pinned_at, created_at, updated_at,
+                    pinned_at, workbench_id, created_at, updated_at,
                     EXISTS(SELECT 1 FROM clipboard_raw_formats WHERE item_id = clipboard_items.id) as has_raw_formats,
                     CASE
                         WHEN content IS NOT NULL AND LENGTH(content) > {content_limit}

@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { INTERNAL_DRAG_MIME } from './constants/dragDrop';
+import { pinItem } from './services/clipboardService';
 import './DragDrop.css';
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']);
@@ -165,9 +166,10 @@ function DragDrop({ onItemAdded }) {
     };
 
     const pinDroppedItem = async (id) => {
-      await invoke('pin_item', {
-        id,
+      const { activeWorkbenchId } = useAppStore.getState();
+      await pinItem(id, {
         maxPinned: maxPinnedItemsRef.current,
+        workbenchId: activeWorkbenchId,
       });
     };
 

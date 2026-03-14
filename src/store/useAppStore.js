@@ -25,7 +25,9 @@ import {
   readHistorySnapshot,
   readHistoryStreamEnabled,
   readSavedFilterViews,
+  readActiveWorkbenchId,
   readWorkbenchRecentSearches,
+  readWorkbenchSearchScope,
   readWorkbenchSavedFilterViews,
 } from './modules';
 
@@ -36,6 +38,8 @@ const initialSavedFilterViews = readSavedFilterViews();
 const initialWorkbenchRecentSearches = readWorkbenchRecentSearches();
 const initialWorkbenchSavedFilterViews = readWorkbenchSavedFilterViews();
 const initialHistoryStreamEnabled = readHistoryStreamEnabled();
+const initialActiveWorkbenchId = readActiveWorkbenchId();
+const initialWorkbenchSearchScope = readWorkbenchSearchScope();
 
 const useAppStore = create((set, get) => ({
   ...createBaseState({
@@ -46,6 +50,8 @@ const useAppStore = create((set, get) => ({
     workbenchRecentSearches: initialWorkbenchRecentSearches,
     workbenchSavedFilterViews: initialWorkbenchSavedFilterViews,
     historyStreamEnabled: initialHistoryStreamEnabled,
+    initialActiveWorkbenchId,
+    initialWorkbenchSearchScope,
   }),
   ...createPanelActions(set, get),
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { X, Check, Plus, Pin, PinOff, Tag } from 'lucide-react';
 import useAppStore from './store/useAppStore';
+import { pinItem } from './services/clipboardService';
 import { QUICK_INPUT_SOURCE } from './utils/sourceConstants';
 import './EditModal.css';
 
@@ -248,8 +249,11 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
         autoFavorite: false,
       });
       if (itemId) {
-        const maxPinned = useAppStore.getState().maxPinnedItems;
-        await invoke('pin_item', { id: itemId, maxPinned });
+        const { maxPinnedItems, activeWorkbenchId } = useAppStore.getState();
+        await pinItem(itemId, {
+          maxPinned: maxPinnedItems,
+          workbenchId: activeWorkbenchId,
+        });
       }
       await useAppStore.getState().loadItems();
       setContent('');

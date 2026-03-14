@@ -25,7 +25,7 @@ import {
 } from '../../utils/collectionHints';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
-import { getUserTags, searchItems } from '../../services/clipboardService';
+import { getUserTags, pinItem, searchItems } from '../../services/clipboardService';
 import { openHistoryEditorWindow } from '../../services/windowService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -287,6 +287,7 @@ function HistoryStream({ style }) {
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
+  const activeWorkbenchId = useAppStore(s => s.activeWorkbenchId);
   const deleteItem = useAppStore(s => s.deleteItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
@@ -1008,7 +1009,9 @@ function HistoryStream({ style }) {
     setQuickAddPending(true);
     clearQuickAddFeedbackTimer();
     try {
-      const pinnedCountBefore = items.filter(item => item.is_pinned).length;
+      const pinnedCountBefore = items.filter(
+        item => item.is_pinned && item.workbench_id === activeWorkbenchId,
+      ).length;
       const itemId = await invoke('add_clipboard_item_manual', {
         content,
         contentType: 'text',
@@ -1020,7 +1023,10 @@ function HistoryStream({ style }) {
         throw new Error('new item missing id');
       }
 
-      await invoke('pin_item', { id: itemId, maxPinned: maxPinnedItems });
+      await pinItem(itemId, {
+        maxPinned: maxPinnedItems,
+        workbenchId: activeWorkbenchId,
+      });
       await loadItems();
 
       setSearchQuery('');
@@ -1150,6 +1156,7 @@ function HistoryStream({ style }) {
     selectedItemIds,
     aiEnabled,
     maxPinnedItems,
+    activeWorkbenchId,
     loadItems,
     addTagToSelectedItems,
     setBackendSearchResults,

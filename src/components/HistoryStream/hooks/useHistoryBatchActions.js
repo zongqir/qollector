@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
-import { getUserTags } from '../../../services/clipboardService';
+import { getUserTags, toggleItemPin } from '../../../services/clipboardService';
 
 export default function useHistoryBatchActions({
   items,
@@ -12,6 +12,7 @@ export default function useHistoryBatchActions({
   selectedItemIds,
   aiEnabled,
   maxPinnedItems,
+  activeWorkbenchId,
   loadItems,
   addTagToSelectedItems,
   setBackendSearchResults,
@@ -256,7 +257,7 @@ export default function useHistoryBatchActions({
     try {
       const maxPinned = targetPinnedState ? maxPinnedItems : 999;
       for (const item of targets) {
-        await invoke('toggle_pin_item', { id: item.id, maxPinned });
+        await toggleItemPin(item.id, { maxPinned, workbenchId: activeWorkbenchId });
       }
       await loadItems();
     } catch (error) {
@@ -268,7 +269,7 @@ export default function useHistoryBatchActions({
     } finally {
       setBatchFlagPending(false);
     }
-  }, [allSelectedArePinned, batchFlagPending, selectedItemsForBatchActions, maxPinnedItems, loadItems, t]);
+  }, [activeWorkbenchId, allSelectedArePinned, batchFlagPending, selectedItemsForBatchActions, maxPinnedItems, loadItems, t]);
 
   const handleBatchAiAction = useCallback(async (taskType) => {
     if ((taskType !== 'summarize' && taskType !== 'rewrite') || !canRunBatchAi || batchAiRunningTask) {

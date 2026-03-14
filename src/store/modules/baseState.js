@@ -6,6 +6,8 @@ export const createBaseState = ({
   workbenchRecentSearches,
   workbenchSavedFilterViews,
   historyStreamEnabled,
+  initialActiveWorkbenchId,
+  initialWorkbenchSearchScope,
 }) => ({
   // ========== 历史数据 ==========
   items: initialHistorySnapshot,
@@ -54,6 +56,10 @@ export const createBaseState = ({
   // ========== 工作区筛选（独立于历史流） ==========
   workbenchSearchQuery: '',
   workbenchRecentSearches,
+  workbenches: [],
+  activeWorkbenchId: initialActiveWorkbenchId || null,
+  activeWorkbenchSearchScope: initialWorkbenchSearchScope || 'current',
+  workbenchStateLoaded: false,
   workbenchSelectedType: 'all',
   workbenchSelectedTags: [],
   workbenchShowFavoritesOnly: false,

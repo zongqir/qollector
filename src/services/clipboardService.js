@@ -4,8 +4,12 @@ export const copyItemToClipboard = async (item) => {
   return invoke('copy_item', { item });
 };
 
-export const toggleItemPin = async (id) => {
-  return invoke('toggle_pin_item', { id });
+export const toggleItemPin = async (id, options = {}) => {
+  const maxPinned = Number.isFinite(Number(options?.maxPinned)) ? Number(options.maxPinned) : undefined;
+  const workbenchId = typeof options?.workbenchId === 'string' && options.workbenchId.trim()
+    ? options.workbenchId.trim()
+    : undefined;
+  return invoke('toggle_pin_item', { id, maxPinned, workbenchId });
 };
 
 export const toggleItemFavorite = async (id) => {
@@ -32,12 +36,36 @@ export const getMoreItems = async (limit = 50, offset = 0) => {
   return invoke('get_more_items', { limit, offset });
 };
 
-export const getWorkbenchPinnedItems = async () => {
-  return invoke('get_workbench_pinned_items');
+export const pinItem = async (id, options = {}) => {
+  const maxPinned = Number.isFinite(Number(options?.maxPinned)) ? Number(options.maxPinned) : undefined;
+  const workbenchId = typeof options?.workbenchId === 'string' && options.workbenchId.trim()
+    ? options.workbenchId.trim()
+    : undefined;
+  return invoke('pin_item', { id, maxPinned, workbenchId });
 };
 
-export const reorderWorkbenchPinnedItems = async (orderedIds = []) => {
-  return invoke('reorder_workbench_pinned_items', { orderedIds });
+export const getWorkbenches = async () => {
+  return invoke('get_workbenches');
+};
+
+export const createWorkbench = async (name) => {
+  return invoke('create_workbench', { name });
+};
+
+export const renameWorkbench = async (id, name) => {
+  return invoke('rename_workbench', { id, name });
+};
+
+export const deleteWorkbench = async (id) => {
+  return invoke('delete_workbench', { id });
+};
+
+export const getWorkbenchPinnedItems = async (workbenchId = undefined) => {
+  return invoke('get_workbench_pinned_items', { workbenchId });
+};
+
+export const reorderWorkbenchPinnedItems = async (orderedIds = [], workbenchId = undefined) => {
+  return invoke('reorder_workbench_pinned_items', { orderedIds, workbenchId });
 };
 
 export const getCollectionFavoriteItems = async () => {

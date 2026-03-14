@@ -1,9 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { Plus, X, Send, Filter } from 'lucide-react';
+import {
+  Filter,
+  Plus,
+  Send,
+  X,
+} from 'lucide-react';
 
 function WorkbenchQuickNoteSection({
   isExpanded,
   quickNote,
+  quickNotePlaceholder,
+  expandedNotePlaceholder,
   hasActiveFilters,
   isFiltersCollapsed,
   onToggleFiltersCollapsed,
@@ -23,7 +30,7 @@ function WorkbenchQuickNoteSection({
           <div className="quick-note-expanded-body">
             <textarea
               className="quick-note-textarea"
-              placeholder={t('workbench.expandedNotePlaceholder')}
+              placeholder={expandedNotePlaceholder || t('workbench.expandedNotePlaceholder')}
               value={quickNote}
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onExpandedKeyDown}
@@ -61,7 +68,7 @@ function WorkbenchQuickNoteSection({
             <input
               type="text"
               className="quick-note-input"
-              placeholder={t('workbench.quickNotePlaceholder')}
+              placeholder={quickNotePlaceholder || t('workbench.quickNotePlaceholder')}
               value={quickNote}
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onQuickNoteKeyDown}

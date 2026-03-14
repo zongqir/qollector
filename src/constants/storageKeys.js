@@ -11,3 +11,5 @@ export const WINDOW_NORMAL_SIZE_STORAGE_KEY = 'qollect-window-normal-size';
 export const LAYOUT_LAST_ALL_SPLIT_WIDTH_STORAGE_KEY = 'qollect-layout-last-all-split-width';
 export const WORKBENCH_FILTER_COLLAPSED_STORAGE_KEY = 'qollect-workbench-filter-collapsed-v1';
 export const WORKBENCH_PRIMARY_ACTION_STORAGE_KEY = 'qollect-workbench-primary-action-v1';
+export const ACTIVE_WORKBENCH_ID_STORAGE_KEY = 'qollect-active-workbench-id-v1';
+export const WORKBENCH_SEARCH_SCOPE_STORAGE_KEY = 'qollect-workbench-search-scope-v1';

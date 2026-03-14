@@ -82,3 +82,11 @@ export { createTagActions } from './tagActions';
 export { createTimelineActions } from './timelineActions';
 export { createUiActions } from './uiActions';
 export { createWorkbenchActions } from './workbenchActions';
+export {
+  readActiveWorkbenchId,
+  persistActiveWorkbenchId,
+  readWorkbenchSearchScope,
+  persistWorkbenchSearchScope,
+  WORKBENCH_SEARCH_SCOPE_CURRENT,
+  WORKBENCH_SEARCH_SCOPE_ALL,
+} from './workbenchState';

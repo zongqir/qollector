@@ -4,7 +4,7 @@ import { runPromptAssistantTask } from '../../../features/ai-assistant/services/
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { getTags, hasReservedTagPrefix } from '../../../utils/tagHelpers';
-import { getUserTags } from '../../../services/clipboardService';
+import { getUserTags, toggleItemPin } from '../../../services/clipboardService';
 
 function useWorkbenchBatchActions({
   selectedPinnedItems,
@@ -15,6 +15,7 @@ function useWorkbenchBatchActions({
   batchAiSourceText,
   itemsRevision,
   uiLanguage,
+  activeWorkbenchId,
   maxPinnedItems,
   loadItems,
   t,
@@ -232,7 +233,7 @@ function useWorkbenchBatchActions({
     try {
       const maxPinned = targetPinnedState ? maxPinnedItems : 999;
       for (const item of targets) {
-        await invoke('toggle_pin_item', { id: item.id, maxPinned });
+        await toggleItemPin(item.id, { maxPinned, workbenchId: activeWorkbenchId });
       }
       await loadItems();
     } catch (error) {
@@ -244,7 +245,7 @@ function useWorkbenchBatchActions({
     } finally {
       setBatchFlagPending(false);
     }
-  }, [allSelectedArePinned, batchFlagPending, selectedPinnedItems, maxPinnedItems, loadItems, t]);
+  }, [activeWorkbenchId, allSelectedArePinned, batchFlagPending, selectedPinnedItems, maxPinnedItems, loadItems, t]);
 
   const handleMergeCopySelected = useCallback(async () => {
     if (selectedPinnedItems.length === 0) return;
