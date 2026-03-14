@@ -16,7 +16,6 @@ import {
 } from './services/windowService';
 import { runSmartCopyCaptureWorkflow } from './services/smartCopyWorkflowService';
 import {
-  QUICK_INPUT_OPEN_WORKBENCH_EVENT,
   QUICK_NOTE_SAVED_EVENT,
 } from './services/quickNoteService';
 import DragDrop from './DragDrop';
@@ -1061,36 +1060,6 @@ function App() {
     setIsQuickInputOpen(false);
     showAppFeedback(t('editModal.savedToast'), 'success', 1200);
   }, [showAppFeedback, t]);
-
-  useEffect(() => {
-    const unlistenPromise = listen(QUICK_INPUT_OPEN_WORKBENCH_EVENT, async () => {
-      try {
-        const appWindow = getCurrentWindow();
-        await appWindow.unminimize();
-      } catch {
-      }
-
-      try {
-        const appWindow = getCurrentWindow();
-        await appWindow.show();
-      } catch {
-      }
-
-      try {
-        const appWindow = getCurrentWindow();
-        await appWindow.setFocus();
-      } catch {
-      }
-
-      handleSelectViewMode(VIEW_MODE_ALL);
-      setPanelMode('workbench');
-      showAppFeedback(t('quickInput.openWorkbenchFeedback'), 'success', 1400);
-    });
-
-    return () => {
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, [handleSelectViewMode, setPanelMode, showAppFeedback, t]);
 
   useEffect(() => {
     if (!initialWindowModeReady || isMiniMode) return undefined;

@@ -115,32 +115,6 @@
           ]
         },
         {
-          "identifier": "quick-input-capability",
-          "windows": [
-            "quick-input"
-          ],
-          "permissions": [
-            "core:window:allow-close",
-            "core:window:allow-destroy",
-            "core:window:allow-set-always-on-top",
-            "core:window:allow-start-dragging",
-            "core:event:default"
-          ]
-        },
-        {
-          "identifier": "history-editor-capability",
-          "windows": [
-            "history-editor-*"
-          ],
-          "permissions": [
-            "core:window:allow-close",
-            "core:window:allow-destroy",
-            "core:window:allow-set-always-on-top",
-            "core:window:allow-start-dragging",
-            "core:event:default"
-          ]
-        },
-        {
           "identifier": "widget-capability",
           "windows": [
             "widget"

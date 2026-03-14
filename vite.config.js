@@ -56,8 +56,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        quickInput: resolve(__dirname, 'quick-input.html'),
-        historyEditor: resolve(__dirname, 'history-editor.html'),
         widget: resolve(__dirname, 'widget.html'),
       },
     },
