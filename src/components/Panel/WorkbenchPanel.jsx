@@ -71,6 +71,7 @@ import {
 } from '../../utils/dateHelpers';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag, parseSystemTag } from '../../utils/tagHelpers';
 import {
+  PREVIEW_CLICK_DELAY_MS,
   SORT_MODE_LONG_PRESS_MOVE_PX,
   SORT_MODE_LONG_PRESS_MS,
   shouldIgnoreLongPressTarget,
@@ -171,6 +172,7 @@ function WorkbenchPanel() {
   const workbenchSortEntryToastTimerRef = useRef(null);
   const workbenchToastTimerRef = useRef(null);
   const workbenchUnpinConfirmTimerRef = useRef(null);
+  const workbenchCardClickTimerRef = useRef(null);
   const workbenchSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
 
@@ -1329,6 +1331,10 @@ function WorkbenchPanel() {
     }
     event.stopPropagation();
     workbenchPanelRef.current?.focus();
+    if (workbenchCardClickTimerRef.current) {
+      clearTimeout(workbenchCardClickTimerRef.current);
+      workbenchCardClickTimerRef.current = null;
+    }
     if (event.ctrlKey || event.metaKey || event.shiftKey) {
       event.preventDefault();
       return;
@@ -1348,7 +1354,10 @@ function WorkbenchPanel() {
       return;
     }
     selectionAnchorIndexRef.current = index;
-    openItemPreview(setPanelMode, item);
+    workbenchCardClickTimerRef.current = setTimeout(() => {
+      openItemPreview(setPanelMode, item);
+      workbenchCardClickTimerRef.current = null;
+    }, PREVIEW_CLICK_DELAY_MS);
   }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
 
   const clearPendingUnpinConfirm = useCallback(() => {
@@ -1361,6 +1370,12 @@ function WorkbenchPanel() {
 
   const handleCardDoubleClick = useCallback(async (item, event) => {
     event.stopPropagation();
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    if (workbenchCardClickTimerRef.current) {
+      clearTimeout(workbenchCardClickTimerRef.current);
+      workbenchCardClickTimerRef.current = null;
+    }
     if (isWorkbenchSortMode) return;
     if (selectedPinnedIds.length > 0) return;
 
@@ -1370,7 +1385,12 @@ function WorkbenchPanel() {
       return;
     }
 
-    await handleCopy(item, 'workbench');
+    if (item?.type_ === 'image' || item?.type_ === 'file') {
+      await handleCopy(item, 'workbench');
+      return;
+    }
+
+    await handleCopyAndAutoPaste(item, 'workbench');
   }, [
     isWorkbenchSortMode,
     selectedPinnedIds.length,
@@ -1378,6 +1398,7 @@ function WorkbenchPanel() {
     showTransientToast,
     t,
     handleCopy,
+    handleCopyAndAutoPaste,
   ]);
 
   const handleCardUnpin = useCallback(async (item) => {
@@ -1428,8 +1449,19 @@ function WorkbenchPanel() {
   const handleCardContextMenu = useCallback((item, index, event) => {
     clearWorkbenchSortLongPressTimer();
     workbenchSortLongPressPointerRef.current.pointerId = null;
+    if (workbenchCardClickTimerRef.current) {
+      clearTimeout(workbenchCardClickTimerRef.current);
+      workbenchCardClickTimerRef.current = null;
+    }
     openContextMenu(item, index, event);
   }, [clearWorkbenchSortLongPressTimer, openContextMenu]);
+
+  useEffect(() => () => {
+    if (workbenchCardClickTimerRef.current) {
+      clearTimeout(workbenchCardClickTimerRef.current);
+      workbenchCardClickTimerRef.current = null;
+    }
+  }, []);
 
   useLayoutEffect(() => {
     if (!isWorkbenchSortMode) return;

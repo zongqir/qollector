@@ -46,7 +46,6 @@ function WorkbenchQuickActionsBar({
     { key: 'snapshot', label: t('workbench.snapshotSave'), icon: BookmarkPlus },
     { key: 'restore-snapshot', label: t('workbench.snapshotRestore'), icon: History },
     { key: 'export', label: t('workbench.exportMarkdown'), icon: FileDown },
-    { key: 'dedupe', label: t('workbench.dedupePinned'), icon: Trash2 },
     { key: 'clear', label: t('workbench.clearAll'), icon: Trash2, danger: true },
   ];
   const currentWorkbenchAction = workbenchActionOptions.find((option) => option.key === workbenchPrimaryAction) || workbenchActionOptions[0];

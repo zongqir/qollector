@@ -13,39 +13,8 @@ import {
 const WORKBENCH_SNAPSHOT_STORAGE_KEY = 'qollect.workbench.snapshot.v1';
 const LEGACY_COLLECTION_SNAPSHOT_STORAGE_KEY = 'qollect.collection.snapshot.v1';
 const DEFAULT_QUICK_OUTPUT_TASK = 'extract';
-const WORKBENCH_MORE_ACTION_KEYS = ['snapshot', 'restore-snapshot', 'export', 'dedupe', 'clear'];
+const WORKBENCH_MORE_ACTION_KEYS = ['snapshot', 'restore-snapshot', 'export', 'clear'];
 const DEFAULT_WORKBENCH_PRIMARY_ACTION = 'snapshot';
-
-const normalizeText = (value) => String(value || '')
-  .replace(/\s+/g, ' ')
-  .trim()
-  .toLowerCase();
-
-const buildDedupeKey = (item) => {
-  const type = item?.type_ || 'unknown';
-  const contentHash = normalizeText(item?.content_hash);
-  const content = normalizeText(item?.content);
-  const ocrText = normalizeText(item?.ocr_text);
-  const imagePaths = normalizeText(item?.image_paths);
-
-  if (type === 'text') {
-    return content ? `text:${content}` : '';
-  }
-  if (type === 'link') {
-    return content ? `link:${content}` : '';
-  }
-  if (type === 'image') {
-    return contentHash || ocrText || imagePaths
-      ? `image:${contentHash || ocrText || imagePaths}`
-      : '';
-  }
-  if (type === 'file') {
-    return contentHash || content || imagePaths
-      ? `file:${contentHash || content || imagePaths}`
-      : '';
-  }
-  return contentHash || content ? `${type}:${contentHash || content}` : '';
-};
 
 const readSnapshot = () => {
   try {
@@ -383,49 +352,6 @@ function useWorkbenchQuickActions({
     }
   }, [isBusy, closeMenus, pinnedItems, t, showMessage]);
 
-  const handleDedupeWorkbench = useCallback(async () => {
-    if (isBusy) return;
-    closeMenus();
-
-    if (pinnedItems.length === 0) {
-      showMessage({ type: 'warning', text: t('workbench.dedupeNoItems') });
-      return;
-    }
-
-    setActiveAction('dedupe');
-    try {
-      const seenKeys = new Set();
-      const duplicateIds = [];
-
-      for (const item of pinnedItems) {
-        const dedupeKey = buildDedupeKey(item);
-        if (!dedupeKey) continue;
-        if (seenKeys.has(dedupeKey)) {
-          duplicateIds.push(item.id);
-        } else {
-          seenKeys.add(dedupeKey);
-        }
-      }
-
-      if (duplicateIds.length === 0) {
-        showMessage({ type: 'warning', text: t('workbench.dedupeNoChanges') });
-        return;
-      }
-
-      for (const id of duplicateIds) {
-        await toggleItemPin(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
-      }
-
-      await loadItems();
-      showMessage({ type: 'success', text: t('workbench.dedupeDone', { count: duplicateIds.length }) });
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      showMessage({ type: 'error', text: t('workbench.actionFailed', { error: message }) });
-    } finally {
-      setActiveAction(null);
-    }
-  }, [activeWorkbenchId, isBusy, closeMenus, pinnedItems, loadItems, showMessage, t]);
-
   const handleClearAll = useCallback(async () => {
     if (isBusy || pinnedItems.length === 0) return;
     closeMenus();
@@ -484,8 +410,6 @@ function useWorkbenchQuickActions({
         return handleRestoreSnapshot();
       case 'export':
         return handleExportWorkbench();
-      case 'dedupe':
-        return handleDedupeWorkbench();
       case 'clear':
         return handleClearAll();
       default:
@@ -496,7 +420,6 @@ function useWorkbenchQuickActions({
     handleSaveSnapshot,
     handleRestoreSnapshot,
     handleExportWorkbench,
-    handleDedupeWorkbench,
     handleClearAll,
   ]);
 
@@ -533,7 +456,6 @@ function useWorkbenchQuickActions({
     handleSaveSnapshot,
     handleRestoreSnapshot,
     handleExportWorkbench,
-    handleDedupeWorkbench,
     handleClearAll,
     handleUndoClearAll,
     handleRunWorkbenchPrimaryAction,
