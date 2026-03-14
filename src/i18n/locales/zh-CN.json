@@ -180,7 +180,7 @@
     "doubleClickToOpen": "双击打开",
     "recognizedText": "识别文本",
     "imageOnlyView": "仅看图片",
-    "imageHoverZoomHint": "悬浮查看提示：双击或点击“仅看图片”，在弹层中可滚轮缩放",
+    "imageHoverZoomHint": "双击图片或点击右上角放大查看，进入后可滚轮缩放",
     "imageLightboxHint": "滚轮缩放，按住左键拖动平移，Esc 关闭",
     "file": "文件",
     "source": "来源",
@@ -208,7 +208,6 @@
     "saveImageAs": "图片另存为",
     "openLink": "打开链接",
     "openFile": "打开文件",
-    "openInNewWindow": "新窗口打开",
     "revealInFolder": "打开所在文件夹",
     "formatJsonCopy": "格式化复制",
     "convertTimestamp": "转换时间戳",
@@ -601,14 +600,14 @@
     "source": "快速输入"
   },
   "historyEditor": {
-    "title": "内容展示",
+    "title": "详情编辑",
     "imageMode": "图片 · 编辑备注",
     "contentMode": "内容 + 备注 · 自动保存",
     "loading": "正在加载条目...",
     "missingItemId": "缺少条目标识，无法打开。",
     "itemNotFound": "条目不存在或已删除。",
     "loadFailed": "加载失败: {{error}}",
-    "openFailed": "打开历史条目窗口失败: {{error}}",
+    "openFailed": "打开详情编辑失败: {{error}}",
     "fileUnsupported": "文件类型不支持新窗口编辑。",
     "imageAlt": "历史图片",
     "imageUnavailable": "图片文件不可用",
@@ -649,13 +648,7 @@
     "aiTagFailed": "AI 标签生成失败",
     "ocrFailed": "OCR 识别失败: {{error}}",
     "addTagFailed": "添加标签失败: {{error}}",
-    "previewFailed": "打开预览窗口失败: {{error}}",
     "openFailed": "打开失败: {{error}}"
-  },
-  "preview": {
-    "title": "图片预览",
-    "created": "预览窗口已创建",
-    "createFailed": "预览窗口创建失败: {{error}}"
   },
   "editModal": {
     "newTitle": "快速添加",

@@ -692,9 +692,12 @@ function App() {
   });
   const leftWidthRef = useRef(leftWidth);
   const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
+  const showStandalonePanel = !isMiniMode
+    && !workbenchPanelEnabled
+    && panelMode !== 'workbench';
   const showHistoryStream = isMiniMode
     ? !showMiniPanel
-    : historyStreamEnabled || !workbenchPanelEnabled;
+    : !showStandalonePanel && (historyStreamEnabled || !workbenchPanelEnabled);
   const previewOverlayActive = !isMiniMode
     && workbenchPanelEnabled
     && showHistoryStream
@@ -925,6 +928,22 @@ function App() {
     }
     setIsMiniMode(enterMini);
   }, [rememberPresetWidth, resolveMiniPrimaryContent, setIsMiniMode]);
+
+  useEffect(() => {
+    if (!isMiniMode) return;
+
+    if (panelMode === 'preview' || panelMode === 'compare' || panelMode === 'timeline') {
+      if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_PANEL) {
+        setMiniPrimaryContent(MINI_PRIMARY_CONTENT_PANEL);
+      }
+      return;
+    }
+
+    const nextPrimaryContent = resolveMiniPrimaryContent();
+    if (miniPrimaryContent !== nextPrimaryContent) {
+      setMiniPrimaryContent(nextPrimaryContent);
+    }
+  }, [isMiniMode, miniPrimaryContent, panelMode, resolveMiniPrimaryContent]);
 
   const performViewModeSwitch = useCallback(async (mode) => {
     const currentMiniMode = useAppStore.getState().isMiniMode;
@@ -1333,7 +1352,7 @@ function App() {
         {showHistoryStream && (
           <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
         )}
-        {(showMiniPanel || (!isMiniMode && workbenchPanelEnabled)) && (
+        {(showMiniPanel || (!isMiniMode && (workbenchPanelEnabled || showStandalonePanel))) && (
           <>
             {!isMiniMode && showHistoryStream && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />

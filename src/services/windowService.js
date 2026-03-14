@@ -160,55 +160,6 @@ const isWindowHandleUsable = async (win) => {
   }
 };
 
-export const openImagePreview = async (imagePath, t) => {
-  try {
-    let originalPath = imagePath;
-    try {
-      const paths = JSON.parse(imagePath);
-      originalPath = paths.original || paths.raw || imagePath;
-    } catch {
-      // 如果不是 JSON，直接使用原路径
-    }
-
-    const windowLabel = 'preview';
-    const existing = await WebviewWindow.getByLabel(windowLabel);
-    if (existing) {
-      try {
-        await existing.close();
-      } catch {
-        // Ignore if stale preview window is already closed.
-      }
-    }
-
-    const PREVIEW_W = 800;
-    const PREVIEW_H = 600;
-    const pos = await centerOnCursorMonitor(PREVIEW_W, PREVIEW_H);
-
-    const webview = new WebviewWindow(windowLabel, {
-      url: `${resolveSubWindowUrl('public/preview.html', 'preview.html')}?path=${encodeURIComponent(originalPath)}`,
-      title: t('preview.title'),
-      width: PREVIEW_W,
-      height: PREVIEW_H,
-      ...(pos || { center: true }),
-      resizable: true,
-      alwaysOnTop: true,
-      decorations: false,
-      skipTaskbar: false
-    });
-
-    webview.once('tauri://created', () => {
-      console.log(t('preview.created'));
-    });
-
-    webview.once('tauri://error', (e) => {
-      console.error(t('preview.createFailed', { error: e }));
-    });
-  } catch (error) {
-    console.error(t('preview.createFailed', { error }));
-    alert(t('error.previewFailed', { error }));
-  }
-};
-
 export const QUICK_INPUT_WINDOW_LABEL = 'quick-input';
 
 export const openQuickInputWindow = async (t) => {

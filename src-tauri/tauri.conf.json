@@ -115,17 +115,6 @@
           ]
         },
         {
-          "identifier": "preview-capability",
-          "windows": [
-            "preview-*"
-          ],
-          "permissions": [
-            "core:window:allow-close",
-            "core:window:allow-set-always-on-top",
-            "core:event:default"
-          ]
-        },
-        {
           "identifier": "quick-input-capability",
           "windows": [
             "quick-input"

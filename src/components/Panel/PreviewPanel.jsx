@@ -641,29 +641,8 @@ function PreviewPanel() {
         >
           <div className="preview-image-stage">
             <img src={imageSrc} alt="" />
-            <div className="preview-image-hover-hint">{t('item.imageHoverZoomHint')}</div>
-            <button
-              type="button"
-              className="preview-image-only-btn"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                openImageOnlyView();
-              }}
-            >
-              <Maximize2 size={12} />
-              <span>{t('item.imageOnlyView')}</span>
-            </button>
           </div>
           <div className="preview-image-inline-actions">
-            <button
-              type="button"
-              className="preview-image-inline-btn"
-              onClick={openImageOnlyView}
-            >
-              <Maximize2 size={12} />
-              <span>{t('item.imageOnlyView')}</span>
-            </button>
             <span className="preview-image-inline-hint">{t('item.imageLightboxHint')}</span>
           </div>
           {item.ocr_text && (
@@ -1028,16 +1007,6 @@ function PreviewPanel() {
                 <button className={`preview-tool-btn secondary ${openFeedback === 'reveal' ? 'clicked-feedback' : ''}`} onClick={handleReveal} title={t('item.revealInFolder')}>
                   {openFeedback === 'reveal' ? <Check size={14} /> : <FolderOpen size={14} />}
                   <span>{openFeedback === 'reveal' ? t('item.opened') : t('item.revealInFolder')}</span>
-                </button>
-              )}
-              {shouldShowSaveImageButton && (
-                <button
-                  className="preview-tool-btn secondary"
-                  onClick={() => setLightboxSrc(getImageOriginal(item.image_paths))}
-                  title={t('item.imageOnlyView')}
-                >
-                  <Maximize2 size={14} />
-                  <span>{t('item.imageOnlyView')}</span>
                 </button>
               )}
               {shouldShowSaveImageButton && (

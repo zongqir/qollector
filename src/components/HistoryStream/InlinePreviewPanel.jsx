@@ -1,11 +1,11 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
-import { Copy, Expand, Trash2 } from 'lucide-react';
+import { Copy, Eye, Trash2 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { getFileName } from '../../utils/formatters';
 import { getImageThumbnail } from '../../utils/imageHelpers';
-import { openHistoryEditorWindow } from '../../services/windowService';
+import { openItemPreview } from '../../utils/previewInteractionPolicy';
 
 function InlinePreviewPanel({ item, onRequestClose }) {
   const { t } = useTranslation();
@@ -14,6 +14,7 @@ function InlinePreviewPanel({ item, onRequestClose }) {
   const copiedItemId = useAppStore(s => s.copiedItemId);
   const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
   const isMiniMode = useAppStore(s => s.isMiniMode);
+  const setPanelMode = useAppStore(s => s.setPanelMode);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const confirmTimerRef = useRef(null);
 
@@ -62,15 +63,6 @@ function InlinePreviewPanel({ item, onRequestClose }) {
     }
     await deleteItem(item);
     onRequestClose?.();
-  };
-
-  const handleOpenWindowClick = async (event) => {
-    event.stopPropagation();
-    try {
-      await openHistoryEditorWindow(item.id, t);
-    } catch (error) {
-      console.error('open history editor failed:', error);
-    }
   };
 
   const handleContentDoubleClick = async (event) => {
@@ -210,6 +202,19 @@ function InlinePreviewPanel({ item, onRequestClose }) {
         <div className="history-inline-preview-actions">
           <button
             type="button"
+            className="history-inline-preview-action-btn"
+            onClick={(event) => {
+              event.stopPropagation();
+              openItemPreview(setPanelMode, item);
+              onRequestClose?.();
+            }}
+            title={t('panel.preview')}
+            aria-label={t('panel.preview')}
+          >
+            <Eye size={14} />
+          </button>
+          <button
+            type="button"
             className={`history-inline-preview-action-btn ${copiedItemId === item.id && copyFeedbackSource === copySource ? 'copied' : ''}`}
             onClick={handleCopyClick}
             title={t('item.copy')}
@@ -217,17 +222,6 @@ function InlinePreviewPanel({ item, onRequestClose }) {
           >
             <Copy size={14} />
           </button>
-          {item.type_ !== 'file' && (
-            <button
-              type="button"
-              className="history-inline-preview-action-btn"
-              onClick={handleOpenWindowClick}
-              title={t('item.openInNewWindow')}
-              aria-label={t('item.openInNewWindow')}
-            >
-              <Expand size={14} />
-            </button>
-          )}
           <button
             type="button"
             className={`history-inline-preview-action-btn delete ${showDeleteConfirm ? 'confirm' : ''}`}

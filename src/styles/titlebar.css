@@ -420,6 +420,15 @@
   justify-content: center;
 }
 
+.titlebar-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.titlebar-btn.close-btn svg {
+  overflow: visible;
+}
+
 .titlebar-btn:focus {
   outline: none;
 }
@@ -615,7 +624,7 @@
 /* Mini mode titlebar */
 .app.mini-mode .titlebar {
   height: 36px;
-  padding: 3px 5px;
+  padding: 3px 8px 3px 5px;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   border-top-left-radius: 10px;
@@ -655,6 +664,8 @@
   padding: 1px;
   border-radius: 9px;
   align-self: center;
+  justify-self: end;
+  margin-right: 1px;
   transform: none;
 }
 

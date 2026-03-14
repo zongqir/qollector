@@ -35,7 +35,6 @@ import useAppStore from '../../store/useAppStore';
 import SortableWorkbenchCard from './SortableWorkbenchCard';
 import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
 import WorkbenchSwitcher from './WorkbenchSwitcher';
-import WorkbenchInlineEditor from './WorkbenchInlineEditor';
 import WorkbenchMultiSelectBar from './WorkbenchMultiSelectBar';
 import WorkbenchQuickActionsBar from './WorkbenchQuickActionsBar';
 import HistoryContextMenu from '../HistoryStream/HistoryContextMenu';
@@ -60,7 +59,6 @@ import {
   reorderWorkbenchPinnedItems,
   searchItems,
 } from '../../services/clipboardService';
-import { openHistoryEditorWindow } from '../../services/windowService';
 import useWorkbenchQuickActions from './hooks/useWorkbenchQuickActions';
 import useWorkbenchBatchActions from './hooks/useWorkbenchBatchActions';
 import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
@@ -142,7 +140,6 @@ function WorkbenchPanel() {
   const [workbenchBottomBarLayout, setWorkbenchBottomBarLayout] = useState(WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL);
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
-  const [workbenchInlineEditorActiveItemId, setWorkbenchInlineEditorActiveItemId] = useState(null);
   const [showWorkbenchSwitcher, setShowWorkbenchSwitcher] = useState(false);
   const [showWorkbenchManageMenu, setShowWorkbenchManageMenu] = useState(false);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
@@ -663,42 +660,9 @@ function WorkbenchPanel() {
     || (isWorkbenchBusy && pinnedItems.length > 0);
   const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
   const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
-  const shouldShowWorkbenchInlineEditor = hasWorkbenchFilters
-    && !isWorkbenchSortMode
-    && selectedPinnedIds.length === 0
-    && pinnedItems.length > 0
-    && pinnedItems.length <= 2;
-  const workbenchInlineEditorItems = useMemo(
-    () => (shouldShowWorkbenchInlineEditor ? pinnedItems.slice(0, 2) : []),
-    [pinnedItems, shouldShowWorkbenchInlineEditor],
-  );
-
   const handleRetryWorkbenchLoad = useCallback(() => {
     setWorkbenchLoadError('');
     setWorkbenchFilterError('');
-    setWorkbenchRefreshNonce((current) => current + 1);
-  }, []);
-
-  useEffect(() => {
-    if (workbenchInlineEditorItems.length === 0) {
-      setWorkbenchInlineEditorActiveItemId(null);
-      return;
-    }
-    if (workbenchInlineEditorItems.some((item) => item.id === workbenchInlineEditorActiveItemId)) {
-      return;
-    }
-    setWorkbenchInlineEditorActiveItemId(workbenchInlineEditorItems[0].id);
-  }, [workbenchInlineEditorItems, workbenchInlineEditorActiveItemId]);
-
-  const handleWorkbenchInlineEditorPatched = useCallback((updatedItem) => {
-    if (!updatedItem?.id) return;
-    setBackendPinnedItems((current) => {
-      if (!Array.isArray(current)) return current;
-      return current.map((item) => (item.id === updatedItem.id ? { ...item, ...updatedItem } : item));
-    });
-  }, []);
-
-  const handleRefreshWorkbenchInlineEditorItems = useCallback(() => {
     setWorkbenchRefreshNonce((current) => current + 1);
   }, []);
 
@@ -1835,8 +1799,8 @@ function WorkbenchPanel() {
           openEditModal(currentItem);
           closeContextMenu();
           return;
-        case 'openInNewWindow':
-          await openHistoryEditorWindow(currentItem.id, t);
+        case 'preview':
+          openItemPreview(setPanelMode, currentItem);
           closeContextMenu();
           return;
         case 'open':
@@ -2350,17 +2314,6 @@ function WorkbenchPanel() {
             </div>
           </SortableContext>
         </DndContext>
-      )}
-
-      {shouldShowWorkbenchInlineEditor && (
-        <WorkbenchInlineEditor
-          items={workbenchInlineEditorItems}
-          activeItemId={workbenchInlineEditorActiveItemId}
-          onActiveItemChange={setWorkbenchInlineEditorActiveItemId}
-          onItemPatched={handleWorkbenchInlineEditorPatched}
-          onRefreshItems={handleRefreshWorkbenchInlineEditorItems}
-          onToggleFavorite={toggleFavorite}
-        />
       )}
 
       <HistoryContextMenu

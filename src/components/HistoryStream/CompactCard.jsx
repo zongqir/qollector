@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Inbox, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Expand, Check, FolderOpen, Palette } from 'lucide-react';
+import { Star, Inbox, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Expand } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -21,7 +21,7 @@ import {
   getCardBackgroundPreset,
 } from '../../utils/cardBackgrounds';
 import useAppStore from '../../store/useAppStore';
-import { openHistoryEditorWindow } from '../../services/windowService';
+import { openItemPreview } from '../../utils/previewInteractionPolicy';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 const FileIconLazy = lazy(() =>
@@ -93,6 +93,7 @@ function CompactCard({
   const { t, i18n } = useTranslation();
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const isMiniMode = useAppStore(s => s.isMiniMode);
+  const setPanelMode = useAppStore(s => s.setPanelMode);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const colorPickerRef = useRef(null);
   const timelineColor = getTimelineColor(item.updated_at);
@@ -142,6 +143,29 @@ function CompactCard({
     onSetCardBackground?.(item, backgroundId);
     setShowColorPicker(false);
   }, [item, onSetCardBackground]);
+
+  const stopActionPointerDown = useCallback((event) => {
+    event.stopPropagation();
+  }, []);
+
+  const stopActionClick = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const preventActionDrag = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const handleCardDragStart = useCallback((event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('.panel-card-action-btn')) {
+      event.preventDefault();
+      return;
+    }
+    onDragStart?.(item, event);
+  }, [item, onDragStart]);
 
   const cardClasses = [
     'compact-card',
@@ -298,7 +322,7 @@ function CompactCard({
       }}
       title={`${formatDate(item.updated_at, i18n.language)} - ${getSourceApp(item.metadata)}`}
       draggable="true"
-      onDragStart={(e) => onDragStart && onDragStart(item, e)}
+      onDragStart={handleCardDragStart}
     >
       <div className="compact-card-header panel-card-header">
         {isSelectionMode && (
@@ -381,7 +405,15 @@ function CompactCard({
               <button
                 type="button"
                 className="badge-btn panel-card-action-btn badge-open"
-                onClick={(e) => { e.stopPropagation(); onOpenItem?.(item); }}
+                draggable={false}
+                data-longpress-ignore="true"
+                onPointerDown={stopActionPointerDown}
+                onMouseDown={stopActionPointerDown}
+                onDragStart={preventActionDrag}
+                onClick={(e) => {
+                  stopActionClick(e);
+                  onOpenItem?.(item);
+                }}
                 title={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
                 aria-label={item.type_ === 'link' ? t('item.openLink') : t('item.openFile')}
               >
@@ -392,37 +424,48 @@ function CompactCard({
               <button
                 type="button"
                 className="badge-btn panel-card-action-btn badge-open"
-                onClick={(e) => { e.stopPropagation(); onRevealInFolder?.(item); }}
+                draggable={false}
+                data-longpress-ignore="true"
+                onPointerDown={stopActionPointerDown}
+                onMouseDown={stopActionPointerDown}
+                onDragStart={preventActionDrag}
+                onClick={(e) => {
+                  stopActionClick(e);
+                  onRevealInFolder?.(item);
+                }}
                 title={t('item.revealInFolder')}
                 aria-label={t('item.revealInFolder')}
               >
                 <FolderOpen size={10} />
               </button>
             )}
-            {item.type_ !== 'file' && (
-              <button
-                type="button"
-                className="badge-btn panel-card-action-btn badge-window"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void openHistoryEditorWindow(item.id, t);
-                }}
-                title={t('item.openInNewWindow')}
-                aria-label={t('item.openInNewWindow')}
-              >
-                <Expand size={10} />
-              </button>
-            )}
+            <button
+              type="button"
+              className="badge-btn panel-card-action-btn badge-window"
+              draggable={false}
+              data-longpress-ignore="true"
+              onPointerDown={stopActionPointerDown}
+              onMouseDown={stopActionPointerDown}
+              onDragStart={preventActionDrag}
+              onClick={(e) => {
+                stopActionClick(e);
+                openItemPreview(setPanelMode, item);
+              }}
+              title={t('panel.preview')}
+              aria-label={t('panel.preview')}
+            >
+              <Expand size={10} />
+            </button>
             <button
               type="button"
               className={`badge-btn panel-card-action-btn badge-color ${hasCustomCardBackground ? 'tinted' : ''}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              draggable={false}
+              data-longpress-ignore="true"
+              onPointerDown={stopActionPointerDown}
+              onMouseDown={stopActionPointerDown}
+              onDragStart={preventActionDrag}
               onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                stopActionClick(e);
                 setShowColorPicker(prev => !prev);
               }}
               title={t('item.cardBackground.button')}
@@ -433,7 +476,15 @@ function CompactCard({
             <button
               type="button"
               className={`badge-btn panel-card-action-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onTogglePin?.(item); }}
+              draggable={false}
+              data-longpress-ignore="true"
+              onPointerDown={stopActionPointerDown}
+              onMouseDown={stopActionPointerDown}
+              onDragStart={preventActionDrag}
+              onClick={(e) => {
+                stopActionClick(e);
+                onTogglePin?.(item);
+              }}
               title={t('item.pin', { max: maxPinnedItems || 10 })}
               aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
             >
@@ -442,7 +493,15 @@ function CompactCard({
             <button
               type="button"
               className={`badge-btn panel-card-action-btn badge-fav ${item.is_favorite ? 'active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); onToggleFavorite?.(item); }}
+              draggable={false}
+              data-longpress-ignore="true"
+              onPointerDown={stopActionPointerDown}
+              onMouseDown={stopActionPointerDown}
+              onDragStart={preventActionDrag}
+              onClick={(e) => {
+                stopActionClick(e);
+                onToggleFavorite?.(item);
+              }}
               title={t('item.favorite')}
               aria-label={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
             >

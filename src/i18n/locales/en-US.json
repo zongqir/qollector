@@ -180,7 +180,7 @@
     "doubleClickToOpen": "Double-click to open",
     "recognizedText": "Recognized Text",
     "imageOnlyView": "Image only",
-    "imageHoverZoomHint": "Hover hint: double-click or tap \"Image only\" to open zoom mode",
+    "imageHoverZoomHint": "Double-click the image or use the top-right zoom button to open zoom mode",
     "imageLightboxHint": "Use mouse wheel to zoom, drag with left button, press Esc to close",
     "file": "File",
     "source": "Source",
@@ -208,7 +208,6 @@
     "saveImageAs": "Save Image As",
     "openLink": "Open Link",
     "openFile": "Open File",
-    "openInNewWindow": "Open in New Window",
     "revealInFolder": "Reveal in Folder",
     "formatJsonCopy": "Format & Copy",
     "convertTimestamp": "Convert Timestamp",
@@ -636,14 +635,14 @@
     "source": "Quick Input"
   },
   "historyEditor": {
-    "title": "Content View",
+    "title": "Detail Editor",
     "imageMode": "Image · Edit Note",
     "contentMode": "Content + Note · Auto save",
     "loading": "Loading item...",
     "missingItemId": "Missing item id.",
     "itemNotFound": "Item not found or deleted.",
     "loadFailed": "Load failed: {{error}}",
-    "openFailed": "Open history editor failed: {{error}}",
+    "openFailed": "Open detail editor failed: {{error}}",
     "fileUnsupported": "File type is not supported in this editor.",
     "imageAlt": "History image",
     "imageUnavailable": "Image file is unavailable",
@@ -684,13 +683,7 @@
     "aiTagFailed": "AI tag generation failed",
     "ocrFailed": "OCR recognition failed: {{error}}",
     "addTagFailed": "Add tag failed: {{error}}",
-    "previewFailed": "Open preview window failed: {{error}}",
     "openFailed": "Open failed: {{error}}"
-  },
-  "preview": {
-    "title": "Image Preview",
-    "created": "Preview window created",
-    "createFailed": "Preview window creation failed: {{error}}"
   },
   "editModal": {
     "newTitle": "Quick Add",

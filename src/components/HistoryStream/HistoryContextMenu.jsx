@@ -101,7 +101,6 @@ function HistoryContextMenu({
     }
 
     const canQuickPaste = enableQuickPaste && item.type_ !== 'image' && item.type_ !== 'file';
-    const canOpenInNewWindow = item.type_ !== 'file';
     const canOpenItem = item.type_ === 'link' || item.type_ === 'file';
     const canReveal = item.type_ === 'file' || item.type_ === 'image';
 
@@ -115,8 +114,8 @@ function HistoryContextMenu({
     ];
 
     const openEntries = [
+      { key: 'preview', label: t('panel.preview'), icon: Eye },
       { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
-      canOpenInNewWindow ? { key: 'openInNewWindow', label: t('item.openInNewWindow'), icon: ExternalLink } : null,
       canOpenItem
         ? { key: 'open', label: item.type_ === 'link' ? t('item.openLink') : t('item.openFile'), icon: ExternalLink }
         : null,
