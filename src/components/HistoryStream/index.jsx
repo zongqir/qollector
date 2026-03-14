@@ -1268,6 +1268,7 @@ function HistoryStream({ style }) {
 
   const { handleSearchInputKeyDown } = useHistoryKeyboardNavigation({
     filteredItems,
+    bulkSelectableItems: contextMenuItems,
     focusedIndex,
     setFocusedIndex,
     shouldUseHoverPreview,
@@ -1473,10 +1474,11 @@ function HistoryStream({ style }) {
 
   const handleOpenCollectionPreview = useCallback((item) => {
     if (!item || isMiniMode) return;
+    const returnViewMode = workbenchPanelEnabled ? 'all' : 'left';
     if (!workbenchPanelEnabled) {
       setWorkbenchPanelEnabled(true);
     }
-    openItemPreview(setPanelMode, item);
+    openItemPreview(setPanelMode, item, { returnViewMode });
   }, [isMiniMode, setPanelMode, setWorkbenchPanelEnabled, workbenchPanelEnabled]);
 
   const searchBarProps = useMemo(() => ({
@@ -1815,6 +1817,7 @@ function HistoryStream({ style }) {
             isMiniMode={isMiniMode}
             showPinnedOnly={showPinnedOnly}
             timeTick={timeTick}
+            selectedItemIds={selectedItemIds}
             onTogglePin={togglePin}
             onToggleFavorite={toggleFavorite}
             onSetCardBackground={setCardBackground}
@@ -1824,6 +1827,8 @@ function HistoryStream({ style }) {
             onAddTagToItem={addTagToItem}
             onCopy={handleCopy}
             onCopyAndAutoPaste={handleCopyAndAutoPaste}
+            onSetSelectedItemIds={setSelectedItemIds}
+            onToggleSelectItem={toggleSelectItem}
             maxPinnedItems={maxPinnedItems}
           />
         ) : backendSearchError && filteredItems.length === 0 ? (
@@ -2008,7 +2013,7 @@ function HistoryStream({ style }) {
         </div>
       )}
 
-      {!shouldRenderCollectionBoard && selectedCount > 0 && (
+      {selectedCount > 0 && (
         <MultiSelectBar {...multiSelectBarProps} />
       )}
     </div>

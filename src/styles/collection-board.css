@@ -604,6 +604,12 @@
   box-shadow: var(--card-shell-shadow-active);
 }
 
+.collection-card.selected,
+.collection-card.multi-selected {
+  border-color: var(--card-shell-border-selected);
+  box-shadow: var(--card-shell-shadow-selected);
+}
+
 .collection-card.sort-anchor {
   border-color: color-mix(in srgb, var(--accent-color) 84%, transparent);
   box-shadow:

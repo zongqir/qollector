@@ -23,6 +23,7 @@ export const createBaseState = ({
   panelMode: 'workbench',
   previewItem: null,
   previewReturnMode: 'workbench',
+  previewReturnViewMode: 'all',
   compareCandidateIds: [],
   compareItemIds: [],
 

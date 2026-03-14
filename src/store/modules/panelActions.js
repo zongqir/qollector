@@ -7,10 +7,19 @@ import {
   itemNeedsHydration,
 } from './itemHydration';
 
+const inferPreviewReturnViewMode = (state) => {
+  if (!state.workbenchPanelEnabled) return 'left';
+  if (!state.historyStreamEnabled) return 'right';
+  return 'all';
+};
+
 export const createPanelActions = (set, get) => ({
-  setPanelMode: (mode, item = null) => {
+  setPanelMode: (mode, item = null, options = {}) => {
     if (mode === 'preview' && item) {
       const currentState = get();
+      const explicitReturnViewMode = typeof options.returnViewMode === 'string'
+        ? options.returnViewMode
+        : null;
       if (currentState.panelMode === 'preview' && currentState.previewItem?.id === item.id) {
         get().backFromPreview();
         return;
@@ -21,6 +30,7 @@ export const createPanelActions = (set, get) => ({
           panelMode: 'preview',
           previewItem: item,
           previewReturnMode: keepCompareContext ? 'compare' : 'workbench',
+          previewReturnViewMode: explicitReturnViewMode || inferPreviewReturnViewMode(state),
           compareCandidateIds: keepCompareContext ? state.compareCandidateIds : [],
           compareItemIds: keepCompareContext ? state.compareItemIds : [],
           timelineItems: [],
@@ -49,6 +59,7 @@ export const createPanelActions = (set, get) => ({
           panelMode: 'workbench',
           previewItem: null,
           previewReturnMode: 'workbench',
+          previewReturnViewMode: 'all',
           compareCandidateIds: [],
           compareItemIds: [],
           timelineItems: [],
@@ -67,6 +78,7 @@ export const createPanelActions = (set, get) => ({
           panelMode: 'compare',
           previewItem: null,
           previewReturnMode: 'workbench',
+          previewReturnViewMode: inferPreviewReturnViewMode(state),
           compareCandidateIds,
           compareItemIds: canKeepCurrentPair ? state.compareItemIds : fallbackCompareItemIds,
           timelineItems: [],
@@ -78,6 +90,7 @@ export const createPanelActions = (set, get) => ({
         panelMode: 'timeline',
         previewItem: null,
         previewReturnMode: 'workbench',
+        previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
       });
@@ -88,6 +101,7 @@ export const createPanelActions = (set, get) => ({
         panelMode: 'workbench',
         previewItem: null,
         previewReturnMode: 'workbench',
+        previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
         timelineItems: [],
@@ -126,12 +140,19 @@ export const createPanelActions = (set, get) => ({
           panelMode: 'compare',
           previewItem: null,
           previewReturnMode: 'workbench',
+          previewReturnViewMode: inferPreviewReturnViewMode(state),
         };
       }
+      const restoreLeft = state.previewReturnViewMode === 'left';
+      const restoreRight = state.previewReturnViewMode === 'right';
+      const restoredViewMode = restoreLeft ? 'left' : restoreRight ? 'right' : 'all';
       return {
         panelMode: 'workbench',
         previewItem: null,
         previewReturnMode: 'workbench',
+        previewReturnViewMode: restoredViewMode,
+        workbenchPanelEnabled: !restoreLeft,
+        historyStreamEnabled: restoreLeft ? true : !restoreRight,
         compareCandidateIds: [],
         compareItemIds: [],
       };
@@ -143,6 +164,7 @@ export const createPanelActions = (set, get) => ({
       panelMode: 'workbench',
       previewItem: null,
       previewReturnMode: 'workbench',
+      previewReturnViewMode: inferPreviewReturnViewMode(get()),
       compareCandidateIds: [],
       compareItemIds: [],
     });

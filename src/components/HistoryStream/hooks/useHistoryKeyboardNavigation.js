@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 
 export default function useHistoryKeyboardNavigation({
   filteredItems,
+  bulkSelectableItems = filteredItems,
   focusedIndex,
   setFocusedIndex,
   shouldUseHoverPreview,
@@ -143,9 +144,9 @@ export default function useHistoryKeyboardNavigation({
       }
 
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'a') {
-        if (filteredItems.length === 0) return;
+        if (bulkSelectableItems.length === 0) return;
         e.preventDefault();
-        setSelectedItemIds(filteredItems.map(item => item.id));
+        setSelectedItemIds(bulkSelectableItems.map(item => item.id));
         setFocusedIndex(0);
         selectionAnchorIndexRef.current = 0;
         return;
@@ -195,6 +196,7 @@ export default function useHistoryKeyboardNavigation({
     panelMode,
     focusedIndex,
     filteredItems,
+    bulkSelectableItems,
     setSelectedItemIds,
     toggleSelectItem,
     openBatchTagEditor,

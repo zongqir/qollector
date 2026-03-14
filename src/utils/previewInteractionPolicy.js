@@ -9,7 +9,7 @@ export const shouldIgnoreLongPressTarget = (target) => {
   return target instanceof Element && Boolean(target.closest(LONG_PRESS_IGNORE_SELECTOR));
 };
 
-export const openItemPreview = (setPanelMode, item) => {
+export const openItemPreview = (setPanelMode, item, options) => {
   if (typeof setPanelMode !== 'function' || !item) return;
-  setPanelMode('preview', item);
+  setPanelMode('preview', item, options);
 };

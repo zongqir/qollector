@@ -178,6 +178,7 @@ function CollectionBoard({
   isMiniMode = false,
   showPinnedOnly,
   timeTick,
+  selectedItemIds = [],
   onTogglePin,
   onToggleFavorite,
   onSetCardBackground,
@@ -187,6 +188,8 @@ function CollectionBoard({
   onAddTagToItem,
   onCopy,
   onCopyAndAutoPaste,
+  onSetSelectedItemIds,
+  onToggleSelectItem,
   maxPinnedItems,
 }) {
   const { t, i18n } = useTranslation();
@@ -992,6 +995,16 @@ function CollectionBoard({
     clearCollectionCardClickTimer();
     setActiveItemId(item.id);
     setOpenColorPickerItemId(null);
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      onToggleSelectItem?.(item.id);
+      return;
+    }
+    if (selectedItemIds.length > 0) {
+      event.preventDefault();
+      onToggleSelectItem?.(item.id);
+      return;
+    }
     if (isCollectionSortMode) {
       return;
     }
@@ -999,7 +1012,7 @@ function CollectionBoard({
       collectionCardClickTimerRef.current = null;
       onOpenPreview?.(item);
     }, PREVIEW_CLICK_DELAY_MS);
-  }, [clearCollectionCardClickTimer, isCollectionSortMode, onOpenPreview]);
+  }, [clearCollectionCardClickTimer, isCollectionSortMode, onOpenPreview, onToggleSelectItem, selectedItemIds.length]);
 
   const handleCollectionCardDoubleClick = useCallback((item, event) => {
     if (!item?.id) return;
@@ -1031,8 +1044,11 @@ function CollectionBoard({
     clearCollectionCardClickTimer();
     collectionSortLongPressPointerRef.current.pointerId = null;
     setActiveItemId(item.id);
+    if (!selectedItemIds.includes(item.id)) {
+      onSetSelectedItemIds?.([item.id]);
+    }
     onOpenContextMenu?.(item, index, event, 'collection');
-  }, [clearCollectionSortLongPressTimer, clearCollectionCardClickTimer, onOpenContextMenu]);
+  }, [clearCollectionSortLongPressTimer, clearCollectionCardClickTimer, onOpenContextMenu, onSetSelectedItemIds, selectedItemIds]);
 
   const handleCollectionCardKeyDown = useCallback((item, index, event) => {
     if (event.target !== event.currentTarget) return;
@@ -1292,6 +1308,10 @@ function CollectionBoard({
     const cardBackground = getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata));
     const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
     const showColorPicker = openColorPickerItemId === item.id;
+    const isSelected = selectedItemIds.includes(item.id);
+    const selectionClassName = isSelected
+      ? (selectedItemIds.length > 1 ? 'multi-selected' : 'selected')
+      : '';
 
     return (
       <article
@@ -1302,6 +1322,7 @@ function CollectionBoard({
           ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
           ${item.is_pinned ? 'pinned' : ''}
           ${activeItemId === item.id ? 'active' : ''}
+          ${selectionClassName}
           ${isCollectionSortMode ? 'sort-mode' : ''}
           ${isCollectionSortMode && collectionSortAnchorItemId === item.id ? 'sort-anchor' : ''}
           ${hasCustomCardBackground ? 'custom-bg' : ''}
@@ -1310,7 +1331,7 @@ function CollectionBoard({
         role="button"
         tabIndex={0}
         aria-label={t('collection.activeCardHint')}
-        aria-pressed={activeItemId === item.id}
+        aria-pressed={activeItemId === item.id || isSelected}
         {...getCardCommonProps(item, index)}
       >
         <div className="collection-card-head panel-card-header">
