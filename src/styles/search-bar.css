@@ -498,10 +498,12 @@
 }
 
 .app.mini-mode .search-input {
+  height: var(--top-rail-input-height);
   min-height: var(--top-rail-input-height);
   border-radius: var(--top-rail-input-radius);
-  padding: 3px 20px 3px var(--top-rail-input-padding-x);
+  padding: 0 20px 0 var(--top-rail-input-padding-x);
   font-size: 12px;
+  line-height: 1.2;
 }
 
 .app.mini-mode .clear-search {
@@ -584,11 +586,13 @@
 }
 
 .search-input {
+  height: var(--top-rail-input-height);
   min-height: var(--top-rail-input-height);
   border-radius: var(--top-rail-input-radius);
-  padding: 7px 30px 7px var(--top-rail-input-padding-x);
+  padding: 0 30px 0 var(--top-rail-input-padding-x);
   color: var(--text-primary);
   font-size: 13px;
+  line-height: 1.2;
   letter-spacing: 0.005em;
   transition:
     border-color var(--motion-fast) var(--ease-standard),
@@ -701,10 +705,12 @@
 }
 
 .app.mini-mode .search-input {
+  height: var(--top-rail-input-height);
   min-height: var(--top-rail-input-height);
   border-radius: var(--top-rail-input-radius);
-  padding: 3px 21px 3px var(--top-rail-input-padding-x);
+  padding: 0 21px 0 var(--top-rail-input-padding-x);
   font-size: 12px;
+  line-height: 1.2;
 }
 
 .app.mini-mode .header-icon-btn {

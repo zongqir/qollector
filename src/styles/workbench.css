@@ -151,6 +151,7 @@
   border-radius: var(--top-rail-input-radius);
   padding: 0 29px 0 var(--top-rail-input-padding-x);
   font-size: 12.5px;
+  line-height: 1.2;
   background: var(--control-input-bg);
   color: var(--text-primary);
   transition:
