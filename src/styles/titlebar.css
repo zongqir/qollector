@@ -62,7 +62,7 @@
 
 .titlebar-drag-hitbox {
   flex: 1 1 auto;
-  min-width: 28px;
+  min-width: 88px;
   height: 100%;
 }
 
@@ -176,6 +176,7 @@
   justify-content: center;
   gap: 6px;
   min-width: 0;
+  min-height: 100%;
 }
 
 .titlebar-status-group.visible {

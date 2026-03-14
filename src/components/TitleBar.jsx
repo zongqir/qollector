@@ -178,7 +178,7 @@ function TitleBar({
 
   return (
     <div className="titlebar" onWheel={handleWheel}>
-      <div className="titlebar-drag-area">
+      <div className="titlebar-drag-area" data-tauri-drag-region>
         <div className="titlebar-brand">
           <div data-tauri-drag-region className="titlebar-brand-drag">
             <img
@@ -189,7 +189,7 @@ function TitleBar({
             />
             <div className="titlebar-title">{t('app.title')}</div>
           </div>
-          <div className="titlebar-mode-cluster">
+          <div className="titlebar-mode-cluster" data-tauri-drag-region="false">
             {modeBadgeText && (
               <span className={`titlebar-mode-pill ${isMiniMode ? 'mini' : 'normal'}`}>
                 {modeBadgeText}
@@ -216,6 +216,7 @@ function TitleBar({
                     className={`titlebar-layout-btn ${currentViewMode === 'mini' ? 'active' : ''}`}
                     title={t('titlebar.layoutMiniShortcut')}
                     aria-label={t('titlebar.layoutMiniShortcut')}
+                    data-tauri-drag-region="false"
                   >
                     <Minimize2 size={13} />
                   </button>
@@ -225,6 +226,7 @@ function TitleBar({
                     className={`titlebar-layout-btn ${currentViewMode === 'left' ? 'active' : ''}`}
                     title={t('titlebar.layoutFocusShortcut')}
                     aria-label={t('titlebar.layoutFocusShortcut')}
+                    data-tauri-drag-region="false"
                   >
                     <List size={13} />
                   </button>
@@ -234,6 +236,7 @@ function TitleBar({
                     className={`titlebar-layout-btn ${currentViewMode === 'right' ? 'active' : ''}`}
                     title={t('titlebar.layoutReviewShortcut')}
                     aria-label={t('titlebar.layoutReviewShortcut')}
+                    data-tauri-drag-region="false"
                   >
                     <SquareKanban size={13} />
                   </button>
@@ -243,6 +246,7 @@ function TitleBar({
                     className={`titlebar-layout-btn ${currentViewMode === 'all' ? 'active' : ''}`}
                     title={t('titlebar.layoutAllShortcut')}
                     aria-label={t('titlebar.layoutAllShortcut')}
+                    data-tauri-drag-region="false"
                   >
                     <LayoutGrid size={13} />
                   </button>
@@ -253,6 +257,7 @@ function TitleBar({
                     className={`titlebar-layout-btn titlebar-layout-density-btn ${densityMode === DENSITY_COMPACT ? 'active' : ''}`}
                     title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
                     aria-label={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
+                    data-tauri-drag-region="false"
                   >
                     {densityMode === DENSITY_COMPACT ? <AlignVerticalJustifyStart size={13} /> : <AlignVerticalSpaceAround size={13} />}
                   </button>
@@ -263,7 +268,10 @@ function TitleBar({
         </div>
         <div data-tauri-drag-region className="titlebar-drag-hitbox" aria-hidden="true" />
       </div>
-      <div className={`titlebar-status-group ${showIndicator && !isMiniMode ? 'visible' : ''}`}>
+      <div
+        className={`titlebar-status-group ${showIndicator && !isMiniMode ? 'visible' : ''}`}
+        data-tauri-drag-region
+      >
         {showIndicator && !isMiniMode && (
           <div className="glass-indicator">
             <div className="glass-indicator-track">

@@ -232,21 +232,24 @@ function QuickNoteOverlay({
         style={{ '--quick-note-card-bg': activeColor.bg }}
         onClick={(event) => event.stopPropagation()}
       >
-        <header className="quick-note-card-header" data-tauri-drag-region>
-          <div className="quick-note-card-heading" data-tauri-drag-region>
-            <span className="quick-note-card-kicker">{t('quickInput.overlayTip')}</span>
-          </div>
-          {showGlassIndicator && (
-            <div className="glass-indicator quick-note-glass-indicator" data-tauri-drag-region>
-              <div className="glass-indicator-track">
-                <div
-                  className="glass-indicator-fill"
-                  style={{ width: `${((glassOpacity - GLASS_MIN) / (GLASS_MAX - GLASS_MIN)) * 100}%` }}
-                />
-              </div>
-              <span className="glass-indicator-value">{Math.round(glassOpacity * 100)}%</span>
+        <header className="quick-note-card-header">
+          <div className="quick-note-card-drag-area" data-tauri-drag-region>
+            <div className="quick-note-card-heading" data-tauri-drag-region="false">
+              <span className="quick-note-card-kicker">{t('quickInput.overlayTip')}</span>
             </div>
-          )}
+            {showGlassIndicator && (
+              <div className="glass-indicator quick-note-glass-indicator" data-tauri-drag-region="false">
+                <div className="glass-indicator-track">
+                  <div
+                    className="glass-indicator-fill"
+                    style={{ width: `${((glassOpacity - GLASS_MIN) / (GLASS_MAX - GLASS_MIN)) * 100}%` }}
+                  />
+                </div>
+                <span className="glass-indicator-value">{Math.round(glassOpacity * 100)}%</span>
+              </div>
+            )}
+            <div className="quick-note-card-drag-hitbox" data-tauri-drag-region aria-hidden="true" />
+          </div>
           <div className="quick-note-card-actions">
             <div
               className={`quick-note-color-wrap ${showColorPanel ? 'open' : ''}`}
