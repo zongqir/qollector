@@ -551,7 +551,8 @@
 
 /* ========== Scheme C Overrides: Search Rail ========== */
 .header {
-  margin: 8px 10px 0;
+  margin: 8px calc(var(--history-panel-gutter, 10px) + var(--history-scroller-inline-end-compensation, 0px)) 4px
+    var(--history-panel-gutter, 10px);
   padding: 8px 10px var(--panel-rail-content-gap);
   gap: 8px;
   background: var(--panel-rail-glass-bg);
@@ -692,7 +693,8 @@
 }
 
 .app.mini-mode .header {
-  margin: 4px 6px 0;
+  margin: 4px calc(var(--history-panel-gutter, 6px) + var(--history-scroller-inline-end-compensation, 0px)) 3px
+    var(--history-panel-gutter, 6px);
   padding: 6px 8px;
   top: 4px;
   gap: var(--top-rail-control-gap);

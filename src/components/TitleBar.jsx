@@ -14,8 +14,8 @@ import {
   List,
   SquareKanban,
   LayoutGrid,
-  AlignVerticalJustifyStart,
-  AlignVerticalSpaceAround,
+  Rows2,
+  Rows3,
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -259,7 +259,7 @@ function TitleBar({
                     aria-label={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
                     data-tauri-drag-region="false"
                   >
-                    {densityMode === DENSITY_COMPACT ? <AlignVerticalJustifyStart size={13} /> : <AlignVerticalSpaceAround size={13} />}
+                    {densityMode === DENSITY_COMPACT ? <Rows3 size={13} /> : <Rows2 size={13} />}
                   </button>
                 </div>
               </>

@@ -82,7 +82,7 @@
 }
 
 .history-stream-helper-text {
-  margin: 0 10px 8px;
+  margin: 0 var(--history-panel-gutter) 8px;
   padding: 7px 10px 7px 22px;
   border: 1px solid var(--border-light);
   border-radius: 8px;
@@ -340,7 +340,7 @@
 }
 
 .history-stream-content > .workbench-inline-editor {
-  margin: 8px 10px 10px;
+  margin: 8px var(--history-panel-gutter) 10px;
   z-index: 12;
 }
 
@@ -363,8 +363,8 @@
 
 .history-stream-row {
   box-sizing: border-box;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: var(--history-card-gutter-inline-start, 10px);
+  padding-right: var(--history-card-gutter-inline-end, 10px);
   min-width: 0;
 }
 
@@ -1381,18 +1381,18 @@
 
 @container (max-width: 520px) {
   .history-stream-content > .workbench-inline-editor {
-    margin: 6px 8px 8px;
+    margin: 6px var(--history-panel-gutter) 8px;
     padding: 8px;
     border-radius: 10px;
   }
 
   .history-stream-row {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: var(--history-card-gutter-inline-start);
+    padding-right: var(--history-card-gutter-inline-end);
   }
 
   .compact-card {
-    padding: 9px 10px;
+    padding: 9px var(--history-card-padding-inline);
   }
 
   .compact-card-header {
@@ -1655,6 +1655,13 @@
 
 /* ========== Scheme C Overrides (moved from workspace.css) ========== */
 .history-stream {
+  --history-panel-gutter: var(--history-panel-gutter-x);
+  --history-card-gutter-inline-start: var(--history-card-gutter-left);
+  --history-card-gutter-inline-end: var(--history-card-gutter-right);
+  --history-card-padding-inline: var(--history-card-padding-x);
+  --history-timeline-dot-left: var(--history-rail-node-left);
+  --history-timeline-line-left: var(--history-rail-track-left);
+  --history-rail-content-gap: var(--history-rail-to-content-gap);
   --history-multi-select-bar-padding: 9px 12px;
   --history-multi-select-bar-border: color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
   --history-multi-select-bar-bg: color-mix(in srgb, var(--surface-strong) 84%, transparent);
@@ -1696,21 +1703,7 @@
 }
 
 .history-stream-content::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 21px;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    color-mix(in srgb, var(--border-light) 78%, transparent) 10%,
-    color-mix(in srgb, var(--border-light) 78%, transparent) 90%,
-    transparent
-  );
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .history-jump-top-btn {
@@ -1766,31 +1759,17 @@
 }
 
 .history-stream-scroller {
-  padding: var(--panel-rail-content-gap) 0 7px;
+  padding: var(--history-rail-content-gap) 0 7px;
 }
 
 .history-stream-row {
   position: relative;
-  padding-left: 13px;
-  padding-right: 12px;
+  padding-left: var(--history-card-gutter-inline-start);
+  padding-right: var(--history-card-gutter-inline-end);
 }
 
 .history-stream-row::before {
-  content: '';
-  position: absolute;
-  left: 17px;
-  top: 16px;
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
-  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 92%, transparent);
-  z-index: 1;
-  transition:
-    transform var(--card-shell-motion-duration) var(--card-shell-motion-ease),
-    border-color var(--card-shell-motion-duration) var(--card-shell-motion-ease),
-    background-color var(--card-shell-motion-duration) var(--card-shell-motion-ease);
+  display: none;
 }
 
 .history-stream-row:has(.compact-card.selected)::before,
@@ -1803,7 +1782,7 @@
 
 .compact-card {
   border-radius: var(--card-shell-radius);
-  padding: 11px 12px 10px;
+  padding: 11px var(--history-card-padding-inline) 10px;
   border: 1px solid var(--card-shell-border);
   background:
     linear-gradient(165deg, color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 94%, transparent), color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 80%, transparent));
@@ -1986,7 +1965,7 @@
 }
 
 .history-stream-helper-text {
-  margin: 0 12px 10px;
+  margin: 0 var(--history-panel-gutter) 10px;
   padding: 7px 11px 7px 23px;
   border-radius: 9px;
   border: 1px solid color-mix(in srgb, var(--surface-border-soft) 80%, transparent);
@@ -2015,12 +1994,12 @@
 }
 
 .app.mini-mode .history-stream-row {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: var(--history-card-gutter-inline-start);
+  padding-right: var(--history-card-gutter-inline-end);
 }
 
 .app.mini-mode .history-stream-content > .workbench-inline-editor {
-  margin: 6px 6px 8px;
+  margin: 6px var(--history-panel-gutter) 8px;
   padding: 8px;
   border-radius: 10px;
 }
@@ -2044,7 +2023,7 @@
 
 .app.mini-mode .compact-card {
   border-radius: var(--card-shell-radius-compact);
-  padding: 7px 8px;
+  padding: 7px var(--history-card-padding-inline);
   box-shadow: none;
 }
 
@@ -2083,7 +2062,7 @@
 }
 
 .app.mini-mode .history-stream-helper-text {
-  margin: 0 8px 6px;
+  margin: 0 var(--history-panel-gutter) 6px;
 }
 
 .app.mini-mode .history-stream-helper-text-action {
@@ -2162,6 +2141,13 @@
 }
 
 .app.mini-mode .history-stream {
+  --history-panel-gutter: var(--history-panel-gutter-x-mini);
+  --history-card-gutter-inline-start: var(--history-card-gutter-left-mini);
+  --history-card-gutter-inline-end: var(--history-card-gutter-right-mini);
+  --history-card-padding-inline: var(--history-card-padding-x-mini);
+  --history-timeline-dot-left: var(--history-rail-node-left-mini);
+  --history-timeline-line-left: var(--history-rail-track-left-mini);
+  --history-rail-content-gap: var(--history-rail-to-content-gap-mini);
   width: 100%;
   min-width: 0;
   max-width: none;

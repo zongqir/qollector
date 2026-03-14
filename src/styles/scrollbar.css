@@ -1,6 +1,6 @@
 /* macOS-style scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: var(--app-scrollbar-width, 6px);
 }
 
 ::-webkit-scrollbar-track {
