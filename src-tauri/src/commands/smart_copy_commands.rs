@@ -43,7 +43,10 @@ fn normalize_ocr_text(text: String) -> Result<String, String> {
     Ok(normalized)
 }
 
-async fn recognize_path_with_service(service: &OcrService, image_path: &str) -> Result<String, String> {
+async fn recognize_path_with_service(
+    service: &OcrService,
+    image_path: &str,
+) -> Result<String, String> {
     let result = service
         .recognize(image_path)
         .await
@@ -51,7 +54,10 @@ async fn recognize_path_with_service(service: &OcrService, image_path: &str) -> 
     normalize_ocr_text(result.text)
 }
 
-async fn recognize_bytes_with_service(service: &OcrService, image_bytes: &[u8]) -> Result<String, String> {
+async fn recognize_bytes_with_service(
+    service: &OcrService,
+    image_bytes: &[u8],
+) -> Result<String, String> {
     let result = service
         .recognize_bytes(image_bytes)
         .await

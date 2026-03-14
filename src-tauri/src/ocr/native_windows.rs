@@ -73,9 +73,7 @@ impl OcrProvider for WindowsNativeOcr {
             .await
             .map_err(|e| OcrError::IoError(e))?;
 
-        let result = self
-            .recognize(temp_file.to_str().unwrap())
-            .await;
+        let result = self.recognize(temp_file.to_str().unwrap()).await;
 
         let _ = tokio::fs::remove_file(&temp_file).await;
 

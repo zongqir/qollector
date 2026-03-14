@@ -81,7 +81,9 @@ fn sanitize_filename_stem(raw: Option<&str>, extension: &str) -> String {
         .collect();
 
     stem = stem.split_whitespace().collect::<Vec<_>>().join(" ");
-    stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+    stem = stem
+        .trim_matches(|c: char| c == ' ' || c == '.')
+        .to_string();
     while stem.starts_with('.') {
         stem.remove(0);
     }
@@ -94,16 +96,21 @@ fn sanitize_filename_stem(raw: Option<&str>, extension: &str) -> String {
         stem = stem.trim_end_matches('.').trim().to_string();
     }
 
-    stem = stem.chars().take(MAX_FILENAME_STEM_CHARS).collect::<String>();
-    stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+    stem = stem
+        .chars()
+        .take(MAX_FILENAME_STEM_CHARS)
+        .collect::<String>();
+    stem = stem
+        .trim_matches(|c: char| c == ' ' || c == '.')
+        .to_string();
 
     if stem.is_empty() {
         stem = DRAG_TEXT_FILE_PREFIX.to_string();
     }
 
     let reserved = [
-        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7",
-        "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+        "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
+        "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
     ];
     if reserved.contains(&stem.to_ascii_lowercase().as_str()) {
         stem.push_str("_file");
@@ -162,11 +169,7 @@ fn create_temp_drag_text_file(
     let extension = resolve_text_extension(language, content);
     let stem = sanitize_filename_stem(filename_stem, extension);
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let base_name = format!(
-        "{stem}_{timestamp}",
-        stem = stem,
-        timestamp = timestamp,
-    );
+    let base_name = format!("{stem}_{timestamp}", stem = stem, timestamp = timestamp,);
     let drag_session_dir = temp_root.join(format!("drag_{}", Uuid::new_v4().simple()));
     std::fs::create_dir_all(&drag_session_dir)
         .map_err(|error| format!("failed to create drag session dir: {error}"))?;
@@ -216,7 +219,8 @@ pub async fn start_native_text_drag(
         return Err("text content is empty".to_string());
     }
 
-    let temp_path = create_temp_drag_text_file(&content, language.as_deref(), filename_stem.as_deref())?;
+    let temp_path =
+        create_temp_drag_text_file(&content, language.as_deref(), filename_stem.as_deref())?;
     let operation = parse_operation(operation)?;
     let request = DragOutRequest {
         paths: vec![temp_path],

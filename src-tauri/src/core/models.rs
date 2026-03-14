@@ -131,8 +131,7 @@ impl ClipboardItem {
         text.chars().any(|c| {
             matches!(
                 c,
-                '。'
-                    | '，'
+                '。' | '，'
                     | '、'
                     | '；'
                     | '：'

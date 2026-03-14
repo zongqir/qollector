@@ -1,5 +1,5 @@
-use super::config::{LicenseConfig, LicenseStatus};
 use super::client;
+use super::config::{LicenseConfig, LicenseStatus};
 
 /// Offline grace period: 30 days in seconds.
 const OFFLINE_GRACE_PERIOD_SECS: i64 = 30 * 24 * 3600;

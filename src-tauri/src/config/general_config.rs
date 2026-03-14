@@ -207,8 +207,10 @@ impl GeneralConfig {
         self.cleanup_max_items = self.cleanup_max_items.clamp(100, 999999);
         self.cleanup_max_age_days = self.cleanup_max_age_days.clamp(1, 3650);
         // validate accent color
-        if !["blue", "purple", "pink", "red", "orange", "yellow", "green", "graphite"]
-            .contains(&self.accent_color.as_str())
+        if ![
+            "blue", "purple", "pink", "red", "orange", "yellow", "green", "graphite",
+        ]
+        .contains(&self.accent_color.as_str())
         {
             self.accent_color = default_accent_color();
         }

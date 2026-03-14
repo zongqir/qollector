@@ -77,8 +77,8 @@ fn encrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
 
     let key_bytes = blake3::hash(password.as_bytes());
 
-    let cipher =
-        Aes256Gcm::new_from_slice(key_bytes.as_bytes()).map_err(|e| format!("encrypt init failed: {}", e))?;
+    let cipher = Aes256Gcm::new_from_slice(key_bytes.as_bytes())
+        .map_err(|e| format!("encrypt init failed: {}", e))?;
 
     // 生成随机 96-bit nonce
     let mut nonce_bytes = [0u8; 12];
@@ -106,8 +106,8 @@ fn decrypt_data(data: &[u8], password: &str) -> Result<Vec<u8>, String> {
 
     let key_bytes = blake3::hash(password.as_bytes());
 
-    let cipher =
-        Aes256Gcm::new_from_slice(key_bytes.as_bytes()).map_err(|e| format!("decrypt init failed: {}", e))?;
+    let cipher = Aes256Gcm::new_from_slice(key_bytes.as_bytes())
+        .map_err(|e| format!("decrypt init failed: {}", e))?;
 
     let nonce = aes_gcm::Nonce::from_slice(&data[8..20]);
     let ciphertext = &data[20..];

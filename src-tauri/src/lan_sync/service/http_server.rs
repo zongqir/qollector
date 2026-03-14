@@ -44,12 +44,10 @@ pub(super) async fn spawn_http_server(
     let bind_address = ([0, 0, 0, 0], service_port);
 
     tokio::spawn(async move {
-        let (_, server) = warp::serve(routes).bind_with_graceful_shutdown(
-            bind_address,
-            async move {
+        let (_, server) =
+            warp::serve(routes).bind_with_graceful_shutdown(bind_address, async move {
                 let _ = stop_rx.changed().await;
-            },
-        );
+            });
         server.await;
     });
 }
@@ -133,7 +131,8 @@ async fn try_accept_pair(
     if active.code != request.code.trim() {
         active.failed_attempts = active.failed_attempts.saturating_add(1);
         if active.failed_attempts >= config.pair_max_failures {
-            active.locked_until_ms = now_ms.saturating_add((config.pair_lockout_secs * 1000) as i64);
+            active.locked_until_ms =
+                now_ms.saturating_add((config.pair_lockout_secs * 1000) as i64);
             active.failed_attempts = 0;
         }
         return Ok(PairResponseBody {
@@ -178,7 +177,9 @@ async fn try_accept_pair(
     })
 }
 
-async fn handle_health_request(service: Arc<LanSyncService>) -> Result<impl warp::Reply, Infallible> {
+async fn handle_health_request(
+    service: Arc<LanSyncService>,
+) -> Result<impl warp::Reply, Infallible> {
     let identity = service.get_identity().await;
     let config = service.get_config().await;
     let body = HealthResponseBody {
@@ -230,7 +231,12 @@ async fn handle_push_request(
     remote: Option<SocketAddr>,
     service: Arc<LanSyncService>,
 ) -> Result<impl warp::Reply, Infallible> {
-    let verified = verify_pair_token(service.as_ref(), &request.from_device_id, &request.pair_token).await;
+    let verified = verify_pair_token(
+        service.as_ref(),
+        &request.from_device_id,
+        &request.pair_token,
+    )
+    .await;
     if verified.is_err() {
         return Ok(warp::reply::with_status(
             warp::reply::json(&PushResponseBody {
@@ -296,12 +302,7 @@ async fn handle_latest_request(
             .await;
     }
 
-    let slot = service
-        .manager
-        .get_sync_latest_slot()
-        .await
-        .ok()
-        .flatten();
+    let slot = service.manager.get_sync_latest_slot().await.ok().flatten();
     Ok(warp::reply::with_status(
         warp::reply::json(&LatestResponseBody { slot }),
         StatusCode::OK,

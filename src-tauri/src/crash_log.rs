@@ -8,7 +8,9 @@ fn crash_log_path() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         let appdata = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(appdata).join("com.qollect.clipboard").join("crash.log")
+        PathBuf::from(appdata)
+            .join("com.qollect.clipboard")
+            .join("crash.log")
     }
     #[cfg(target_os = "linux")]
     {
@@ -83,7 +85,10 @@ fn prune_crash_log(path: &PathBuf) {
 pub fn install_panic_hook() {
     let default_hook = std::panic::take_hook();
     let log_path = crash_log_path();
-    println!("[CrashLog] Panic hook installed, log path: {}", log_path.display());
+    println!(
+        "[CrashLog] Panic hook installed, log path: {}",
+        log_path.display()
+    );
 
     std::panic::set_hook(Box::new(move |info| {
         let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");

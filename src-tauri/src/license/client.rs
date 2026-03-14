@@ -1,6 +1,6 @@
 use hmac::{Hmac, Mac};
-use sha2::Sha256;
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -43,17 +43,14 @@ fn compute_signature(license_key: &str, device_id: &str, timestamp: i64) -> Stri
     let payload = format!("{}{}{}", license_key, device_id, timestamp);
     // Do not ship a global shared secret in client binaries.
     // Signature key is derived per-license to avoid single-point key leakage.
-    let mut mac = HmacSha256::new_from_slice(license_key.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(license_key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(payload.as_bytes());
     let result = mac.finalize();
     hex::encode(result.into_bytes())
 }
 
-fn build_request(
-    license_key: &str,
-    device_id: &str,
-) -> LicenseRequest {
+fn build_request(license_key: &str, device_id: &str) -> LicenseRequest {
     let timestamp = chrono::Utc::now().timestamp();
     let signature = compute_signature(license_key, device_id, timestamp);
     LicenseRequest {
@@ -66,10 +63,7 @@ fn build_request(
     }
 }
 
-pub async fn activate(
-    license_key: &str,
-    device_id: &str,
-) -> Result<ActivateResponse, String> {
+pub async fn activate(license_key: &str, device_id: &str) -> Result<ActivateResponse, String> {
     let req = build_request(license_key, device_id);
     let client = reqwest::Client::new();
     let resp = client
@@ -94,10 +88,7 @@ pub async fn activate(
     }
 }
 
-pub async fn verify(
-    license_key: &str,
-    device_id: &str,
-) -> Result<VerifyResponse, String> {
+pub async fn verify(license_key: &str, device_id: &str) -> Result<VerifyResponse, String> {
     let req = build_request(license_key, device_id);
     let client = reqwest::Client::new();
     let resp = client
@@ -121,10 +112,7 @@ pub async fn verify(
     }
 }
 
-pub async fn deactivate(
-    license_key: &str,
-    device_id: &str,
-) -> Result<DeactivateResponse, String> {
+pub async fn deactivate(license_key: &str, device_id: &str) -> Result<DeactivateResponse, String> {
     let req = build_request(license_key, device_id);
     let client = reqwest::Client::new();
     let resp = client

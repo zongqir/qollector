@@ -1,4 +1,4 @@
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// Get a stable device identifier, hashed with SHA256.
 /// - Windows: MachineGuid from registry

@@ -1,6 +1,6 @@
 use crate::ai::AIConfig;
-use crate::config::GeneralConfig;
 use crate::config::secure_store::{seal_json, unseal_json};
+use crate::config::GeneralConfig;
 use crate::lan_sync::LanSyncConfig;
 use crate::license::config::LicenseConfig;
 use crate::mcp::McpConfig;
@@ -205,8 +205,8 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, false)?;
-            let config: McpConfig =
-                serde_json::from_str(&decoded_value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            let config: McpConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {
             Ok(None)
@@ -244,8 +244,8 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, false)?;
-            let mut config: GeneralConfig =
-                serde_json::from_str(&decoded_value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            let mut config: GeneralConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             config.validate();
             Ok(Some(config))
         } else {
@@ -284,8 +284,8 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, true)?;
-            let config: ShareConfig =
-                serde_json::from_str(&decoded_value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            let config: ShareConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {
             Ok(None)
@@ -323,8 +323,8 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, false)?;
-            let config: LanSyncConfig =
-                serde_json::from_str(&decoded_value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            let config: LanSyncConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {
             Ok(None)
@@ -362,8 +362,8 @@ impl ConfigRepository {
 
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, true)?;
-            let config: LicenseConfig =
-                serde_json::from_str(&decoded_value).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            let config: LicenseConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {
             Ok(None)

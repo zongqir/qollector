@@ -207,7 +207,10 @@ fn append_common_search_filters(
     }
 
     if let Some(date_range) = &filters.date_range {
-        sql.push_str(&format!(" AND {} >= {}", created_at_column, date_range.start));
+        sql.push_str(&format!(
+            " AND {} >= {}",
+            created_at_column, date_range.start
+        ));
         sql.push_str(&format!(" AND {} <= {}", created_at_column, date_range.end));
     }
 }
@@ -228,10 +231,18 @@ impl ClipboardRepository {
             .await?;
 
         // Performance & stability PRAGMAs
-        sqlx::query("PRAGMA journal_mode=WAL").execute(&pool).await?;
-        sqlx::query("PRAGMA busy_timeout=5000").execute(&pool).await?;
-        sqlx::query("PRAGMA synchronous=NORMAL").execute(&pool).await?;
-        sqlx::query("PRAGMA cache_size=-8000").execute(&pool).await?;
+        sqlx::query("PRAGMA journal_mode=WAL")
+            .execute(&pool)
+            .await?;
+        sqlx::query("PRAGMA busy_timeout=5000")
+            .execute(&pool)
+            .await?;
+        sqlx::query("PRAGMA synchronous=NORMAL")
+            .execute(&pool)
+            .await?;
+        sqlx::query("PRAGMA cache_size=-8000")
+            .execute(&pool)
+            .await?;
         sqlx::query("PRAGMA foreign_keys=ON").execute(&pool).await?;
 
         let repo = Self { pool };
@@ -256,7 +267,11 @@ impl ClipboardRepository {
         .await?;
 
         let db_version = self.get_schema_version().await?;
-        println!("[Schema] current version: {}, code version: {}", db_version, Self::CURRENT_SCHEMA_VERSION);
+        println!(
+            "[Schema] current version: {}, code version: {}",
+            db_version,
+            Self::CURRENT_SCHEMA_VERSION
+        );
 
         if db_version > Self::CURRENT_SCHEMA_VERSION {
             println!(
@@ -641,7 +656,10 @@ impl ClipboardRepository {
         Ok(exists > 0)
     }
 
-    async fn sync_user_tag_index_for_tags(&self, tags: &HashSet<String>) -> Result<(), sqlx::Error> {
+    async fn sync_user_tag_index_for_tags(
+        &self,
+        tags: &HashSet<String>,
+    ) -> Result<(), sqlx::Error> {
         if tags.is_empty() {
             return Ok(());
         }
@@ -649,11 +667,13 @@ impl ClipboardRepository {
         let now = chrono::Utc::now().timestamp();
         for tag in tags {
             if self.user_tag_exists_in_active_items(tag).await? {
-                sqlx::query("INSERT OR REPLACE INTO user_tag_index (tag, updated_at) VALUES (?, ?)")
-                    .bind(tag)
-                    .bind(now)
-                    .execute(&self.pool)
-                    .await?;
+                sqlx::query(
+                    "INSERT OR REPLACE INTO user_tag_index (tag, updated_at) VALUES (?, ?)",
+                )
+                .bind(tag)
+                .bind(now)
+                .execute(&self.pool)
+                .await?;
             } else {
                 sqlx::query("DELETE FROM user_tag_index WHERE tag = ?")
                     .bind(tag)
@@ -700,7 +720,8 @@ impl ClipboardRepository {
 
         self.insert_fts(item).await;
         let affected_user_tags = parse_user_tags(item.tags.as_deref());
-        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+        self.sync_user_tag_index_for_tags(&affected_user_tags)
+            .await?;
 
         Ok(())
     }
@@ -1135,7 +1156,8 @@ impl ClipboardRepository {
 
         let mut affected_user_tags = parse_user_tags(previous_tags.as_deref());
         affected_user_tags.extend(parse_user_tags(item.tags.as_deref()));
-        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+        self.sync_user_tag_index_for_tags(&affected_user_tags)
+            .await?;
 
         if let Ok(Some(latest)) = self.find_by_id(&item.id).await {
             self.update_fts(&latest).await;
@@ -1159,7 +1181,8 @@ impl ClipboardRepository {
 
         self.delete_fts(id).await;
         let affected_user_tags = parse_user_tags(existing_tags.as_deref());
-        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+        self.sync_user_tag_index_for_tags(&affected_user_tags)
+            .await?;
 
         Ok(())
     }
@@ -1278,12 +1301,11 @@ impl ClipboardRepository {
     }
 
     pub async fn find_workbench_by_id(&self, id: &str) -> Result<Option<Workbench>, sqlx::Error> {
-        let workbench = sqlx::query_as::<_, Workbench>(
-            "SELECT * FROM workbenches WHERE id = ? LIMIT 1",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let workbench =
+            sqlx::query_as::<_, Workbench>("SELECT * FROM workbenches WHERE id = ? LIMIT 1")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?;
 
         Ok(workbench)
     }
@@ -1304,13 +1326,12 @@ impl ClipboardRepository {
         let trimmed_name = name.trim();
         let now = chrono::Utc::now().timestamp();
         let workbench_id = uuid::Uuid::new_v4().to_string();
-        let next_sort_order = sqlx::query_scalar::<_, Option<i64>>(
-            "SELECT MAX(sort_order) FROM workbenches",
-        )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or(0)
-            + 1;
+        let next_sort_order =
+            sqlx::query_scalar::<_, Option<i64>>("SELECT MAX(sort_order) FROM workbenches")
+                .fetch_one(&self.pool)
+                .await?
+                .unwrap_or(0)
+                + 1;
 
         sqlx::query(
             "INSERT INTO workbenches (id, name, is_default, sort_order, created_at, updated_at)
@@ -1482,9 +1503,9 @@ impl ClipboardRepository {
              SET is_pinned = 0, pinned_at = NULL, pin_order = NULL, workbench_id = NULL
              WHERE id = ?",
         )
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -1555,10 +1576,7 @@ impl ClipboardRepository {
             return Ok(());
         }
 
-        let existing_set = existing_ids
-            .iter()
-            .cloned()
-            .collect::<HashSet<String>>();
+        let existing_set = existing_ids.iter().cloned().collect::<HashSet<String>>();
 
         let mut normalized = Vec::with_capacity(existing_ids.len());
         let mut seen = HashSet::new();
@@ -1648,10 +1666,7 @@ impl ClipboardRepository {
             return Ok(());
         }
 
-        let existing_set = existing_ids
-            .iter()
-            .cloned()
-            .collect::<HashSet<String>>();
+        let existing_set = existing_ids.iter().cloned().collect::<HashSet<String>>();
 
         let mut normalized = Vec::with_capacity(existing_ids.len());
         let mut seen = HashSet::new();
@@ -2382,7 +2397,8 @@ impl ClipboardRepository {
                 .await;
         }
 
-        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+        self.sync_user_tag_index_for_tags(&affected_user_tags)
+            .await?;
 
         Ok(targets)
     }
@@ -2432,7 +2448,8 @@ impl ClipboardRepository {
                 .await;
         }
 
-        self.sync_user_tag_index_for_tags(&affected_user_tags).await?;
+        self.sync_user_tag_index_for_tags(&affected_user_tags)
+            .await?;
 
         Ok(targets)
     }

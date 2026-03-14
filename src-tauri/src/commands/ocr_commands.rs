@@ -2,8 +2,8 @@ use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::ocr::{OcrConfig, OcrService};
 use crate::repository::config_repo::ConfigRepository;
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 use tauri::State;
 
 pub struct OcrState {

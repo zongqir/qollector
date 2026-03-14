@@ -3,12 +3,12 @@ pub mod windows {
     use crate::core::models::{ClipboardContent, WindowMetadata};
     use crate::platform::clipboard_trait::*;
     use async_trait::async_trait;
-    use std::sync::LazyLock;
+    use parking_lot::Mutex;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::mpsc;
     use std::sync::Arc;
-    use parking_lot::Mutex;
+    use std::sync::LazyLock;
     use windows::core::w;
     use windows::Win32::Foundation::*;
     use windows::Win32::System::DataExchange::*;
@@ -1161,7 +1161,9 @@ pub mod windows {
             // priority 1: ProductName from exe version info
             if let Some(product_name) = Self::get_product_name_from_exe(exe_path) {
                 if !product_name.is_empty() {
-                    APP_NAME_CACHE.lock().insert(exe_path.to_string(), product_name.clone());
+                    APP_NAME_CACHE
+                        .lock()
+                        .insert(exe_path.to_string(), product_name.clone());
                     return product_name;
                 }
             }
@@ -1171,7 +1173,9 @@ pub mod windows {
                 let candidate = window_title[pos + 3..].trim();
                 if !candidate.is_empty() && candidate.len() < 50 {
                     let name = candidate.to_string();
-                    APP_NAME_CACHE.lock().insert(exe_path.to_string(), name.clone());
+                    APP_NAME_CACHE
+                        .lock()
+                        .insert(exe_path.to_string(), name.clone());
                     return name;
                 }
             }
@@ -1183,7 +1187,9 @@ pub mod windows {
                 .unwrap_or("Unknown")
                 .to_string();
 
-            APP_NAME_CACHE.lock().insert(exe_path.to_string(), file_name.clone());
+            APP_NAME_CACHE
+                .lock()
+                .insert(exe_path.to_string(), file_name.clone());
             file_name
         }
 

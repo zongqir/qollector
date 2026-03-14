@@ -2,8 +2,8 @@ use crate::ai::{AIConfig, AIProvider, AIService};
 use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::repository::config_repo::ConfigRepository;
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 use tauri::State;
 
 pub struct AIState {

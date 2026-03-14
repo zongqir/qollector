@@ -1,9 +1,8 @@
-use std::sync::LazyLock;
 use serde::Serialize;
+use std::sync::LazyLock;
 
-static BUILD_TIMESTAMP: LazyLock<u64> = LazyLock::new(|| {
-    env!("BUILD_TIMESTAMP").parse::<u64>().unwrap_or(0)
-});
+static BUILD_TIMESTAMP: LazyLock<u64> =
+    LazyLock::new(|| env!("BUILD_TIMESTAMP").parse::<u64>().unwrap_or(0));
 
 const BETA_EXPIRY_DAYS: i64 = 30;
 
@@ -18,8 +17,8 @@ pub struct BetaStatus {
 pub fn check_beta_expiry() -> BetaStatus {
     use chrono::{DateTime, TimeDelta, Utc};
 
-    let build_dt = DateTime::from_timestamp(*BUILD_TIMESTAMP as i64, 0)
-        .unwrap_or_else(|| Utc::now());
+    let build_dt =
+        DateTime::from_timestamp(*BUILD_TIMESTAMP as i64, 0).unwrap_or_else(|| Utc::now());
     let expiry_dt = build_dt + TimeDelta::days(BETA_EXPIRY_DAYS);
     let now = Utc::now();
     let remaining = (expiry_dt - now).num_days();

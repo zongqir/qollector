@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use qollect::ai::{AIConfig, AICredentials, AIProvider, AIService};
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {

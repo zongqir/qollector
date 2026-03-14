@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use parking_lot::Mutex;
+use std::sync::Arc;
 use tauri::State;
 
 use crate::license::config::{LicenseConfig, LicenseStatus};
@@ -57,9 +57,7 @@ pub async fn activate_license(
 }
 
 #[tauri::command]
-pub async fn deactivate_license(
-    state: State<'_, LicenseState>,
-) -> Result<(), String> {
+pub async fn deactivate_license(state: State<'_, LicenseState>) -> Result<(), String> {
     let (key, device_id) = {
         let config = state.config.lock();
         match &config.license_key {
@@ -95,9 +93,7 @@ pub async fn deactivate_license(
 }
 
 #[tauri::command]
-pub async fn check_license_valid(
-    state: State<'_, LicenseState>,
-) -> Result<bool, String> {
+pub async fn check_license_valid(state: State<'_, LicenseState>) -> Result<bool, String> {
     let mut config = state.config.lock().clone();
     let result = validator::check_feature_access(&mut config).await;
 

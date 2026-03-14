@@ -413,13 +413,7 @@ impl LanSyncService {
         let now_ms = Self::now_unix_ms();
         let ttl_ms = self.get_config().await.discovery_ttl_ms as i64;
 
-        if let Some(discovered) = self
-            .discovered
-            .lock()
-            .await
-            .get(&paired.device_id)
-            .cloned()
-        {
+        if let Some(discovered) = self.discovered.lock().await.get(&paired.device_id).cloned() {
             if now_ms.saturating_sub(discovered.last_seen_ms) <= ttl_ms {
                 return Ok((discovered.host, discovered.service_port));
             }

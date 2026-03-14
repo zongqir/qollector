@@ -28,13 +28,15 @@ fn to_wide(s: &std::ffi::OsStr) -> Vec<u16> {
 }
 
 #[cfg(target_os = "windows")]
-fn create_shortcut(target: &std::path::Path, lnk_path: &std::path::Path) -> Result<(), DragOutError> {
+fn create_shortcut(
+    target: &std::path::Path,
+    lnk_path: &std::path::Path,
+) -> Result<(), DragOutError> {
     use windows::core::{Interface, GUID, PCWSTR};
     use windows::Win32::System::Com::*;
     use windows::Win32::UI::Shell::IShellLinkW;
 
-    const CLSID_SHELL_LINK: GUID =
-        GUID::from_u128(0x00021401_0000_0000_C000_000000000046);
+    const CLSID_SHELL_LINK: GUID = GUID::from_u128(0x00021401_0000_0000_C000_000000000046);
 
     let target_wide = to_wide(target.as_os_str());
     let lnk_wide = to_wide(lnk_path.as_os_str());
@@ -69,10 +71,7 @@ fn create_link_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, DragOutError> {
 
     let mut lnk_paths = Vec::with_capacity(paths.len());
     for path in paths {
-        let stem = path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy();
+        let stem = path.file_name().unwrap_or_default().to_string_lossy();
         let lnk_name = format!("{}.lnk", stem);
         let lnk_path = temp_dir.join(&lnk_name);
         create_shortcut(path, &lnk_path)?;

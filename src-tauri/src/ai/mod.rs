@@ -1,8 +1,8 @@
 use chrono::{Local, TimeZone, Timelike};
-use std::sync::LazyLock;
-use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
+use std::time::Duration;
 use thiserror::Error;
 
 // System prompts configuration (embedded in EXE)
@@ -436,7 +436,12 @@ impl AIService {
             self.config.current_provider.base_url()
         );
 
-        println!("[AI] request: model={}, language={}, prompt_len={}", model, language, prompt.len());
+        println!(
+            "[AI] request: model={}, language={}, prompt_len={}",
+            model,
+            language,
+            prompt.len()
+        );
 
         let mut attempt = 1;
         let response = loop {
@@ -512,7 +517,9 @@ impl AIService {
             let mut tag_lines: Vec<String> = Vec::new();
             for line in normalized_lines.iter().skip(1) {
                 if ai_title.is_none() {
-                    if let Some(title) = normalize_optional_text(strip_prefixed_value(line, "TITLE:")) {
+                    if let Some(title) =
+                        normalize_optional_text(strip_prefixed_value(line, "TITLE:"))
+                    {
                         ai_title = Some(title);
                         continue;
                     }

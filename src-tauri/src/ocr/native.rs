@@ -1,12 +1,12 @@
-#[cfg(target_os = "windows")]
-#[path = "native_windows.rs"]
-mod native_windows;
-#[cfg(target_os = "macos")]
-#[path = "native_macos.rs"]
-mod native_macos;
 #[cfg(target_os = "linux")]
 #[path = "native_linux.rs"]
 mod native_linux;
+#[cfg(target_os = "macos")]
+#[path = "native_macos.rs"]
+mod native_macos;
+#[cfg(target_os = "windows")]
+#[path = "native_windows.rs"]
+mod native_windows;
 
 use super::{provider::OcrProvider, OcrError, OcrResult};
 use async_trait::async_trait;

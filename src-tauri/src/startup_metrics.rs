@@ -1,5 +1,5 @@
-use serde::Serialize;
 use parking_lot::Mutex;
+use serde::Serialize;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Serialize)]

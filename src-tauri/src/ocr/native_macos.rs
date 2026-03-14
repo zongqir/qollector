@@ -39,8 +39,7 @@ impl MacNativeOcr {
                 cocoa::foundation::NSSize::new(0.0, 0.0),
             );
             let null_ptr: *mut Object = std::ptr::null_mut();
-            let cg_image: *mut Object =
-                msg_send![ns_image, CGImageForProposedRect: &cg_rect context: null_ptr hints: null_ptr];
+            let cg_image: *mut Object = msg_send![ns_image, CGImageForProposedRect: &cg_rect context: null_ptr hints: null_ptr];
             if cg_image.is_null() {
                 return Err(OcrError::ImageError("Failed to get CGImage".into()));
             }
@@ -64,10 +63,8 @@ impl MacNativeOcr {
             // Set recognition languages: Chinese + English
             let ns_array_cls = Class::get("NSArray")
                 .ok_or_else(|| OcrError::EngineError("NSArray not found".into()))?;
-            let lang_zh: *mut Object =
-                msg_send![ns_string_cls, stringWithUTF8String: CString::new("zh-Hans").unwrap().as_ptr()];
-            let lang_en: *mut Object =
-                msg_send![ns_string_cls, stringWithUTF8String: CString::new("en").unwrap().as_ptr()];
+            let lang_zh: *mut Object = msg_send![ns_string_cls, stringWithUTF8String: CString::new("zh-Hans").unwrap().as_ptr()];
+            let lang_en: *mut Object = msg_send![ns_string_cls, stringWithUTF8String: CString::new("en").unwrap().as_ptr()];
             let langs: *mut Object =
                 msg_send![ns_array_cls, arrayWithObjects: &[lang_zh, lang_en][0] count: 2usize];
             let _: () = msg_send![request, setRecognitionLanguages: langs];
@@ -76,11 +73,9 @@ impl MacNativeOcr {
             let _: () = msg_send![request, setRecognitionLevel: 1i64];
 
             // Perform request
-            let requests: *mut Object =
-                msg_send![ns_array_cls, arrayWithObject: request];
+            let requests: *mut Object = msg_send![ns_array_cls, arrayWithObject: request];
             let mut error: *mut Object = std::ptr::null_mut();
-            let success: BOOL =
-                msg_send![handler, performRequests: requests error: &mut error];
+            let success: BOOL = msg_send![handler, performRequests: requests error: &mut error];
 
             if success != YES {
                 let desc: *mut Object = msg_send![error, localizedDescription];
@@ -88,9 +83,14 @@ impl MacNativeOcr {
                 let err_msg = if c_str.is_null() {
                     "Unknown Vision error".to_string()
                 } else {
-                    std::ffi::CStr::from_ptr(c_str).to_string_lossy().into_owned()
+                    std::ffi::CStr::from_ptr(c_str)
+                        .to_string_lossy()
+                        .into_owned()
                 };
-                return Err(OcrError::EngineError(format!("Vision request failed: {}", err_msg)));
+                return Err(OcrError::EngineError(format!(
+                    "Vision request failed: {}",
+                    err_msg
+                )));
             }
 
             // Extract results
@@ -100,8 +100,7 @@ impl MacNativeOcr {
 
             for i in 0..count {
                 let observation: *mut Object = msg_send![results, objectAtIndex: i];
-                let candidates: *mut Object =
-                    msg_send![observation, topCandidates: 1usize];
+                let candidates: *mut Object = msg_send![observation, topCandidates: 1usize];
                 let candidate_count: usize = msg_send![candidates, count];
                 if candidate_count > 0 {
                     let candidate: *mut Object = msg_send![candidates, objectAtIndex: 0usize];
@@ -156,4 +155,3 @@ impl OcrProvider for MacNativeOcr {
         true
     }
 }
-

@@ -284,9 +284,7 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
         if pinned_always_on_top {
             // For pinned windows, briefly hide to hand focus back to the previous app,
             // then restore without activation after paste.
-            println!(
-                "[AutoPaste] main window is pinned(always-on-top), hide briefly and restore"
-            );
+            println!("[AutoPaste] main window is pinned(always-on-top), hide briefly and restore");
             cancel_main_window_release(&app, "auto_paste_hide_restore_pinned");
             if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 let _ = main_window.hide();
@@ -453,7 +451,6 @@ fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     Ok(())
 }
-
 
 #[tauri::command]
 pub async fn reveal_in_folder(

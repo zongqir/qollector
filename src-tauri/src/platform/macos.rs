@@ -5,13 +5,13 @@ use cocoa::appkit::{NSFilenamesPboardType, NSPasteboard};
 use cocoa::base::{id, nil, NO};
 use cocoa::foundation::{NSArray, NSAutoreleasePool, NSString, NSURL};
 use objc::{class, msg_send, sel, sel_impl};
+use parking_lot::Mutex;
 use std::borrow::Cow;
 use std::ffi::CStr;
 use std::io::Cursor;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use parking_lot::Mutex;
 use std::time::{Duration, Instant};
 
 const CLIPBOARD_POLL_INTERVAL_MS: u64 = 50;

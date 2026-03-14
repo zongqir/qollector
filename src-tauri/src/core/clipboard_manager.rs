@@ -3,15 +3,15 @@ use crate::core::models::{
     ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
     WindowMetadata, Workbench,
 };
+use crate::lan_sync::PairedSyncDevice;
 use crate::ocr::OcrService;
 use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
-use crate::lan_sync::PairedSyncDevice;
+use parking_lot::Mutex;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
-use parking_lot::Mutex;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
@@ -182,8 +182,7 @@ impl ClipboardManager {
             .flatten()
             .unwrap_or_default();
 
-        if !general_config.copy_qollect_source_items
-            && Self::is_qollect_managed_source(&source_app)
+        if !general_config.copy_qollect_source_items && Self::is_qollect_managed_source(&source_app)
         {
             println!(
                 "[Clipboard] Skip capture for internal source: source_app='{}'",
@@ -585,7 +584,9 @@ impl ClipboardManager {
                         let service = AIService::new(ai_config);
                         match service.generate_tags(content, &language).await {
                             Ok((tags, code_language, title))
-                                if !tags.is_empty() || code_language.is_some() || title.is_some() =>
+                                if !tags.is_empty()
+                                    || code_language.is_some()
+                                    || title.is_some() =>
                             {
                                 let ai_tags: Vec<String> =
                                     tags.iter().map(|t| format!("AI:{}", t)).collect();
@@ -721,7 +722,8 @@ impl ClipboardManager {
             .trim()
             .chars()
             .map(|ch| {
-                if ch.is_control() || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
+                if ch.is_control()
+                    || matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')
                 {
                     '_'
                 } else {
@@ -731,7 +733,9 @@ impl ClipboardManager {
             .collect();
 
         stem = stem.split_whitespace().collect::<Vec<_>>().join(" ");
-        stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+        stem = stem
+            .trim_matches(|c: char| c == ' ' || c == '.')
+            .to_string();
         while stem.starts_with('.') {
             stem.remove(0);
         }
@@ -740,8 +744,13 @@ impl ClipboardManager {
             return None;
         }
 
-        stem = stem.chars().take(MAX_AI_FILENAME_STEM_CHARS).collect::<String>();
-        stem = stem.trim_matches(|c: char| c == ' ' || c == '.').to_string();
+        stem = stem
+            .chars()
+            .take(MAX_AI_FILENAME_STEM_CHARS)
+            .collect::<String>();
+        stem = stem
+            .trim_matches(|c: char| c == ' ' || c == '.')
+            .to_string();
 
         if stem.is_empty() {
             return None;
@@ -1121,7 +1130,9 @@ impl ClipboardManager {
             return Err("工作台数量已达上限".to_string());
         }
 
-        repo.create_workbench(trimmed).await.map_err(|e| e.to_string())
+        repo.create_workbench(trimmed)
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn rename_workbench(&self, id: &str, name: &str) -> Result<(), String> {
@@ -1131,7 +1142,11 @@ impl ClipboardManager {
         }
 
         let repo = self.repository.lock().await;
-        let Some(workbench) = repo.find_workbench_by_id(id).await.map_err(|e| e.to_string())? else {
+        let Some(workbench) = repo
+            .find_workbench_by_id(id)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
             return Err("工作台不存在".to_string());
         };
         if workbench.is_default {
@@ -1145,7 +1160,11 @@ impl ClipboardManager {
 
     pub async fn delete_workbench(&self, id: &str) -> Result<String, String> {
         let repo = self.repository.lock().await;
-        let Some(workbench) = repo.find_workbench_by_id(id).await.map_err(|e| e.to_string())? else {
+        let Some(workbench) = repo
+            .find_workbench_by_id(id)
+            .await
+            .map_err(|e| e.to_string())?
+        else {
             return Err("工作台不存在".to_string());
         };
         if workbench.is_default {
@@ -1161,7 +1180,8 @@ impl ClipboardManager {
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         let resolved_workbench_id = self.resolve_workbench_id(&repo, workbench_id).await?;
-        repo.get_workbench_pinned_items(&resolved_workbench_id).await
+        repo.get_workbench_pinned_items(&resolved_workbench_id)
+            .await
     }
 
     pub async fn reorder_workbench_pinned_items(
@@ -1560,7 +1580,8 @@ impl ClipboardManager {
                     }
                 }
 
-                repo.set_pinned(id, true, Some(&resolved_workbench_id)).await?;
+                repo.set_pinned(id, true, Some(&resolved_workbench_id))
+                    .await?;
                 return Ok(true);
             }
 
@@ -1584,7 +1605,9 @@ impl ClipboardManager {
                 .resolve_item_target_workbench_id(&repo, &item, workbench_id)
                 .await?;
 
-            if item.is_pinned && item.workbench_id.as_deref() == Some(resolved_workbench_id.as_str()) {
+            if item.is_pinned
+                && item.workbench_id.as_deref() == Some(resolved_workbench_id.as_str())
+            {
                 return Ok(true);
             }
 
@@ -1597,7 +1620,8 @@ impl ClipboardManager {
                 }
             }
 
-            repo.set_pinned(id, true, Some(&resolved_workbench_id)).await?;
+            repo.set_pinned(id, true, Some(&resolved_workbench_id))
+                .await?;
             Ok(true)
         } else {
             Err(sqlx::Error::RowNotFound)
@@ -1622,7 +1646,10 @@ impl ClipboardManager {
         repo: &ClipboardRepository,
         requested_workbench_id: Option<&str>,
     ) -> Result<String, sqlx::Error> {
-        if let Some(workbench_id) = requested_workbench_id.map(str::trim).filter(|id| !id.is_empty()) {
+        if let Some(workbench_id) = requested_workbench_id
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+        {
             if repo.find_workbench_by_id(workbench_id).await?.is_some() {
                 return Ok(workbench_id.to_string());
             }
@@ -1637,7 +1664,10 @@ impl ClipboardManager {
         item: &ClipboardItem,
         requested_workbench_id: Option<&str>,
     ) -> Result<String, sqlx::Error> {
-        if let Some(workbench_id) = requested_workbench_id.map(str::trim).filter(|id| !id.is_empty()) {
+        if let Some(workbench_id) = requested_workbench_id
+            .map(str::trim)
+            .filter(|id| !id.is_empty())
+        {
             if repo.find_workbench_by_id(workbench_id).await?.is_some() {
                 return Ok(workbench_id.to_string());
             }
@@ -1649,7 +1679,11 @@ impl ClipboardManager {
             .map(str::trim)
             .filter(|id| !id.is_empty())
         {
-            if repo.find_workbench_by_id(existing_workbench_id).await?.is_some() {
+            if repo
+                .find_workbench_by_id(existing_workbench_id)
+                .await?
+                .is_some()
+            {
                 return Ok(existing_workbench_id.to_string());
             }
         }
@@ -1848,7 +1882,8 @@ impl ClipboardManager {
 
     fn detect_local_code_language(content: &str) -> Option<String> {
         let trimmed = content.trim();
-        if trimmed.len() < LOCAL_CODE_DETECT_MIN_CHARS || trimmed.len() > LOCAL_CODE_DETECT_MAX_CHARS
+        if trimmed.len() < LOCAL_CODE_DETECT_MIN_CHARS
+            || trimmed.len() > LOCAL_CODE_DETECT_MAX_CHARS
         {
             return None;
         }
@@ -1952,26 +1987,8 @@ impl ClipboardManager {
 
     fn looks_like_code_fast(text: &str) -> bool {
         const CODE_KEYWORDS: [&str; 20] = [
-            "=>",
-            "->",
-            "::",
-            "//",
-            "/*",
-            "*/",
-            "#include",
-            "import ",
-            "from ",
-            "def ",
-            "fn ",
-            "func ",
-            "class ",
-            "const ",
-            "let ",
-            "var ",
-            "return ",
-            "select ",
-            "create ",
-            "alter ",
+            "=>", "->", "::", "//", "/*", "*/", "#include", "import ", "from ", "def ", "fn ",
+            "func ", "class ", "const ", "let ", "var ", "return ", "select ", "create ", "alter ",
         ];
         if text.chars().any(|c| "{};=<>()[ ]".contains(c) && c != ' ') {
             return true;
@@ -2038,7 +2055,8 @@ impl ClipboardManager {
             return Ok(None);
         }
 
-        let Some((source_bytes, decoded)) = Self::read_and_decode_image_with_retry(source_path, 8, 25)
+        let Some((source_bytes, decoded)) =
+            Self::read_and_decode_image_with_retry(source_path, 8, 25)
         else {
             eprintln!(
                 "Skipped PixPin image-file promotion: decode failed after retries for '{}'",
