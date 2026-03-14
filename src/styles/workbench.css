@@ -1514,12 +1514,17 @@
 }
 
 .workbench-card-source {
+  display: none;
   min-width: 0;
   max-width: 120px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.workbench-card:hover .workbench-card-source {
+  display: inline;
 }
 
 .workbench-card-source::before {

@@ -2148,6 +2148,7 @@
 }
 
 .compact-card-source {
+  display: none;
   max-width: 88px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2155,6 +2156,10 @@
   font-size: 10px;
   color: var(--text-tertiary);
   opacity: 0.92;
+}
+
+.compact-card:hover .compact-card-source {
+  display: inline;
 }
 
 .compact-card-source::before {

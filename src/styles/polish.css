@@ -764,13 +764,7 @@
 }
 
 .density-compact .history-stream .compact-card:is(
-  :hover,
-  :focus-visible,
-  :focus-within,
-  .selected,
-  .multi-selected,
-  .keyboard-focused,
-  :has(.compact-card-color-picker)
+  :hover
 ) .compact-card-source {
   display: inline;
 }
@@ -955,6 +949,10 @@
 }
 
 .density-cozy .history-stream .compact-card-source {
+  display: none;
+}
+
+.density-cozy .history-stream .compact-card:hover .compact-card-source {
   display: inline;
 }
 
@@ -1070,7 +1068,7 @@
   display: none;
 }
 
-.density-compact .collection-card:is(:hover, :focus-visible, .active, .sort-anchor, :has(.compact-card-color-picker)) .collection-card-source {
+.density-compact .collection-card:hover .collection-card-source {
   display: inline;
 }
 
@@ -1184,7 +1182,7 @@
   display: none;
 }
 
-.density-compact .workbench-card:is(:hover, :focus-visible, .multi-selected, .sort-anchor, :has(.workbench-card-color-picker)) .workbench-card-source {
+.density-compact .workbench-card:hover .workbench-card-source {
   display: inline;
 }
 

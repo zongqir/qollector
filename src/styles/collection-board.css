@@ -763,12 +763,17 @@
 }
 
 .collection-card-source {
+  display: none;
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 120px;
+}
+
+.collection-card:hover .collection-card-source {
+  display: inline;
 }
 
 .collection-card-source::before {
