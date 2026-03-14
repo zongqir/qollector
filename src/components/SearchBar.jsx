@@ -6,9 +6,7 @@ import useEscapeDismiss from './hooks/useEscapeDismiss';
 import useClickOutsideDismiss from './hooks/useClickOutsideDismiss';
 import useFilterDropdownCoordinator from './hooks/useFilterDropdownCoordinator';
 import TagFilterControl from './shared/TagFilterControl';
-import SavedViewControl from './shared/SavedViewControl';
 import TypeFilterControl from './shared/TypeFilterControl';
-import DateFilterControl from './shared/DateFilterControl';
 import {
   PanelSummaryActionButton,
   PanelSummaryBadge,
@@ -30,18 +28,7 @@ function SearchBar({
   tagSearchQuery, onTagSearchChange,
   onToggleTag,
   onOpenSettings,
-  selectedDateRange, showDateFilter, onToggleDateFilter,
-  onClearDateFilter, onSelectDatePreset,
-  customDateStart, customDateEnd,
-  onCustomDateStartChange, onCustomDateEndChange,
-  onApplyCustomDateRange,
   onSearchKeyDown,
-  savedFilterViews,
-  activeFilterViewId,
-  onSaveCurrentView,
-  onApplySavedView,
-  onDeleteSavedView,
-  onClearActiveSavedView,
   resultCount,
   filterBusy = false,
   filterError = '',
@@ -52,12 +39,8 @@ function SearchBar({
   const shouldToggleRecentSearchesOnClickRef = useRef(false);
   const tagListboxRef = useRef(null);
   const tagWrapperRef = useRef(null);
-  const dateWrapperRef = useRef(null);
   const typeWrapperRef = useRef(null);
-  const savedViewWrapperRef = useRef(null);
   const [showTypeFilter, setShowTypeFilter] = useState(false);
-  const [showSavedViews, setShowSavedViews] = useState(false);
-  const [savedViewName, setSavedViewName] = useState('');
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [activeRecentSearchIndex, setActiveRecentSearchIndex] = useState(-1);
 
@@ -97,35 +80,10 @@ function SearchBar({
     onDismiss: onToggleTagFilter,
   });
   useClickOutsideDismiss({
-    isOpen: showDateFilter,
-    wrapperRef: dateWrapperRef,
-    onDismiss: onToggleDateFilter,
-  });
-  useClickOutsideDismiss({
     isOpen: showTypeFilter,
     wrapperRef: typeWrapperRef,
     onDismiss: () => setShowTypeFilter(false),
   });
-  useClickOutsideDismiss({
-    isOpen: showSavedViews,
-    wrapperRef: savedViewWrapperRef,
-    onDismiss: () => setShowSavedViews(false),
-  });
-
-  const datePresets = [
-    { key: 'today', label: t('toolbar.dateToday'), badge: t('toolbar.dateBadgeToday') },
-    { key: 'yesterday', label: t('toolbar.dateYesterday'), badge: t('toolbar.dateBadgeYesterday') },
-    { key: '7d', label: t('toolbar.dateLast7Days'), badge: t('toolbar.dateBadgeLast7Days') },
-    { key: '30d', label: t('toolbar.dateLast30Days'), badge: t('toolbar.dateBadgeLast30Days') },
-    { key: 'custom', label: t('toolbar.dateCustomRange'), badge: t('toolbar.dateBadgeCustomRange') },
-  ];
-
-  const dateBadgeText = selectedDateRange
-    ? (selectedDateRange.preset === 'custom'
-      ? t('toolbar.dateBadgeCustomRange')
-      : datePresets.find(p => p.key === selectedDateRange.preset)?.badge || '')
-    : '';
-  const selectedDatePreset = selectedDateRange?.preset || null;
 
   const typeOptions = [
     { key: 'all', icon: <Layers size={14} /> },
@@ -136,7 +94,6 @@ function SearchBar({
     { key: 'code', icon: <Braces size={14} /> },
   ];
   const selectedTypeOption = typeOptions.find(({ key }) => key === selectedType) || typeOptions[0];
-  const datePresetOptions = datePresets.map(({ key, label }) => ({ key, label }));
   const typeFilterOptions = typeOptions.map(({ key, icon }) => ({ key, icon }));
   const parsedTagOptions = useMemo(() => (
     filteredTagsList
@@ -158,11 +115,7 @@ function SearchBar({
       .filter((option) => option.kind !== 'type')
   ), [filteredTagsList, t]);
   const visibleTagOptions = parsedTagOptions.slice(0, 20);
-  const savedViews = Array.isArray(savedFilterViews) ? savedFilterViews : [];
-  const activeSavedView = savedViews.find(view => view.id === activeFilterViewId) || null;
   const hasSelectedTags = selectedTags.length > 0;
-  const hasSelectedDate = Boolean(selectedDateRange);
-  const hasActiveSavedView = Boolean(activeSavedView);
   const hasSelectedType = selectedType !== 'all';
   const hasFavoritesOnly = Boolean(showFavoritesOnly);
   const hasPinnedOnly = Boolean(showPinnedOnly);
@@ -200,25 +153,16 @@ function SearchBar({
     if (hasSelectedTags) {
       parts.push(t('search.empty.filterTags', { count: selectedTags.length }));
     }
-    if (hasSelectedDate) {
-      parts.push(t('toolbar.dateFilterActive'));
-    }
     if (hasFavoritesOnly) {
       parts.push(t('search.empty.filterFavorites'));
     }
     if (hasPinnedOnly) {
       parts.push(t('search.empty.filterPinned'));
     }
-    if (hasActiveSavedView) {
-      parts.push(t('search.savedViews.using', { name: activeSavedView.name }));
-    }
     return parts;
   }, [
-    activeSavedView,
-    hasActiveSavedView,
     hasFavoritesOnly,
     hasPinnedOnly,
-    hasSelectedDate,
     hasSelectedTags,
     hasSelectedType,
     selectedType,
@@ -233,21 +177,15 @@ function SearchBar({
     if (normalizedSearchQuery) onSearchChange?.('');
     if (hasSelectedType) onTypeChange?.('all');
     if (hasSelectedTags) onClearTags?.();
-    if (hasSelectedDate) onClearDateFilter?.();
     if (hasFavoritesOnly) onToggleFavorites?.();
     if (hasPinnedOnly) onTogglePinned?.();
-    if (hasActiveSavedView) onClearActiveSavedView?.();
   }, [
-    hasActiveSavedView,
     hasFavoritesOnly,
     hasPinnedOnly,
     normalizedSearchQuery,
-    hasSelectedDate,
     hasSelectedTags,
     hasSelectedType,
     onSearchChange,
-    onClearActiveSavedView,
-    onClearDateFilter,
     onClearTags,
     onToggleFavorites,
     onTogglePinned,
@@ -255,9 +193,7 @@ function SearchBar({
   ]);
   const tagDropdownId = 'search-tag-filter-dropdown';
   const tagListboxId = `${tagDropdownId}-options`;
-  const dateDropdownId = 'search-date-filter-dropdown';
   const typeDropdownId = 'search-type-filter-dropdown';
-  const savedViewDropdownId = 'search-saved-view-dropdown';
 
   const closeTagFilter = useCallback(() => {
     if (showTagFilter) {
@@ -265,23 +201,11 @@ function SearchBar({
     }
   }, [showTagFilter, onToggleTagFilter]);
 
-  const closeDateFilter = useCallback(() => {
-    if (showDateFilter) {
-      onToggleDateFilter?.();
-    }
-  }, [showDateFilter, onToggleDateFilter]);
-
   const closeTypeFilter = useCallback(() => {
     if (showTypeFilter) {
       setShowTypeFilter(false);
     }
   }, [showTypeFilter]);
-
-  const closeSavedViews = useCallback(() => {
-    if (showSavedViews) {
-      setShowSavedViews(false);
-    }
-  }, [showSavedViews]);
   const closeRecentSearches = useCallback(() => {
     setShowRecentSearches(false);
     setActiveRecentSearchIndex(-1);
@@ -292,20 +216,10 @@ function SearchBar({
   }, [canShowRecentSearches]);
 
   const coordinatedDropdowns = useMemo(() => ({
-    saved: {
-      isOpen: showSavedViews,
-      open: () => setShowSavedViews(true),
-      close: closeSavedViews,
-    },
     type: {
       isOpen: showTypeFilter,
       open: () => setShowTypeFilter(true),
       close: closeTypeFilter,
-    },
-    date: {
-      isOpen: showDateFilter,
-      open: onToggleDateFilter,
-      close: closeDateFilter,
     },
     tag: {
       isOpen: showTagFilter,
@@ -313,13 +227,8 @@ function SearchBar({
       close: closeTagFilter,
     },
   }), [
-    showSavedViews,
-    closeSavedViews,
     showTypeFilter,
     closeTypeFilter,
-    showDateFilter,
-    onToggleDateFilter,
-    closeDateFilter,
     showTagFilter,
     onToggleTagFilter,
     closeTagFilter,
@@ -356,16 +265,8 @@ function SearchBar({
     toggleDropdown('tag');
   }, [toggleDropdown]);
 
-  const toggleDateFilter = useCallback(() => {
-    toggleDropdown('date');
-  }, [toggleDropdown]);
-
   const toggleTypeFilter = useCallback(() => {
     toggleDropdown('type');
-  }, [toggleDropdown]);
-
-  const toggleSavedViews = useCallback(() => {
-    toggleDropdown('saved');
   }, [toggleDropdown]);
 
   const handleTagSearchInputKeyDown = useCallback((event) => {
@@ -378,15 +279,6 @@ function SearchBar({
     }
     tagListboxRef.current?.focusFirst?.();
   }, [visibleTagOptions.length]);
-
-  const handleSaveView = () => {
-    const normalizedName = savedViewName.trim();
-    if (!normalizedName) return;
-    const result = onSaveCurrentView?.(normalizedName);
-    if (result?.ok) {
-      setSavedViewName('');
-    }
-  };
 
   const applyRecentSearch = useCallback((query) => {
     const normalizedQuery = String(query || '').trim();
@@ -588,7 +480,7 @@ function SearchBar({
           </button>
         )}
 
-        {allTags.length > 0 && (
+      {allTags.length > 0 && (
           <TagFilterControl
             wrapperRef={tagWrapperRef}
             isOpen={showTagFilter}
@@ -612,55 +504,6 @@ function SearchBar({
             clearAllText={t('toolbar.clearAll')}
           />
         )}
-
-        <DateFilterControl
-          wrapperRef={dateWrapperRef}
-          isOpen={showDateFilter}
-          onToggle={toggleDateFilter}
-          onClose={closeDateFilter}
-          controlsId={dateDropdownId}
-          hasSelection={Boolean(selectedDateRange)}
-          badgeText={dateBadgeText}
-          dateFilterText={t('toolbar.dateFilter')}
-          datePresetOptions={datePresetOptions}
-          selectedDatePreset={selectedDatePreset}
-          onSelectDatePreset={onSelectDatePreset}
-          selectedDateRange={selectedDateRange}
-          customDateStart={customDateStart}
-          customDateEnd={customDateEnd}
-          onCustomDateStartChange={onCustomDateStartChange}
-          onCustomDateEndChange={onCustomDateEndChange}
-          onApplyCustomDateRange={onApplyCustomDateRange}
-          onClearDateFilter={onClearDateFilter}
-          dateStartText={t('toolbar.dateStart')}
-          dateEndText={t('toolbar.dateEnd')}
-          dateApplyText={t('toolbar.dateApply')}
-          clearDateFilterText={t('toolbar.clearDateFilter')}
-        />
-
-        <SavedViewControl
-          wrapperRef={savedViewWrapperRef}
-          isOpen={showSavedViews}
-          onToggle={toggleSavedViews}
-          onClose={closeSavedViews}
-          controlsId={savedViewDropdownId}
-          savedViews={savedViews}
-          activeFilterViewId={activeFilterViewId}
-          activeSavedView={activeSavedView}
-          savedViewName={savedViewName}
-          onSavedViewNameChange={setSavedViewName}
-          onSaveView={handleSaveView}
-          onApplySavedView={onApplySavedView}
-          onDeleteSavedView={onDeleteSavedView}
-          onClearActiveSavedView={onClearActiveSavedView}
-          titleText={t('search.savedViews.title')}
-          namePlaceholderText={t('search.savedViews.namePlaceholder')}
-          saveCurrentText={t('search.savedViews.saveCurrent')}
-          emptyText={t('search.savedViews.empty')}
-          activeText={t('search.savedViews.active')}
-          deleteText={t('search.savedViews.delete')}
-          clearActiveText={t('search.savedViews.clearActive')}
-        />
 
         {!isMiniMode && (
           <div className="type-filter-group">
@@ -703,7 +546,7 @@ function SearchBar({
       </div>
 
       {shouldShowFilterSummary && (
-        <PanelSummaryRow className={`filter-status ${hasActiveSavedView ? 'saved-view-status' : ''}`.trim()}>
+        <PanelSummaryRow className="filter-status">
           {filterBusy && (
             <PanelSummaryBadge className="is-busy panel-summary-item--status">{t('search.searching')}</PanelSummaryBadge>
           )}

@@ -2,8 +2,6 @@ import { useState, useCallback, useMemo, useRef, useEffect, useLayoutEffect } fr
 import { useTranslation } from 'react-i18next';
 import {
   ArrowUpDown,
-  Bookmark,
-  Calendar,
   ChevronDown,
   Clock3,
   Package,
@@ -43,9 +41,7 @@ import useEscapeDismiss from '../hooks/useEscapeDismiss';
 import useClickOutsideDismiss from '../hooks/useClickOutsideDismiss';
 import useFilterDropdownCoordinator from '../hooks/useFilterDropdownCoordinator';
 import TagFilterControl from '../shared/TagFilterControl';
-import SavedViewControl from '../shared/SavedViewControl';
 import TypeFilterControl from '../shared/TypeFilterControl';
-import DateFilterControl from '../shared/DateFilterControl';
 import {
   PanelSummaryActionButton,
   PanelSummaryBadge,
@@ -354,6 +350,24 @@ function WorkbenchPanel() {
     if (!normalizedQuery) return;
     addWorkbenchRecentSearch(normalizedQuery);
   }, [addWorkbenchRecentSearch, workbenchDebouncedSearchQuery]);
+
+  useEffect(() => {
+    if (showWorkbenchDateFilter) {
+      setShowWorkbenchDateFilter(false);
+    }
+    if (selectedDateRange) {
+      clearDateFilter();
+    }
+    if (activeFilterViewId) {
+      clearActiveFilterView();
+    }
+  }, [
+    showWorkbenchDateFilter,
+    selectedDateRange,
+    activeFilterViewId,
+    clearDateFilter,
+    clearActiveFilterView,
+  ]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -1873,24 +1887,6 @@ function WorkbenchPanel() {
         </button>
       )}
 
-      <button
-        type="button"
-        className={`header-icon-btn filter-trigger-btn ${selectedDateRange ? 'active' : ''}`.trim()}
-        tabIndex={-1}
-      >
-        <Calendar size={15} />
-        {selectedDateRange && <span className={`icon-btn-badge date-badge ${String(workbenchDateBadgeText || '').length > 3 ? 'date-badge-wide' : ''}`.trim()}>{workbenchDateBadgeText}</span>}
-      </button>
-
-      <button
-        type="button"
-        className={`header-icon-btn filter-trigger-btn saved-view-btn ${activeSavedView ? 'active' : ''}`.trim()}
-        tabIndex={-1}
-      >
-        <Bookmark size={15} />
-        {savedViews.length > 0 && <span className="icon-btn-badge">{Math.min(savedViews.length, 99)}</span>}
-      </button>
-
       {isWorkbenchSortMode && (
         <button type="button" className="workbench-sort-toggle active" tabIndex={-1}>
           <ArrowUpDown size={12} />
@@ -2148,56 +2144,6 @@ function WorkbenchPanel() {
                 clearAllText={t('toolbar.clearAll')}
               />
             )}
-
-            <DateFilterControl
-              wrapperRef={workbenchDateWrapperRef}
-              isOpen={showWorkbenchDateFilter}
-              onToggle={toggleWorkbenchDateFilter}
-              onClose={closeWorkbenchDateFilter}
-              controlsId={workbenchDateDropdownId}
-              hasSelection={Boolean(selectedDateRange)}
-              badgeText={workbenchDateBadgeText}
-              dateFilterText={t('toolbar.dateFilter')}
-              datePresetOptions={datePresetOptions}
-              selectedDatePreset={selectedDatePreset}
-              onSelectDatePreset={handleSelectWorkbenchDatePreset}
-              selectedDateRange={selectedDateRange}
-              customDateStart={customDateStart}
-              customDateEnd={customDateEnd}
-              onCustomDateStartChange={setCustomDateStart}
-              onCustomDateEndChange={setCustomDateEnd}
-              onApplyCustomDateRange={handleApplyWorkbenchCustomDateRange}
-              onClearDateFilter={handleClearWorkbenchDateFilter}
-              dateStartText={t('toolbar.dateStart')}
-              dateEndText={t('toolbar.dateEnd')}
-              dateApplyText={t('toolbar.dateApply')}
-              clearDateFilterText={t('toolbar.clearDateFilter')}
-            />
-
-            <SavedViewControl
-              wrapperRef={workbenchSavedViewWrapperRef}
-              triggerClassName="workbench-saved-view-wrapper"
-              isOpen={showWorkbenchSavedViews}
-              onToggle={toggleWorkbenchSavedViews}
-              onClose={closeWorkbenchSavedViews}
-              controlsId={workbenchSavedViewDropdownId}
-              savedViews={savedViews}
-              activeFilterViewId={activeFilterViewId}
-              activeSavedView={activeSavedView}
-              savedViewName={workbenchSavedViewName}
-              onSavedViewNameChange={setWorkbenchSavedViewName}
-              onSaveView={handleSaveWorkbenchView}
-              onApplySavedView={applySavedFilterView}
-              onDeleteSavedView={deleteSavedFilterView}
-              onClearActiveSavedView={clearActiveFilterView}
-              titleText={t('search.savedViews.title')}
-              namePlaceholderText={t('search.savedViews.namePlaceholder')}
-              saveCurrentText={t('search.savedViews.saveCurrent')}
-              emptyText={t('search.savedViews.empty')}
-              activeText={t('search.savedViews.active')}
-              deleteText={t('search.savedViews.delete')}
-              clearActiveText={t('search.savedViews.clearActive')}
-            />
 
             {isWorkbenchSortMode && (
               <button

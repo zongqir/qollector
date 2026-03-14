@@ -6,7 +6,6 @@ import {
   openItemPreview,
   shouldIgnoreCardDoubleClickTarget,
 } from '../../../utils/previewInteractionPolicy';
-import { getSourceApp } from '../../../utils/tagHelpers';
 
 const HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS = 420;
 

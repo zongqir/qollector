@@ -15,7 +15,6 @@ import useHistoryContextMenu from './hooks/useHistoryContextMenu';
 import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
-import { getDateRangeForPreset, dateStringToTimestamp, dateStringToEndTimestamp } from '../../utils/dateHelpers';
 import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import {
   COLLECTION_HINTS_VISIBILITY_EVENT,
@@ -248,20 +247,12 @@ function HistoryStream({ style }) {
   const tagSearchQuery = useAppStore(s => s.tagSearchQuery);
   const selectedDateRange = useAppStore(s => s.selectedDateRange);
   const showDateFilter = useAppStore(s => s.showDateFilter);
-  const customDateStart = useAppStore(s => s.customDateStart);
-  const customDateEnd = useAppStore(s => s.customDateEnd);
   const savedFilterViews = useAppStore(s => s.savedFilterViews);
   const activeFilterViewId = useAppStore(s => s.activeFilterViewId);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const toggleTagFilter = useAppStore(s => s.toggleTagFilter);
-  const setSelectedDateRange = useAppStore(s => s.setSelectedDateRange);
   const setShowDateFilter = useAppStore(s => s.setShowDateFilter);
-  const setCustomDateStart = useAppStore(s => s.setCustomDateStart);
-  const setCustomDateEnd = useAppStore(s => s.setCustomDateEnd);
   const clearDateFilter = useAppStore(s => s.clearDateFilter);
-  const saveCurrentFilterView = useAppStore(s => s.saveCurrentFilterView);
-  const applySavedFilterView = useAppStore(s => s.applySavedFilterView);
-  const deleteSavedFilterView = useAppStore(s => s.deleteSavedFilterView);
   const clearActiveFilterView = useAppStore(s => s.clearActiveFilterView);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const handleCopyAndAutoPaste = useAppStore(s => s.handleCopyAndAutoPaste);
@@ -322,6 +313,25 @@ function HistoryStream({ style }) {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [addCollectionRecentSearch, collectionSearchQuery, isCollectionMode]);
+
+  useEffect(() => {
+    if (showDateFilter) {
+      setShowDateFilter(false);
+    }
+    if (selectedDateRange) {
+      clearDateFilter();
+    }
+    if (activeFilterViewId) {
+      clearActiveFilterView();
+    }
+  }, [
+    showDateFilter,
+    selectedDateRange,
+    activeFilterViewId,
+    setShowDateFilter,
+    clearDateFilter,
+    clearActiveFilterView,
+  ]);
 
   const [backendSearchResults, setBackendSearchResults] = useState(null);
   const [backendSearchError, setBackendSearchError] = useState('');
@@ -564,23 +574,6 @@ function HistoryStream({ style }) {
     setCollectionVisibleItems([]);
   }, [isCollectionMode]);
 
-  const handleSelectDatePreset = useCallback((preset) => {
-    if (preset === 'custom') {
-      setSelectedDateRange({ preset: 'custom', start: null, end: null });
-    } else {
-      const range = getDateRangeForPreset(preset);
-      if (range) setSelectedDateRange(range);
-    }
-  }, [setSelectedDateRange]);
-
-  const handleApplyCustomDateRange = useCallback(() => {
-    const start = dateStringToTimestamp(customDateStart);
-    const end = dateStringToEndTimestamp(customDateEnd);
-    if (start != null || end != null) {
-      setSelectedDateRange({ preset: 'custom', start, end });
-    }
-  }, [customDateStart, customDateEnd, setSelectedDateRange]);
-
   const activeFilterView = useMemo(() => (
     savedFilterViews.find(view => view.id === activeFilterViewId) || null
   ), [savedFilterViews, activeFilterViewId]);
@@ -595,8 +588,6 @@ function HistoryStream({ style }) {
       showFavoritesOnly,
       showPinnedOnly,
       selectedDateRange,
-      customDateStart,
-      customDateEnd,
     };
 
     if (!sameFilterSnapshot(activeFilterView.filters, currentSnapshot)) {
@@ -610,8 +601,6 @@ function HistoryStream({ style }) {
     showFavoritesOnly,
     showPinnedOnly,
     selectedDateRange,
-    customDateStart,
-    customDateEnd,
     clearActiveFilterView,
   ]);
 
@@ -949,40 +938,6 @@ function HistoryStream({ style }) {
     clearDateFilter,
     clearActiveFilterView,
   });
-
-  const recentUsableSavedView = useMemo(() => {
-    const shouldRecommendRestore = filteredItems.length === 0
-      && emptyDiagnostic.mode !== 'first-use'
-      && Array.isArray(savedFilterViews)
-      && savedFilterViews.length > 0;
-    if (!shouldRecommendRestore) return null;
-
-    const rankedViews = [...savedFilterViews].sort(
-      (left, right) => (right.updatedAt || right.createdAt || 0) - (left.updatedAt || left.createdAt || 0),
-    );
-
-    for (const view of rankedViews) {
-      if (!view?.id || view.id === activeFilterViewId) continue;
-      if (!view?.filters) continue;
-      const hasAnyMatch = items.some(item => itemMatchesFilterSnapshot(item, view.filters, t));
-      if (hasAnyMatch) return view;
-    }
-
-    return null;
-  }, [
-    filteredItems.length,
-    emptyDiagnostic.mode,
-    savedFilterViews,
-    activeFilterViewId,
-    items,
-    t,
-    i18n.language,
-  ]);
-
-  const handleRestoreRecentSavedView = useCallback(() => {
-    if (!recentUsableSavedView?.id) return;
-    applySavedFilterView(recentUsableSavedView.id);
-  }, [recentUsableSavedView, applySavedFilterView]);
 
   const addFromSearchQuery = useMemo(
     () => debouncedSearchQuery.trim(),
@@ -1427,10 +1382,6 @@ function HistoryStream({ style }) {
     setShowSettings(true, 'dataSecurity');
   }, [setShowSettings]);
 
-  const handleToggleDateFilterVisible = useCallback(() => {
-    setShowDateFilter(!showDateFilter);
-  }, [setShowDateFilter, showDateFilter]);
-
   const handleOpenCollectionPreview = useCallback((item) => {
     if (!item || isMiniMode) return;
     const returnViewMode = workbenchPanelEnabled ? 'all' : 'left';
@@ -1469,23 +1420,7 @@ function HistoryStream({ style }) {
     onTagSearchChange: setTagSearchQuery,
     onToggleTag: toggleTagFilter,
     onOpenSettings: handleOpenSettingsPanel,
-    selectedDateRange,
-    showDateFilter,
-    onToggleDateFilter: handleToggleDateFilterVisible,
-    onClearDateFilter: clearDateFilter,
-    onSelectDatePreset: handleSelectDatePreset,
-    customDateStart,
-    customDateEnd,
-    onCustomDateStartChange: setCustomDateStart,
-    onCustomDateEndChange: setCustomDateEnd,
-    onApplyCustomDateRange: handleApplyCustomDateRange,
     onSearchKeyDown: handleSearchInputKeyDown,
-    savedFilterViews,
-    activeFilterViewId,
-    onSaveCurrentView: saveCurrentFilterView,
-    onApplySavedView: applySavedFilterView,
-    onDeleteSavedView: deleteSavedFilterView,
-    onClearActiveSavedView: clearActiveFilterView,
     resultCount: filteredItems.length,
     filterBusy: isSearching,
     filterError: backendSearchError,
@@ -1518,23 +1453,7 @@ function HistoryStream({ style }) {
     setTagSearchQuery,
     toggleTagFilter,
     handleOpenSettingsPanel,
-    selectedDateRange,
-    showDateFilter,
-    handleToggleDateFilterVisible,
-    clearDateFilter,
-    handleSelectDatePreset,
-    customDateStart,
-    customDateEnd,
-    setCustomDateStart,
-    setCustomDateEnd,
-    handleApplyCustomDateRange,
     handleSearchInputKeyDown,
-    savedFilterViews,
-    activeFilterViewId,
-    saveCurrentFilterView,
-    applySavedFilterView,
-    deleteSavedFilterView,
-    clearActiveFilterView,
     filteredItems.length,
     isSearching,
     backendSearchError,
@@ -1845,32 +1764,7 @@ function HistoryStream({ style }) {
                   </button>
                 </div>
               )}
-              {emptyDiagnostic.mode !== 'first-use' && recentUsableSavedView && (
-                <>
-                  <div className="empty-actions-row panel-state-actions">
-                    <button
-                      type="button"
-                      className="empty-action-btn panel-state-action-btn"
-                      onClick={handleRestoreRecentSavedView}
-                    >
-                      {t('search.empty.restoreRecentView')}
-                    </button>
-                    {emptyDiagnostic.canReset && (
-                      <button
-                        type="button"
-                        className="empty-action-btn ghost panel-state-action-btn panel-state-action-btn--ghost"
-                        onClick={handleResetAllFilters}
-                      >
-                        {t('search.empty.clearAllFilters')}
-                      </button>
-                    )}
-                  </div>
-                  <div className="empty-detail state-panel__hint panel-state-text">
-                    {t('search.empty.restoreRecentViewHint', { name: recentUsableSavedView.name })}
-                  </div>
-                </>
-              )}
-              {emptyDiagnostic.canReset && !recentUsableSavedView && (
+              {emptyDiagnostic.canReset && emptyDiagnostic.mode !== 'first-use' && (
                 <button type="button" className="empty-action-btn panel-state-action-btn" onClick={handleResetAllFilters}>
                   {t('search.empty.clearAllFilters')}
                 </button>
