@@ -1195,43 +1195,108 @@ function App() {
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
+  const pendingDragWidthRef = useRef(null);
+  const splitWidthRafRef = useRef(null);
+
+  const applyWorkspaceSplitWidth = useCallback((width) => {
+    const workspaceEl = workspaceRef.current;
+    if (!(workspaceEl instanceof HTMLElement)) return;
+    workspaceEl.style.setProperty('--workspace-history-split-width', `${clampHistoryWidth(width)}px`);
+  }, []);
+
+  const clearWorkspaceSplitWidth = useCallback(() => {
+    const workspaceEl = workspaceRef.current;
+    if (!(workspaceEl instanceof HTMLElement)) return;
+    workspaceEl.style.removeProperty('--workspace-history-split-width');
+  }, []);
+
+  const flushPendingDragWidth = useCallback(() => {
+    if (splitWidthRafRef.current != null) {
+      cancelAnimationFrame(splitWidthRafRef.current);
+      splitWidthRafRef.current = null;
+    }
+    if (pendingDragWidthRef.current == null) return null;
+    const nextWidth = clampHistoryWidth(pendingDragWidthRef.current);
+    applyWorkspaceSplitWidth(nextWidth);
+    return nextWidth;
+  }, [applyWorkspaceSplitWidth]);
+
+  const scheduleDragWidthUpdate = useCallback((width) => {
+    pendingDragWidthRef.current = clampHistoryWidth(width);
+    if (splitWidthRafRef.current != null) return;
+    splitWidthRafRef.current = requestAnimationFrame(() => {
+      splitWidthRafRef.current = null;
+      if (pendingDragWidthRef.current == null) return;
+      applyWorkspaceSplitWidth(pendingDragWidthRef.current);
+    });
+  }, [applyWorkspaceSplitWidth]);
+
+  useLayoutEffect(() => {
+    if (isMiniMode || !workbenchPanelEnabled || !showHistoryStream) {
+      clearWorkspaceSplitWidth();
+      return;
+    }
+    applyWorkspaceSplitWidth(leftWidth);
+  }, [
+    applyWorkspaceSplitWidth,
+    clearWorkspaceSplitWidth,
+    isMiniMode,
+    leftWidth,
+    showHistoryStream,
+    workbenchPanelEnabled,
+  ]);
 
   const handleResizeStart = useCallback((e) => {
     e.preventDefault();
     isDraggingRef.current = true;
     startXRef.current = e.clientX;
-    startWidthRef.current = leftWidth;
+    startWidthRef.current = leftWidthRef.current;
+    pendingDragWidthRef.current = leftWidthRef.current;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-  }, [leftWidth]);
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isDraggingRef.current) return;
       const delta = e.clientX - startXRef.current;
       const newWidth = clampHistoryWidth(startWidthRef.current + delta);
-      setLeftWidth(newWidth);
+      scheduleDragWidthUpdate(newWidth);
     };
     const handleMouseUp = () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
+      const finalWidth = flushPendingDragWidth() ?? leftWidthRef.current;
+      pendingDragWidthRef.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      leftWidthRef.current = finalWidth;
+      setLeftWidth(finalWidth);
       if (!isMiniMode && workbenchPanelEnabled && showHistoryStream) {
-        rememberPresetWidth(layoutPreset, leftWidthRef.current);
+        rememberPresetWidth(layoutPreset, finalWidth);
       }
     };
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     return () => {
+      if (splitWidthRafRef.current != null) {
+        cancelAnimationFrame(splitWidthRafRef.current);
+        splitWidthRafRef.current = null;
+      }
+      pendingDragWidthRef.current = null;
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [
+    flushPendingDragWidth,
     workbenchPanelEnabled,
     isMiniMode,
     layoutPreset,
     rememberPresetWidth,
+    scheduleDragWidthUpdate,
     showHistoryStream,
   ]);
 
@@ -1319,7 +1384,7 @@ function App() {
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
         {showHistoryStream && (
-          <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
+          <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)' }} />
         )}
         {(showMiniPanel || (!isMiniMode && (workbenchPanelEnabled || showStandalonePanel))) && (
           <>
