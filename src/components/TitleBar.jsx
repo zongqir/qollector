@@ -11,11 +11,11 @@ import {
   Pin,
   Expand,
   Minimize2,
-  PanelLeft,
-  PanelRight,
+  List,
+  SquareKanban,
   LayoutGrid,
-  Rows2,
-  Rows3,
+  AlignVerticalJustifyStart,
+  AlignVerticalSpaceAround,
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -226,7 +226,7 @@ function TitleBar({
                     title={t('titlebar.layoutFocusShortcut')}
                     aria-label={t('titlebar.layoutFocusShortcut')}
                   >
-                    <PanelLeft size={13} />
+                    <List size={13} />
                   </button>
                   <button
                     type="button"
@@ -235,7 +235,7 @@ function TitleBar({
                     title={t('titlebar.layoutReviewShortcut')}
                     aria-label={t('titlebar.layoutReviewShortcut')}
                   >
-                    <PanelRight size={13} />
+                    <SquareKanban size={13} />
                   </button>
                   <button
                     type="button"
@@ -254,7 +254,7 @@ function TitleBar({
                     title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
                     aria-label={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
                   >
-                    {densityMode === DENSITY_COMPACT ? <Rows2 size={13} /> : <Rows3 size={13} />}
+                    {densityMode === DENSITY_COMPACT ? <AlignVerticalJustifyStart size={13} /> : <AlignVerticalSpaceAround size={13} />}
                   </button>
                 </div>
               </>
