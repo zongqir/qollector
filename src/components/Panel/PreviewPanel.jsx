@@ -108,11 +108,11 @@ function PreviewPanel() {
     if (!latest) return previewItem;
     return {
       ...latest,
-      content: previewItem.content ?? latest.content,
-      original_content: previewItem.original_content ?? latest.original_content,
-      ocr_text: previewItem.ocr_text ?? latest.ocr_text,
-      content_truncated: Boolean(previewItem.content_truncated),
-      ocr_truncated: Boolean(previewItem.ocr_truncated),
+      content: latest.content,
+      original_content: latest.original_content ?? previewItem.original_content,
+      ocr_text: latest.ocr_text ?? previewItem.ocr_text,
+      content_truncated: Boolean(latest.content_truncated ?? previewItem.content_truncated),
+      ocr_truncated: Boolean(latest.ocr_truncated ?? previewItem.ocr_truncated),
     };
   }, [items, previewItem]);
 
@@ -423,13 +423,35 @@ function PreviewPanel() {
   const handleSaveContent = async () => {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
+      const updatedAt = Math.floor(Date.now() / 1000);
       const updatedItem = {
         ...item,
         content: editContent,
         content_updated: true,
-        updated_at: Math.floor(Date.now() / 1000)
+        content_truncated: false,
+        updated_at: updatedAt,
       };
       await invoke('update_item', { item: updatedItem });
+      useAppStore.setState((state) => ({
+        items: state.items.map((candidate) => (
+          candidate.id === updatedItem.id
+            ? {
+              ...candidate,
+              content: updatedItem.content,
+              content_updated: updatedItem.content_updated,
+              content_truncated: false,
+              updated_at: updatedAt,
+            }
+            : candidate
+        )),
+        previewItem: state.previewItem?.id === updatedItem.id
+          ? {
+            ...state.previewItem,
+            ...updatedItem,
+          }
+          : state.previewItem,
+        itemsRevision: state.itemsRevision + 1,
+      }));
       await useAppStore.getState().loadItems();
       setIsEditingContent(false);
     } catch (error) {

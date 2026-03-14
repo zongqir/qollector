@@ -50,15 +50,38 @@ export const createEditModalActions = (set, get) => ({
       } else {
         const nextContent = data.content ?? editingItem.content;
         const contentUpdated = nextContent !== editingItem.content;
+        const updatedAt = Math.floor(Date.now() / 1000);
         const updatedItem = {
           ...editingItem,
           content: nextContent,
           content_updated: contentUpdated,
           user_note: data.note,
           tags: JSON.stringify(data.tags),
-          updated_at: Math.floor(Date.now() / 1000),
+          updated_at: updatedAt,
         };
         await invoke('update_item', { item: updatedItem });
+        set((state) => ({
+          items: state.items.map((candidate) => (
+            candidate.id === updatedItem.id
+              ? {
+                ...candidate,
+                content: updatedItem.content,
+                content_updated: updatedItem.content_updated,
+                user_note: updatedItem.user_note,
+                tags: updatedItem.tags,
+                updated_at: updatedAt,
+              }
+              : candidate
+          )),
+          previewItem: state.previewItem?.id === updatedItem.id
+            ? {
+              ...state.previewItem,
+              ...updatedItem,
+              content_truncated: false,
+            }
+            : state.previewItem,
+          itemsRevision: state.itemsRevision + 1,
+        }));
       }
       await loadItems();
       set({ showEditModal: false, editingItem: null });
