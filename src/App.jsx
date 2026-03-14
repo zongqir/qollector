@@ -60,6 +60,8 @@ const VIEW_MODE_LEFT = 'left';
 const VIEW_MODE_RIGHT = 'right';
 const VIEW_MODE_ALL = 'all';
 const VIEW_MODE_RESTORE = 'restore';
+const MINI_PRIMARY_CONTENT_HISTORY = 'history';
+const MINI_PRIMARY_CONTENT_PANEL = 'panel';
 const LAYOUT_PRESET_DEFAULT_WIDTHS = {
   [LAYOUT_PRESET_FLOW]: 300,
   [LAYOUT_PRESET_DETAIL]: 280,
@@ -271,14 +273,6 @@ function App() {
   const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
   const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
   const panelMode = useAppStore(s => s.panelMode);
-  const showHistoryStream = isMiniMode || historyStreamEnabled || !workbenchPanelEnabled;
-  const previewOverlayActive = !isMiniMode
-    && workbenchPanelEnabled
-    && showHistoryStream
-    && panelMode === 'preview';
-  const workspaceRef = useRef(null);
-  const prevPanelRectRef = useRef(null);
-  const prevOverlayActiveRef = useRef(previewOverlayActive);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -316,6 +310,7 @@ function App() {
   const confirmShareUpload = useAppStore(s => s.confirmShareUpload);
   const switchShareProvider = useAppStore(s => s.switchShareProvider);
   const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
+  const [miniPrimaryContent, setMiniPrimaryContent] = useState(MINI_PRIMARY_CONTENT_HISTORY);
   const autoMiniSwitchPendingRef = useRef(false);
 
   const mapSmartCopyErrorMessage = useCallback((error) => {
@@ -699,6 +694,17 @@ function App() {
     return clampHistoryWidth(widths[preset] ?? preferredAllWidth ?? fallback);
   });
   const leftWidthRef = useRef(leftWidth);
+  const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
+  const showHistoryStream = isMiniMode
+    ? !showMiniPanel
+    : historyStreamEnabled || !workbenchPanelEnabled;
+  const previewOverlayActive = !isMiniMode
+    && workbenchPanelEnabled
+    && showHistoryStream
+    && panelMode === 'preview';
+  const workspaceRef = useRef(null);
+  const prevPanelRectRef = useRef(null);
+  const prevOverlayActiveRef = useRef(previewOverlayActive);
 
   useEffect(() => {
     leftWidthRef.current = leftWidth;
@@ -857,6 +863,25 @@ function App() {
     }
   }, [isMiniMode]);
 
+  const resolveMiniPrimaryContent = useCallback(() => {
+    const state = useAppStore.getState();
+    if (state.showFavoritesOnly) return MINI_PRIMARY_CONTENT_HISTORY;
+    if (state.workbenchPanelBeforeMini === true && state.panelMode === 'workbench') {
+      return MINI_PRIMARY_CONTENT_PANEL;
+    }
+    if (activeDesktopViewModeRef.current === VIEW_MODE_LEFT) return MINI_PRIMARY_CONTENT_HISTORY;
+    if (
+      state.panelMode === 'workbench'
+      && (
+        activeDesktopViewModeRef.current === VIEW_MODE_RIGHT
+        || activeDesktopViewModeRef.current === VIEW_MODE_ALL
+      )
+    ) {
+      return MINI_PRIMARY_CONTENT_PANEL;
+    }
+    return MINI_PRIMARY_CONTENT_HISTORY;
+  }, []);
+
   const setMiniMode = useCallback(async (enterMini, options = {}) => {
     const keepCurrentSizeOnExit = options?.keepCurrentSizeOnExit === true;
     const currentMiniMode = useAppStore.getState().isMiniMode;
@@ -864,6 +889,7 @@ function App() {
     miniTransitionTargetRef.current = enterMini;
 
     if (enterMini) {
+      setMiniPrimaryContent(resolveMiniPrimaryContent());
       lastDesktopViewModeRef.current = activeDesktopViewModeRef.current;
       hasDesktopRestoreTargetRef.current = true;
 
@@ -897,8 +923,11 @@ function App() {
       WINDOW_MODE_STORAGE_KEY,
       enterMini ? WINDOW_MODE_MINI : WINDOW_MODE_NORMAL
     );
+    if (!enterMini) {
+      setMiniPrimaryContent(MINI_PRIMARY_CONTENT_HISTORY);
+    }
     setIsMiniMode(enterMini);
-  }, [rememberPresetWidth, setIsMiniMode]);
+  }, [rememberPresetWidth, resolveMiniPrimaryContent, setIsMiniMode]);
 
   const performViewModeSwitch = useCallback(async (mode) => {
     const currentMiniMode = useAppStore.getState().isMiniMode;
@@ -1349,9 +1378,9 @@ function App() {
         {showHistoryStream && (
           <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : `${leftWidth}px` }} />
         )}
-        {!isMiniMode && workbenchPanelEnabled && (
+        {(showMiniPanel || (!isMiniMode && workbenchPanelEnabled)) && (
           <>
-            {showHistoryStream && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
+            {!isMiniMode && showHistoryStream && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />
           </>
         )}

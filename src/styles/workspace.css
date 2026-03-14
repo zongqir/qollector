@@ -199,6 +199,10 @@
   background: color-mix(in srgb, var(--surface-muted) 96%, transparent);
 }
 
+.app.mini-mode .polymorphic-panel {
+  overflow: visible;
+}
+
 @media (max-width: 960px) {
   .workspace.preview-overlay-active .polymorphic-panel {
     width: clamp(420px, 76%, 720px);

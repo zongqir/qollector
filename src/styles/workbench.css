@@ -37,6 +37,9 @@
 
 .app.mini-mode .workbench-panel {
   background: transparent;
+  overflow: visible;
+  padding: 5px 6px 2px;
+  gap: 4px;
 }
 
 .workbench-filter-row {
@@ -1951,10 +1954,13 @@
 }
 
 .workbench-dropdown-menu {
+  --workbench-dropdown-max-width: min(220px, calc(100vw - 16px));
+  --workbench-dropdown-shift-x: 0px;
   position: absolute;
   left: 0;
   bottom: calc(100% + 8px);
-  min-width: 190px;
+  min-width: min(190px, var(--workbench-dropdown-max-width));
+  max-width: var(--workbench-dropdown-max-width);
   padding: 6px;
   border: 1px solid var(--control-dropdown-border);
   border-radius: 10px;
@@ -1964,12 +1970,13 @@
   flex-direction: column;
   gap: 4px;
   z-index: 40;
+  transform: translateX(var(--workbench-dropdown-shift-x));
 }
 
 .workbench-dropdown-menu.align-right {
   left: auto;
   right: 0;
-  min-width: 220px;
+  min-width: min(220px, var(--workbench-dropdown-max-width));
 }
 
 .workbench-dropdown-item {
@@ -1990,6 +1997,14 @@
 
 .workbench-dropdown-item svg {
   flex-shrink: 0;
+}
+
+.workbench-dropdown-item span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workbench-dropdown-active-mark {
@@ -2668,6 +2683,17 @@
   border-radius: 5px;
 }
 
+.workbench-compact-action-menu {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.workbench-bottom-bar--compact .workbench-compact-action-menu .quick-output-main-btn,
+.workbench-bottom-bar--compact .workbench-compact-action-menu .workbench-more-main-btn {
+  position: relative;
+}
+
 .workbench-bottom-bar--compact .workbench-btn-label {
   display: none;
 }
@@ -2675,6 +2701,22 @@
 .workbench-bottom-bar--compact .workbench-btn svg {
   width: 12px;
   height: 12px;
+}
+
+.workbench-btn--switchable {
+  overflow: visible;
+}
+
+.workbench-btn-switch-indicator {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 36%, var(--text-tertiary) 64%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+  opacity: 0.66;
 }
 
 .workbench-bottom-bar--compact .workbench-switcher-anchor--toolbar {
