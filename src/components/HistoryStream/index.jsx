@@ -199,6 +199,7 @@ function HistoryStream({ style }) {
   const compareFeedbackTimerRef = useRef(null);
   const quickAddFeedbackTimerRef = useRef(null);
   const addFromSearchButtonRef = useRef(null);
+  const addToHistoryFromSearchButtonRef = useRef(null);
   const quickAddPendingRef = useRef(false);
   const quickAddUndoPendingRef = useRef(false);
 
@@ -344,6 +345,7 @@ function HistoryStream({ style }) {
   const [compareFeedback, setCompareFeedback] = useState(null);
   const [quickAddFeedback, setQuickAddFeedback] = useState(null);
   const [quickAddPending, setQuickAddPending] = useState(false);
+  const [quickAddMode, setQuickAddMode] = useState(null);
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
@@ -960,6 +962,7 @@ function HistoryStream({ style }) {
 
     quickAddPendingRef.current = true;
     setQuickAddPending(true);
+    setQuickAddMode('workbench');
     clearQuickAddFeedbackTimer();
     try {
       const pinnedCountBefore = items.filter(
@@ -1010,15 +1013,81 @@ function HistoryStream({ style }) {
     } finally {
       quickAddPendingRef.current = false;
       setQuickAddPending(false);
+      setQuickAddMode(null);
     }
   }, [
     addFromSearchQuery,
+    activeWorkbenchId,
     clearQuickAddFeedbackTimer,
     focusSearchInput,
     items,
     loadItems,
     maxPinnedItems,
+    pinItem,
     setFocusedIndex,
+    setQuickAddMode,
+    setSearchQuery,
+    showQuickAddFeedback,
+    t,
+  ]);
+
+  const addSearchQueryToHistory = useCallback(async () => {
+    const content = addFromSearchQuery.trim();
+    if (!content || quickAddPendingRef.current) return;
+
+    quickAddPendingRef.current = true;
+    setQuickAddPending(true);
+    setQuickAddMode('history');
+    clearQuickAddFeedbackTimer();
+    try {
+      const itemId = await invoke('add_clipboard_item_manual', {
+        content,
+        contentType: 'text',
+        source: QUICK_INPUT_SOURCE,
+        autoFavorite: false,
+      });
+
+      if (!itemId) {
+        throw new Error('new item missing id');
+      }
+
+      await loadItems();
+
+      setSearchQuery('');
+      setFocusedIndex(-1);
+
+      showQuickAddFeedback({
+        type: 'success',
+        message: t('search.empty.addedToHistory'),
+        detail: '',
+        itemId,
+        undoable: true,
+      }, 5000);
+
+      requestAnimationFrame(() => {
+        focusSearchInput();
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || '');
+      showQuickAddFeedback({
+        type: 'error',
+        message: t('quickInput.failed', { error: message || t('item.unknown') }),
+        detail: '',
+        itemId: null,
+        undoable: false,
+      }, 2600);
+    } finally {
+      quickAddPendingRef.current = false;
+      setQuickAddPending(false);
+      setQuickAddMode(null);
+    }
+  }, [
+    addFromSearchQuery,
+    clearQuickAddFeedbackTimer,
+    focusSearchInput,
+    loadItems,
+    setFocusedIndex,
+    setQuickAddMode,
     setSearchQuery,
     showQuickAddFeedback,
     t,
@@ -1069,10 +1138,48 @@ function HistoryStream({ style }) {
   ]);
 
   const handleAddFromSearchActionKeyDown = useCallback((event) => {
+    const actionButtons = [
+      addFromSearchButtonRef.current,
+      addToHistoryFromSearchButtonRef.current,
+    ].filter(button => button && !button.disabled);
+    const currentIndex = actionButtons.findIndex(button => button === event.currentTarget);
+
     if (event.key === 'ArrowUp') {
+      if (currentIndex > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        actionButtons[currentIndex - 1]?.focus();
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
       focusSearchInput();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      if (currentIndex > -1 && currentIndex < actionButtons.length - 1) {
+        event.preventDefault();
+        event.stopPropagation();
+        actionButtons[currentIndex + 1]?.focus();
+      }
+      return;
+    }
+
+    if (
+      (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+      && actionButtons.length > 1
+    ) {
+      if (currentIndex === -1) return;
+
+      const nextIndex = event.key === 'ArrowRight'
+        ? (currentIndex + 1) % actionButtons.length
+        : (currentIndex - 1 + actionButtons.length) % actionButtons.length;
+
+      event.preventDefault();
+      event.stopPropagation();
+      actionButtons[nextIndex]?.focus();
     }
   }, [focusSearchInput]);
 
@@ -1738,9 +1845,22 @@ function HistoryStream({ style }) {
                     disabled={quickAddPending}
                     aria-label={t('search.empty.addFromSearch', { query: addFromSearchQuery })}
                   >
-                    {quickAddPending
+                    {quickAddPending && quickAddMode === 'workbench'
                       ? t('search.empty.addFromSearchPending')
                       : t('search.empty.addFromSearch', { query: addFromSearchQuery })}
+                  </button>
+                  <button
+                    ref={addToHistoryFromSearchButtonRef}
+                    type="button"
+                    className="empty-action-btn ghost panel-state-action-btn panel-state-action-btn--ghost"
+                    onClick={addSearchQueryToHistory}
+                    onKeyDown={handleAddFromSearchActionKeyDown}
+                    disabled={quickAddPending}
+                    aria-label={t('search.empty.addToHistoryFromSearch')}
+                  >
+                    {quickAddPending && quickAddMode === 'history'
+                      ? t('search.empty.addToHistoryFromSearchPending')
+                      : t('search.empty.addToHistoryFromSearch')}
                   </button>
                 </div>
               )}
