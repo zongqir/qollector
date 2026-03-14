@@ -72,6 +72,7 @@ import {
   PREVIEW_CLICK_DELAY_MS,
   SORT_MODE_LONG_PRESS_MOVE_PX,
   SORT_MODE_LONG_PRESS_MS,
+  shouldIgnoreCardDoubleClickTarget,
   shouldIgnoreLongPressTarget,
   openItemPreview,
 } from '../../utils/previewInteractionPolicy';
@@ -1333,6 +1334,10 @@ function WorkbenchPanel() {
   }, []);
 
   const handleCardDoubleClick = useCallback(async (item, event) => {
+    if (shouldIgnoreCardDoubleClickTarget(event.target)) {
+      event.stopPropagation();
+      return;
+    }
     event.stopPropagation();
     event.preventDefault();
     window.getSelection()?.removeAllRanges();

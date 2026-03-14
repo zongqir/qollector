@@ -695,6 +695,7 @@
   box-shadow: var(--card-toolbar-shell-shadow);
   padding: var(--card-toolbar-shell-padding-y) var(--card-toolbar-shell-padding-x);
   min-height: calc(var(--panel-card-action-size) + (var(--card-toolbar-shell-padding-y) * 2));
+  pointer-events: none;
   transition:
     opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
     transform var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
@@ -719,6 +720,7 @@
     box-shadow var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
     opacity var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease),
     transform var(--card-toolbar-reveal-duration) var(--card-toolbar-reveal-ease);
+  pointer-events: auto;
 }
 
 .panel-card-action-btn:hover {
@@ -755,7 +757,6 @@
   ) .panel-card-actions--hover-reveal {
     opacity: var(--card-toolbar-visible-opacity);
     transform: translateY(var(--card-toolbar-shell-visible-translate)) scale(1);
-    pointer-events: auto;
     box-shadow: var(--card-toolbar-shell-shadow);
   }
 }
@@ -764,7 +765,6 @@
   .panel-card-actions--hover-reveal {
     opacity: var(--card-toolbar-visible-opacity);
     transform: none;
-    pointer-events: auto;
     box-shadow: var(--card-toolbar-shell-shadow);
   }
 

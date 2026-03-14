@@ -67,6 +67,7 @@ import {
   PREVIEW_CLICK_DELAY_MS,
   SORT_MODE_LONG_PRESS_MOVE_PX,
   SORT_MODE_LONG_PRESS_MS,
+  shouldIgnoreCardDoubleClickTarget,
   shouldIgnoreLongPressTarget,
 } from '../../utils/previewInteractionPolicy';
 import { getCardTagPreviewLimit } from '../../utils/cardDensity';
@@ -998,6 +999,10 @@ function CollectionBoard({
 
   const handleCollectionCardDoubleClick = useCallback((item, event) => {
     if (!item?.id) return;
+    if (shouldIgnoreCardDoubleClickTarget(event.target)) {
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     clearCollectionSortLongPressTimer();

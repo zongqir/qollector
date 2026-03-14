@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { INTERNAL_DRAG_MIME } from '../../../constants/dragDrop';
 import { resolveFilenameStemForItem } from '../../../utils/filenameNaming';
-import { PREVIEW_CLICK_DELAY_MS, openItemPreview } from '../../../utils/previewInteractionPolicy';
+import {
+  PREVIEW_CLICK_DELAY_MS,
+  openItemPreview,
+  shouldIgnoreCardDoubleClickTarget,
+} from '../../../utils/previewInteractionPolicy';
 
 function getExternalFilePaths(item) {
   if (item.type_ === 'file' && item.content) {
@@ -156,6 +160,10 @@ export default function useHistoryRowInteractions({
   ]);
 
   const handleCardDoubleClick = useCallback((item, e) => {
+    if (shouldIgnoreCardDoubleClickTarget(e.target)) {
+      e.stopPropagation();
+      return;
+    }
     e.stopPropagation();
     e.preventDefault();
     window.getSelection()?.removeAllRanges();
