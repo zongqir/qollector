@@ -35,6 +35,7 @@ function WorkbenchQuickActionsBar({
   workbenchPrimaryAction,
   handleRunWorkbenchPrimaryAction,
   handleSelectWorkbenchPrimaryAction,
+  workbenchSwitcher = null,
   layoutMode = 'full',
   measurementMode = false,
   barRef = null,
@@ -205,6 +206,8 @@ function WorkbenchQuickActionsBar({
             )}
           </div>
         )}
+
+        {workbenchSwitcher}
 
         {feedback && (
           <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">

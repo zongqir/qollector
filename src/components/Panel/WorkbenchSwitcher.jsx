@@ -9,6 +9,8 @@ import {
 function WorkbenchSwitcher({
   variant = 'floating',
   activeWorkbenchName,
+  activeWorkbenchShortName,
+  accentColor,
   workbenchOptions,
   isOpen,
   isManageMenuOpen,
@@ -21,13 +23,22 @@ function WorkbenchSwitcher({
   onToggleManageMenu,
   onRenameWorkbench,
   onDeleteWorkbench,
+  measurementMode = false,
 }) {
   const { t } = useTranslation();
+  const isToolbarVariant = variant === 'toolbar';
+  const triggerLabel = isToolbarVariant
+    ? activeWorkbenchShortName || activeWorkbenchName || t('workbench.defaultBadge')
+    : activeWorkbenchShortName || activeWorkbenchName || t('workbench.defaultBadge');
+  const triggerTitle = isToolbarVariant
+    ? `${t('workbench.switchWorkbench')} · ${activeWorkbenchName || t('workbench.defaultWorkbench')}`
+    : activeWorkbenchName || triggerLabel;
 
   return (
     <div
       ref={switcherRef}
       className={`workbench-switcher-anchor workbench-switcher-anchor--${variant}`}
+      style={accentColor ? { '--workbench-switcher-accent': accentColor } : undefined}
     >
       <button
         type="button"
@@ -36,10 +47,11 @@ function WorkbenchSwitcher({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={t('workbench.switchWorkbench')}
-        title={activeWorkbenchName}
+        title={triggerTitle}
         disabled={disabled}
+        tabIndex={measurementMode ? -1 : undefined}
       >
-        <span className="workbench-switcher-trigger-label">{activeWorkbenchName}</span>
+        <span className="workbench-switcher-trigger-label">{triggerLabel}</span>
         <ChevronDown size={12} className="workbench-switcher-trigger-caret" />
       </button>
 

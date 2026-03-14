@@ -254,6 +254,17 @@ function WorkbenchPanel() {
     return fullLabel.length > 4 ? `${fullLabel.slice(0, 4)}…` : fullLabel;
   }, [getWorkbenchDisplayName, t]);
 
+  const getToolbarWorkbenchDisplayName = useCallback((workbench) => {
+    if (workbench?.is_default) return t('workbench.defaultBadge');
+    const fullLabel = String(workbench?.name || '').trim();
+    if (!fullLabel) return t('workbench.defaultBadge');
+    const isCjkLabel = /[\u3400-\u9fff]/.test(fullLabel);
+    if (isCjkLabel) {
+      return fullLabel.slice(0, 4);
+    }
+    return fullLabel.slice(0, 8);
+  }, [t]);
+
   const activeWorkbenchLabel = useMemo(
     () => getWorkbenchDisplayName(activeWorkbench),
     [activeWorkbench, getWorkbenchDisplayName],
@@ -263,6 +274,28 @@ function WorkbenchPanel() {
     () => getCompactWorkbenchDisplayName(activeWorkbench),
     [activeWorkbench, getCompactWorkbenchDisplayName],
   );
+
+  const activeWorkbenchToolbarLabel = useMemo(
+    () => getToolbarWorkbenchDisplayName(activeWorkbench),
+    [activeWorkbench, getToolbarWorkbenchDisplayName],
+  );
+
+  const activeWorkbenchAccent = useMemo(() => {
+    if (!activeWorkbench) {
+      return 'hsl(214 24% 62%)';
+    }
+    if (activeWorkbench.is_default) {
+      return 'hsl(214 28% 64%)';
+    }
+
+    const source = String(activeWorkbench.id || activeWorkbench.name || '').trim();
+    let hash = 0;
+    for (let index = 0; index < source.length; index += 1) {
+      hash = ((hash * 31) + source.charCodeAt(index)) % 360;
+    }
+    const hue = (hash + 360) % 360;
+    return `hsl(${hue} 52% 58%)`;
+  }, [activeWorkbench]);
 
   const workbenchSwitcherOptions = useMemo(() => (
     workbenches.map((workbench) => ({
@@ -1820,7 +1853,7 @@ function WorkbenchPanel() {
   ]);
 
   const workbenchFilterRowClassName = `workbench-filter-row ${shouldCollapseWorkbenchFilterText ? 'workbench-filter-row--adaptive-icon' : ''}`.trim();
-  const workbenchPanelClassName = `workbench-panel ${selectedPinnedIds.length === 0 && workbenchBottomBarLayout === WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT ? 'workbench-panel--compact-bottom-bar' : ''}`.trim();
+  const workbenchPanelClassName = `workbench-panel ${selectedPinnedIds.length === 0 ? 'workbench-panel--docked-bottom-bar' : ''} ${selectedPinnedIds.length === 0 && workbenchBottomBarLayout === WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT ? 'workbench-panel--compact-bottom-bar' : ''}`.trim();
   const renderWorkbenchFilterActionSizer = (iconOnly = false) => (
     <div className="workbench-filter-actions">
       <button
@@ -1892,10 +1925,12 @@ function WorkbenchPanel() {
       onExpand={() => setIsExpanded(true)}
     />
   );
-  const floatingWorkbenchSwitcher = (
+  const toolbarWorkbenchSwitcher = (
     <WorkbenchSwitcher
-      variant="floating"
+      variant="toolbar"
       activeWorkbenchName={activeWorkbenchLabel}
+      activeWorkbenchShortName={activeWorkbenchToolbarLabel}
+      accentColor={activeWorkbenchAccent}
       workbenchOptions={workbenchSwitcherOptions}
       isOpen={showWorkbenchSwitcher}
       isManageMenuOpen={showWorkbenchManageMenu}
@@ -1911,6 +1946,28 @@ function WorkbenchPanel() {
     />
   );
 
+  const toolbarWorkbenchSwitcherSizer = (
+    <WorkbenchSwitcher
+      variant="toolbar"
+      activeWorkbenchName={activeWorkbenchLabel}
+      activeWorkbenchShortName={activeWorkbenchToolbarLabel}
+      accentColor={activeWorkbenchAccent}
+      workbenchOptions={workbenchSwitcherOptions}
+      isOpen={false}
+      isManageMenuOpen={false}
+      disabled
+      canManageActiveWorkbench={false}
+      switcherRef={null}
+      onToggle={() => {}}
+      onSelectWorkbench={() => {}}
+      onCreateWorkbench={() => {}}
+      onToggleManageMenu={() => {}}
+      onRenameWorkbench={() => {}}
+      onDeleteWorkbench={() => {}}
+      measurementMode
+    />
+  );
+
   if (allPinnedItems.length === 0) {
     return (
       <div
@@ -1921,7 +1978,7 @@ function WorkbenchPanel() {
         onDrop={handleNativeDrop}
       >
         {quickNoteSection}
-        <div className={`workbench-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
+        <div className={`workbench-empty state-panel panel-state-stack ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
           <div className="workbench-empty-icon panel-state-icon">
             <Package size={48} strokeWidth={1} />
           </div>
@@ -1945,7 +2002,7 @@ function WorkbenchPanel() {
           )}
         </div>
         <div className="workbench-bottom-area workbench-bottom-area--empty">
-          {floatingWorkbenchSwitcher}
+          {toolbarWorkbenchSwitcher}
         </div>
       </div>
     );
@@ -2203,7 +2260,7 @@ function WorkbenchPanel() {
       )}
 
       {pinnedItems.length === 0 ? (
-        <div className={`workbench-filter-empty state-panel panel-state-stack panel-state-stack--narrow ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
+        <div className={`workbench-filter-empty state-panel panel-state-stack ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
           <div className="workbench-empty-icon panel-state-icon">
             <Package size={42} strokeWidth={1} />
           </div>
@@ -2336,11 +2393,11 @@ function WorkbenchPanel() {
             workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
             handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
             handleSelectWorkbenchPrimaryAction={quickActions.handleSelectWorkbenchPrimaryAction}
+            workbenchSwitcher={toolbarWorkbenchSwitcher}
             layoutMode={workbenchBottomBarLayout}
             barRef={workbenchBottomBarRef}
           />
         )}
-        {floatingWorkbenchSwitcher}
       </div>
       <div className="workbench-adaptive-sizers" aria-hidden="true">
         {!isWorkbenchFiltersCollapsed && (
@@ -2387,6 +2444,7 @@ function WorkbenchPanel() {
           workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
           handleRunWorkbenchPrimaryAction={() => {}}
           handleSelectWorkbenchPrimaryAction={() => {}}
+          workbenchSwitcher={toolbarWorkbenchSwitcherSizer}
           layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL}
           measurementMode
           barRef={workbenchBottomBarLabelSizerRef}
@@ -2413,6 +2471,7 @@ function WorkbenchPanel() {
           workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
           handleRunWorkbenchPrimaryAction={() => {}}
           handleSelectWorkbenchPrimaryAction={() => {}}
+          workbenchSwitcher={toolbarWorkbenchSwitcherSizer}
           layoutMode={WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT}
           measurementMode
           barRef={workbenchBottomBarIconSizerRef}

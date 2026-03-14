@@ -171,9 +171,17 @@
   gap: 8px;
 }
 
+.workbench-panel.workbench-panel--docked-bottom-bar {
+  padding-bottom: 2px;
+}
+
 .workbench-panel.workbench-panel--compact-bottom-bar {
   padding: 8px 8px 4px;
   gap: 4px;
+}
+
+.workbench-panel.workbench-panel--compact-bottom-bar.workbench-panel--docked-bottom-bar {
+  padding-bottom: 2px;
 }
 
 .timeline-header,
