@@ -7,9 +7,9 @@ mod config;
 mod core;
 mod crash_log;
 mod http_client;
-mod low_memory_mode;
 mod lan_sync;
 mod license;
+mod low_memory_mode;
 mod mcp;
 mod ocr;
 mod platform;
@@ -22,7 +22,6 @@ mod window_lifecycle;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
-use commands::workbench_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
@@ -36,17 +35,18 @@ use commands::prompt_commands::*;
 use commands::share_commands::*;
 use commands::smart_copy_commands::*;
 use commands::sync_commands::*;
+use commands::workbench_commands::*;
 use core::clipboard_manager::ClipboardManager;
 use low_memory_mode::{AppExitState, LowMemoryModeState};
+use parking_lot::Mutex;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
 use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
 use std::sync::Arc;
-use parking_lot::Mutex;
 use std::time::Instant;
-use tauri::Manager;
 use tauri::Emitter;
+use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
 use window_lifecycle::{
@@ -707,6 +707,14 @@ fn main() {
             // Intercept close on main window: hide to tray instead
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == MAIN_WINDOW_LABEL {
+                    if cfg!(debug_assertions) {
+                        println!(
+                            "[Shutdown] Main window close requested in debug mode, exiting app"
+                        );
+                        window.app_handle().exit(0);
+                        return;
+                    }
+
                     api.prevent_close();
                     let app_handle = window.app_handle().clone();
                     hide_main_window_with_release(&app_handle, "close_button_hide");
@@ -825,6 +833,11 @@ fn main() {
         .run(|app, event| {
             match event {
                 tauri::RunEvent::ExitRequested { api, .. } => {
+                    if cfg!(debug_assertions) {
+                        println!("[Shutdown] Exit requested in debug mode, allowing app exit");
+                        return;
+                    }
+
                     let user_requested_exit = app
                         .try_state::<AppExitState>()
                         .map(|state| state.is_user_requested_exit())

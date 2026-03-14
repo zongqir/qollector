@@ -16,7 +16,7 @@
     "visual:current:capture": "node scripts/visual-regression/capture.mjs --mode=current --clean",
     "visual:diff": "node scripts/visual-regression/compare.mjs",
     "visual:check": "npm run visual:current:capture && npm run visual:diff",
-    "tauri": "tauri"
+    "tauri": "node scripts/run-tauri.mjs"
   },
   "keywords": [],
   "author": "",
