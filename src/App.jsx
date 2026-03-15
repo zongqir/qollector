@@ -1465,19 +1465,21 @@ function App() {
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
         {shouldRenderHistoryPane && (
-          <div
-            className={`workspace-pane workspace-pane--history ${showHistoryStream ? '' : 'is-hidden'}`.trim()}
-            aria-hidden={!showHistoryStream}
-          >
-            <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)' }} />
-          </div>
+          <HistoryStream
+            style={{
+              width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)',
+              display: !isMiniMode && !showHistoryStream ? 'none' : undefined,
+            }}
+          />
+        )}
+        {!isMiniMode && showHistoryStream && showPanelPane && !previewOverlayActive && (
+          <div className="resize-handle" onMouseDown={handleResizeStart} />
         )}
         {shouldRenderPanelPane && (
           <div
-            className={`workspace-pane workspace-pane--panel ${showPanelPane ? '' : 'is-hidden'}`.trim()}
+            className={`workspace-panel-host ${showPanelPane ? '' : 'is-hidden'}`.trim()}
             aria-hidden={!showPanelPane}
           >
-            {!isMiniMode && showHistoryStream && showPanelPane && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />
           </div>
         )}

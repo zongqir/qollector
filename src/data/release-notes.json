@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.4",
+      "publishedAt": "2026-03-15",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-4",
+      "summary": {
+        "zh-CN": "继续优化历史流与工作区性能，降低收起后重开的等待感，并修复相关布局回归。",
+        "en-US": "Continued improving history/workbench performance, reduced reopen latency after collapsing, and fixed the related layout regression."
+      },
+      "highlights": {
+        "zh-CN": [
+          "历史流、工作区与收藏区继续减少整表扫描，改为更多索引读取与按需计算。",
+          "优化工作区 pinned 数据链路，降低筛选、排序和批量操作时的重渲染成本。",
+          "优化窗口隐藏后的恢复路径，减少快速收起再打开时的等待感。",
+          "修复桌面布局切换过程中的界面回归，恢复列表与右侧面板的正常显示。",
+          "继续拆分低频弹层资源，降低主包压力与非必要加载。"
+        ],
+        "en-US": [
+          "Further reduced full-list scans across history, workbench, and collection by using indexed reads and more on-demand computation.",
+          "Optimized the pinned-item data path in Workbench to cut rerender cost during filtering, sorting, and batch actions.",
+          "Improved the restore path after hiding the window to reduce perceived delay during quick reopen flows.",
+          "Fixed the desktop layout regression introduced during panel-toggle optimization and restored normal list/panel rendering.",
+          "Continued splitting low-frequency overlays out of the main bundle to reduce unnecessary startup cost."
+        ]
+      }
+    },
+    {
       "version": "0.3.3",
       "publishedAt": "2026-03-15",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-3",

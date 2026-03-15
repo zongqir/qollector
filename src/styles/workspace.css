@@ -80,19 +80,15 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 88%, transparent), color-mix(in srgb, var(--surface-elevated) 84%, transparent));
 }
 
-.workspace-pane {
+.workspace-panel-host {
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.workspace-pane--panel {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.workspace-pane.is-hidden {
+.workspace-panel-host.is-hidden {
   display: none;
 }
 
