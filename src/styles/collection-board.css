@@ -64,7 +64,7 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0) scale(1);
-  transition-delay: 0s;
+  transition-delay: var(--motion-reduced);
 }
 
 .collection-tag-rail-wrap:hover .collection-toolbar-actions--floating .collection-view-toggle,
@@ -309,7 +309,7 @@
   background: color-mix(in srgb, var(--control-panel-bg-soft) 92%, transparent);
   padding: 2px;
   flex-shrink: 0;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--control-panel-shadow);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }

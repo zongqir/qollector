@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.3",
+      "publishedAt": "2026-03-15",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-3",
+      "summary": {
+        "zh-CN": "聚焦预览编辑回写与多工作区切换体验，继续统一列表交互显隐规则并收敛样式 token。",
+        "en-US": "Focused on preview edit persistence and multi-workbench switching while further unifying list hover behavior and tightening style token usage."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复预览区正文编辑后保存但内容未即时刷新的问题，编辑结果会立即回写到当前预览与列表状态。",
+          "继续优化多工作区与面板切换体验，补齐默认工作台、切换入口和工作区标注等交互细节。",
+          "统一列表卡片的信息显隐规则，来源信息与工具操作按悬浮展示，固定或收藏状态不再长期占用注意力。",
+          "修复历史流单行内容下双击复制与自动粘贴的边界问题，减少窄窗和特殊内容场景下的误判。",
+          "清理快速记录与收藏区相关样式 token，恢复严格样式守卫为零告警状态。"
+        ],
+        "en-US": [
+          "Fixed the case where saving edited preview text did not refresh immediately, and now write back changes to both the active preview and list state right away.",
+          "Continued refining multi-workbench and panel switching with clearer default workspace behavior, switch entry points, and workbench labeling details.",
+          "Unified list-card visibility rules so source labels and tool actions appear on hover instead of staying persistent after pinning or favoriting.",
+          "Resolved edge cases around double-click copy and auto-paste for single-line history items, especially in narrow layouts and special-content scenarios.",
+          "Cleaned up style tokens for quick note and collection UI so strict style-guard checks return to zero warnings."
+        ]
+      }
+    },
+    {
       "version": "0.3.2",
       "publishedAt": "2026-03-12",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-2",

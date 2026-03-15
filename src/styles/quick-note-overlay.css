@@ -29,11 +29,11 @@
   border-radius: 0;
   border: 0;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, calc(var(--glass-opacity) * 0.16)), transparent 48%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-glow) 42%, transparent), transparent 48%),
     var(--quick-note-card-bg, var(--quick-input-bg));
   box-shadow:
     0 22px 56px color-mix(in srgb, var(--shadow-xl) 94%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 100%, transparent);
   overflow: hidden;
   animation: quick-note-card-rise var(--motion-pop) var(--ease-emphasized);
   transition:
@@ -117,7 +117,7 @@
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, calc(var(--glass-opacity) * 0.34));
+  background: color-mix(in srgb, var(--surface-strong) 34%, transparent);
   cursor: pointer;
   transition:
     color var(--motion-fast) var(--ease-standard),
@@ -129,7 +129,7 @@
 .quick-note-icon-btn:hover,
 .quick-note-icon-btn:focus-visible {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, calc(var(--glass-opacity) * 0.5));
+  background: color-mix(in srgb, var(--surface-strong) 50%, transparent);
   border-color: var(--accent-border-soft);
   transform: translateY(-1px);
   outline: none;
@@ -145,7 +145,7 @@
   padding: 8px;
   border-radius: 999px;
   border: 1px solid var(--border-light);
-  background: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.94));
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
   box-shadow: 0 16px 32px color-mix(in srgb, var(--shadow-lg) 92%, transparent);
   backdrop-filter: blur(10px);
 }
@@ -159,10 +159,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--text-on-accent);
   background: var(--quick-note-dot);
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-light) 100%, transparent);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
@@ -174,7 +174,7 @@
 
 .quick-note-color-dot.active {
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 2px color-mix(in srgb, var(--surface-strong) 90%, transparent),
     0 0 0 3px color-mix(in srgb, var(--accent-color) 42%, transparent);
 }
 
@@ -223,7 +223,7 @@
   gap: 10px;
   padding: 8px 14px 10px;
   border-top: 1px solid color-mix(in srgb, var(--border-light) 88%, transparent);
-  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, calc(var(--glass-opacity) * 0.14)));
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--surface-glow) 36%, transparent));
 }
 
 .quick-note-card-hints {
