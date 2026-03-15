@@ -94,6 +94,64 @@ jobs:
         run: |
           VERSION=$(grep -o '"version": "[^"]*"' src-tauri/tauri.conf.json | head -1 | cut -d'"' -f4)
           echo "version=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "version_num=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build release metadata
+        id: release_meta
+        shell: bash
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const version = process.env.VERSION;
+          const notesPath = path.join(process.cwd(), 'src', 'data', 'release-notes.json');
+          const raw = fs.readFileSync(notesPath, 'utf8');
+          const notes = JSON.parse(raw);
+          const release = Array.isArray(notes.releases)
+            ? notes.releases.find((entry) => String(entry.version || '').trim() === version)
+            : null;
+
+          if (!release) {
+            throw new Error(`Missing release-notes entry for ${version}`);
+          }
+
+          const summaryZh = String(release.summary?.['zh-CN'] || '').trim();
+          const summaryEn = String(release.summary?.['en-US'] || '').trim();
+          const highlightsZh = Array.isArray(release.highlights?.['zh-CN'])
+            ? release.highlights['zh-CN'].map((item) => String(item || '').trim()).filter(Boolean)
+            : [];
+          const highlightsEn = Array.isArray(release.highlights?.['en-US'])
+            ? release.highlights['en-US'].map((item) => String(item || '').trim()).filter(Boolean)
+            : [];
+          const changelogUrl = String(release.changelogUrl || notes.changelogUrl || '').trim();
+
+          const bodyLines = [];
+          if (summaryEn) {
+            bodyLines.push("## What's New", "", summaryEn);
+            if (highlightsEn.length > 0) {
+              bodyLines.push("", ...highlightsEn.map((item) => `- ${item}`));
+            }
+            bodyLines.push("");
+          }
+          if (summaryZh) {
+            bodyLines.push("## 更新内容", "", summaryZh);
+            if (highlightsZh.length > 0) {
+              bodyLines.push("", ...highlightsZh.map((item) => `- ${item}`));
+            }
+            bodyLines.push("");
+          }
+          if (changelogUrl) {
+            bodyLines.push(`[Full Changelog](${changelogUrl})`);
+          }
+
+          const body = bodyLines.join('\n').trim();
+          const outputPath = process.env.GITHUB_OUTPUT;
+          fs.appendFileSync(outputPath, `release_name=Qollect v${version}\n`);
+          fs.appendFileSync(outputPath, `release_body<<__QOLLECT_BODY__\n${body}\n__QOLLECT_BODY__\n`);
+          EOF
+        env:
+          VERSION: ${{ steps.version.outputs.version_num }}
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
@@ -101,8 +159,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ steps.version.outputs.version }}
-          releaseName: "Qollect ${{ steps.version.outputs.version }}"
-          releaseBody: "See the assets to download and install this version.\n\n> **Note:** Linux build is experimental — clipboard functionality is not yet implemented."
+          releaseName: ${{ steps.release_meta.outputs.release_name }}
+          releaseBody: ${{ steps.release_meta.outputs.release_body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
@@ -170,6 +228,10 @@ jobs:
           echo "Generated latest.json:"
           cat r2-upload/latest.json
 
+      - name: Prepare release-notes.json for R2
+        run: |
+          cp src/data/release-notes.json r2-upload/release-notes.json
+
       - name: Install wrangler
         run: npm install -g wrangler
 
@@ -184,6 +246,11 @@ jobs:
           # Upload latest.json
           wrangler r2 object put "${BUCKET}/latest.json" \
             --file r2-upload/latest.json \
+            --content-type "application/json" \
+            --remote
+
+          wrangler r2 object put "${BUCKET}/release-notes.json" \
+            --file r2-upload/release-notes.json \
             --content-type "application/json" \
             --remote
 

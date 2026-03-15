@@ -50,8 +50,8 @@ npm run tauri build
 # 1) 构建校验
 npm run build
 
-# 2) 正式发布（生成 latest.json / GitHub Release / R2 上传）
-.\release.ps1
+# 2) 提交并推送版本变更，由 GitHub Release workflow 正式发布
+# workflow: .github/workflows/release.yml
 ```
 
 ### 发布后必验收

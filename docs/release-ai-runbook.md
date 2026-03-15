@@ -20,8 +20,8 @@
 发版链路会自动复用该文件：
 
 1. 客户端首次启动时的“本次更新”弹窗（只弹一次）。
-2. `release.ps1` 生成的 `latest.json`（用于 Tauri updater）。
-3. `release.ps1` 生成的 GitHub Release 文案。
+2. GitHub Actions 发布流程生成的 `latest.json`（用于 Tauri updater）。
+3. GitHub Actions 发布流程生成的 GitHub Release 文案。
 4. 上传到 R2 的 `release-notes.json`（供官网渲染历史 changelog）。
 
 禁止在多个地方手写重复的更新说明文本。
@@ -104,21 +104,21 @@ npm run build
 
 ### Step D：执行发布
 
-执行：
+使用 GitHub Actions 的 Release workflow 发布，不再使用本地 `release.ps1`。
 
-```powershell
-.\release.ps1
-```
+标准方式：
 
-脚本将自动：
+1. 提交并推送包含版本号与 `release-notes.json` 的变更。
+2. 由 `.github/workflows/release.yml` 自动：
+   1. 构建安装包并签名。
+   2. 基于 `src/data/release-notes.json` 生成 GitHub Release 文案。
+   3. 生成 updater 使用的 `latest.json`。
+   4. 上传 R2：
+      1. 安装包 + 签名
+      2. `latest.json`
+      3. `release-notes.json`
 
-1. 构建安装包并签名。
-2. 生成 `release-artifacts/latest.json`。
-3. 发布 GitHub Release。
-4. 上传 R2：
-   1. 安装包 + 签名
-   2. `latest.json`
-   3. `release-notes.json`
+若需手动触发，应在 GitHub Actions 页面执行对应 workflow，而不是运行本地发布脚本。
 
 ### Step E：发布后验收
 
@@ -156,14 +156,14 @@ AI 完成后应向用户回报：
 ## 8. 常见错误与处理
 
 1. `release-notes.json` 没有当前版本条目：
-   1. `release.ps1` 会 fallback 到默认文案。
+   1. GitHub Release workflow 会缺少当前版本文案或直接失败。
    2. 处理：补齐条目后重新发布。
 2. 版本号不一致（`package.json` 与 `tauri.conf.json`）：
    1. 可能导致显示和发布混乱。
    2. 处理：统一版本后重新构建。
 3. R2 上传失败：
-   1. 检查 `wrangler` 登录状态和 bucket 权限。
-   2. 必要时手工补传 `latest.json` 与 `release-notes.json`。
+   1. 检查 GitHub Actions secrets 中的 Cloudflare 凭据与 bucket 权限。
+   2. 必要时在 workflow 中重试或手工补传 `latest.json` 与 `release-notes.json`。
 
 ---
 
@@ -171,4 +171,3 @@ AI 完成后应向用户回报：
 
 1. 本文档是 AI 发版标准流程，后续若发布链路变更，要同步更新此文档。
 2. 新增发版脚本参数、分发平台、官网 changelog 渲染方式时，优先更新本文件再执行发版。
-
