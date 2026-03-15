@@ -533,6 +533,12 @@ function GeneralSection({
                 const checked = e.target.checked;
                 const updated = { ...generalConfig, low_memory_mode_enabled: checked };
                 setGeneralConfig(updated);
+                useAppStore.setState({ lowMemoryModeEnabled: checked });
+                if (!checked) {
+                  useAppStore.getState().resumeFromMinimize?.().catch((error) => {
+                    console.error('resume after disabling low memory mode failed:', error);
+                  });
+                }
                 try {
                   await invoke('update_general_config', { config: updated });
                 } catch (error) {

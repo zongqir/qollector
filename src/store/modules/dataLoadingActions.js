@@ -13,6 +13,7 @@ import {
 import { buildItemDerivations } from './itemsIndex';
 
 let loadItemsRequestSeq = 0;
+let suspendedItemsSnapshot = null;
 
 const createCodeLanguageBatchUpdater = (set) => {
   let pendingById = new Map();
@@ -162,6 +163,7 @@ export const createDataLoadingActions = (set, get) => ({
   suspendForMinimize: () => {
     const state = get();
     if (state.isMemorySuspended) return;
+    suspendedItemsSnapshot = state.items;
     persistHistorySnapshot(state.items);
 
       set({
@@ -186,7 +188,10 @@ export const createDataLoadingActions = (set, get) => ({
     const state = get();
     if (!state.isMemorySuspended) return;
 
-    const snapshot = readHistorySnapshot();
+    const snapshot = Array.isArray(suspendedItemsSnapshot)
+      ? suspendedItemsSnapshot
+      : readHistorySnapshot();
+    suspendedItemsSnapshot = null;
     set({
       isMemorySuspended: false,
       items: snapshot,

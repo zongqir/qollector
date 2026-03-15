@@ -68,6 +68,7 @@ const LAYOUT_PRESET_LEGACY_DEFAULT_WIDTHS = {
 };
 const RELEASE_NOTES_SEEN_VERSION_KEY = 'qollect-release-notes-seen-version';
 const RELEASE_NOTES_FALLBACK_URL = 'https://qollect.zongqir.com/changelog';
+const MINIMIZE_SUSPEND_DELAY_MS = 12000;
 
 const normalizeVersion = (version) => String(version || '').trim().replace(/^v/i, '');
 
@@ -260,31 +261,50 @@ function AppMemorySuspendHost() {
   const lowMemoryModeEnabled = useAppStore((s) => s.lowMemoryModeEnabled);
   const suspendForMinimize = useAppStore((s) => s.suspendForMinimize);
   const resumeFromMinimize = useAppStore((s) => s.resumeFromMinimize);
+  const suspendTimerRef = useRef(null);
 
   useEffect(() => {
     const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
     if (!isWindowsRuntime) return;
 
+    const clearPendingSuspend = () => {
+      if (suspendTimerRef.current == null) return;
+      window.clearTimeout(suspendTimerRef.current);
+      suspendTimerRef.current = null;
+    };
+
     if (!lowMemoryModeEnabled) {
+      clearPendingSuspend();
       resumeFromMinimize().catch((error) => {
         console.error('[MemorySuspend] resume check failed:', error);
       });
-      return;
+      return () => {
+        clearPendingSuspend();
+      };
     }
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        suspendForMinimize();
+        clearPendingSuspend();
+        suspendTimerRef.current = window.setTimeout(() => {
+          suspendTimerRef.current = null;
+          if (document.visibilityState !== 'hidden') return;
+          suspendForMinimize();
+        }, MINIMIZE_SUSPEND_DELAY_MS);
         return;
       }
 
+      clearPendingSuspend();
       resumeFromMinimize().catch((error) => {
         console.error('[MemorySuspend] resume failed:', error);
       });
     };
 
     document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      clearPendingSuspend();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
 
   return null;
@@ -795,6 +815,11 @@ function App() {
   const showHistoryStream = isMiniMode
     ? !showMiniPanel
     : !showStandalonePanel && (historyStreamEnabled || !workbenchPanelEnabled);
+  const showPanelPane = isMiniMode
+    ? showMiniPanel
+    : (workbenchPanelEnabled || showStandalonePanel);
+  const shouldRenderHistoryPane = !isMiniMode || showHistoryStream;
+  const shouldRenderPanelPane = !isMiniMode || showPanelPane;
   const previewOverlayActive = !isMiniMode
     && workbenchPanelEnabled
     && showHistoryStream
@@ -1439,14 +1464,22 @@ function App() {
       </Suspense>
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
-        {showHistoryStream && (
-          <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)' }} />
+        {shouldRenderHistoryPane && (
+          <div
+            className={`workspace-pane workspace-pane--history ${showHistoryStream ? '' : 'is-hidden'}`.trim()}
+            aria-hidden={!showHistoryStream}
+          >
+            <HistoryStream style={{ width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)' }} />
+          </div>
         )}
-        {(showMiniPanel || (!isMiniMode && (workbenchPanelEnabled || showStandalonePanel))) && (
-          <>
-            {!isMiniMode && showHistoryStream && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
+        {shouldRenderPanelPane && (
+          <div
+            className={`workspace-pane workspace-pane--panel ${showPanelPane ? '' : 'is-hidden'}`.trim()}
+            aria-hidden={!showPanelPane}
+          >
+            {!isMiniMode && showHistoryStream && showPanelPane && !previewOverlayActive && <div className="resize-handle" onMouseDown={handleResizeStart} />}
             <PolymorphicPanel />
-          </>
+          </div>
         )}
       </div>
 
