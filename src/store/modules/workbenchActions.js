@@ -10,6 +10,7 @@ import {
 import { QUICK_NOTE_SOURCE } from '../../utils/sourceConstants';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemsIfNeeded } from './itemHydration';
+import { getPinnedItemsForWorkbench } from './itemsIndex';
 import {
   persistActiveWorkbenchId,
   persistWorkbenchSearchScope,
@@ -118,8 +119,8 @@ export const createWorkbenchActions = (set, get) => ({
 
   mergeCopyPinned: async () => {
     try {
-      const { items, activeWorkbenchId } = get();
-      const pinnedItems = items.filter((i) => i.is_pinned && i.workbench_id === activeWorkbenchId);
+      const { itemsById, pinnedItemIdsByWorkbench, activeWorkbenchId } = get();
+      const pinnedItems = getPinnedItemsForWorkbench(itemsById, pinnedItemIdsByWorkbench, activeWorkbenchId);
       const hydratedPinnedItems = await hydrateItemsIfNeeded(pinnedItems);
       const merged = hydratedPinnedItems
         .map((item) => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
@@ -142,8 +143,8 @@ export const createWorkbenchActions = (set, get) => ({
 
   clearAllPinned: async () => {
     try {
-      const { items, loadItems, activeWorkbenchId } = get();
-      const pinnedItems = items.filter((i) => i.is_pinned && i.workbench_id === activeWorkbenchId);
+      const { itemsById, pinnedItemIdsByWorkbench, loadItems, activeWorkbenchId } = get();
+      const pinnedItems = getPinnedItemsForWorkbench(itemsById, pinnedItemIdsByWorkbench, activeWorkbenchId);
       for (const item of pinnedItems) {
         await toggleItemPin(item.id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }

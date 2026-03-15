@@ -15,6 +15,7 @@ import { isQollectManagedSource } from '../../utils/sourceConstants';
 import { SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK } from './platformSupport';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemIfNeeded } from './itemHydration';
+import { buildItemDerivations, getPinnedItemIdsForWorkbench } from './itemsIndex';
 
 const shouldSkipInternalSourceCopy = (item, allowInternalCopy, options = {}) => {
   if (options?.bypassInternalSourceProtection) return false;
@@ -115,14 +116,18 @@ export const createItemActions = (set, get) => ({
       set((state) => {
         let items = state.items;
         const unpinnedByLimitIds = new Set();
+        const pinnedIdsInActiveWorkbench = getPinnedItemIdsForWorkbench(
+          state.pinnedItemIdsByWorkbench,
+          activeWorkbenchId,
+        ).filter((id) => id !== item.id);
+        const alreadyPinnedItems = pinnedIdsInActiveWorkbench
+          .map((id) => state.itemsById?.get(id))
+          .filter(Boolean);
 
         if (nextPinnedState === true) {
-          const alreadyPinned = state.items.filter(
-            (it) => it.is_pinned && it.id !== item.id && it.workbench_id === activeWorkbenchId,
-          );
-          const overflow = alreadyPinned.length + 1 - maxPinnedItems;
+          const overflow = alreadyPinnedItems.length + 1 - maxPinnedItems;
           if (overflow > 0) {
-            const oldestPinned = [...alreadyPinned]
+            const oldestPinned = [...alreadyPinnedItems]
               .sort((a, b) => {
                 const aPinnedAt = a.pinned_at || 0;
                 const bPinnedAt = b.pinned_at || 0;
@@ -134,15 +139,8 @@ export const createItemActions = (set, get) => ({
           }
         }
 
-        const maxPinOrder = state.items.reduce((maxOrder, candidate) => {
-          if (
-            !candidate.is_pinned
-            || candidate.id === item.id
-            || unpinnedByLimitIds.has(candidate.id)
-            || candidate.workbench_id !== activeWorkbenchId
-          ) {
-            return maxOrder;
-          }
+        const maxPinOrder = alreadyPinnedItems.reduce((maxOrder, candidate) => {
+          if (unpinnedByLimitIds.has(candidate.id)) return maxOrder;
           const value = Number(candidate.pin_order);
           if (!Number.isFinite(value)) return maxOrder;
           return value > maxOrder ? value : maxOrder;
@@ -198,6 +196,7 @@ export const createItemActions = (set, get) => ({
 
         return {
           items,
+          ...buildItemDerivations(items),
           previewItem,
           itemsRevision: state.itemsRevision + 1,
         };
@@ -243,6 +242,7 @@ export const createItemActions = (set, get) => ({
 
         return {
           items: nextItems,
+          ...buildItemDerivations(nextItems),
           previewItem: nextPreviewItem,
           editingItem: state.editingItem?.id === item.id
             ? {
@@ -361,6 +361,7 @@ export const createItemActions = (set, get) => ({
           : state.previewItem;
         return {
           items: nextItems,
+          ...buildItemDerivations(nextItems),
           previewItem: nextPreviewItem,
           itemsRevision: state.itemsRevision + 1,
         };
@@ -373,15 +374,19 @@ export const createItemActions = (set, get) => ({
   deleteItem: async (item) => {
     try {
       await deleteItemSvc(item.id);
-      set((state) => ({
-        items: state.items.filter((candidate) => candidate.id !== item.id),
-        panelMode: 'workbench',
-        previewItem: null,
-        previewReturnMode: 'workbench',
-        compareCandidateIds: [],
-        compareItemIds: [],
-        itemsRevision: state.itemsRevision + 1,
-      }));
+      set((state) => {
+        const nextItems = state.items.filter((candidate) => candidate.id !== item.id);
+        return {
+          items: nextItems,
+          ...buildItemDerivations(nextItems),
+          panelMode: 'workbench',
+          previewItem: null,
+          previewReturnMode: 'workbench',
+          compareCandidateIds: [],
+          compareItemIds: [],
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
     } catch (error) {
       console.error('删除失败:', error);
     }

@@ -80,6 +80,7 @@ import {
   SEARCH_REQUEST_TRIGGER_MODE,
 } from '../../utils/searchRequestBuilder';
 import { WORKBENCH_FILTER_COLLAPSED_STORAGE_KEY } from '../../constants/storageKeys';
+import { getPinnedItemIdsForWorkbench, normalizeWorkbenchBucketId } from '../../store/modules/itemsIndex';
 
 const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
 const WORKBENCH_FILTER_COLLAPSE_DEFAULT = false;
@@ -215,7 +216,8 @@ function WorkbenchPanel() {
   const workbenchSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
 
-  const items = useAppStore(s => s.items);
+  const itemsById = useAppStore(s => s.itemsById);
+  const pinnedItemIdsByWorkbench = useAppStore(s => s.pinnedItemIdsByWorkbench);
   const itemsRevision = useAppStore(s => s.itemsRevision);
   const aiEnabled = useAppStore(s => s.aiEnabled);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
@@ -450,17 +452,37 @@ function WorkbenchPanel() {
     };
   }, [debouncedWorkbenchTagSearchQuery, backendPinnedItems, itemsRevision]);
 
-  const pinnedBaseItems = useMemo(() => {
-    if (Array.isArray(backendPinnedItems)) return backendPinnedItems;
-    return [...items.filter(item => item.is_pinned && item.workbench_id === activeWorkbenchId)].sort((left, right) => {
-      const leftOrder = Number.isFinite(Number(left?.pin_order)) ? Number(left.pin_order) : Number.MAX_SAFE_INTEGER;
-      const rightOrder = Number.isFinite(Number(right?.pin_order)) ? Number(right.pin_order) : Number.MAX_SAFE_INTEGER;
-      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
-      return Number(right?.pinned_at || 0) - Number(left?.pinned_at || 0);
+  const storePinnedIds = useMemo(
+    () => getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, activeWorkbenchId),
+    [pinnedItemIdsByWorkbench, activeWorkbenchId],
+  );
+  const backendPinnedItemsById = useMemo(() => {
+    const map = new Map();
+    if (!Array.isArray(backendPinnedItems)) return map;
+    backendPinnedItems.forEach((item) => {
+      if (!item?.id) return;
+      map.set(item.id, item);
     });
-  }, [activeWorkbenchId, backendPinnedItems, items]);
-
-  const allPinnedItems = useMemo(() => pinnedBaseItems, [pinnedBaseItems]);
+    return map;
+  }, [backendPinnedItems]);
+  const pinnedBaseItems = useMemo(() => {
+    const orderedBackendIds = Array.isArray(backendPinnedItems)
+      ? backendPinnedItems.map((item) => item.id).filter(Boolean)
+      : [];
+    const seenIds = new Set(orderedBackendIds);
+    const mergedIds = [
+      ...orderedBackendIds,
+      ...storePinnedIds.filter((id) => !seenIds.has(id)),
+    ];
+    const normalizedWorkbenchId = normalizeWorkbenchBucketId(activeWorkbenchId);
+    return mergedIds
+      .map((id) => itemsById?.get(id) || backendPinnedItemsById.get(id))
+      .filter((item) => (
+        item?.is_pinned
+        && String(item.workbench_id || '').trim() === normalizedWorkbenchId
+      ));
+  }, [activeWorkbenchId, backendPinnedItems, backendPinnedItemsById, itemsById, storePinnedIds]);
+  const allPinnedItems = pinnedBaseItems;
 
   const workbenchBackendFilterRequest = useMemo(() => {
     return buildSearchRequest({
@@ -542,6 +564,9 @@ function WorkbenchPanel() {
     const selectedIdSet = new Set(selectedPinnedIds);
     return pinnedItems.filter(item => selectedIdSet.has(item.id));
   }, [selectedPinnedIds, pinnedItems]);
+  const selectedPinnedIdSet = useMemo(() => new Set(selectedPinnedIds), [selectedPinnedIds]);
+  const pinnedItemIds = useMemo(() => pinnedItems.map((item) => item.id), [pinnedItems]);
+  const isPinnedSelectionMode = selectedPinnedIdSet.size > 0;
 
   const allSelectedAreText = useMemo(
     () => selectedPinnedItems.length > 0 && selectedPinnedItems.every(item => item.type_ === 'text'),
@@ -1240,7 +1265,7 @@ function WorkbenchPanel() {
     if (qollectData) {
       try {
         const { id } = JSON.parse(qollectData);
-        const item = items.find(i => i.id === id);
+        const item = itemsById?.get(id);
         if (item && !item.is_pinned) {
           await togglePin(item);
         }
@@ -1248,7 +1273,7 @@ function WorkbenchPanel() {
         console.error('Drop pin failed:', err);
       }
     }
-  }, [items, togglePin]);
+  }, [itemsById, togglePin]);
 
   const handleWorkbenchCardPointerUp = useCallback(() => {
     clearWorkbenchSortLongPressTimer();
@@ -1730,11 +1755,11 @@ function WorkbenchPanel() {
   });
 
   const quickActions = useWorkbenchQuickActions({
-    pinnedItems: allPinnedItems,
-    items,
+    pinnedItems: pinnedBaseItems,
+    itemsById,
     aiEnabled,
     uiLanguage: i18n.language,
-    selectionMode: selectedPinnedIds.length > 0,
+    selectionMode: isPinnedSelectionMode,
     activeWorkbenchId,
     addQuickNote,
     loadItems,
@@ -1879,7 +1904,7 @@ function WorkbenchPanel() {
           closeContextMenu();
           return;
         case 'multiSelect': {
-          const nextSelected = selectedPinnedIds.includes(currentItem.id)
+          const nextSelected = selectedPinnedIdSet.has(currentItem.id)
             ? selectedPinnedIds
             : [...selectedPinnedIds, currentItem.id];
           setSelectedPinnedIds(nextSelected);
@@ -2294,7 +2319,7 @@ function WorkbenchPanel() {
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={pinnedItems.map(i => i.id)} strategy={rectSortingStrategy}>
+          <SortableContext items={pinnedItemIds} strategy={rectSortingStrategy}>
             <div ref={workbenchCardsRef} className={`workbench-cards ${isWorkbenchSortMode ? 'sort-mode' : ''}`}>
               {pinnedItems.map((item, index) => (
                 <SortableWorkbenchCard
@@ -2302,11 +2327,11 @@ function WorkbenchPanel() {
                   item={item}
                   timeTick={workbenchTimeTick}
                   isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
-                  isMultiSelected={selectedPinnedIds.includes(item.id)}
+                  isMultiSelected={selectedPinnedIdSet.has(item.id)}
                   isSortMode={isWorkbenchSortMode}
                   isSortAnchor={isWorkbenchSortMode && workbenchSortAnchorItemId === item.id}
-                  isSelectionMode={selectedPinnedIds.length > 0}
-                  sortableDisabled={!workbenchDragEnabled || selectedPinnedIds.length > 0}
+                  isSelectionMode={isPinnedSelectionMode}
+                  sortableDisabled={!workbenchDragEnabled || isPinnedSelectionMode}
                   isUnpinConfirmArmed={pendingUnpinItemId === item.id}
                   onUnpin={() => handleCardUnpin(item)}
                   onSetCardRef={(node) => setWorkbenchCardRef(item.id, node)}

@@ -1,8 +1,11 @@
+import { buildItemDerivations } from './itemsIndex';
+
 export const createRuntimeActions = (set, clearHistorySnapshot) => ({
   resetRuntimeStateAfterDataReset: () => {
     clearHistorySnapshot();
     set((state) => ({
       items: [],
+      ...buildItemDerivations([]),
       loading: false,
       hasMore: true,
       loadingMore: false,

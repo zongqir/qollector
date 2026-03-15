@@ -24,6 +24,7 @@ import {
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { getUserTags, pinItem, searchItems } from '../../services/clipboardService';
+import { getPinnedItemIdsForWorkbench } from '../../store/modules/itemsIndex';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -78,6 +79,71 @@ const buildSnippet = (text, match, radius = 46) => {
   const prefix = start > 0 ? '...' : '';
   const suffix = end < rawText.length ? '...' : '';
   return `${prefix}${rawText.slice(start, end)}${suffix}`;
+};
+
+const buildSearchExplain = (item, searchTerms, t) => {
+  if (!item?.id || !Array.isArray(searchTerms) || searchTerms.length === 0) return null;
+
+  const matchedSources = [];
+  let snippet = '';
+  let highlightTerm = searchTerms[0];
+
+  const assignSnippet = (text, match) => {
+    if (snippet || !match) return;
+    snippet = buildSnippet(text, match);
+    highlightTerm = match.term;
+  };
+
+  const contentMatch = findFirstMatch(item.content, searchTerms);
+  if (contentMatch) {
+    matchedSources.push('content');
+    assignSnippet(item.content, contentMatch);
+  }
+
+  const noteMatch = findFirstMatch(item.user_note, searchTerms);
+  if (noteMatch) {
+    matchedSources.push('note');
+    assignSnippet(item.user_note, noteMatch);
+  }
+
+  const ocrMatch = findFirstMatch(item.ocr_text, searchTerms);
+  if (ocrMatch) {
+    matchedSources.push('ocr');
+    assignSnippet(item.ocr_text, ocrMatch);
+  }
+
+  const tags = getTags(item.tags);
+  const matchedTag = tags.find((tag) => findFirstMatch(tag, searchTerms));
+  if (matchedTag) {
+    matchedSources.push('tag');
+    assignSnippet(matchedTag, findFirstMatch(matchedTag, searchTerms));
+  }
+
+  const sourceApp = getSourceApp(item.metadata);
+  const sourceMatch = findFirstMatch(sourceApp, searchTerms);
+  if (sourceMatch) {
+    matchedSources.push('source');
+    assignSnippet(sourceApp, sourceMatch);
+  }
+
+  const typeLabel = item.code_language
+    ? t('search.typeFilter.code')
+    : t(`search.typeFilter.${item.type_ || 'text'}`);
+  const typeMatch = findFirstMatch(typeLabel, searchTerms);
+  if (typeMatch) {
+    matchedSources.push('type');
+    assignSnippet(typeLabel, typeMatch);
+  }
+
+  if (matchedSources.length === 0) {
+    matchedSources.push('content');
+  }
+
+  return {
+    sources: matchedSources.slice(0, 4),
+    snippet: snippet || buildSnippet(item.content || item.user_note || item.ocr_text, null),
+    highlightTerm,
+  };
 };
 
 const buildDayBoundaries = (nowMs) => {
@@ -231,6 +297,8 @@ function HistoryStream({ style }) {
   const cleanupMaxAgeDays = useAppStore(s => s.cleanupMaxAgeDays);
   const startupFavoritesViewEnabled = useAppStore(s => s.startupFavoritesViewEnabled);
   const itemsRevision = useAppStore(s => s.itemsRevision);
+  const itemsById = useAppStore(s => s.itemsById);
+  const pinnedItemIdsByWorkbench = useAppStore(s => s.pinnedItemIdsByWorkbench);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setCollectionSearchQuery = useAppStore(s => s.setCollectionSearchQuery);
@@ -835,76 +903,6 @@ function HistoryStream({ style }) {
 
   const searchTerms = useMemo(() => tokenizeSearchQuery(debouncedSearchQuery), [debouncedSearchQuery]);
 
-  const searchExplainById = useMemo(() => {
-    if (searchTerms.length === 0) return new Map();
-
-    const explains = new Map();
-    filteredItems.forEach((item) => {
-      const matchedSources = [];
-      let snippet = '';
-      let highlightTerm = searchTerms[0];
-
-      const assignSnippet = (text, match) => {
-        if (snippet || !match) return;
-        snippet = buildSnippet(text, match);
-        highlightTerm = match.term;
-      };
-
-      const contentMatch = findFirstMatch(item.content, searchTerms);
-      if (contentMatch) {
-        matchedSources.push('content');
-        assignSnippet(item.content, contentMatch);
-      }
-
-      const noteMatch = findFirstMatch(item.user_note, searchTerms);
-      if (noteMatch) {
-        matchedSources.push('note');
-        assignSnippet(item.user_note, noteMatch);
-      }
-
-      const ocrMatch = findFirstMatch(item.ocr_text, searchTerms);
-      if (ocrMatch) {
-        matchedSources.push('ocr');
-        assignSnippet(item.ocr_text, ocrMatch);
-      }
-
-      const tags = getTags(item.tags);
-      const matchedTag = tags.find(tag => findFirstMatch(tag, searchTerms));
-      if (matchedTag) {
-        matchedSources.push('tag');
-        assignSnippet(matchedTag, findFirstMatch(matchedTag, searchTerms));
-      }
-
-      const sourceApp = getSourceApp(item.metadata);
-      const sourceMatch = findFirstMatch(sourceApp, searchTerms);
-      if (sourceMatch) {
-        matchedSources.push('source');
-        assignSnippet(sourceApp, sourceMatch);
-      }
-
-      const typeLabel = item.code_language
-        ? t('search.typeFilter.code')
-        : t(`search.typeFilter.${item.type_ || 'text'}`);
-      const typeMatch = findFirstMatch(typeLabel, searchTerms);
-      if (typeMatch) {
-        matchedSources.push('type');
-        assignSnippet(typeLabel, typeMatch);
-      }
-
-      if (matchedSources.length === 0) {
-        matchedSources.push('content');
-      }
-
-      explains.set(item.id, {
-        sources: matchedSources.slice(0, 4),
-        snippet: snippet || buildSnippet(item.content || item.user_note || item.ocr_text, null),
-        highlightTerm,
-      });
-    });
-
-    return explains;
-  }, [filteredItems, searchTerms, t, i18n.language]);
-
   const dayBoundaries = useMemo(() => buildDayBoundaries(timeTick), [timeTick]);
   const historyGrouping = useMemo(() => {
     const firstIndexByGroup = {};
@@ -967,8 +965,9 @@ function HistoryStream({ style }) {
     setQuickAddMode('workbench');
     clearQuickAddFeedbackTimer();
     try {
-      const pinnedCountBefore = items.filter(
-        item => item.is_pinned && item.workbench_id === activeWorkbenchId,
+      const pinnedCountBefore = getPinnedItemIdsForWorkbench(
+        pinnedItemIdsByWorkbench,
+        activeWorkbenchId,
       ).length;
       const itemId = await invoke('add_clipboard_item_manual', {
         content,
@@ -1022,10 +1021,10 @@ function HistoryStream({ style }) {
     activeWorkbenchId,
     clearQuickAddFeedbackTimer,
     focusSearchInput,
-    items,
     loadItems,
     maxPinnedItems,
     pinItem,
+    pinnedItemIdsByWorkbench,
     setFocusedIndex,
     setQuickAddMode,
     setSearchQuery,
@@ -1212,7 +1211,7 @@ function HistoryStream({ style }) {
     handleBatchTagInputKeyDown,
     handleBatchTagInputChange,
   } = useHistoryBatchActions({
-    items,
+    itemsById,
     itemsRevision,
     filteredItems,
     selectedItemIds,
@@ -1407,7 +1406,7 @@ function HistoryStream({ style }) {
     return {
       item,
       index,
-      searchExplain: searchExplainById.get(item.id) || null,
+      searchExplain: buildSearchExplain(item, searchTerms, t),
       isSelected: panelMode === 'preview' && previewItem?.id === item.id,
       isExpandedPreview: shouldUseHoverPreview && expandedPreviewItemId === item.id,
       isSelectionMode: selectedCount > 0,
@@ -1416,7 +1415,8 @@ function HistoryStream({ style }) {
     };
   }, [
     filteredItems,
-    searchExplainById,
+    searchTerms,
+    t,
     panelMode,
     previewItem?.id,
     shouldUseHoverPreview,
@@ -1628,11 +1628,11 @@ function HistoryStream({ style }) {
     const orderedByVisible = filteredItems.filter(item => selectedIdSet.has(item.id));
     if (orderedByVisible.length >= 2) return orderedByVisible;
 
-    const fallbackById = new Map(items.map(item => [item.id, item]));
+    const fallbackById = itemsById instanceof Map ? itemsById : null;
     return selectedItemIds
-      .map(id => fallbackById.get(id))
+      .map(id => fallbackById?.get(id))
       .filter(Boolean);
-  }, [selectedItemIds, filteredItems, items]);
+  }, [selectedItemIds, filteredItems, itemsById]);
 
   const selectedCompareCandidateIds = useMemo(
     () => selectedItemsForCompare.map(item => item.id),
@@ -1816,10 +1816,10 @@ function HistoryStream({ style }) {
           </div>
         ) : shouldRenderCollectionBoard ? (
           <CollectionBoard
-            items={filteredItems}
             searchQuery={collectionSearchQuery}
             selectedType={selectedType}
             selectedDateRange={selectedDateRange}
+            itemsRevision={itemsRevision}
             isMiniMode={isMiniMode}
             showPinnedOnly={showPinnedOnly}
             timeTick={timeTick}

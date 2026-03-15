@@ -10,8 +10,50 @@ import {
   persistHistorySnapshot,
   readHistorySnapshot,
 } from './historySnapshot';
+import { buildItemDerivations } from './itemsIndex';
 
 let loadItemsRequestSeq = 0;
+
+const createCodeLanguageBatchUpdater = (set) => {
+  let pendingById = new Map();
+  let flushTimer = null;
+
+  const flush = () => {
+    flushTimer = null;
+    if (pendingById.size === 0) return;
+
+    const updates = pendingById;
+    pendingById = new Map();
+
+    set((state) => {
+      let changed = false;
+      const nextItems = state.items.map((item) => {
+        const nextLanguage = updates.get(item.id);
+        if (!nextLanguage || item.code_language === nextLanguage) {
+          return item;
+        }
+        changed = true;
+        return {
+          ...item,
+          code_language: nextLanguage,
+        };
+      });
+
+      if (!changed) return {};
+      return {
+        items: nextItems,
+        ...buildItemDerivations(nextItems),
+      };
+    });
+  };
+
+  return (id, language) => {
+    if (!id || !language) return;
+    pendingById.set(id, language);
+    if (flushTimer != null) return;
+    flushTimer = setTimeout(flush, 0);
+  };
+};
 
 export const createDataLoadingActions = (set, get) => ({
   loadItems: async () => {
@@ -33,6 +75,7 @@ export const createDataLoadingActions = (set, get) => ({
       console.log('[Perf:Store] Setting items state at', performance.now().toFixed(1), 'ms');
       set((state) => ({
         items: mergedItems,
+        ...buildItemDerivations(mergedItems),
         hasMore: result.length >= pageSize,
         historyLoadStopReason: null,
         itemsRevision: state.itemsRevision + 1,
@@ -45,13 +88,10 @@ export const createDataLoadingActions = (set, get) => ({
       });
 
       console.log('[Perf:Store] Calling detectAndUpdateCodeLanguage at', performance.now().toFixed(1), 'ms');
+      const queueCodeLanguageUpdate = createCodeLanguageBatchUpdater(set);
       detectAndUpdateCodeLanguage(mergedItems, (id, lang) => {
         if (requestSeq !== loadItemsRequestSeq) return;
-        set((state) => ({
-          items: state.items.map((it) =>
-            it.id === id ? { ...it, code_language: lang } : it
-          ),
-        }));
+        queueCodeLanguageUpdate(id, lang);
       });
 
       // AI enrichment for newly-copied items is handled by backend ClipboardManager.
@@ -91,6 +131,7 @@ export const createDataLoadingActions = (set, get) => ({
         mergedItemsSnapshot = merged;
         return {
           items: merged,
+          ...buildItemDerivations(merged),
           hasMore: more.length >= pageSize && merged.length < memoryCap,
           historyLoadStopReason: reachedMemoryCap
             ? 'memory-cap'
@@ -107,12 +148,9 @@ export const createDataLoadingActions = (set, get) => ({
           memoryCap,
         });
       }
+      const queueCodeLanguageUpdate = createCodeLanguageBatchUpdater(set);
       detectAndUpdateCodeLanguage(more, (id, lang) => {
-        set((state) => ({
-          items: state.items.map((it) =>
-            it.id === id ? { ...it, code_language: lang } : it
-          ),
-        }));
+        queueCodeLanguageUpdate(id, lang);
       });
     } catch (error) {
       console.error('加载更多失败:', error);
@@ -126,9 +164,10 @@ export const createDataLoadingActions = (set, get) => ({
     if (state.isMemorySuspended) return;
     persistHistorySnapshot(state.items);
 
-    set({
-      items: [],
-      hasMore: true,
+      set({
+        items: [],
+        ...buildItemDerivations([]),
+        hasMore: true,
       loadingMore: false,
       historyLoadStopReason: null,
       itemsRevision: state.itemsRevision + 1,
@@ -151,6 +190,7 @@ export const createDataLoadingActions = (set, get) => ({
     set({
       isMemorySuspended: false,
       items: snapshot,
+      ...buildItemDerivations(snapshot),
       hasMore: true,
       loadingMore: false,
       historyLoadStopReason: null,

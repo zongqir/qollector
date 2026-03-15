@@ -22,9 +22,6 @@ import DragDrop from './DragDrop';
 import TitleBar from './components/TitleBar';
 import HistoryStream from './components/HistoryStream';
 import PolymorphicPanel from './components/Panel';
-import QuickNoteOverlay from './components/QuickNoteOverlay';
-import GuidedTour from './components/GuidedTour/GuidedTour';
-import ShortcutHelpOverlay from './components/ShortcutHelpOverlay';
 import releaseNotes from './data/release-notes.json';
 import {
   TOUR_COMPLETED_STORAGE_KEY,
@@ -39,6 +36,9 @@ const Settings = lazy(() => import('./Settings'));
 const LockScreen = lazy(() => import('./LockScreen'));
 const EditModal = lazy(() => import('./EditModal'));
 const ShareModal = lazy(() => import('./components/ShareModal/ShareModal'));
+const QuickNoteOverlay = lazy(() => import('./components/QuickNoteOverlay'));
+const GuidedTour = lazy(() => import('./components/GuidedTour/GuidedTour'));
+const ShortcutHelpOverlay = lazy(() => import('./components/ShortcutHelpOverlay'));
 
 const NORMAL_SIZE = { width: 800, height: 600 };
 const MINI_SIZE = { width: 320, height: 450 };
@@ -215,6 +215,188 @@ const persistLastAllSplitWidth = (width) => {
   }
 };
 
+function AppLockGate({ children }) {
+  const isLocked = useAppStore((s) => s.isLocked);
+  const hasPassword = useAppStore((s) => s.hasPassword);
+  const setIsLocked = useAppStore((s) => s.setIsLocked);
+
+  if (isLocked && hasPassword) {
+    return (
+      <Suspense fallback={null}>
+        <LockScreen onUnlock={() => setIsLocked(false)} />
+      </Suspense>
+    );
+  }
+
+  return children;
+}
+
+function AppThemeEffectHost() {
+  const themeMode = useAppStore((s) => s.themeMode);
+  const { setThemeMode: applyTheme } = useTheme(themeMode);
+
+  useEffect(() => {
+    applyTheme(themeMode);
+  }, [themeMode, applyTheme]);
+
+  return null;
+}
+
+function AppWidgetLifecycleHost() {
+  const widgetEnabled = useAppStore((s) => s.widgetEnabled);
+
+  useEffect(() => {
+    if (widgetEnabled) {
+      openWidgetWindow().catch((err) => console.warn('widget launch failed:', err));
+    } else {
+      closeWidgetWindow().catch((err) => console.warn('widget close failed:', err));
+    }
+  }, [widgetEnabled]);
+
+  return null;
+}
+
+function AppMemorySuspendHost() {
+  const lowMemoryModeEnabled = useAppStore((s) => s.lowMemoryModeEnabled);
+  const suspendForMinimize = useAppStore((s) => s.suspendForMinimize);
+  const resumeFromMinimize = useAppStore((s) => s.resumeFromMinimize);
+
+  useEffect(() => {
+    const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
+    if (!isWindowsRuntime) return;
+
+    if (!lowMemoryModeEnabled) {
+      resumeFromMinimize().catch((error) => {
+        console.error('[MemorySuspend] resume check failed:', error);
+      });
+      return;
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        suspendForMinimize();
+        return;
+      }
+
+      resumeFromMinimize().catch((error) => {
+        console.error('[MemorySuspend] resume failed:', error);
+      });
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
+
+  return null;
+}
+
+function AppCopyFeedbackHost({ showAppFeedback }) {
+  const { t } = useTranslation();
+  const copiedItemId = useAppStore((s) => s.copiedItemId);
+  const copyFeedbackSource = useAppStore((s) => s.copyFeedbackSource);
+  const copyFeedbackToken = useAppStore((s) => s.copyFeedbackToken);
+  const lastCopyWasAutoPaste = useAppStore((s) => s.lastCopyWasAutoPaste);
+
+  useEffect(() => {
+    if (!copiedItemId) return undefined;
+
+    const channelKey = copyFeedbackSource || 'global';
+    const channelLabel = t(`feedback.channel.${channelKey}`, { defaultValue: t('feedback.channel.global') });
+    const actionLabel = lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied');
+    showAppFeedback(`${actionLabel} - ${channelLabel}`, 'success', 1400);
+
+    return undefined;
+  }, [copiedItemId, copyFeedbackToken, copyFeedbackSource, lastCopyWasAutoPaste, showAppFeedback, t]);
+
+  return null;
+}
+
+function AppUiOverlayHost({
+  showShortcutHelp,
+  onCloseShortcutHelp,
+}) {
+  const showSettings = useAppStore((s) => s.showSettings);
+  const showEditModal = useAppStore((s) => s.showEditModal);
+  const editingItem = useAppStore((s) => s.editingItem);
+  const editModalMode = useAppStore((s) => s.editModalMode);
+  const isMiniMode = useAppStore((s) => s.isMiniMode);
+  const themeMode = useAppStore((s) => s.themeMode);
+  const tourActive = useAppStore((s) => s.tourActive);
+  const shareModalItem = useAppStore((s) => s.shareModalItem);
+  const shareResult = useAppStore((s) => s.shareResult);
+  const shareLoading = useAppStore((s) => s.shareLoading);
+  const shareError = useAppStore((s) => s.shareError);
+  const sharePendingConfirm = useAppStore((s) => s.sharePendingConfirm);
+  const sharePendingProvider = useAppStore((s) => s.sharePendingProvider);
+
+  const loadConfigs = useAppStore((s) => s.loadConfigs);
+  const setShowSettings = useAppStore((s) => s.setShowSettings);
+  const setThemeMode = useAppStore((s) => s.setThemeMode);
+  const handleEditModalSave = useAppStore((s) => s.handleEditModalSave);
+  const handleEditModalCancel = useAppStore((s) => s.handleEditModalCancel);
+  const closeShareModal = useAppStore((s) => s.closeShareModal);
+  const retryShare = useAppStore((s) => s.retryShare);
+  const confirmShareUpload = useAppStore((s) => s.confirmShareUpload);
+  const switchShareProvider = useAppStore((s) => s.switchShareProvider);
+
+  return (
+    <>
+      {showSettings && (
+        <Suspense fallback={null}>
+          <Settings
+            onClose={() => setShowSettings(false)}
+            themeMode={themeMode}
+            onThemeModeChange={setThemeMode}
+            onConfigChange={loadConfigs}
+          />
+        </Suspense>
+      )}
+
+      <Suspense fallback={null}>
+        <ShortcutHelpOverlay
+          isOpen={showShortcutHelp}
+          onClose={onCloseShortcutHelp}
+        />
+      </Suspense>
+
+      {showEditModal && (
+        <Suspense fallback={null}>
+          <EditModal
+            item={editingItem}
+            mode={editModalMode}
+            isMiniMode={isMiniMode}
+            onSave={handleEditModalSave}
+            onCancel={handleEditModalCancel}
+          />
+        </Suspense>
+      )}
+
+      {shareModalItem && (
+        <Suspense fallback={null}>
+          <ShareModal
+            item={shareModalItem}
+            shareResult={shareResult}
+            shareLoading={shareLoading}
+            shareError={shareError}
+            pendingConfirm={sharePendingConfirm}
+            pendingProvider={sharePendingProvider}
+            onClose={closeShareModal}
+            onRetry={retryShare}
+            onConfirmUpload={confirmShareUpload}
+            onSwitchProvider={switchShareProvider}
+          />
+        </Suspense>
+      )}
+
+      {tourActive && (
+        <Suspense fallback={null}>
+          <GuidedTour />
+        </Suspense>
+      )}
+    </>
+  );
+}
+
 function App() {
   console.log('[Perf:App] App() function called at', performance.now().toFixed(1), 'ms');
 
@@ -249,62 +431,30 @@ function App() {
   }, []);
 
   // Store state
-  const isLocked = useAppStore(s => s.isLocked);
-  const hasPassword = useAppStore(s => s.hasPassword);
-  const showSettings = useAppStore(s => s.showSettings);
-  const showEditModal = useAppStore(s => s.showEditModal);
-  const editingItem = useAppStore(s => s.editingItem);
-  const editModalMode = useAppStore(s => s.editModalMode);
   const isAlwaysOnTop = useAppStore(s => s.isAlwaysOnTop);
   const isMiniMode = useAppStore(s => s.isMiniMode);
-  const themeMode = useAppStore(s => s.themeMode);
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
-  const lowMemoryModeEnabled = useAppStore(s => s.lowMemoryModeEnabled);
   const autoLayoutSwitchEnabled = useAppStore(s => s.autoLayoutSwitchEnabled);
-  const widgetEnabled = useAppStore(s => s.widgetEnabled);
   const smartCopyEntryEnabled = useAppStore(s => s.smartCopyEntryEnabled);
-  const copiedItemId = useAppStore(s => s.copiedItemId);
-  const copyFeedbackSource = useAppStore(s => s.copyFeedbackSource);
-  const copyFeedbackToken = useAppStore(s => s.copyFeedbackToken);
-  const lastCopyWasAutoPaste = useAppStore(s => s.lastCopyWasAutoPaste);
   const panelMode = useAppStore(s => s.panelMode);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
   const loadConfigs = useAppStore(s => s.loadConfigs);
   const setShowSettings = useAppStore(s => s.setShowSettings);
-  const setIsLocked = useAppStore(s => s.setIsLocked);
   const setIsAlwaysOnTop = useAppStore(s => s.setIsAlwaysOnTop);
   const setIsMiniMode = useAppStore(s => s.setIsMiniMode);
   const setWorkbenchPanelBeforeMini = useAppStore(s => s.setWorkbenchPanelBeforeMini);
   const workbenchPanelBeforeMini = useAppStore(s => s.workbenchPanelBeforeMini);
   const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
-  const setThemeMode = useAppStore(s => s.setThemeMode);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
-  const handleEditModalSave = useAppStore(s => s.handleEditModalSave);
-  const handleEditModalCancel = useAppStore(s => s.handleEditModalCancel);
-  const suspendForMinimize = useAppStore(s => s.suspendForMinimize);
-  const resumeFromMinimize = useAppStore(s => s.resumeFromMinimize);
 
   // Tour state
-  const tourActive = useAppStore(s => s.tourActive);
   const startTour = useAppStore(s => s.startTour);
-
-  // Share state
-  const shareModalItem = useAppStore(s => s.shareModalItem);
-  const shareResult = useAppStore(s => s.shareResult);
-  const shareLoading = useAppStore(s => s.shareLoading);
-  const shareError = useAppStore(s => s.shareError);
-  const sharePendingConfirm = useAppStore(s => s.sharePendingConfirm);
-  const sharePendingProvider = useAppStore(s => s.sharePendingProvider);
-  const closeShareModal = useAppStore(s => s.closeShareModal);
-  const retryShare = useAppStore(s => s.retryShare);
-  const confirmShareUpload = useAppStore(s => s.confirmShareUpload);
-  const switchShareProvider = useAppStore(s => s.switchShareProvider);
   const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
   const [miniPrimaryContent, setMiniPrimaryContent] = useState(MINI_PRIMARY_CONTENT_HISTORY);
   const autoMiniSwitchPendingRef = useRef(false);
@@ -355,12 +505,6 @@ function App() {
       setSmartCopyRunning(false);
     }
   }, [handleCopyPlainText, mapSmartCopyErrorMessage, showAppFeedback, smartCopyRunning, t]);
-
-  // Theme
-  const { setThemeMode: applyTheme } = useTheme(themeMode);
-  useEffect(() => {
-    applyTheme(themeMode);
-  }, [themeMode, applyTheme]);
 
   // 初始化
   useEffect(() => {
@@ -569,15 +713,6 @@ function App() {
     return () => clearTimeout(timer);
   }, [checkForUpdate]);
 
-  // Widget window lifecycle driven by config
-  useEffect(() => {
-    if (widgetEnabled) {
-      openWidgetWindow().catch(err => console.warn('widget launch failed:', err));
-    } else {
-      closeWidgetWindow().catch(err => console.warn('widget close failed:', err));
-    }
-  }, [widgetEnabled]);
-
   useEffect(() => {
     let raf1 = 0;
     let raf2 = 0;
@@ -608,43 +743,6 @@ function App() {
       cancelAnimationFrame(raf2);
     };
   }, []);
-
-  useEffect(() => {
-    const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
-    if (!isWindowsRuntime) return;
-
-    if (!lowMemoryModeEnabled) {
-      resumeFromMinimize().catch((error) => {
-        console.error('[MemorySuspend] resume check failed:', error);
-      });
-      return;
-    }
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        suspendForMinimize();
-        return;
-      }
-
-      resumeFromMinimize().catch((error) => {
-        console.error('[MemorySuspend] resume failed:', error);
-      });
-    };
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
-
-  useEffect(() => {
-    if (!copiedItemId) return undefined;
-
-    const channelKey = copyFeedbackSource || 'global';
-    const channelLabel = t(`feedback.channel.${channelKey}`, { defaultValue: t('feedback.channel.global') });
-    const actionLabel = lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied');
-    showAppFeedback(`${actionLabel} - ${channelLabel}`, 'success', 1400);
-
-    return undefined;
-  }, [copiedItemId, copyFeedbackToken, copyFeedbackSource, lastCopyWasAutoPaste, showAppFeedback, t]);
 
   useEffect(() => () => {
     if (appFeedbackTimerRef.current) {
@@ -1300,66 +1398,22 @@ function App() {
     showHistoryStream,
   ]);
 
-  // Beta expired overlay removed - soft banner is shown at the bottom instead
-
-  if (isLocked && hasPassword) {
-    return (
-      <Suspense fallback={null}>
-        <LockScreen onUnlock={() => setIsLocked(false)} />
-      </Suspense>
-    );
-  }
-
   return (
-    <div
-      className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
-      role="application"
-      aria-label={t('app.title')}
-    >
-      {showSettings && (
-        <Suspense fallback={null}>
-          <Settings
-            onClose={() => setShowSettings(false)}
-            themeMode={themeMode}
-            onThemeModeChange={setThemeMode}
-            onConfigChange={loadConfigs}
-          />
-        </Suspense>
-      )}
-      <ShortcutHelpOverlay
-        isOpen={showShortcutHelp}
-        onClose={() => setShowShortcutHelp(false)}
-      />
-      <DragDrop onItemAdded={loadItems} />
-
-      {showEditModal && (
-        <Suspense fallback={null}>
-          <EditModal
-            item={editingItem}
-            mode={editModalMode}
-            isMiniMode={isMiniMode}
-            onSave={handleEditModalSave}
-            onCancel={handleEditModalCancel}
-          />
-        </Suspense>
-      )}
-
-      {shareModalItem && (
-        <Suspense fallback={null}>
-          <ShareModal
-            item={shareModalItem}
-            shareResult={shareResult}
-            shareLoading={shareLoading}
-            shareError={shareError}
-            pendingConfirm={sharePendingConfirm}
-            pendingProvider={sharePendingProvider}
-            onClose={closeShareModal}
-            onRetry={retryShare}
-            onConfirmUpload={confirmShareUpload}
-            onSwitchProvider={switchShareProvider}
-          />
-        </Suspense>
-      )}
+    <AppLockGate>
+      <AppThemeEffectHost />
+      <AppWidgetLifecycleHost />
+      <AppMemorySuspendHost />
+      <AppCopyFeedbackHost showAppFeedback={showAppFeedback} />
+      <div
+        className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
+        role="application"
+        aria-label={t('app.title')}
+      >
+        <AppUiOverlayHost
+          showShortcutHelp={showShortcutHelp}
+          onCloseShortcutHelp={() => setShowShortcutHelp(false)}
+        />
+        <DragDrop onItemAdded={loadItems} />
 
       <TitleBar
         isAlwaysOnTop={isAlwaysOnTop}
@@ -1375,12 +1429,14 @@ function App() {
         onDensityModeChange={handleDensityModeChange}
       />
 
-      <QuickNoteOverlay
-        isOpen={isQuickInputOpen}
-        isMiniMode={isMiniMode}
-        onClose={handleCloseQuickInput}
-        onSaved={handleQuickInputSaved}
-      />
+      <Suspense fallback={null}>
+        <QuickNoteOverlay
+          isOpen={isQuickInputOpen}
+          isMiniMode={isMiniMode}
+          onClose={handleCloseQuickInput}
+          onSaved={handleQuickInputSaved}
+        />
+      </Suspense>
 
       <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
         {showHistoryStream && (
@@ -1393,8 +1449,6 @@ function App() {
           </>
         )}
       </div>
-
-      {tourActive && <GuidedTour />}
 
       {appFeedback && (
         <div className={`app-feedback-toast ${appFeedback.type}`} role="status" aria-live="polite">
@@ -1521,7 +1575,8 @@ function App() {
           {updateError && <span style={{ color: '#fecaca', fontSize: 12 }}>{updateError}</span>}
         </div>
       )}
-    </div>
+      </div>
+    </AppLockGate>
   );
 }
 

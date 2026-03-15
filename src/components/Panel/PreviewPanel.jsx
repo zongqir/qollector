@@ -6,6 +6,7 @@ import {
   ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
+import { buildItemDerivations } from '../../store/modules/itemsIndex';
 import {
   getContentPreview,
   getFileList,
@@ -77,11 +78,18 @@ function PreviewPanel() {
   const ocrEnabled = useAppStore(s => s.ocrEnabled);
   const isProUser = useAppStore(s => s.isProUser);
   const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
-  const items = useAppStore(s => s.items);
   const itemsRevision = useAppStore(s => s.itemsRevision);
   const openShareModal = useAppStore(s => s.openShareModal);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
+  const previewItemId = previewItem?.id ?? null;
+  const livePreviewItem = useAppStore(useCallback(
+    (state) => {
+      if (!previewItemId) return null;
+      return state.itemsById?.get(previewItemId) || null;
+    },
+    [previewItemId],
+  ));
 
   // 澶囨敞鐩稿叧
   const editingNoteId = useAppStore(s => s.editingNoteId);
@@ -103,8 +111,8 @@ function PreviewPanel() {
 
   // Prefer hydrated preview payload while still inheriting fast-changing flags from list state.
   const item = useMemo(() => {
-    if (!previewItem?.id) return null;
-    const latest = items.find(i => i.id === previewItem.id);
+    if (!previewItemId) return null;
+    const latest = livePreviewItem;
     if (!latest) return previewItem;
     return {
       ...latest,
@@ -114,7 +122,7 @@ function PreviewPanel() {
       content_truncated: Boolean(latest.content_truncated ?? previewItem.content_truncated),
       ocr_truncated: Boolean(latest.ocr_truncated ?? previewItem.ocr_truncated),
     };
-  }, [items, previewItem]);
+  }, [livePreviewItem, previewItem, previewItemId]);
 
   if (!item) {
     switchToWorkbench();
@@ -432,8 +440,8 @@ function PreviewPanel() {
         updated_at: updatedAt,
       };
       await invoke('update_item', { item: updatedItem });
-      useAppStore.setState((state) => ({
-        items: state.items.map((candidate) => (
+      useAppStore.setState((state) => {
+        const nextItems = state.items.map((candidate) => (
           candidate.id === updatedItem.id
             ? {
               ...candidate,
@@ -443,15 +451,19 @@ function PreviewPanel() {
               updated_at: updatedAt,
             }
             : candidate
-        )),
-        previewItem: state.previewItem?.id === updatedItem.id
-          ? {
-            ...state.previewItem,
-            ...updatedItem,
-          }
-          : state.previewItem,
-        itemsRevision: state.itemsRevision + 1,
-      }));
+        ));
+        return {
+          items: nextItems,
+          ...buildItemDerivations(nextItems),
+          previewItem: state.previewItem?.id === updatedItem.id
+            ? {
+              ...state.previewItem,
+              ...updatedItem,
+            }
+            : state.previewItem,
+          itemsRevision: state.itemsRevision + 1,
+        };
+      });
       await useAppStore.getState().loadItems();
       setIsEditingContent(false);
     } catch (error) {

@@ -1,3 +1,5 @@
+import { buildItemDerivations } from './itemsIndex';
+
 export const createBaseState = ({
   initialHistorySnapshot,
   historyRecentSearches,
@@ -8,9 +10,12 @@ export const createBaseState = ({
   historyStreamEnabled,
   initialActiveWorkbenchId,
   initialWorkbenchSearchScope,
-}) => ({
+}) => {
+  const itemDerivations = buildItemDerivations(initialHistorySnapshot);
+  return ({
   // ========== 历史数据 ==========
   items: initialHistorySnapshot,
+  ...itemDerivations,
   loading: initialHistorySnapshot.length === 0,
   hasMore: true,
   loadingMore: false,
@@ -144,4 +149,5 @@ export const createBaseState = ({
   sharePendingData: null,
   sharePendingProvider: null,
   shareConfig: null,
-});
+  });
+};

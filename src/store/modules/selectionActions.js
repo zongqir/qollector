@@ -3,6 +3,7 @@ import { deleteItem as deleteItemSvc } from '../../services/clipboardService';
 import { getTags, hasReservedTagPrefix } from '../../utils/tagHelpers';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemsIfNeeded } from './itemHydration';
+import { buildItemDerivations } from './itemsIndex';
 
 export const createSelectionActions = (set, get) => ({
   setSelectedItemIds: (itemIds) => {
@@ -44,7 +45,7 @@ export const createSelectionActions = (set, get) => ({
 
     const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
     const preferredById = new Map(preferredItems.map((item) => [item.id, item]));
-    const fallbackById = new Map(items.map((item) => [item.id, item]));
+    const fallbackById = get().itemsById;
     const selectedItems = selectedItemIds
       .map((id) => preferredById.get(id) || fallbackById.get(id))
       .filter(Boolean);
@@ -113,6 +114,7 @@ export const createSelectionActions = (set, get) => ({
 
         return {
           items: nextItems,
+          ...buildItemDerivations(nextItems),
           previewItem: nextPreviewItem,
           itemsRevision: state.itemsRevision + 1,
         };
@@ -137,8 +139,11 @@ export const createSelectionActions = (set, get) => ({
       for (const id of selectedItemIds) {
         await deleteItemSvc(id);
       }
+      const selectedIdSet = new Set(selectedItemIds);
+      const nextItems = items.filter((item) => !selectedIdSet.has(item.id));
       set((state) => ({
-        items: items.filter((item) => !selectedItemIds.includes(item.id)),
+        items: nextItems,
+        ...buildItemDerivations(nextItems),
         selectedItemIds: [],
         panelMode: 'workbench',
         previewItem: null,
@@ -158,7 +163,7 @@ export const createSelectionActions = (set, get) => ({
     try {
       const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
       const preferredById = new Map(preferredItems.map((item) => [item.id, item]));
-      const fallbackById = new Map(items.map((item) => [item.id, item]));
+      const fallbackById = get().itemsById;
       const selectedItems = selectedItemIds
         .map((id) => preferredById.get(id) || fallbackById.get(id))
         .filter(Boolean);

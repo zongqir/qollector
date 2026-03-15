@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import { hydrateItemIfNeeded, itemNeedsHydration } from './itemHydration';
+import { buildItemDerivations } from './itemsIndex';
 
 export const createEditModalActions = (set, get) => ({
   openEditModal: (item = null) => {
@@ -60,8 +61,8 @@ export const createEditModalActions = (set, get) => ({
           updated_at: updatedAt,
         };
         await invoke('update_item', { item: updatedItem });
-        set((state) => ({
-          items: state.items.map((candidate) => (
+        set((state) => {
+          const nextItems = state.items.map((candidate) => (
             candidate.id === updatedItem.id
               ? {
                 ...candidate,
@@ -72,16 +73,20 @@ export const createEditModalActions = (set, get) => ({
                 updated_at: updatedAt,
               }
               : candidate
-          )),
-          previewItem: state.previewItem?.id === updatedItem.id
-            ? {
-              ...state.previewItem,
-              ...updatedItem,
-              content_truncated: false,
-            }
-            : state.previewItem,
-          itemsRevision: state.itemsRevision + 1,
-        }));
+          ));
+          return {
+            items: nextItems,
+            ...buildItemDerivations(nextItems),
+            previewItem: state.previewItem?.id === updatedItem.id
+              ? {
+                ...state.previewItem,
+                ...updatedItem,
+                content_truncated: false,
+              }
+              : state.previewItem,
+            itemsRevision: state.itemsRevision + 1,
+          };
+        });
       }
       await loadItems();
       set({ showEditModal: false, editingItem: null });

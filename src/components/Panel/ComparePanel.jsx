@@ -10,9 +10,34 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { shallow } from 'zustand/shallow';
 import useAppStore from '../../store/useAppStore';
 import { getFileList, getFileName, getContentPreview, parseUrl } from '../../utils/formatters';
 import { getImageThumbnail } from '../../utils/imageHelpers';
+
+const EMPTY_COMPARE_ITEMS = [];
+
+const selectItemsByIds = (state, ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) return EMPTY_COMPARE_ITEMS;
+  const indexedItems = state.itemsById;
+  if (indexedItems instanceof Map) {
+    return ids
+      .map((id) => indexedItems.get(id))
+      .filter(Boolean);
+  }
+
+  const targets = new Set(ids);
+  const fallbackItemsById = new Map();
+  state.items.forEach((item) => {
+    if (targets.has(item.id)) {
+      fallbackItemsById.set(item.id, item);
+    }
+  });
+
+  return ids
+    .map((id) => fallbackItemsById.get(id))
+    .filter(Boolean);
+};
 
 const getComparableText = (item) => {
   if (!item) return '';
@@ -112,7 +137,6 @@ function ComparePanel() {
   const togglePin = useAppStore(s => s.togglePin);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
-  const items = useAppStore(s => s.items);
   const [diffOnlyMode, setDiffOnlyMode] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [openSelectorSide, setOpenSelectorSide] = useState(null);
@@ -123,8 +147,6 @@ function ComparePanel() {
   const selectorAreaRef = useRef(null);
   const selectorTriggerRefs = useRef({ left: null, right: null });
   const selectorOptionRefs = useRef({ left: [], right: [] });
-
-  const itemById = useMemo(() => new Map(items.map(item => [item.id, item])), [items]);
 
   const candidateIds = useMemo(() => {
     const sourceIds = Array.isArray(compareCandidateIds) && compareCandidateIds.length >= 2
@@ -137,23 +159,26 @@ function ComparePanel() {
     });
     return normalized;
   }, [compareCandidateIds, compareItemIds]);
+  const activeCompareIds = useMemo(
+    () => compareItemIds.filter(Boolean).slice(0, 2),
+    [compareItemIds],
+  );
 
-  const candidateItems = useMemo(() => (
-    candidateIds
-      .map(id => itemById.get(id))
-      .filter(Boolean)
-  ), [candidateIds, itemById]);
+  const candidateItems = useAppStore(
+    useCallback((state) => selectItemsByIds(state, candidateIds), [candidateIds]),
+    shallow,
+  );
+  const activeCompareItems = useAppStore(
+    useCallback((state) => selectItemsByIds(state, activeCompareIds), [activeCompareIds]),
+    shallow,
+  );
 
   const compareItems = useMemo(() => {
-    const activeItems = compareItemIds
-      .map(id => itemById.get(id))
-      .filter(Boolean)
-      .slice(0, 2);
-    if (activeItems.length === 2 && activeItems[0].id !== activeItems[1].id) {
-      return activeItems;
+    if (activeCompareItems.length === 2 && activeCompareItems[0].id !== activeCompareItems[1].id) {
+      return activeCompareItems;
     }
     return candidateItems.slice(0, 2);
-  }, [compareItemIds, itemById, candidateItems]);
+  }, [activeCompareItems, candidateItems]);
 
   const [leftItem, rightItem] = compareItems;
   const canSwitchCandidate = candidateItems.length > 2 && leftItem && rightItem;

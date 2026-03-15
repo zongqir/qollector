@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowUpDown,
@@ -171,10 +171,10 @@ function StaticCollectionItem({ className, children }) {
 }
 
 function CollectionBoard({
-  items,
   searchQuery,
   selectedType,
   selectedDateRange,
+  itemsRevision = 0,
   isMiniMode = false,
   showPinnedOnly,
   timeTick,
@@ -297,7 +297,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [items, collectionRefreshNonce]);
+  }, [itemsRevision, collectionRefreshNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,7 +401,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [collectionBackendFilterRequest, backendItems.length, items, t, collectionRefreshNonce]);
+  }, [collectionBackendFilterRequest, backendItems.length, itemsRevision, t, collectionRefreshNonce]);
 
   const orderedFavoriteItems = useMemo(
     () => backendItems.filter(item => item.is_favorite !== false),
@@ -419,20 +419,25 @@ function CollectionBoard({
     () => allFavoriteItems.slice(0, backendLimit),
     [allFavoriteItems, backendLimit],
   );
-  const tagsSourceItems = useMemo(() => {
-    const merged = new Map();
-    [...items, ...allFavoriteItems].forEach((item) => {
-      if (!item?.id) return;
-      merged.set(item.id, item);
-    });
-    return Array.from(merged.values());
-  }, [items, allFavoriteItems]);
+  const tagsSourceItems = useMemo(
+    () => orderedFavoriteItems,
+    [orderedFavoriteItems],
+  );
 
   const itemsById = useMemo(() => {
     const map = new Map();
     collectionItems.forEach((item) => map.set(item.id, item));
     return map;
   }, [collectionItems]);
+  const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds]);
+  const selectedCollectionTagSet = useMemo(
+    () => new Set(selectedCollectionTags),
+    [selectedCollectionTags],
+  );
+  const collectionItemIds = useMemo(
+    () => collectionItems.map((item) => item.id),
+    [collectionItems],
+  );
 
   const collectionAvailableTags = useMemo(() => {
     const availableSet = new Set();
@@ -621,7 +626,7 @@ function CollectionBoard({
               <button
                 key={tag}
                 type="button"
-                className={`collection-card-tag panel-card-tag ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                className={`collection-card-tag panel-card-tag ${selectedCollectionTagSet.has(tag) ? 'active' : ''}`}
                 onClick={(event) => {
                   event.stopPropagation();
                   toggleRailTag(tag);
@@ -1031,11 +1036,17 @@ function CollectionBoard({
     clearCollectionCardClickTimer();
     collectionSortLongPressPointerRef.current.pointerId = null;
     setActiveItemId(item.id);
-    if (!selectedItemIds.includes(item.id)) {
+    if (!selectedItemIdSet.has(item.id)) {
       onSetSelectedItemIds?.([item.id]);
     }
     onOpenContextMenu?.(item, index, event, 'collection');
-  }, [clearCollectionSortLongPressTimer, clearCollectionCardClickTimer, onOpenContextMenu, onSetSelectedItemIds, selectedItemIds]);
+  }, [
+    clearCollectionSortLongPressTimer,
+    clearCollectionCardClickTimer,
+    onOpenContextMenu,
+    onSetSelectedItemIds,
+    selectedItemIdSet,
+  ]);
 
   const handleCollectionCardKeyDown = useCallback((item, index, event) => {
     if (event.target !== event.currentTarget) return;
@@ -1295,7 +1306,7 @@ function CollectionBoard({
     const cardBackground = getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata));
     const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
     const showColorPicker = openColorPickerItemId === item.id;
-    const isSelected = selectedItemIds.includes(item.id);
+    const isSelected = selectedItemIdSet.has(item.id);
     const selectionClassName = isSelected
       ? (selectedItemIds.length > 1 ? 'multi-selected' : 'selected')
       : '';
@@ -1475,7 +1486,7 @@ function CollectionBoard({
                 <button
                   key={tag}
                   type="button"
-                  className={`collection-tag-chip ${selectedCollectionTags.includes(tag) ? 'active' : ''}`}
+                  className={`collection-tag-chip ${selectedCollectionTagSet.has(tag) ? 'active' : ''}`}
                   onClick={() => toggleRailTag(tag)}
                 >
                   {tag}
@@ -1662,7 +1673,7 @@ function CollectionBoard({
               collisionDetection={closestCenter}
               onDragEnd={handleCollectionDragEnd}
             >
-              <SortableContext items={collectionItems.map((item) => item.id)} strategy={rectSortingStrategy}>
+              <SortableContext items={collectionItemIds} strategy={rectSortingStrategy}>
                 {collectionItems.map((item, index) => (
                   <SortableCollectionItem key={item.id} id={item.id} disabled={!collectionDragEnabled} className="collection-grid-item">
                     {renderCollectionCard(item, index)}
@@ -1693,4 +1704,4 @@ function CollectionBoard({
   );
 }
 
-export default CollectionBoard;
+export default memo(CollectionBoard);

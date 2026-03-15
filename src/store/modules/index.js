@@ -30,6 +30,16 @@ export {
   getItemsPageSize,
 } from './historyListRuntime';
 export {
+  buildItemDerivations,
+  buildItemsById,
+  buildFavoriteItemIds,
+  buildPinnedItemIdsByWorkbench,
+  normalizeWorkbenchBucketId,
+  getPinnedItemIdsForWorkbench,
+  getPinnedItemsForWorkbench,
+  withIndexedItems,
+} from './itemsIndex';
+export {
   readHistorySnapshot,
   persistHistorySnapshot,
   clearHistorySnapshot,

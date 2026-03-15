@@ -6,7 +6,7 @@ import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/util
 import { getUserTags, toggleItemPin } from '../../../services/clipboardService';
 
 export default function useHistoryBatchActions({
-  items,
+  itemsById,
   itemsRevision,
   filteredItems,
   selectedItemIds,
@@ -102,15 +102,15 @@ export default function useHistoryBatchActions({
       return preferredOrdered;
     }
 
-    const fallbackById = new Map(items.map(item => [item.id, item]));
+    const fallbackById = itemsById instanceof Map ? itemsById : null;
     const fallbackOrdered = selectedItemIds
-      .map(id => fallbackById.get(id))
+      .map(id => fallbackById?.get(id))
       .filter(Boolean);
     const preferredIdSet = new Set(preferredOrdered.map(item => item.id));
     return preferredOrdered.length > 0
       ? [...preferredOrdered, ...fallbackOrdered.filter(item => !preferredIdSet.has(item.id))]
       : fallbackOrdered;
-  }, [selectedItemIds, filteredItems, items]);
+  }, [selectedItemIds, filteredItems, itemsById]);
 
   const allSelectedAreText = useMemo(
     () => selectedItemsForBatchActions.length > 0 && selectedItemsForBatchActions.every(item => item.type_ === 'text'),

@@ -95,7 +95,7 @@ const buildExportMarkdown = (items, t) => {
 
 function useWorkbenchQuickActions({
   pinnedItems,
-  items,
+  itemsById,
   aiEnabled,
   uiLanguage,
   selectionMode,
@@ -290,9 +290,8 @@ function useWorkbenchQuickActions({
 
     setActiveAction('restore-snapshot');
     try {
-      const itemMap = new Map(items.map(item => [item.id, item]));
       const currentPinnedIds = pinnedItems.map(item => item.id);
-      const snapshotIds = snapshot.ids.filter(id => itemMap.has(id));
+      const snapshotIds = snapshot.ids.filter(id => itemsById?.has(id));
 
       if (snapshotIds.length === 0) {
         showMessage({ type: 'warning', text: t('workbench.snapshotNoMatch') });
@@ -323,7 +322,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [activeWorkbenchId, isBusy, closeMenus, items, pinnedItems, loadItems, setPanelMode, showMessage, t]);
+  }, [activeWorkbenchId, isBusy, closeMenus, itemsById, pinnedItems, loadItems, setPanelMode, showMessage, t]);
 
   const handleExportWorkbench = useCallback(async () => {
     if (isBusy) return;
@@ -385,9 +384,8 @@ function useWorkbenchQuickActions({
     if (isBusy || lastClearedPinnedIds.length === 0) return;
     setActiveAction('undo-clear');
     try {
-      const itemMap = new Map(items.map(item => [item.id, item]));
       for (const id of lastClearedPinnedIds) {
-        const candidate = itemMap.get(id);
+        const candidate = itemsById?.get(id);
         if (!candidate || candidate.is_pinned) continue;
         await pinItem(id, { maxPinned: 999, workbenchId: activeWorkbenchId });
       }
@@ -400,7 +398,7 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [activeWorkbenchId, isBusy, lastClearedPinnedIds, items, loadItems, showMessage, t]);
+  }, [activeWorkbenchId, isBusy, lastClearedPinnedIds, itemsById, loadItems, showMessage, t]);
 
   const runWorkbenchMoreAction = useCallback((actionKey = workbenchPrimaryAction) => {
     switch (actionKey) {
