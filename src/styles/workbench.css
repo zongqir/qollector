@@ -136,15 +136,15 @@
 }
 
 .workbench-filter-row--adaptive-icon .workbench-type-filter-wrapper.type-select-wrapper {
-  width: var(--top-rail-mini-pill-height);
-  max-width: var(--top-rail-mini-pill-height);
+  width: var(--top-rail-control-height);
+  max-width: var(--top-rail-control-height);
 }
 
 .workbench-filter-row--adaptive-icon .workbench-type-filter-wrapper .type-select-btn,
 .workbench-filter-row--adaptive-icon .workbench-sort-toggle {
-  width: var(--top-rail-mini-pill-height);
-  min-width: var(--top-rail-mini-pill-height);
-  min-height: var(--top-rail-mini-pill-height);
+  width: var(--top-rail-control-height);
+  min-width: var(--top-rail-control-height);
+  min-height: var(--top-rail-control-height);
   padding: 0;
   justify-content: center;
   gap: 0;
@@ -1325,13 +1325,15 @@
   z-index: 1;
   --workbench-card-column-min: 210px;
   --workbench-card-column-gap: 12px;
-  columns: 6 var(--workbench-card-column-min);
-  column-gap: var(--workbench-card-column-gap);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--workbench-card-column-min), 1fr));
+  gap: var(--workbench-card-column-gap);
+  align-content: start;
+  align-items: start;
   padding: var(--workbench-cards-padding);
 }
 
 .workbench-cards.sort-mode {
-  columns: initial;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--workbench-card-column-min), 1fr));
   gap: var(--workbench-card-column-gap);
@@ -1339,7 +1341,6 @@
 }
 
 .workbench-cards.sort-mode .workbench-card {
-  margin-bottom: 0;
   transform: none;
 }
 
@@ -1353,6 +1354,8 @@
   padding: calc(var(--card-shell-padding) + 1px);
   position: relative;
   cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
   transition:
     transform var(--card-shell-motion-duration) var(--card-shell-motion-ease),
     border-color var(--card-shell-motion-duration) var(--card-shell-motion-ease),
@@ -1361,7 +1364,6 @@
   border: 1px solid var(--card-shell-border);
   box-shadow: var(--card-shell-shadow-rest);
   break-inside: avoid;
-  margin-bottom: var(--workbench-card-column-gap);
   outline: none;
 }
 
@@ -1475,7 +1477,6 @@
   gap: 8px;
   min-height: 18px;
   margin-bottom: 6px;
-  padding-right: 78px;
 }
 
 .workbench-card-head-main {
@@ -1686,10 +1687,12 @@
 
 .workbench-card-content {
   margin-bottom: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
-  padding-right: 78px;
+  padding-right: 0;
 }
 
 .workbench-card-text {
@@ -1841,9 +1844,12 @@
 .workbench-card-link .link-path {
   font-size: 11px;
   color: var(--text-tertiary);
+  white-space: normal;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   letter-spacing: 0;
 }
 
@@ -1852,9 +1858,11 @@
   line-height: 1.45;
   color: var(--text-primary);
   font-weight: 400;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   letter-spacing: 0;
 }
 
@@ -2392,7 +2400,7 @@
   }
 
   .workbench-search-input {
-    height: var(--top-rail-mini-input-height);
+    height: var(--top-rail-mini-pill-height);
     border-radius: var(--top-rail-mini-input-radius);
     padding: 0 24px 0 var(--top-rail-mini-input-padding-x);
     font-size: 12px;
@@ -2458,7 +2466,7 @@
   }
 
   .workbench-card-header {
-    padding-right: 76px;
+    padding-right: 0;
   }
 
   .workbench-card-source {
@@ -2535,6 +2543,27 @@
 
   .workbench-filter-feedback {
     max-width: 100%;
+  }
+
+  .workbench-search-input {
+    height: var(--top-rail-mini-pill-height);
+    border-radius: var(--top-rail-mini-control-radius);
+    padding: 0 24px 0 var(--top-rail-mini-input-padding-x);
+    font-size: 12px;
+  }
+
+  .workbench-search-clear-btn {
+    width: 15px;
+    height: 15px;
+    right: 5px;
+  }
+
+  .workbench-filter-actions .header-icon-btn,
+  .workbench-filter-actions .filter-trigger-btn {
+    width: var(--top-rail-mini-pill-height);
+    min-width: var(--top-rail-mini-pill-height);
+    height: var(--top-rail-mini-pill-height);
+    border-radius: var(--top-rail-mini-control-radius);
   }
 }
 
@@ -2630,7 +2659,7 @@
 
 @container workbench-panel (max-width: 360px) {
   .workbench-cards {
-    columns: 1;
+    grid-template-columns: 1fr;
   }
 
   .workbench-cards.sort-mode {

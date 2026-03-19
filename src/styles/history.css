@@ -1532,6 +1532,7 @@
 }
 
 .compact-link-info {
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
