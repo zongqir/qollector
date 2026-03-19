@@ -27,14 +27,15 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
+  right: auto;
+  inline-size: min(clamp(220px, 100%, 320px), calc(100vw - 24px));
   z-index: 24;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
+  gap: 5px;
+  padding: 6px;
   border: 1px solid var(--control-dropdown-border);
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--control-dropdown-bg);
   box-shadow: var(--control-dropdown-shadow);
   -webkit-backdrop-filter: blur(6px);
@@ -45,16 +46,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .search-recent-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
 }
 
@@ -75,16 +76,16 @@
 .search-recent-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .search-recent-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--surface-muted) 72%, transparent);
   transition:
     border-color var(--motion-fast) var(--ease-standard),
@@ -106,12 +107,13 @@
 
 .search-recent-apply-btn {
   min-width: 0;
-  min-height: 32px;
+  min-height: 29px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px;
+  gap: 6px;
+  padding: 0 8px;
   text-align: left;
+  font-size: 12px;
 }
 
 .search-recent-query {
@@ -119,16 +121,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.2;
 }
 
 .search-recent-remove-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-right: 2px;
+  margin-right: 1px;
   color: var(--text-tertiary);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
@@ -514,20 +518,21 @@
 
 .app.mini-mode .search-recent-dropdown {
   top: calc(100% + 4px);
-  padding: 6px;
-  border-radius: 10px;
+  inline-size: min(clamp(200px, 100%, 280px), calc(100vw - 20px));
+  padding: 5px;
+  border-radius: 9px;
 }
 
 .app.mini-mode .search-recent-apply-btn {
-  min-height: 28px;
-  padding: 0 8px;
-  gap: 6px;
-  font-size: 11px;
+  min-height: 26px;
+  padding: 0 7px;
+  gap: 5px;
+  font-size: 10.5px;
 }
 
 .app.mini-mode .search-recent-remove-btn {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
 }
 
 .app.mini-mode .header-icon-btn {
