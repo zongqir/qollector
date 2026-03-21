@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.5",
+      "publishedAt": "2026-03-21",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-5",
+      "summary": {
+        "zh-CN": "继续打磨标题栏与顶部操作区细节，统一默认态视觉层级并修复透明度调节时的布局挤压问题。",
+        "en-US": "Continued refining the title bar and top controls by unifying default visual hierarchy and fixing layout shifts during transparency adjustment."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复标题栏透明度调节指示器在不同百分比下挤压布局、下沉到下一层的问题。",
+          "收紧标题栏工具条体积，降低顶部控件的视觉占用，让界面更克制。",
+          "统一标题栏按钮默认态的深浅层级，仅在 hover / 激活态保留语义差异。",
+          "移除左上角品牌图标与名称，标题栏改为更纯粹的工具条布局。",
+          "继续优化卡片与快速记录区域的文本可选规则，减少非正文内容被误选中。"
+        ],
+        "en-US": [
+          "Fixed the title-bar transparency indicator so different percentage values no longer push layout or spill into the next row.",
+          "Tightened the visual size of the title-bar tool groups to make the top controls feel lighter and more restrained.",
+          "Unified the default icon tone across title-bar buttons while keeping semantic differences for hover and active states.",
+          "Removed the top-left brand logo and title to simplify the title bar into a cleaner tool-focused layout.",
+          "Further refined text-selection behavior in cards and the quick-note area to reduce accidental selection outside main content."
+        ]
+      }
+    },
+    {
       "version": "0.3.4",
       "publishedAt": "2026-03-15",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-4",
