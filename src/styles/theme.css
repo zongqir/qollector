@@ -670,6 +670,8 @@
 .panel-card-time {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-source {
@@ -678,12 +680,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-state {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-state-chip {
@@ -696,6 +702,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-actions {
@@ -798,6 +806,8 @@
   font-size: var(--panel-card-content-text-size);
   line-height: var(--panel-card-content-text-line-height);
   color: color-mix(in srgb, var(--text-primary) 96%, transparent);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .panel-card-content-link {
@@ -805,6 +815,8 @@
   display: flex;
   align-items: center;
   gap: var(--panel-card-content-link-gap);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-link-title {
@@ -834,6 +846,8 @@
   border-radius: var(--panel-card-content-block-radius);
   background: var(--panel-card-content-block-bg);
   padding: 4px 7px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .panel-card-file-icon {
@@ -889,6 +903,8 @@
 .panel-card-note {
   font-size: var(--panel-card-note-size);
   line-height: var(--panel-card-note-line-height);
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .panel-card-tags {

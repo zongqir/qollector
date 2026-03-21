@@ -63,6 +63,8 @@ function TitleBar({
     return saved === DENSITY_COMPACT ? DENSITY_COMPACT : DENSITY_COZY;
   });
   const hideTimerRef = useRef(null);
+  const titlebarButtonsRef = useRef(null);
+  const [statusRightOffset, setStatusRightOffset] = useState(18);
 
   useEffect(() => {
     applyGlassOpacity(glassOpacity);
@@ -79,6 +81,34 @@ function TitleBar({
   useEffect(() => () => {
     clearTimeout(hideTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    const buttonsEl = titlebarButtonsRef.current;
+    if (!buttonsEl) return undefined;
+
+    const syncStatusOffset = () => {
+      const nextWidth = buttonsEl.getBoundingClientRect().width;
+      setStatusRightOffset(Math.ceil(nextWidth) + 18);
+    };
+
+    syncStatusOffset();
+
+    if (typeof ResizeObserver !== 'function') {
+      window.addEventListener('resize', syncStatusOffset);
+      return () => window.removeEventListener('resize', syncStatusOffset);
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncStatusOffset();
+    });
+    observer.observe(buttonsEl);
+    window.addEventListener('resize', syncStatusOffset);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncStatusOffset);
+    };
+  }, [showSmartCopyEntry, isMiniMode]);
 
   const handleToggleDensity = useCallback(() => {
     setDensityMode((prev) => {
@@ -180,15 +210,6 @@ function TitleBar({
     <div className="titlebar" onWheel={handleWheel}>
       <div className="titlebar-drag-area" data-tauri-drag-region>
         <div className="titlebar-brand">
-          <div data-tauri-drag-region className="titlebar-brand-drag">
-            <img
-              src="/qollect-logo.svg"
-              alt="Qollect logo"
-              className="titlebar-logo"
-              draggable="false"
-            />
-            <div className="titlebar-title">{t('app.title')}</div>
-          </div>
           <div className="titlebar-mode-cluster" data-tauri-drag-region="false">
             {modeBadgeText && (
               <span className={`titlebar-mode-pill ${isMiniMode ? 'mini' : 'normal'}`}>
@@ -271,6 +292,7 @@ function TitleBar({
       <div
         className={`titlebar-status-group ${showIndicator && !isMiniMode ? 'visible' : ''}`}
         data-tauri-drag-region
+        style={{ '--titlebar-status-right': `${statusRightOffset}px` }}
       >
         {showIndicator && !isMiniMode && (
           <div className="glass-indicator">
@@ -284,7 +306,7 @@ function TitleBar({
           </div>
         )}
       </div>
-      <div className="titlebar-buttons" data-tauri-drag-region="false">
+      <div className="titlebar-buttons" data-tauri-drag-region="false" ref={titlebarButtonsRef}>
         <div className="titlebar-btn-group titlebar-btn-group-capture">
           {showSmartCopyEntry && (
             <button
@@ -302,7 +324,7 @@ function TitleBar({
             className={`titlebar-btn quick-add-btn ${isQuickInputOpen ? 'active' : ''}`}
             title={t('titlebar.quickAdd')}
           >
-            <SquarePen size={15} />
+            <SquarePen size={14} />
           </button>
         </div>
         <span className="titlebar-btn-divider" aria-hidden="true" />

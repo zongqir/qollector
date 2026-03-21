@@ -477,6 +477,8 @@
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .workbench-switcher-trigger--floating {
@@ -815,6 +817,8 @@
     border-color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quick-note-filter-toggle-btn:hover {
@@ -873,6 +877,8 @@
     border-color var(--motion-fast) var(--ease-standard),
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quick-note-expand-btn:hover {
@@ -889,6 +895,13 @@
   background: transparent;
   font-size: 12.5px;
   color: var(--text-primary);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.quick-note-input:placeholder-shown {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quick-note-input::placeholder {
