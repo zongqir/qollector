@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
 import { prewarmCodeLanguageDetection } from './services/codeDetectionService';
+import { createUpdaterProgressHandler } from './utils/updaterProgress';
 import {
   openWidgetWindow,
   closeWidgetWindow,
@@ -430,7 +431,7 @@ function App() {
 
   // Update state
   const [updateInfo, setUpdateInfo] = useState(null); // { version, update }
-  const [updateProgress, setUpdateProgress] = useState(null); // null | number (0-100) | 'ready'
+  const [updateProgress, setUpdateProgress] = useState(null); // null | number (0-100) | 'downloading' | 'installing' | 'ready' | 'upToDate'
   const [updateError, setUpdateError] = useState(null);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [releaseNotesModal, setReleaseNotesModal] = useState(null);
@@ -702,23 +703,20 @@ function App() {
 
   const downloadAndInstall = useCallback(async () => {
     if (!updateInfo?.update) return;
-    setUpdateProgress(0);
+    setUpdateProgress('downloading');
     setUpdateError(null);
     try {
-      await updateInfo.update.downloadAndInstall((event) => {
-        if (event.event === 'Started' && event.data?.contentLength) {
-          setUpdateProgress(0);
-        } else if (event.event === 'Progress') {
-          setUpdateProgress((prev) => {
-            const current = typeof prev === 'number' ? prev : 0;
-            const chunk = event.data?.chunkLength || 0;
-            const total = event.data?.contentLength || 1;
-            return Math.min(current + (chunk / total) * 100, 99);
-          });
-        } else if (event.event === 'Finished') {
-          setUpdateProgress('ready');
-        }
-      });
+      await updateInfo.update.downloadAndInstall(createUpdaterProgressHandler({
+        onDownloadStart: ({ totalBytes }) => {
+          setUpdateProgress(totalBytes ? 0 : 'downloading');
+        },
+        onDownloadProgress: ({ percent }) => {
+          setUpdateProgress(percent);
+        },
+        onInstalling: () => {
+          setUpdateProgress('installing');
+        },
+      }));
       setUpdateProgress('ready');
     } catch (err) {
       console.error('[Updater] download failed:', err);
@@ -1589,6 +1587,10 @@ function App() {
         }}>
           {typeof updateProgress === 'number' ? (
             <span>{t('update.progress', { percent: Math.round(updateProgress) })}</span>
+          ) : updateProgress === 'downloading' ? (
+            <span>{t('update.downloading')}</span>
+          ) : updateProgress === 'installing' ? (
+            <span>{t('update.installing')}</span>
           ) : updateProgress === 'ready' ? (
             <button
               onClick={() => relaunch()}

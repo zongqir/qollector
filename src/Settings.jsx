@@ -6,6 +6,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import useAppStore from './store/useAppStore';
+import { createUpdaterProgressHandler } from './utils/updaterProgress';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
 import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
@@ -269,11 +270,11 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const [licenseDeactivating, setLicenseDeactivating] = useState(false);
   const [licenseError, setLicenseError] = useState('');
   const [licenseSuccess, setLicenseSuccess] = useState('');
-  const [aboutUpdateStatus, setAboutUpdateStatus] = useState(null); // null | 'checking' | 'downloading' | 'ready' | 'upToDate' | 'error'
+  const [aboutUpdateStatus, setAboutUpdateStatus] = useState(null); // null | 'checking' | 'downloading' | 'installing' | 'ready' | 'upToDate' | 'error'
   const [aboutUpdateError, setAboutUpdateError] = useState('');
   const [aboutUpdateVersion, setAboutUpdateVersion] = useState('');
   const [aboutUpdateRef, setAboutUpdateRef] = useState(null);
-  const [aboutDownloadPercent, setAboutDownloadPercent] = useState(0);
+  const [aboutDownloadPercent, setAboutDownloadPercent] = useState(null);
 
   useEffect(() => {
     getVersion().then(v => setAppVersion(v)).catch(() => {});
@@ -282,7 +283,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const handleCheckUpdate = async () => {
     setAboutUpdateStatus('checking');
     setAboutUpdateError('');
-    setAboutDownloadPercent(0);
+    setAboutDownloadPercent(null);
     try {
       const update = await check();
       if (update) {
@@ -302,7 +303,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
 
   const handleDownloadAndRestart = async () => {
     setAboutUpdateError('');
-    setAboutDownloadPercent(0);
+    setAboutDownloadPercent(null);
     try {
       let targetUpdate = aboutUpdateRef;
       if (!targetUpdate) {
@@ -320,17 +321,18 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setAboutUpdateRef(targetUpdate);
       setAboutUpdateStatus('downloading');
 
-      await targetUpdate.downloadAndInstall((event) => {
-        if (event.event === 'Progress') {
-          setAboutDownloadPercent((prev) => {
-            const chunk = event.data?.chunkLength || 0;
-            const total = event.data?.contentLength || 1;
-            return Math.min(prev + (chunk / total) * 100, 99);
-          });
-        } else if (event.event === 'Finished') {
-          setAboutDownloadPercent(100);
-        }
-      });
+      await targetUpdate.downloadAndInstall(createUpdaterProgressHandler({
+        onDownloadStart: ({ totalBytes }) => {
+          setAboutUpdateStatus('downloading');
+          setAboutDownloadPercent(totalBytes ? 0 : null);
+        },
+        onDownloadProgress: ({ percent }) => {
+          setAboutDownloadPercent(percent);
+        },
+        onInstalling: () => {
+          setAboutUpdateStatus('installing');
+        },
+      }));
       setAboutUpdateStatus('ready');
       await relaunch();
     } catch (err) {

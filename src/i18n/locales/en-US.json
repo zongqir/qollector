@@ -1069,6 +1069,7 @@
     "downloadNow": "Click to download update",
     "manualDownloadHint": "A manual click is required to start the download",
     "downloading": "Downloading update...",
+    "installing": "Preparing update installation...",
     "progress": "Download progress: {{percent}}%",
     "ready": "Update ready, click to restart",
     "failed": "Update failed: {{error}}",

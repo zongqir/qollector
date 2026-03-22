@@ -1034,6 +1034,7 @@
     "downloadNow": "点击下载更新",
     "manualDownloadHint": "检测到新版本后需要手动点击下载",
     "downloading": "正在下载更新...",
+    "installing": "正在准备安装更新...",
     "progress": "下载进度: {{percent}}%",
     "ready": "更新已就绪，点击重启",
     "failed": "更新失败: {{error}}",

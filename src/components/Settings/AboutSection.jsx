@@ -101,8 +101,13 @@ function AboutSection({
         )}
         {aboutUpdateStatus === 'downloading' && (
           <span style={{ fontSize: 13, opacity: 0.6 }}>
-            {t('update.progress', { percent: Math.round(aboutDownloadPercent) })}
+            {typeof aboutDownloadPercent === 'number'
+              ? t('update.progress', { percent: Math.round(aboutDownloadPercent) })
+              : t('update.downloading')}
           </span>
+        )}
+        {aboutUpdateStatus === 'installing' && (
+          <span style={{ fontSize: 13, opacity: 0.6 }}>{t('update.installing')}</span>
         )}
         {aboutUpdateStatus === 'ready' && (
           <span style={{ fontSize: 13, color: '#22c55e' }}>{t('update.ready')}</span>
