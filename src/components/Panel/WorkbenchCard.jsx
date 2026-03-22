@@ -94,8 +94,7 @@ function WorkbenchCard({
   const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
   const canDragOut = supportsNativeExternalDrag
     && (
-      (item?.type_ === 'text' && typeof item.content === 'string' && item.content.trim().length > 0)
-      || item?.type_ === 'file'
+      item?.type_ === 'file'
       || item?.type_ === 'image'
     );
 

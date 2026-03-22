@@ -12,6 +12,7 @@ function WorkbenchQuickNoteSection({
   quickNotePlaceholder,
   expandedNotePlaceholder,
   workbenchSwitcher = null,
+  showFilterToggle = true,
   hasActiveFilters,
   isFiltersCollapsed,
   onToggleFiltersCollapsed,
@@ -74,17 +75,19 @@ function WorkbenchQuickNoteSection({
               onChange={(event) => onQuickNoteChange(event.target.value)}
               onKeyDown={onQuickNoteKeyDown}
             />
-            <button
-              type="button"
-              className={`quick-note-filter-toggle-btn ${isFiltersCollapsed ? 'is-collapsed' : ''}`}
-              onClick={onToggleFiltersCollapsed}
-              title={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
-              aria-label={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
-              aria-expanded={!isFiltersCollapsed}
-            >
-              <Filter size={13} />
-              {hasActiveFilters && <span className="quick-note-filter-active-dot" aria-hidden />}
-            </button>
+            {showFilterToggle && (
+              <button
+                type="button"
+                className={`quick-note-filter-toggle-btn ${isFiltersCollapsed ? 'is-collapsed' : ''}`}
+                onClick={onToggleFiltersCollapsed}
+                title={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
+                aria-label={isFiltersCollapsed ? t('workbench.expandFilters') : t('workbench.collapseFilters')}
+                aria-expanded={!isFiltersCollapsed}
+              >
+                <Filter size={13} />
+                {hasActiveFilters && <span className="quick-note-filter-active-dot" aria-hidden />}
+              </button>
+            )}
           </div>
           {workbenchSwitcher ? (
             <div className="quick-note-switcher-slot">

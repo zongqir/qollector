@@ -73,7 +73,6 @@ import {
   shouldIgnoreLongPressTarget,
   openItemPreview,
 } from '../../utils/previewInteractionPolicy';
-import { resolveFilenameStemForItem } from '../../utils/filenameNaming';
 import { isQollectManagedSource } from '../../utils/sourceConstants';
 import {
   buildSearchRequest,
@@ -85,6 +84,7 @@ import { getPinnedItemIdsForWorkbench, normalizeWorkbenchBucketId } from '../../
 const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
 const WORKBENCH_FILTER_COLLAPSE_DEFAULT = false;
 const WORKBENCH_FILTER_SEARCH_SIZER_WIDTH = 108;
+const WORKBENCH_NARROW_QUICK_NOTE_THRESHOLD = 360;
 const WORKBENCH_BOTTOM_BAR_LAYOUT = {
   LABEL: 'label',
   COMPACT: 'compact',
@@ -125,12 +125,6 @@ function getExternalFilePaths(item) {
   }
 
   return [];
-}
-
-function canDragTextAsFile(item) {
-  return item?.type_ === 'text'
-    && typeof item.content === 'string'
-    && item.content.trim().length > 0;
 }
 
 const readWorkbenchFilterCollapsed = () => {
@@ -180,6 +174,7 @@ function WorkbenchPanel() {
   const [workbenchLoadError, setWorkbenchLoadError] = useState('');
   const [workbenchFilterError, setWorkbenchFilterError] = useState('');
   const [shouldCollapseWorkbenchFilterText, setShouldCollapseWorkbenchFilterText] = useState(false);
+  const [isWorkbenchQuickNoteNarrow, setIsWorkbenchQuickNoteNarrow] = useState(false);
   const [workbenchBottomBarLayout, setWorkbenchBottomBarLayout] = useState(WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL);
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
@@ -1472,16 +1467,6 @@ function WorkbenchPanel() {
     if (!SUPPORTS_NATIVE_EXTERNAL_DRAG) return;
 
     try {
-      if (canDragTextAsFile(item)) {
-        await invoke('start_native_text_drag', {
-          content: item.content,
-          language: item.code_language || null,
-          filenameStem: resolveFilenameStemForItem(item),
-          operation: 'copy',
-        });
-        return;
-      }
-
       const paths = getExternalFilePaths(item);
       if (paths.length === 0) return;
 
@@ -1776,9 +1761,17 @@ function WorkbenchPanel() {
     const scheduleLayoutUpdate = () => {
       window.cancelAnimationFrame(rafId);
       rafId = window.requestAnimationFrame(() => {
+        const panelWidth = workbenchPanelRef.current?.clientWidth || 0;
         const filterRowWidth = workbenchFilterRowRef.current?.clientWidth || 0;
         const filterFullWidth = measureNodeWidth(workbenchFilterFullSizerRef.current);
         const filterIconWidth = measureNodeWidth(workbenchFilterIconSizerRef.current);
+
+        if (panelWidth > 0) {
+          const nextIsWorkbenchQuickNoteNarrow = panelWidth <= WORKBENCH_NARROW_QUICK_NOTE_THRESHOLD;
+          setIsWorkbenchQuickNoteNarrow((current) => (
+            current === nextIsWorkbenchQuickNoteNarrow ? current : nextIsWorkbenchQuickNoteNarrow
+          ));
+        }
 
         if (filterRowWidth > 0 && filterFullWidth > 0 && filterIconWidth > 0) {
           const nextShouldCollapseFilterText = filterFullWidth > filterRowWidth;
@@ -1833,6 +1826,24 @@ function WorkbenchPanel() {
     quickActions.workbenchPrimaryAction,
     selectedPinnedIds.length,
     selectedType,
+  ]);
+
+  useEffect(() => {
+    if (!(isWorkbenchQuickNoteNarrow || shouldCollapseWorkbenchFilterText)) return;
+    dismissOpenDropdowns();
+    closeWorkbenchSwitcherOverlays();
+    setShowWorkbenchRecentSearches(false);
+    setActiveWorkbenchRecentSearchIndex(-1);
+    setIsWorkbenchFiltersCollapsed((current) => {
+      if (current) return current;
+      persistWorkbenchFilterCollapsed(true);
+      return true;
+    });
+  }, [
+    closeWorkbenchSwitcherOverlays,
+    dismissOpenDropdowns,
+    isWorkbenchQuickNoteNarrow,
+    shouldCollapseWorkbenchFilterText,
   ]);
 
   const handleContextMenuAction = useCallback(async (actionKey) => {
@@ -1978,6 +1989,7 @@ function WorkbenchPanel() {
   ]);
 
   const workbenchFilterRowClassName = `workbench-filter-row ${shouldCollapseWorkbenchFilterText ? 'workbench-filter-row--adaptive-icon' : ''}`.trim();
+  const shouldCompactWorkbenchTopRail = isWorkbenchQuickNoteNarrow || shouldCollapseWorkbenchFilterText;
   const workbenchPanelClassName = `workbench-panel ${selectedPinnedIds.length === 0 ? 'workbench-panel--docked-bottom-bar' : ''} ${selectedPinnedIds.length === 0 && workbenchBottomBarLayout === WORKBENCH_BOTTOM_BAR_LAYOUT.COMPACT ? 'workbench-panel--compact-bottom-bar' : ''}`.trim();
   const renderWorkbenchFilterActionSizer = (iconOnly = false) => (
     <div className="workbench-filter-actions">
@@ -2041,7 +2053,8 @@ function WorkbenchPanel() {
       quickNote={quickNote}
       quickNotePlaceholder={t('workbench.quickNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
       expandedNotePlaceholder={t('workbench.expandedNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
-      workbenchSwitcher={toolbarWorkbenchSwitcher}
+      workbenchSwitcher={shouldCompactWorkbenchTopRail ? null : toolbarWorkbenchSwitcher}
+      showFilterToggle={!shouldCompactWorkbenchTopRail}
       hasActiveFilters={hasWorkbenchFilters}
       isFiltersCollapsed={isWorkbenchFiltersCollapsed}
       onToggleFiltersCollapsed={handleToggleWorkbenchFiltersCollapsed}
