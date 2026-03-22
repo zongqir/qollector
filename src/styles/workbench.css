@@ -1814,12 +1814,16 @@
 .workbench-card-link {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  width: 100%;
   gap: 5px;
 }
 
 .workbench-card-link .link-header {
   display: flex;
   align-items: center;
+  width: 100%;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -1831,6 +1835,8 @@
 }
 
 .workbench-card-link .link-domain {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 13px;
   font-weight: 400;
   color: var(--text-secondary);
