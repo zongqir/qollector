@@ -335,9 +335,6 @@
   gap: 8px;
   padding: 24px 16px;
   margin: 10px 16px 12px;
-  border: 1px dashed var(--state-panel-border);
-  border-radius: var(--state-panel-radius);
-  background: var(--state-panel-bg);
 }
 
 .workbench-quick-note {
@@ -1022,9 +1019,12 @@
   gap: 10px;
   padding: 24px;
   margin: 10px 16px 12px;
-  border: 1px dashed var(--state-panel-border);
-  border-radius: var(--state-panel-radius);
-  background: var(--state-panel-bg);
+}
+
+.workbench-empty.state-panel:not(.state-panel--error),
+.workbench-filter-empty.state-panel:not(.state-panel--error) {
+  border: none;
+  background: transparent;
 }
 
 .workbench-inline-editor {

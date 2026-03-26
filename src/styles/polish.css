@@ -629,11 +629,11 @@
 /* Density modes */
 
 .density-compact .titlebar {
-  height: 40px;
+  height: 36px;
 }
 
 .density-compact .app:not(.mini-mode) .titlebar {
-  padding: 3px 8px;
+  padding: 2px 7px;
 }
 
 .density-compact .app:not(.mini-mode) .titlebar-buttons {
@@ -641,20 +641,20 @@
 }
 
 .density-compact .app:not(.mini-mode) .titlebar-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
 }
 
 .density-compact .app:not(.mini-mode) .titlebar-btn-divider {
-  height: 16px;
-  margin: 0 4px;
+  height: 14px;
+  margin: 0 3px;
 }
 
 .density-compact .titlebar-status-pill {
-  min-height: 20px;
-  padding-inline: 7px;
-  font-size: 9.5px;
+  min-height: 18px;
+  padding-inline: 6px;
+  font-size: 9px;
 }
 
 .density-compact .header {

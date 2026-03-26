@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.6",
+      "publishedAt": "2026-03-26",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-6",
+      "summary": {
+        "zh-CN": "继续收紧顶部标题栏占位，并优化工作区空态在窄窗下的展示，让界面更紧凑也更易读。",
+        "en-US": "Further tightened the title-bar footprint and improved narrow workbench empty-state presentation so the interface stays compact without losing readability."
+      },
+      "highlights": {
+        "zh-CN": [
+          "继续压缩标题栏高度、按钮尺寸和左右留白，降低顶部菜单区域的整体视觉占用。",
+          "工作区空态移除普通状态下的内圈虚线框，缓解窄窗与 mini 模式下的文字拥挤和截断感。",
+          "保留工作区错误态的边框语义，确保加载失败或筛选异常时仍有明确状态反馈。",
+          "同步收敛 compact 密度下的标题栏比例，让 mini 与正常模式的顶部节奏更一致。"
+        ],
+        "en-US": [
+          "Further reduced title-bar height, button sizes, and horizontal padding to make the entire top menu area feel lighter.",
+          "Removed the inner dashed frame from the normal workbench empty state so narrow and mini layouts no longer squeeze the guidance text as aggressively.",
+          "Kept the bordered treatment for workbench error states so load or filtering failures still remain visually explicit.",
+          "Aligned compact-density title-bar proportions with the updated layout so normal and mini modes keep a more consistent top rhythm."
+        ]
+      }
+    },
+    {
       "version": "0.3.5",
       "publishedAt": "2026-03-21",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-5",

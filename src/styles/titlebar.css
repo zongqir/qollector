@@ -2,12 +2,12 @@
 .titlebar {
   position: relative;
   z-index: 120;
-  height: 46px;
-  padding: 6px 8px;
+  height: 40px;
+  padding: 4px 7px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background:
     linear-gradient(120deg, var(--surface-elevated), var(--surface-muted)),
     radial-gradient(circle at top left, color-mix(in srgb, var(--surface-glow) 72%, transparent), transparent 46%);
@@ -36,8 +36,8 @@
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-inline: 8px;
+  gap: 6px;
+  padding-inline: 6px;
   overflow: visible;
   position: relative;
   z-index: 1;
@@ -46,7 +46,7 @@
 .titlebar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   flex-shrink: 0;
@@ -55,7 +55,7 @@
 .titlebar-brand-drag {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex-shrink: 0;
 }
@@ -69,7 +69,7 @@
 .titlebar-mode-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   -webkit-app-region: no-drag;
 }
@@ -78,22 +78,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 20px;
-  padding: 0 8px;
+  min-height: 18px;
+  padding: 0 7px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent-color) 28%, transparent);
   background: color-mix(in srgb, var(--accent-light) 68%, transparent);
   color: var(--accent-color);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
 
 .titlebar-mini-flow-btn {
-  width: 24px;
-  height: 22px;
+  width: 22px;
+  height: 20px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 7px;
   border: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
   background: color-mix(in srgb, var(--bg-card) 92%, transparent);
   color: color-mix(in srgb, var(--text-secondary) 92%, var(--text-tertiary) 8%);
@@ -109,8 +109,8 @@
 }
 
 .titlebar-mini-flow-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .titlebar-mini-flow-btn:hover {
@@ -152,13 +152,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 20px;
-  padding: 0 9px;
+  min-height: 18px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-color) 68%, transparent);
   background: color-mix(in srgb, var(--bg-card) 74%, transparent);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -178,9 +178,9 @@
   display: none;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  min-height: 24px;
+  min-height: 22px;
   pointer-events: none;
   z-index: 1;
 }
@@ -193,13 +193,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 24px;
-  padding: 0 9px;
+  min-height: 22px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-light) 74%, transparent);
   background: color-mix(in srgb, var(--bg-card) 82%, transparent);
   color: var(--text-secondary);
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -243,9 +243,9 @@
 .glass-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 8px;
+  gap: 5px;
+  height: 22px;
+  padding: 0 7px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--border-light) 74%, transparent);
   background: color-mix(in srgb, var(--bg-card) 82%, transparent);
@@ -254,7 +254,7 @@
 }
 
 .glass-indicator-track {
-  width: 54px;
+  width: 48px;
   height: 4px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border-color) 72%, transparent);
@@ -273,7 +273,7 @@
   min-width: 4ch;
   flex: 0 0 4ch;
   text-align: right;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -295,7 +295,7 @@
   align-items: center;
   gap: 0;
   padding: 1px;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 1px solid color-mix(in srgb, var(--border-light) 72%, transparent);
   border-right-color: color-mix(in srgb, var(--border-light) 24%, transparent);
   background: color-mix(in srgb, var(--bg-card) 78%, transparent);
@@ -312,29 +312,29 @@
 .titlebar-btn-group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .titlebar-btn-group-capture {
   padding: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--accent-light) 30%, transparent);
 }
 
 .titlebar-layout-presets {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 2px;
-  border-radius: 7px;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--bg-card) 84%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-light) 76%, transparent);
 }
 
 .titlebar-layout-separator {
   width: 1px;
-  height: 13px;
+  height: 11px;
   margin-inline: 1px 0;
   border-radius: 999px;
   background: color-mix(in srgb, var(--border-color) 72%, transparent);
@@ -342,12 +342,12 @@
 }
 
 .titlebar-layout-btn {
-  width: 22px;
-  min-width: 22px;
-  height: 20px;
+  width: 20px;
+  min-width: 20px;
+  height: 18px;
   padding: 0;
   border: none;
-  border-radius: 5px;
+  border-radius: 4px;
   background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
@@ -361,8 +361,8 @@
 }
 
 .titlebar-layout-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .titlebar-layout-btn:hover {
@@ -394,18 +394,18 @@
 
 .titlebar-btn-divider {
   width: 1px;
-  height: 16px;
-  margin: 0 4px;
+  height: 14px;
+  margin: 0 3px;
   background: color-mix(in srgb, var(--border-color) 68%, transparent);
   border-radius: 999px;
   opacity: 0.85;
 }
 
 .titlebar-btn {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border: none;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
   color: color-mix(in srgb, var(--text-tertiary) 94%, var(--text-secondary) 6%);
   cursor: pointer;
@@ -421,6 +421,8 @@
 .titlebar-btn svg {
   display: block;
   flex-shrink: 0;
+  width: 13px;
+  height: 13px;
 }
 
 .titlebar-btn.close-btn svg {
@@ -600,13 +602,13 @@
   }
 
   .titlebar-btn-divider {
-    margin: 0 3px;
+    margin: 0 2px;
     opacity: 0.72;
   }
 
   .titlebar-layout-btn {
-    width: 22px;
-    min-width: 22px;
+    width: 20px;
+    min-width: 20px;
   }
 
   .titlebar-btn-group-capture {
@@ -617,10 +619,10 @@
 
 /* Mini mode titlebar */
 .app.mini-mode .titlebar {
-  height: 36px;
-  padding: 3px 8px 3px 5px;
+  height: 34px;
+  padding: 3px 7px 3px 5px;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
+  gap: 5px;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
 }
@@ -654,9 +656,9 @@
 }
 
 .app.mini-mode .titlebar-buttons {
-  gap: 2px;
+  gap: 1px;
   padding: 1px;
-  border-radius: 9px;
+  border-radius: 8px;
   align-self: center;
   justify-self: end;
   margin-right: 1px;
@@ -664,17 +666,17 @@
 }
 
 .app.mini-mode .titlebar-btn-group {
-  gap: 2px;
+  gap: 1px;
 }
 
 .app.mini-mode .titlebar-mini-flow-btn {
-  width: 24px;
-  height: 22px;
+  width: 22px;
+  height: 20px;
 }
 
 .app.mini-mode .titlebar-mini-flow-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .app.mini-mode .titlebar-drag-hitbox {
@@ -691,14 +693,14 @@
 }
 
 .app.mini-mode .titlebar-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
 }
 
 .app.mini-mode .titlebar-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .app.mini-mode .titlebar-btn.quick-add-btn,
