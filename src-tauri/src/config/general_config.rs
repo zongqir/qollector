@@ -146,6 +146,10 @@ fn default_auto_layout_switch_enabled() -> bool {
     true
 }
 
+fn default_autostart_enabled() -> bool {
+    true
+}
+
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
@@ -167,7 +171,7 @@ impl Default for GeneralConfig {
             cleanup_max_items: 50000,
             cleanup_max_age_days: 90,
             startup_favorites_view_enabled: false,
-            autostart_enabled: false,
+            autostart_enabled: default_autostart_enabled(),
             low_memory_mode_enabled: default_low_memory_mode_enabled(),
             auto_layout_switch_enabled: default_auto_layout_switch_enabled(),
             widget_enabled: false,

@@ -13,11 +13,46 @@ const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
 
 const NOTE_COLORS = [
-  { id: 'default', bg: 'var(--quick-input-bg)', swatch: '#d7dbe3' },
-  { id: 'amber', bg: 'rgba(255, 244, 214, calc(var(--glass-opacity) * 0.96))', swatch: '#f2bf4b' },
-  { id: 'mint', bg: 'rgba(228, 248, 236, calc(var(--glass-opacity) * 0.96))', swatch: '#59b87d' },
-  { id: 'sky', bg: 'rgba(232, 242, 255, calc(var(--glass-opacity) * 0.96))', swatch: '#67a5ff' },
-  { id: 'rose', bg: 'rgba(252, 236, 241, calc(var(--glass-opacity) * 0.96))', swatch: '#e786a5' },
+  {
+    id: 'default',
+    bg: 'var(--quick-input-bg)',
+    fg: 'var(--text-primary)',
+    muted: 'var(--text-secondary)',
+    placeholder: 'var(--text-tertiary)',
+    swatch: '#d7dbe3',
+  },
+  {
+    id: 'amber',
+    bg: 'rgba(255, 244, 214, calc(var(--glass-opacity) * 0.96))',
+    fg: '#5f4300',
+    muted: '#866319',
+    placeholder: '#ab8740',
+    swatch: '#f2bf4b',
+  },
+  {
+    id: 'mint',
+    bg: 'rgba(228, 248, 236, calc(var(--glass-opacity) * 0.96))',
+    fg: '#1e5031',
+    muted: '#427155',
+    placeholder: '#6d927b',
+    swatch: '#59b87d',
+  },
+  {
+    id: 'sky',
+    bg: 'rgba(232, 242, 255, calc(var(--glass-opacity) * 0.96))',
+    fg: '#21456f',
+    muted: '#486a94',
+    placeholder: '#7694b8',
+    swatch: '#67a5ff',
+  },
+  {
+    id: 'rose',
+    bg: 'rgba(252, 236, 241, calc(var(--glass-opacity) * 0.96))',
+    fg: '#6a3145',
+    muted: '#91586c',
+    placeholder: '#bc8799',
+    swatch: '#e786a5',
+  },
 ];
 
 const normalizeNoteColorId = (value) => (
@@ -229,7 +264,12 @@ function QuickNoteOverlay({
         role="dialog"
         aria-modal="true"
         aria-label={t('quickInput.title')}
-        style={{ '--quick-note-card-bg': activeColor.bg }}
+        style={{
+          '--quick-note-card-bg': activeColor.bg,
+          '--quick-note-card-fg': activeColor.fg,
+          '--quick-note-card-muted': activeColor.muted,
+          '--quick-note-card-placeholder': activeColor.placeholder,
+        }}
         onClick={(event) => event.stopPropagation()}
       >
         <header className="quick-note-card-header">

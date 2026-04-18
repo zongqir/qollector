@@ -267,6 +267,8 @@ function WorkbenchPanel() {
   const createWorkbench = useAppStore(s => s.createWorkbench);
   const renameWorkbench = useAppStore(s => s.renameWorkbench);
   const deleteWorkbench = useAppStore(s => s.deleteWorkbench);
+  const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
+  const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
 
   const activeWorkbench = useMemo(
     () => workbenches.find((workbench) => workbench.id === activeWorkbenchId)
@@ -274,6 +276,7 @@ function WorkbenchPanel() {
       || null,
     [workbenches, activeWorkbenchId],
   );
+  const isWorkbenchSplitView = workbenchPanelEnabled && historyStreamEnabled;
 
   const getWorkbenchDisplayName = useCallback((workbench) => {
     if (workbench?.is_default) return t('workbench.defaultWorkbench');
@@ -1761,6 +1764,15 @@ function WorkbenchPanel() {
     const scheduleLayoutUpdate = () => {
       window.cancelAnimationFrame(rafId);
       rafId = window.requestAnimationFrame(() => {
+        if (isWorkbenchSplitView) {
+          setIsWorkbenchQuickNoteNarrow((current) => (current ? false : current));
+          setShouldCollapseWorkbenchFilterText((current) => (current ? false : current));
+          setWorkbenchBottomBarLayout((current) => (
+            current === WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL ? current : WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL
+          ));
+          return;
+        }
+
         const panelWidth = workbenchPanelRef.current?.clientWidth || 0;
         const filterRowWidth = workbenchFilterRowRef.current?.clientWidth || 0;
         const filterFullWidth = measureNodeWidth(workbenchFilterFullSizerRef.current);
@@ -1820,6 +1832,7 @@ function WorkbenchPanel() {
   }, [
     allTags.length,
     i18n.language,
+    isWorkbenchSplitView,
     isWorkbenchFiltersCollapsed,
     isWorkbenchSortMode,
     quickActions.quickOutputTask,
@@ -1829,6 +1842,7 @@ function WorkbenchPanel() {
   ]);
 
   useEffect(() => {
+    if (isWorkbenchSplitView) return;
     if (!(isWorkbenchQuickNoteNarrow || shouldCollapseWorkbenchFilterText)) return;
     dismissOpenDropdowns();
     closeWorkbenchSwitcherOverlays();
@@ -1842,6 +1856,7 @@ function WorkbenchPanel() {
   }, [
     closeWorkbenchSwitcherOverlays,
     dismissOpenDropdowns,
+    isWorkbenchSplitView,
     isWorkbenchQuickNoteNarrow,
     shouldCollapseWorkbenchFilterText,
   ]);

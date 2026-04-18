@@ -2,12 +2,12 @@
 .titlebar {
   position: relative;
   z-index: 120;
-  height: 40px;
-  padding: 4px 7px;
+  height: 38px;
+  padding: 2px 7px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   background:
     linear-gradient(120deg, var(--surface-elevated), var(--surface-muted)),
     radial-gradient(circle at top left, color-mix(in srgb, var(--surface-glow) 72%, transparent), transparent 46%);
@@ -36,8 +36,8 @@
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-inline: 6px;
+  gap: 5px;
+  padding-inline: 5px;
   overflow: visible;
   position: relative;
   z-index: 1;
@@ -294,8 +294,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0;
-  padding: 1px;
-  border-radius: 9px;
+  padding: 0;
+  border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--border-light) 72%, transparent);
   border-right-color: color-mix(in srgb, var(--border-light) 24%, transparent);
   background: color-mix(in srgb, var(--bg-card) 78%, transparent);
@@ -306,7 +306,7 @@
 
 .app:not(.mini-mode) .titlebar-buttons {
   align-self: center;
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .titlebar-btn-group {
@@ -326,8 +326,8 @@
   display: inline-flex;
   align-items: center;
   gap: 1px;
-  padding: 1px;
-  border-radius: 6px;
+  padding: 0;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--bg-card) 84%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-light) 76%, transparent);
 }

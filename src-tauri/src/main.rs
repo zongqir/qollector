@@ -426,7 +426,16 @@ fn main() {
                     )
                     .expect("Failed to load startup configs");
                 init_meter.mark("load_startup_configs");
+                let is_first_run_general_config = general_config_opt.is_none();
                 let general_config = general_config_opt.unwrap_or_default();
+                if is_first_run_general_config {
+                    if let Err(error) = config_repo.save_general_config(&general_config).await {
+                        eprintln!(
+                            "[Config] failed to persist first-run general config defaults: {}",
+                            error
+                        );
+                    }
+                }
 
                 let ai_config = ai_config_opt.unwrap_or_default();
                 println!("AI config loaded: enabled={}", ai_config.enabled);
@@ -594,11 +603,13 @@ fn main() {
                 });
                 init_meter.mark("spawn_clipboard_monitor");
                 startup_metrics_for_core_init.mark_monitor_spawn_complete();
-                general_config
+                (general_config, is_first_run_general_config)
             });
 
             setup_meter.mark("setup_complete");
             startup_metrics_for_setup.mark_setup_complete();
+
+            let (startup_general_config, is_first_run_general_config) = startup_general_config;
 
             if let Some(low_memory_mode_state) =
                 app_handle_for_shortcuts.try_state::<LowMemoryModeState>()
@@ -611,6 +622,25 @@ fn main() {
                     app_handle_for_shortcuts.clone(),
                     "startup_low_memory_mode",
                 );
+            }
+
+            if is_first_run_general_config && startup_general_config.autostart_enabled {
+                match app_handle_for_shortcuts.autolaunch().is_enabled() {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        if let Err(error) = app_handle_for_shortcuts.autolaunch().enable() {
+                            eprintln!("[Autostart] Failed to enable first-run autostart: {}", error);
+                        } else {
+                            println!("[Autostart] Enabled by first-run default");
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "[Autostart] Failed to query first-run autostart state: {}",
+                            error
+                        );
+                    }
+                }
             }
 
             // Register global shortcuts

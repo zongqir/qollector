@@ -1428,7 +1428,7 @@ function App() {
       <AppMemorySuspendHost />
       <AppCopyFeedbackHost showAppFeedback={showAppFeedback} />
       <div
-        className={`app ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
+        className={`app view-mode-${activeViewMode} ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
         role="application"
         aria-label={t('app.title')}
       >

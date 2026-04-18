@@ -234,7 +234,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     cleanup_max_age_days: 90,
     copy_qollect_source_items: false,
     startup_favorites_view_enabled: false,
-    autostart_enabled: false,
+    autostart_enabled: true,
     low_memory_mode_enabled: false,
     auto_layout_switch_enabled: true,
     smart_copy_entry_enabled: false,

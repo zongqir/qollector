@@ -633,11 +633,11 @@
 }
 
 .density-compact .app:not(.mini-mode) .titlebar {
-  padding: 2px 7px;
+  padding: 1px 7px;
 }
 
 .density-compact .app:not(.mini-mode) .titlebar-buttons {
-  padding: 1px;
+  padding: 0;
 }
 
 .density-compact .app:not(.mini-mode) .titlebar-btn {
@@ -658,7 +658,7 @@
 }
 
 .density-compact .header {
-  padding: 6px 9px;
+  padding: 4px 9px 5px;
   gap: 5px;
 }
 
@@ -876,7 +876,7 @@
 }
 
 .density-cozy .titlebar {
-  height: 48px;
+  height: 44px;
 }
 
 .density-cozy .titlebar-status-pill {
@@ -886,7 +886,7 @@
 }
 
 .density-cozy .header {
-  padding: 11px 12px 10px;
+  padding: 7px 12px 10px;
   gap: 7px;
 }
 
@@ -1125,117 +1125,117 @@
   padding: 1px 7px;
 }
 
-.density-compact .workbench-filter-row {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-row {
   margin: 6px 12px 0;
   padding: 6px 8px;
   border-radius: 10px;
 }
 
-.density-compact .workbench-filter-summary {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-summary {
   margin: 4px 12px 0;
 }
 
-.density-compact .workbench-search-input {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-search-input {
   font-size: 12px;
 }
 
-.density-compact .workbench-cards {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-cards {
   --workbench-card-column-min: 166px;
   --workbench-card-column-gap: 10px;
   padding: calc(var(--panel-rail-content-gap) + 1px) 12px 10px;
 }
 
-.density-compact .workbench-cards.sort-mode {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-cards.sort-mode {
   grid-template-columns: repeat(auto-fill, minmax(var(--workbench-card-column-min), 1fr));
   gap: var(--workbench-card-column-gap);
 }
 
-.density-compact .workbench-card {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card {
   padding: 9px;
   border-radius: 12px;
 }
 
-.density-compact .workbench-card-tools {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tools {
   top: 6px;
   right: 6px;
 }
 
-.density-compact .workbench-card-header {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-header {
   gap: 6px;
   margin-bottom: 4px;
 }
 
-.density-compact .workbench-card-meta {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-meta {
   gap: 4px;
   font-size: 10px;
 }
 
-.density-compact .workbench-card-source {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-source {
   max-width: 94px;
   font-size: 10px;
 }
 
-.density-compact .workbench-card-source,
-.density-compact .workbench-card-note,
-.density-compact .workbench-card-tags {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-source,
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-note,
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tags {
   display: none;
 }
 
-.density-compact .workbench-card:hover .workbench-card-source {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card:hover .workbench-card-source {
   display: inline;
 }
 
-.density-compact .workbench-card:is(:hover, :focus-visible, .multi-selected, .sort-anchor, :has(.workbench-card-color-picker)) .workbench-card-note {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card:is(:hover, :focus-visible, .multi-selected, .sort-anchor, :has(.workbench-card-color-picker)) .workbench-card-note {
   display: -webkit-box;
 }
 
-.density-compact .workbench-card:is(:hover, :focus-visible, .multi-selected, .sort-anchor, :has(.workbench-card-color-picker)) .workbench-card-tags {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card:is(:hover, :focus-visible, .multi-selected, .sort-anchor, :has(.workbench-card-color-picker)) .workbench-card-tags {
   display: flex;
 }
 
-.density-compact .workbench-card-content {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-content {
   margin-bottom: 6px;
 }
 
-.density-compact .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card:not(:has(.workbench-card-image)) .workbench-card-content {
   padding-right: 0;
 }
 
-.density-compact .workbench-card-text {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-text {
   font-size: 12.5px;
   -webkit-line-clamp: 4;
 }
 
-.density-compact .workbench-card-link .link-domain {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-domain {
   font-size: 11px;
 }
 
-.density-compact .workbench-card-link .link-path {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-path {
   font-size: 10px;
 }
 
-.density-compact .workbench-card-note {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-note {
   font-size: 11px;
   -webkit-line-clamp: 1;
   line-clamp: 1;
 }
 
-.density-compact .workbench-card-tag {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tag {
   font-size: 10px;
   padding: 1px 7px;
 }
 
-.density-compact .workbench-bottom-bar {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar {
   gap: 6px;
   padding: 8px 12px;
 }
 
-.density-compact .workbench-btn {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-btn {
   min-height: 31px;
   font-size: 12px;
 }
 
-.density-compact .workbench-bottom-bar.workbench-bottom-bar--compact {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar.workbench-bottom-bar--compact {
   gap: 3px;
   padding: 0 6px;
   height: 32px;
@@ -1243,24 +1243,24 @@
   max-height: 32px;
 }
 
-.density-compact .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar.workbench-bottom-bar--compact .workbench-btn {
   min-height: 22px;
   height: 22px;
   font-size: 10px;
 }
 
-.density-compact .workbench-bottom-bar.workbench-bottom-bar--label {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar.workbench-bottom-bar--label {
   gap: 6px;
   padding: 4px 10px;
 }
 
-.density-compact .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar.workbench-bottom-bar--label .workbench-btn {
   min-height: 28px;
   height: 28px;
   font-size: 11px;
 }
 
-.density-compact .workbench-more-btn {
+.density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-more-btn {
   padding: 6px 8px;
 }
 
