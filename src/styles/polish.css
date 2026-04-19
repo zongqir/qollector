@@ -1507,6 +1507,116 @@
   padding: 8px 12px;
 }
 
+@container workbench-panel (max-width: 460px) {
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-panel,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-panel {
+    padding: 2px 4px 4px;
+    gap: 0;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-row,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-row {
+    margin: 4px 4px 0;
+    padding: 5px 6px;
+    border-radius: 9px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-summary,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-filter-summary {
+    margin: 3px 4px 0;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-cards,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-cards {
+    --workbench-card-column-min: 0px;
+    --workbench-card-column-gap: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 2px 4px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-cards.sort-mode,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-cards.sort-mode {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--workbench-card-column-gap);
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card {
+    padding: 5px;
+    border-radius: 8px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tools,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tools {
+    top: 3px;
+    right: 3px;
+    gap: 1px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-header,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-header {
+    margin-bottom: 2px;
+    gap: 3px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-meta,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-meta {
+    gap: 2px;
+    font-size: 9.5px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-content,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-content {
+    margin-bottom: 3px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-text,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-title,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-text,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-title {
+    font-size: 11.5px;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-domain,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-path,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-note,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tag,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-files .file-item,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-domain,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-link .link-path,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-note,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-tag,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-files .file-item {
+    font-size: 9.5px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-dragout,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-remove,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-color,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-dragout,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-remove,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-color {
+    width: 18px;
+    height: 18px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-type-icon,
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-card-state-chip,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-type-icon,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-card-state-chip {
+    width: 13px;
+    height: 13px;
+  }
+
+  .density-compact .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar,
+  .density-cozy .app:not(.mini-mode):not(.view-mode-all) .workbench-bottom-bar {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+}
+
 .density-compact .app.mini-mode .collection-grid {
   --collection-grid-min: 138px;
   --collection-grid-gap: 4px;
