@@ -1831,10 +1831,16 @@
 .compact-card {
   border-radius: var(--card-shell-radius);
   padding: 11px var(--history-card-padding-inline) 10px;
-  border: 1px solid var(--card-shell-border);
+  border: 1px solid color-mix(in srgb, var(--card-shell-border) 42%, transparent);
   background:
-    linear-gradient(165deg, color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 94%, transparent), color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 80%, transparent));
-  box-shadow: var(--card-shell-shadow-rest);
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 96%, transparent),
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 90%, transparent)
+    );
+  box-shadow:
+    0 3px 10px color-mix(in srgb, var(--shadow-sm) 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 16%, transparent);
   transition:
     transform var(--card-shell-motion-duration) var(--card-shell-motion-ease),
     border-color var(--card-shell-motion-duration) var(--card-shell-motion-ease),
@@ -1844,8 +1850,10 @@
 
 .compact-card:hover {
   transform: translateY(var(--card-shell-lift-y));
-  border-color: var(--card-shell-border-hover);
-  box-shadow: var(--card-shell-shadow-hover);
+  border-color: color-mix(in srgb, var(--card-shell-border-hover) 72%, transparent);
+  box-shadow:
+    0 10px 22px color-mix(in srgb, var(--shadow-md) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 24%, transparent);
 }
 
 .compact-card:active:not(.selected):not(.multi-selected) {

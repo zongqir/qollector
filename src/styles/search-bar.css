@@ -482,8 +482,8 @@
 }
 
 .app.mini-mode .type-select-wrapper.mini-type-filter .type-select-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .app.mini-mode .header {
@@ -493,7 +493,7 @@
   --top-rail-input-height: var(--top-rail-mini-input-height);
   --top-rail-input-radius: var(--top-rail-mini-input-radius);
   --top-rail-input-padding-x: var(--top-rail-mini-input-padding-x);
-  padding: 6px 8px;
+  padding: 4px 6px 5px;
   gap: var(--top-rail-control-gap);
 }
 
@@ -505,15 +505,15 @@
   height: var(--top-rail-input-height);
   min-height: var(--top-rail-input-height);
   border-radius: var(--top-rail-input-radius);
-  padding: 0 20px 0 var(--top-rail-input-padding-x);
-  font-size: 12px;
+  padding: 0 18px 0 var(--top-rail-input-padding-x);
+  font-size: 11.5px;
   line-height: 1.2;
 }
 
 .app.mini-mode .clear-search {
-  width: 15px;
-  height: 15px;
-  right: 4px;
+  width: 14px;
+  height: 14px;
+  right: 3px;
 }
 
 .app.mini-mode .search-recent-dropdown {
@@ -542,8 +542,8 @@
 }
 
 .app.mini-mode .header-icon-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .app.mini-mode .icon-btn-badge {
@@ -556,26 +556,32 @@
 
 /* ========== Scheme C Overrides: Search Rail ========== */
 .header {
-  margin: 8px calc(var(--history-panel-gutter, 10px) + var(--history-scroller-inline-end-compensation, 0px)) 4px
-    var(--history-panel-gutter, 10px);
-  padding: 5px 10px var(--panel-rail-content-gap);
+  --search-rail-inline-gap: max(6px, calc(var(--history-panel-gutter, 10px) - 2px));
+  margin: 2px calc(var(--search-rail-inline-gap) + var(--history-scroller-inline-end-compensation, 0px)) 4px
+    var(--search-rail-inline-gap);
+  padding: 3px 8px var(--panel-rail-content-gap);
   gap: 8px;
   background: var(--panel-rail-glass-bg);
   border: 1px solid var(--panel-rail-glass-border);
   border-radius: 12px;
   position: sticky;
-  top: 8px;
+  top: 2px;
   z-index: 14;
   box-shadow: var(--panel-rail-glass-shadow);
   -webkit-backdrop-filter: blur(var(--panel-rail-glass-blur));
   backdrop-filter: blur(var(--panel-rail-glass-blur));
 }
 
+.history-stream .header {
+  margin: 2px calc(var(--history-card-gutter-inline-end, var(--search-rail-inline-gap)) + var(--history-scroller-inline-end-compensation, 0px)) 4px
+    var(--history-card-gutter-inline-start, var(--search-rail-inline-gap));
+}
+
 .header::after {
   content: '';
   position: absolute;
-  left: 10px;
-  right: 10px;
+  left: 8px;
+  right: 8px;
   bottom: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-glow) 62%, transparent), transparent);
@@ -698,10 +704,10 @@
 }
 
 .app.mini-mode .header {
-  margin: 4px calc(var(--history-panel-gutter, 6px) + var(--history-scroller-inline-end-compensation, 0px)) 3px
+  margin: 3px calc(var(--history-panel-gutter, 6px) + var(--history-scroller-inline-end-compensation, 0px)) 2px
     var(--history-panel-gutter, 6px);
-  padding: 5px 8px 6px;
-  top: 4px;
+  padding: 3px 6px 4px;
+  top: 3px;
   gap: var(--top-rail-control-gap);
   border: 1px solid var(--panel-rail-mini-border);
   border-radius: 8px;
@@ -711,12 +717,17 @@
   -webkit-backdrop-filter: none;
 }
 
+.app.mini-mode .history-stream .header {
+  margin: 3px calc(var(--history-card-gutter-inline-end, var(--history-panel-gutter, 6px)) + var(--history-scroller-inline-end-compensation, 0px)) 2px
+    var(--history-card-gutter-inline-start, var(--history-panel-gutter, 6px));
+}
+
 .app.mini-mode .search-input {
   height: var(--top-rail-input-height);
   min-height: var(--top-rail-input-height);
   border-radius: var(--top-rail-input-radius);
-  padding: 0 21px 0 var(--top-rail-input-padding-x);
-  font-size: 12px;
+  padding: 0 18px 0 var(--top-rail-input-padding-x);
+  font-size: 11.5px;
   line-height: 1.2;
 }
 
@@ -724,6 +735,17 @@
   width: var(--top-rail-control-height);
   height: var(--top-rail-control-height);
   border-radius: var(--top-rail-control-radius);
+}
+
+.app.mini-mode .header-icon-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.app.mini-mode .clear-search {
+  width: 14px;
+  height: 14px;
+  right: 3px;
 }
 
 .app.mini-mode .header::after {

@@ -80,10 +80,10 @@
 }
 
 .compact-card {
-  border-color: color-mix(in srgb, var(--surface-border-soft) 90%, transparent);
+  border-color: color-mix(in srgb, var(--surface-border-soft) 46%, transparent);
   box-shadow:
-    0 8px 16px color-mix(in srgb, var(--shadow-sm) 62%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 34%, transparent);
+    0 3px 10px color-mix(in srgb, var(--shadow-sm) 26%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 16%, transparent);
 }
 
 .compact-card::after {
@@ -95,12 +95,12 @@
   height: 1px;
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-glow) 56%, transparent), transparent);
-  opacity: 0.52;
+  opacity: 0.14;
   pointer-events: none;
 }
 
 .compact-card:hover {
-  border-color: color-mix(in srgb, var(--surface-border-strong) 84%, transparent);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 62%, transparent);
 }
 
 .compact-card.selected,

@@ -368,11 +368,11 @@
   --history-panel-gutter-x: 10px;
   --history-panel-gutter-x-mini: 6px;
   --history-scroller-inline-end-compensation: var(--app-scrollbar-width);
-  --history-card-gutter-left: 10px;
-  --history-card-gutter-right: 10px;
+  --history-card-gutter-left: 6px;
+  --history-card-gutter-right: 2px;
   --history-card-gutter-left-mini: 6px;
-  --history-card-gutter-right-mini: 6px;
-  --history-card-padding-x: 12px;
+  --history-card-gutter-right-mini: 0px;
+  --history-card-padding-x: 10px;
   --history-card-padding-x-mini: 8px;
   --history-rail-node-left: 3px;
   --history-rail-track-left: 5px;
