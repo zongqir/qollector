@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.7",
+      "publishedAt": "2026-04-19",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-7",
+      "summary": {
+        "zh-CN": "默认开启开机自启，并继续打磨历史流与工作区的窄窗界面，让整体布局更紧凑也更顺眼。",
+        "en-US": "Enabled autostart by default and continued refining narrow-window history and workbench layouts so the interface feels tighter and more visually consistent."
+      },
+      "highlights": {
+        "zh-CN": [
+          "默认开启开机自启，并在首次启动时持久化设置，新安装后无需额外配置即可随系统启动。",
+          "收紧标题栏、顶部筛选区与快速记录相关样式，统一紧凑和宽松密度下的顶部节奏。",
+          "历史流顶部搜索筛选区与下方卡片重新对齐，mini 与正常模式同步弱化卡片边框、阴影和卡片间分隔线。",
+          "工作区在窄窗和单列场景下进一步压缩卡片内边距、字号和列宽约束，减少右侧内容被截断的问题。"
+        ],
+        "en-US": [
+          "Enabled autostart by default and persisted the setting on first launch, so fresh installs can start with the system without extra setup.",
+          "Tightened the title bar, top filter rail, and quick-note styling to keep a more consistent top rhythm across compact and cozy densities.",
+          "Realigned the history search rail with the cards below it, and softened card borders, shadows, and separators in both normal and mini modes.",
+          "Further compacted workbench cards in narrow and single-column layouts by reducing padding, type scale, and column constraints so the right side is less likely to feel clipped."
+        ]
+      }
+    },
+    {
       "version": "0.3.6",
       "publishedAt": "2026-03-26",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-6",
