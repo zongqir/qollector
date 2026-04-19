@@ -72,7 +72,6 @@ jobs:
             echo "::error::Signing key invalid. Check TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
             exit 1
           fi
-          rm -f "$RUNNER_TEMP/sign_test.txt" "$RUNNER_TEMP/sign_test.txt.sig"
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -87,6 +86,15 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+
+      - name: Verify updater pubkey matches signing key
+        shell: bash
+        run: |
+          cargo run --manifest-path src-tauri/Cargo.toml --bin check-updater-signature -- \
+            "$RUNNER_TEMP/sign_test.txt" \
+            "$RUNNER_TEMP/sign_test.txt.sig" \
+            "src-tauri/tauri.conf.json"
+          rm -f "$RUNNER_TEMP/sign_test.txt" "$RUNNER_TEMP/sign_test.txt.sig"
 
       - name: Get version
         id: version
