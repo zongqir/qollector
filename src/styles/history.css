@@ -1732,7 +1732,7 @@
   border-right: 1px solid var(--surface-border-soft);
   background:
     var(--panel-ambient-overlay),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 94%, transparent), color-mix(in srgb, var(--surface-muted) 74%, transparent));
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 96%, transparent), color-mix(in srgb, var(--surface-muted) 84%, transparent));
 }
 
 .history-stream::before {
@@ -1831,16 +1831,16 @@
 .compact-card {
   border-radius: var(--card-shell-radius);
   padding: 11px var(--history-card-padding-inline) 10px;
-  border: 1px solid color-mix(in srgb, var(--card-shell-border) 42%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-shell-border) 18%, transparent);
   background:
     linear-gradient(
       165deg,
-      color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 96%, transparent),
-      color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 90%, transparent)
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 98%, transparent),
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 95%, transparent)
     );
   box-shadow:
-    0 3px 10px color-mix(in srgb, var(--shadow-sm) 24%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 16%, transparent);
+    0 1px 4px color-mix(in srgb, var(--shadow-sm) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 8%, transparent);
   transition:
     transform var(--card-shell-motion-duration) var(--card-shell-motion-ease),
     border-color var(--card-shell-motion-duration) var(--card-shell-motion-ease),
@@ -1850,10 +1850,10 @@
 
 .compact-card:hover {
   transform: translateY(var(--card-shell-lift-y));
-  border-color: color-mix(in srgb, var(--card-shell-border-hover) 72%, transparent);
+  border-color: color-mix(in srgb, var(--card-shell-border-hover) 36%, transparent);
   box-shadow:
-    0 10px 22px color-mix(in srgb, var(--shadow-md) 40%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 24%, transparent);
+    0 6px 14px color-mix(in srgb, var(--shadow-md) 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 12%, transparent);
 }
 
 .compact-card:active:not(.selected):not(.multi-selected) {

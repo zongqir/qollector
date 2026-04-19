@@ -80,10 +80,10 @@
 }
 
 .compact-card {
-  border-color: color-mix(in srgb, var(--surface-border-soft) 46%, transparent);
+  border-color: color-mix(in srgb, var(--surface-border-soft) 20%, transparent);
   box-shadow:
-    0 3px 10px color-mix(in srgb, var(--shadow-sm) 26%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 16%, transparent);
+    0 1px 4px color-mix(in srgb, var(--shadow-sm) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--surface-glow) 8%, transparent);
 }
 
 .compact-card::after {
@@ -95,12 +95,12 @@
   height: 1px;
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface-glow) 56%, transparent), transparent);
-  opacity: 0.14;
+  opacity: 0.03;
   pointer-events: none;
 }
 
 .compact-card:hover {
-  border-color: color-mix(in srgb, var(--surface-border-strong) 62%, transparent);
+  border-color: color-mix(in srgb, var(--surface-border-strong) 34%, transparent);
 }
 
 .compact-card.selected,
@@ -129,6 +129,7 @@
 
 .history-stream-row {
   padding-left: var(--history-card-gutter-inline-start);
+  padding-right: var(--history-card-gutter-inline-end);
 }
 
 .history-stream-row.group-start {
@@ -140,7 +141,15 @@
 }
 
 .history-stream-row::after {
-  display: none;
+  content: '';
+  position: absolute;
+  left: calc(var(--history-card-gutter-inline-start) + 12px);
+  right: calc(var(--history-card-gutter-inline-end) + 12px);
+  top: -1px;
+  height: 1px;
+  background: color-mix(in srgb, var(--surface-border-soft) 42%, transparent);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .history-stream-row.group-start::after {
@@ -154,6 +163,12 @@
 
 .history-stream-row.group-start:hover::after {
   opacity: 0.62;
+}
+
+.history-stream-row:has(.compact-card:hover)::after,
+.history-stream-row:has(.compact-card.selected)::after,
+.history-stream-row:has(.compact-card.multi-selected)::after {
+  opacity: 0;
 }
 
 .history-stream-row:has(.compact-card.selected)::before,
@@ -1811,7 +1826,7 @@
 }
 
 .dark-mode .compact-card::after {
-  opacity: 0.45;
+  opacity: 0.12;
 }
 
 .dark-mode .preview-nav,
@@ -1840,13 +1855,32 @@ html:not(.dark-mode) .preview-tool-btn.secondary {
 .app.mini-mode .preview-nav::after,
 .app.mini-mode .history-stream-content::before,
 .app.mini-mode .history-stream-content::after,
-.app.mini-mode .history-stream-row::before,
-.app.mini-mode .history-stream-row::after {
+.app.mini-mode .history-stream-row::before {
   display: none;
 }
 
 .app.mini-mode .compact-card {
   border-color: color-mix(in srgb, var(--surface-border-soft) 92%, transparent);
+}
+
+.app.mini-mode .history-stream .history-stream-row::after {
+  left: calc(var(--history-card-gutter-inline-start) + 10px);
+  right: calc(var(--history-card-gutter-inline-end) + 10px);
+  background: color-mix(in srgb, var(--surface-border-soft) 38%, transparent);
+}
+
+.app.mini-mode .history-stream .compact-card {
+  border-color: color-mix(in srgb, var(--surface-border-soft) 18%, transparent);
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-elevated)) 98%, transparent),
+      color-mix(in srgb, var(--compact-card-bg, var(--surface-muted)) 96%, transparent)
+    );
+}
+
+.app.mini-mode .history-stream .compact-card:hover {
+  border-color: color-mix(in srgb, var(--surface-border-strong) 30%, transparent);
 }
 
 .app.mini-mode .history-group-jump {
