@@ -27,10 +27,13 @@ function WorkbenchQuickActionsBar({
   workbenchMoreMenuRef,
   activeAction,
   feedback,
+  pendingClearConfirm,
   lastClearedPinnedIds,
   hasSnapshot,
   handleRunQuickOutput,
   handleQuickOutputMenuSelect,
+  handleCancelClearAll,
+  handleConfirmClearAll,
   handleUndoClearAll,
   workbenchPrimaryAction,
   handleRunWorkbenchPrimaryAction,
@@ -395,7 +398,35 @@ function WorkbenchQuickActionsBar({
 
         {workbenchSwitcher}
 
-        {feedback && (
+        {pendingClearConfirm && (
+          <div className="workbench-bottom-feedback workbench-bottom-feedback--confirm ui-feedback warning" role="alert" aria-live="assertive">
+            <div className="workbench-bottom-feedback-copy">
+              <span className="workbench-bottom-feedback-title">{t('workbench.clearAllConfirmTitle')}</span>
+              <span>{t('workbench.clearAllConfirmBody')}</span>
+            </div>
+            <div className="workbench-bottom-feedback-actions">
+              <button
+                type="button"
+                className="workbench-bottom-feedback-undo"
+                onClick={handleCancelClearAll}
+                disabled={isBusy}
+              >
+                <span className="workbench-btn-label">{t('workbench.cancel')}</span>
+              </button>
+              <button
+                type="button"
+                className="workbench-bottom-feedback-undo workbench-bottom-feedback-undo--danger"
+                onClick={handleConfirmClearAll}
+                disabled={isBusy}
+              >
+                {activeAction === 'clear' ? <Loader2 size={12} className="workbench-feedback-spinner" /> : <Trash2 size={12} />}
+                <span className="workbench-btn-label">{t('workbench.clearAllConfirmAction')}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {feedback && !pendingClearConfirm && (
           <div className={`workbench-bottom-feedback ui-feedback ${feedback.type}`} role="status" aria-live="polite">
             <span>{feedback.text}</span>
             {feedback.withUndo && lastClearedPinnedIds.length > 0 && (

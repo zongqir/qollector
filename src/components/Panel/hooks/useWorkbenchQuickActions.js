@@ -116,6 +116,7 @@ function useWorkbenchQuickActions({
   const [showQuickOutputMenu, setShowQuickOutputMenu] = useState(false);
   const [showWorkbenchMoreMenu, setShowWorkbenchMoreMenu] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [pendingClearConfirm, setPendingClearConfirm] = useState(false);
   const [lastClearedPinnedIds, setLastClearedPinnedIds] = useState([]);
   const [hasSnapshot, setHasSnapshot] = useState(() => Boolean(readSnapshot()));
   const [workbenchPrimaryAction, setWorkbenchPrimaryAction] = useState(() => readWorkbenchPrimaryAction());
@@ -141,6 +142,11 @@ function useWorkbenchQuickActions({
     if (!quickOutputTaskOverridden) return;
     setQuickOutputTaskOverridden(false);
   }, [pinnedItems.length, quickOutputTaskOverridden]);
+
+  useEffect(() => {
+    if (pinnedItems.length > 0) return;
+    setPendingClearConfirm(false);
+  }, [pinnedItems.length]);
 
   const isBusy = quickOutputRunning || activeAction != null;
 
@@ -184,6 +190,7 @@ function useWorkbenchQuickActions({
   const handleRunQuickOutput = useCallback(async (taskType = quickOutputTask) => {
     if (isBusy) return;
     closeMenus();
+    setPendingClearConfirm(false);
 
     if (!aiEnabled) {
       showMessage({ type: 'warning', text: t('workbench.aiNotEnabled') });
@@ -255,6 +262,7 @@ function useWorkbenchQuickActions({
   const handleSaveSnapshot = useCallback(async () => {
     if (isBusy) return;
     closeMenus();
+    setPendingClearConfirm(false);
 
     const pinnedIds = pinnedItems.map(item => item.id);
     if (pinnedIds.length === 0) {
@@ -281,6 +289,7 @@ function useWorkbenchQuickActions({
   const handleRestoreSnapshot = useCallback(async () => {
     if (isBusy) return;
     closeMenus();
+    setPendingClearConfirm(false);
 
     const snapshot = readSnapshot();
     if (!snapshot?.ids?.length) {
@@ -327,6 +336,7 @@ function useWorkbenchQuickActions({
   const handleExportWorkbench = useCallback(async () => {
     if (isBusy) return;
     closeMenus();
+    setPendingClearConfirm(false);
 
     if (pinnedItems.length === 0) {
       showMessage({ type: 'warning', text: t('workbench.exportNoItems') });
@@ -352,11 +362,20 @@ function useWorkbenchQuickActions({
   }, [isBusy, closeMenus, pinnedItems, t, showMessage]);
 
   const handleClearAll = useCallback(async () => {
-    if (isBusy || pinnedItems.length === 0) return;
+    if (isBusy || pinnedItems.length === 0 || pendingClearConfirm) return;
     closeMenus();
+    setFeedback(null);
+    setPendingClearConfirm(true);
+  }, [isBusy, pinnedItems.length, pendingClearConfirm, closeMenus]);
 
-    const confirmed = window.confirm(t('workbench.clearAllConfirm'));
-    if (!confirmed) return;
+  const handleCancelClearAll = useCallback(() => {
+    if (activeAction === 'clear') return;
+    setPendingClearConfirm(false);
+  }, [activeAction]);
+
+  const handleConfirmClearAll = useCallback(async () => {
+    if (isBusy || pinnedItems.length === 0) return;
+    setPendingClearConfirm(false);
 
     const pinnedIdsSnapshot = pinnedItems.map(item => item.id);
     setActiveAction('clear');
@@ -378,10 +397,11 @@ function useWorkbenchQuickActions({
     } finally {
       setActiveAction(null);
     }
-  }, [activeWorkbenchId, isBusy, pinnedItems, closeMenus, t, loadItems, setPanelMode, showMessage]);
+  }, [activeWorkbenchId, isBusy, pinnedItems, t, loadItems, setPanelMode, showMessage]);
 
   const handleUndoClearAll = useCallback(async () => {
     if (isBusy || lastClearedPinnedIds.length === 0) return;
+    setPendingClearConfirm(false);
     setActiveAction('undo-clear');
     try {
       for (const id of lastClearedPinnedIds) {
@@ -439,6 +459,7 @@ function useWorkbenchQuickActions({
     showWorkbenchMoreMenu,
     activeAction,
     feedback,
+    pendingClearConfirm,
     lastClearedPinnedIds,
     hasSnapshot,
     workbenchPrimaryAction,
@@ -455,6 +476,8 @@ function useWorkbenchQuickActions({
     handleRestoreSnapshot,
     handleExportWorkbench,
     handleClearAll,
+    handleCancelClearAll,
+    handleConfirmClearAll,
     handleUndoClearAll,
     handleRunWorkbenchPrimaryAction,
     handleSelectWorkbenchPrimaryAction,

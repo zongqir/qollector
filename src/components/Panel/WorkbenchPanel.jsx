@@ -2437,10 +2437,13 @@ function WorkbenchPanel() {
             workbenchMoreMenuRef={quickActions.workbenchMoreMenuRef}
             activeAction={quickActions.activeAction}
             feedback={quickActions.feedback}
+            pendingClearConfirm={quickActions.pendingClearConfirm}
             lastClearedPinnedIds={quickActions.lastClearedPinnedIds}
             hasSnapshot={quickActions.hasSnapshot}
             handleRunQuickOutput={quickActions.handleRunQuickOutput}
             handleQuickOutputMenuSelect={quickActions.handleQuickOutputMenuSelect}
+            handleCancelClearAll={quickActions.handleCancelClearAll}
+            handleConfirmClearAll={quickActions.handleConfirmClearAll}
             handleUndoClearAll={quickActions.handleUndoClearAll}
             workbenchPrimaryAction={quickActions.workbenchPrimaryAction}
             handleRunWorkbenchPrimaryAction={quickActions.handleRunWorkbenchPrimaryAction}
