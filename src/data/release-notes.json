@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.8",
+      "publishedAt": "2026-04-20",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-8",
+      "summary": {
+        "zh-CN": "轮换更新签名密钥并同步官网回退下载版本，确保后续自动更新与官网分发重新回到同一条稳定链路。",
+        "en-US": "Rotated the updater signing keys and aligned the website fallback download version so automatic updates and site distribution are back on the same reliable path."
+      },
+      "highlights": {
+        "zh-CN": [
+          "重新生成并切换 Tauri updater 签名密钥，修复发布流程中私钥签名与仓库公钥验签不一致的问题。",
+          "同步更新 GitHub Release workflow 使用的签名 secrets，后续构建产物会使用新的签名链路生成更新元数据。",
+          "将应用版本提升到 0.3.8，并补齐本次中英文更新说明，保持客户端弹窗、latest.json、GitHub Release 与官网 changelog 继续共用同一数据源。",
+          "同步推进官网下载区的 fallback 版本，避免 latest.json 临时不可用时页面仍回落到过旧安装包。"
+        ],
+        "en-US": [
+          "Regenerated and switched the Tauri updater signing keys to fix the mismatch between the signing secret and the repository public key during release verification.",
+          "Updated the signing secrets used by the GitHub Release workflow so future builds generate updater metadata through the new signing chain.",
+          "Bumped the app to 0.3.8 and added bilingual release notes so the in-app prompt, latest.json, GitHub Release, and website changelog continue sharing one source of truth.",
+          "Moved the website download fallback forward as well, so the page no longer drops back to an outdated installer when latest.json is temporarily unavailable."
+        ]
+      }
+    },
+    {
       "version": "0.3.7",
       "publishedAt": "2026-04-19",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-7",

@@ -1,6 +1,6 @@
 {
   "productName": "Qollect",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "identifier": "com.qollect.clipboard",
   "build": {
     "beforeDevCommand": "npm run dev:ensure",
@@ -47,7 +47,7 @@
         "https://dl.135070.xyz/latest.json",
         "https://github.com/zongqir/qollector/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ1QjQzOEU3Q0UwMUQ3NzQKUldSMDF3SE81emkwUmE1T3hkK1hneENyak5PM0RQQVVFaEY1aStsRENuTHJZalNaa3RMemlrbE8K"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYzMzA3QkI5ODI2RDIxNEEKUldSS0lXMkN1WHN3ODBZSEdpMzRRczdyYTgxSWkzWjlOak9EV0FBd2ZsZjBKVUk2SjMzOUV0RkwK"
     }
   },
   "app": {
