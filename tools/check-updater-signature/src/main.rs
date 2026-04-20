@@ -65,13 +65,11 @@ fn main() {
     let payload =
         fs::read(&file_path).unwrap_or_else(|err| fail(format!("failed to read {}: {err}", file_path)));
 
-    public_key
-        .verify(&payload, &signature, true)
-        .unwrap_or_else(|err| {
-            fail(format!(
-                "updater signing key mismatch: secret key can sign, but tauri.conf.json pubkey cannot verify it: {err}"
-            ))
-        });
+    public_key.verify(&payload, &signature, true).unwrap_or_else(|err| {
+        fail(format!(
+            "updater signing key mismatch: secret key can sign, but tauri.conf.json pubkey cannot verify it: {err}"
+        ))
+    });
 
     println!("Updater signing key matches tauri.conf.json pubkey.");
 }

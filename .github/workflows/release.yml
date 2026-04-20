@@ -90,7 +90,7 @@ jobs:
       - name: Verify updater pubkey matches signing key
         shell: bash
         run: |
-          cargo run --manifest-path src-tauri/Cargo.toml --bin check-updater-signature -- \
+          cargo run --manifest-path tools/check-updater-signature/Cargo.toml -- \
             "$RUNNER_TEMP/sign_test.txt" \
             "$RUNNER_TEMP/sign_test.txt.sig" \
             "src-tauri/tauri.conf.json"
