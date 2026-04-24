@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.9",
+      "publishedAt": "2026-04-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-9",
+      "summary": {
+        "zh-CN": "修正 mini 模式默认落点，并让重新复制旧内容时刷新最近活动时间，列表排序终于更符合真实使用习惯。",
+        "en-US": "Adjusted the default mini-mode landing view and refreshed recent activity timestamps when older items are copied again so sorting better matches real usage."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复 mini 模式默认落到工作区的问题，常规场景下进入 mini 会优先回到历史流，只有预览、对比、时间线或工作区独占视图才保留面板语义。",
+          "当用户从历史流、收藏区或工作区重新复制一条已有内容时，会同步刷新该条记录的 updated_at，后续按最近活动排序时会更贴近真实使用轨迹。",
+          "前端在复制成功后会立即更新本地列表顺序，不需要等待下一次全量刷新，重新使用过的内容会更快回到前面。"
+        ],
+        "en-US": [
+          "Fixed the default mini-mode landing target so regular mini entry returns to the history stream, while preview, compare, timeline, and panel-only workbench views still keep their panel-first behavior.",
+          "When an existing item is copied again from history, collection, or workbench, its updated_at timestamp is refreshed so recency-based sorting better reflects actual reuse.",
+          "The frontend now reorders the local list immediately after a successful copy, so reused items move forward without waiting for a full reload."
+        ]
+      }
+    },
+    {
       "version": "0.3.8",
       "publishedAt": "2026-04-20",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-8",

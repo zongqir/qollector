@@ -1298,8 +1298,8 @@ impl ClipboardManager {
             return Err(ClipboardError::UnsupportedType);
         };
 
-        // Refresh pinned timestamps so ordering remains stable.
-        if item.is_pinned {
+        // Reusing an existing item counts as activity, so refresh updated_at for sorting.
+        {
             let repo = self.repository.lock().await;
             let _ = repo.touch(&item.id).await;
         }

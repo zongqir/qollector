@@ -16,12 +16,46 @@ import { SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK } from './platformSupport';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemIfNeeded } from './itemHydration';
 import { buildItemDerivations, getPinnedItemIdsForWorkbench } from './itemsIndex';
+import { mergeUniqueById } from './historyListRuntime';
 
 const shouldSkipInternalSourceCopy = (item, allowInternalCopy, options = {}) => {
   if (options?.bypassInternalSourceProtection) return false;
   if (allowInternalCopy) return false;
   const sourceApp = getSourceApp(item?.metadata);
   return isQollectManagedSource(sourceApp);
+};
+
+const syncCopiedItemActivity = (state, itemId, updatedAt) => {
+  let changed = false;
+  const nextItems = state.items.map((candidate) => {
+    if (candidate.id !== itemId) return candidate;
+    changed = true;
+    return {
+      ...candidate,
+      updated_at: updatedAt,
+    };
+  });
+
+  const sortedItems = changed ? mergeUniqueById([], nextItems) : nextItems;
+
+  const nextPreviewItem = state.previewItem?.id === itemId
+    ? {
+      ...state.previewItem,
+      updated_at: updatedAt,
+    }
+    : state.previewItem;
+
+  if (!changed && nextPreviewItem === state.previewItem) {
+    return state;
+  }
+
+  return {
+    ...state,
+    items: sortedItems,
+    ...buildItemDerivations(sortedItems),
+    previewItem: nextPreviewItem,
+    itemsRevision: state.itemsRevision + 1,
+  };
 };
 
 export const createItemActions = (set, get) => ({
@@ -32,6 +66,8 @@ export const createItemActions = (set, get) => ({
         return false;
       }
       await copyItemToClipboard(itemForCopy);
+      const updatedAt = Math.floor(Date.now() / 1000);
+      set((state) => syncCopiedItemActivity(state, itemForCopy.id, updatedAt));
       pushCopyFeedback(set, {
         itemId: itemForCopy.id,
         source,
@@ -52,6 +88,8 @@ export const createItemActions = (set, get) => ({
         return false;
       }
       await copyItemToClipboard(itemForCopy);
+      const updatedAt = Math.floor(Date.now() / 1000);
+      set((state) => syncCopiedItemActivity(state, itemForCopy.id, updatedAt));
       pushCopyFeedback(set, {
         itemId: itemForCopy.id,
         source,
