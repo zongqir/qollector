@@ -986,19 +986,15 @@ function App() {
   const resolveMiniPrimaryContent = useCallback(() => {
     const state = useAppStore.getState();
     if (state.showFavoritesOnly) return MINI_PRIMARY_CONTENT_HISTORY;
-    if (state.workbenchPanelBeforeMini === true && state.panelMode === 'workbench') {
-      return MINI_PRIMARY_CONTENT_PANEL;
-    }
     if (activeDesktopViewModeRef.current === VIEW_MODE_LEFT) return MINI_PRIMARY_CONTENT_HISTORY;
-    if (
-      state.panelMode === 'workbench'
-      && (
-        activeDesktopViewModeRef.current === VIEW_MODE_RIGHT
-        || activeDesktopViewModeRef.current === VIEW_MODE_ALL
-      )
-    ) {
+
+    // Mini 模式默认回到历史流，只有明确处于 panel-only 或强 panel 语义时才保留面板。
+    if (state.panelMode !== 'workbench') {
       return MINI_PRIMARY_CONTENT_PANEL;
     }
+
+    if (activeDesktopViewModeRef.current === VIEW_MODE_RIGHT) return MINI_PRIMARY_CONTENT_PANEL;
+
     return MINI_PRIMARY_CONTENT_HISTORY;
   }, []);
 
