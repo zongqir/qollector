@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.10",
+      "publishedAt": "2026-04-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-10",
+      "summary": {
+        "zh-CN": "优化文本去重判定，减少同一句内容因空格、换行或零宽字符差异被拆成多条的问题。",
+        "en-US": "Improved text deduplication so the same sentence is less likely to split into multiple history items because of whitespace, line-ending, or zero-width character differences."
+      },
+      "highlights": {
+        "zh-CN": [
+          "文本判重改为先做安全规范化，再参与 content_hash 计算，统一处理首尾空白、换行风格、行尾空白和常见零宽字符。",
+          "保留正文内部空格差异，避免代码、命令、表格等内容被过度合并。",
+          "统一剪贴板监听、手动新增文本和当前内容定位的 hash 口径，未来新入库数据的判重结果更一致、更稳定。"
+        ],
+        "en-US": [
+          "Text deduplication now uses a safer normalization step before computing content_hash, covering outer whitespace, line endings, trailing line whitespace, and common zero-width characters.",
+          "Internal spacing differences are still preserved so code, commands, and tabular content are not merged too aggressively.",
+          "Clipboard monitoring, manual text insertion, and current-content lookup now share the same hash rule, making future deduplication more consistent and predictable."
+        ]
+      }
+    },
+    {
       "version": "0.3.9",
       "publishedAt": "2026-04-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-9",

@@ -88,7 +88,7 @@ pub struct SyncApplyResult {
 
 impl ClipboardItem {
     pub fn new_text(content: String, metadata: WindowMetadata) -> Self {
-        let hash = Self::calculate_hash(&content);
+        let hash = Self::calculate_text_hash(&content);
         let now = chrono::Utc::now().timestamp();
 
         // 检测是否为链接
@@ -215,9 +215,7 @@ impl ClipboardItem {
     }
 
     fn bare_url_host_candidate(text: &str) -> &str {
-        let authority_end = text
-            .find(['/', '?', '#'])
-            .unwrap_or(text.len());
+        let authority_end = text.find(['/', '?', '#']).unwrap_or(text.len());
         let authority = &text[..authority_end];
 
         if let Some((host, port)) = authority.rsplit_once(':') {
@@ -292,7 +290,7 @@ impl ClipboardItem {
     }
 
     pub fn new_image(raw_path: String, thumb_path: String, metadata: WindowMetadata) -> Self {
-        let hash = Self::calculate_hash(&raw_path);
+        let hash = Self::calculate_raw_hash(&raw_path);
         let now = chrono::Utc::now().timestamp();
 
         let image_paths = serde_json::json!({
@@ -329,7 +327,41 @@ impl ClipboardItem {
         }
     }
 
-    fn calculate_hash(content: &str) -> String {
+    pub fn calculate_text_hash(content: &str) -> String {
+        let normalized = Self::normalize_text_for_hash(content);
+        Self::calculate_raw_hash(&normalized)
+    }
+
+    fn normalize_text_for_hash(content: &str) -> String {
+        let normalized_line_endings = content.replace("\r\n", "\n").replace('\r', "\n");
+        let without_zero_width: String = normalized_line_endings
+            .chars()
+            .filter(|ch| !Self::is_ignored_text_hash_char(*ch))
+            .collect();
+
+        // Preserve whitespace-only blocks as distinct content so blank layout snippets
+        // do not collapse into a single item.
+        if without_zero_width.trim().is_empty() {
+            return without_zero_width;
+        }
+
+        let trimmed_lines = without_zero_width
+            .lines()
+            .map(|line| line.trim_end_matches(char::is_whitespace))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        trimmed_lines.trim().to_string()
+    }
+
+    fn is_ignored_text_hash_char(ch: char) -> bool {
+        matches!(
+            ch,
+            '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{2060}' | '\u{FEFF}'
+        )
+    }
+
+    fn calculate_raw_hash(content: &str) -> String {
         blake3::hash(content.as_bytes()).to_hex().to_string()
     }
 
@@ -482,6 +514,44 @@ mod tests {
         assert!(ClipboardItem::is_url("www.qq.com"));
         assert!(ClipboardItem::is_url("127.0.0.1"));
         assert!(ClipboardItem::is_url("127.0.0.1:5173"));
+    }
+
+    #[test]
+    fn text_hash_ignores_outer_whitespace_and_line_endings() {
+        let a = "  方向对了。\r\n第二行  \r\n";
+        let b = "方向对了。\n第二行";
+
+        assert_eq!(
+            ClipboardItem::calculate_text_hash(a),
+            ClipboardItem::calculate_text_hash(b)
+        );
+    }
+
+    #[test]
+    fn text_hash_ignores_common_zero_width_chars() {
+        let plain = "方向对了。";
+        let with_zero_width = "\u{FEFF}方\u{200B}向对\u{200D}了。\u{2060}";
+
+        assert_eq!(
+            ClipboardItem::calculate_text_hash(plain),
+            ClipboardItem::calculate_text_hash(with_zero_width)
+        );
+    }
+
+    #[test]
+    fn text_hash_keeps_internal_spacing_differences() {
+        assert_ne!(
+            ClipboardItem::calculate_text_hash("foo  bar"),
+            ClipboardItem::calculate_text_hash("foo bar")
+        );
+    }
+
+    #[test]
+    fn text_hash_keeps_whitespace_only_layout_blocks_distinct() {
+        assert_ne!(
+            ClipboardItem::calculate_text_hash("\n\n\n"),
+            ClipboardItem::calculate_text_hash("\n\n\n\n")
+        );
     }
 }
 

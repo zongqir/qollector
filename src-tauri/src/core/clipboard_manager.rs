@@ -1742,7 +1742,7 @@ impl ClipboardManager {
         content: &str,
         notes: Option<&str>,
     ) -> Result<ClipboardItem, Box<dyn std::error::Error>> {
-        let hash = blake3::hash(content.as_bytes()).to_hex().to_string();
+        let hash = ClipboardItem::calculate_text_hash(content);
 
         let metadata = self.platform.get_active_window_info().unwrap_or_else(|_| {
             crate::core::models::WindowMetadata {
@@ -2305,7 +2305,7 @@ impl ClipboardManager {
         match content {
             ClipboardContent::Text {
                 plain: ref text, ..
-            } => blake3::hash(text.as_bytes()).to_hex().to_string(),
+            } => ClipboardItem::calculate_text_hash(text),
             ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
             ClipboardContent::File(paths_str) => {
                 blake3::hash(paths_str.as_bytes()).to_hex().to_string()
