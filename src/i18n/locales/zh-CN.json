@@ -50,6 +50,23 @@
   },
   "search": {
     "placeholder": "搜索内容、标签、备注...",
+    "ai": {
+      "open": "AI 搜索",
+      "title": "AI 搜索",
+      "placeholder": "问我你之前复制过什么，例如：上周那段 Python 正则",
+      "submit": "搜索",
+      "searching": "正在理解问题...",
+      "searchingCandidates": "正在搜索候选...",
+      "ranking": "正在整理结果...",
+      "scope": "搜索范围：全部内容",
+      "summary": "结果摘要",
+      "interpreted": "已理解为：{{query}}",
+      "filters": "筛选：{{filters}}",
+      "noResults": "没有找到相关内容",
+      "fallbackPlanner": "AI 解析失败，已回退为普通搜索。",
+      "fallbackRerank": "AI 重排失败，已返回原始搜索结果。",
+      "searchOnly": "AI 结构化筛选过窄，已放宽条件重新搜索。"
+    },
     "noResults": "没有找到匹配的记录",
     "searching": "搜索中...",
     "queryFailed": "后端筛选失败，请稍后重试",

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers } from 'lucide-react';
+import { Clock3, X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers, Sparkles } from 'lucide-react';
 import { parseSystemTag } from '../utils/tagHelpers';
 import useEscapeDismiss from './hooks/useEscapeDismiss';
 import useClickOutsideDismiss from './hooks/useClickOutsideDismiss';
@@ -28,6 +28,8 @@ function SearchBar({
   tagSearchQuery, onTagSearchChange,
   onToggleTag,
   onOpenSettings,
+  onOpenAiSearch,
+  aiSearchActive = false,
   onSearchKeyDown,
   resultCount,
   filterBusy = false,
@@ -457,6 +459,17 @@ function SearchBar({
             </button>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={onOpenAiSearch}
+          className={`header-icon-btn ai-search-btn ${aiSearchActive ? 'active' : ''}`}
+          title={t('search.ai.open')}
+          aria-label={t('search.ai.open')}
+          aria-pressed={aiSearchActive}
+        >
+          <Sparkles size={15} />
+        </button>
 
         <button
           onClick={onToggleFavorites}

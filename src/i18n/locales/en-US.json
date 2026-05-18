@@ -50,6 +50,23 @@
   },
   "search": {
     "placeholder": "Search content, tags, notes...",
+    "ai": {
+      "open": "AI Search",
+      "title": "AI Search",
+      "placeholder": "Ask what you copied before, e.g. the Python regex from last week",
+      "submit": "Search",
+      "searching": "Understanding your question...",
+      "searchingCandidates": "Searching candidates...",
+      "ranking": "Organizing results...",
+      "scope": "Scope: all content",
+      "summary": "Summary",
+      "interpreted": "Interpreted as: {{query}}",
+      "filters": "Filters: {{filters}}",
+      "noResults": "No related content found",
+      "fallbackPlanner": "AI planning failed. Falling back to normal search.",
+      "fallbackRerank": "AI rerank failed. Returning the original search order.",
+      "searchOnly": "AI filters were too strict. Relaxed them and searched again."
+    },
     "noResults": "No matching records found",
     "searching": "Searching...",
     "queryFailed": "Backend filtering failed. Please retry.",

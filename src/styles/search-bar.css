@@ -245,6 +245,12 @@
   background: var(--control-button-active-bg);
 }
 
+.header-icon-btn.ai-search-btn.active {
+  border-color: color-mix(in srgb, var(--accent-color) 52%, var(--control-button-active-border));
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-light) 58%, var(--control-button-active-bg));
+}
+
 .header-icon-btn.fav-active {
   color: var(--state-warning-fg);
   background: color-mix(in srgb, var(--state-warning-bg) 84%, transparent);
@@ -698,6 +704,129 @@
   font-size: 12px;
 }
 
+.ai-search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 24%, var(--control-dropdown-border));
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent-light) 12%, var(--control-dropdown-bg)) 0%,
+      var(--control-dropdown-bg) 100%
+    );
+}
+
+.ai-search-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-search-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-search-panel-hint {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.ai-search-panel-form {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ai-search-panel-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--control-input-border);
+  border-radius: 10px;
+  background: var(--control-input-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.ai-search-panel-input:focus {
+  outline: none;
+  border-color: var(--control-input-focus-border);
+  box-shadow: var(--control-input-focus-ring);
+}
+
+.ai-search-panel-submit {
+  min-width: 86px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 34%, var(--control-button-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-light) 52%, var(--control-button-bg));
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-search-panel-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ai-search-panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ai-search-panel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--control-button-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-muted) 76%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.ai-search-panel-status {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.ai-search-panel-status.error {
+  color: var(--state-error-fg);
+}
+
+.ai-search-panel-summary {
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ai-search-panel-debug {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.ai-search-panel-empty {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .clear-filter-btn {
   border-radius: 999px;
   padding: 2px 7px;
@@ -740,6 +869,15 @@
 .app.mini-mode .header-icon-btn svg {
   width: 12px;
   height: 12px;
+}
+
+.app.mini-mode .ai-search-panel-form {
+  flex-direction: column;
+}
+
+.app.mini-mode .ai-search-panel-submit {
+  width: 100%;
+  min-height: 34px;
 }
 
 .app.mini-mode .clear-search {
