@@ -166,10 +166,10 @@ export const createDataLoadingActions = (set, get) => ({
     suspendedItemsSnapshot = state.items;
     persistHistorySnapshot(state.items);
 
-      set({
-        items: [],
-        ...buildItemDerivations([]),
-        hasMore: true,
+    set({
+      items: [],
+      ...buildItemDerivations([]),
+      hasMore: true,
       loadingMore: false,
       historyLoadStopReason: null,
       itemsRevision: state.itemsRevision + 1,
@@ -180,6 +180,7 @@ export const createDataLoadingActions = (set, get) => ({
       compareCandidateIds: [],
       compareItemIds: [],
       isMemorySuspended: true,
+      memorySuspendVersion: state.memorySuspendVersion + 1,
     });
     console.log('[MemorySuspend] detached heavy list state while minimized');
   },
@@ -192,7 +193,7 @@ export const createDataLoadingActions = (set, get) => ({
       ? suspendedItemsSnapshot
       : readHistorySnapshot();
     suspendedItemsSnapshot = null;
-    set({
+    set((current) => ({
       isMemorySuspended: false,
       items: snapshot,
       ...buildItemDerivations(snapshot),
@@ -200,7 +201,8 @@ export const createDataLoadingActions = (set, get) => ({
       loadingMore: false,
       historyLoadStopReason: null,
       loading: snapshot.length === 0,
-    });
+      memoryResumeVersion: current.memoryResumeVersion + 1,
+    }));
     console.log('[MemorySuspend] restoring list state after window became visible');
     await get().loadItems();
   },

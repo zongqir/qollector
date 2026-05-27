@@ -34,6 +34,7 @@ import {
   reorderCollectionFavoriteItems,
   searchItems,
 } from '../../services/clipboardService';
+import useAppStore from '../../store/useAppStore';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import {
   DndContext,
@@ -218,6 +219,9 @@ function CollectionBoard({
   const [showSortEntryToast, setShowSortEntryToast] = useState(false);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const [collectionHintsExpanded, setCollectionHintsExpanded] = useState(false);
+  const isMemorySuspended = useAppStore(s => s.isMemorySuspended);
+  const memorySuspendVersion = useAppStore(s => s.memorySuspendVersion);
+  const memoryResumeVersion = useAppStore(s => s.memoryResumeVersion);
   const colorPickerRef = useRef(null);
   const collectionGridRef = useRef(null);
   const collectionCardRefsRef = useRef(new Map());
@@ -274,6 +278,23 @@ function CollectionBoard({
   }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
 
   useEffect(() => {
+    if (!isMemorySuspended) return;
+    setBackendItems([]);
+    setBackendFilteredFavoriteIds(null);
+    setBackendCollectionUserTags([]);
+    setBackendLoading(false);
+    setBackendFiltering(false);
+    setBackendError('');
+    setBackendFilterError('');
+    setActiveItemId(null);
+    setOpenColorPickerItemId(null);
+    setShowTagEditor(false);
+    setCollectionSortMode(false);
+    setCollectionSortAnchorItemId(null);
+  }, [isMemorySuspended, memorySuspendVersion]);
+
+  useEffect(() => {
+    if (isMemorySuspended) return undefined;
     let cancelled = false;
     setBackendLoading(true);
     setBackendError('');
@@ -297,9 +318,10 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [itemsRevision, collectionRefreshNonce]);
+  }, [itemsRevision, collectionRefreshNonce, isMemorySuspended, memoryResumeVersion]);
 
   useEffect(() => {
+    if (isMemorySuspended) return undefined;
     let cancelled = false;
     getUserTagsSvc(debouncedCollectionTagQuery, 200, { onlyFavorite: true })
       .then((tags) => {
@@ -319,7 +341,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [debouncedCollectionTagQuery, backendItems]);
+  }, [debouncedCollectionTagQuery, backendItems, isMemorySuspended, memoryResumeVersion]);
 
   const collectionBackendFilterRequest = useMemo(() => {
     const query = debouncedSearchQuery.trim();
@@ -369,6 +391,12 @@ function CollectionBoard({
   ]);
 
   useEffect(() => {
+    if (isMemorySuspended) {
+      setBackendFilteredFavoriteIds(null);
+      setBackendFiltering(false);
+      setBackendFilterError('');
+      return undefined;
+    }
     if (!collectionBackendFilterRequest.shouldQueryBackend) {
       setBackendFilteredFavoriteIds(null);
       setBackendFiltering(false);
@@ -401,7 +429,15 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [collectionBackendFilterRequest, backendItems.length, itemsRevision, t, collectionRefreshNonce]);
+  }, [
+    collectionBackendFilterRequest,
+    backendItems.length,
+    itemsRevision,
+    t,
+    collectionRefreshNonce,
+    isMemorySuspended,
+    memoryResumeVersion,
+  ]);
 
   const orderedFavoriteItems = useMemo(
     () => backendItems.filter(item => item.is_favorite !== false),

@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.11",
+      "publishedAt": "2026-05-27",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-11",
+      "summary": {
+        "zh-CN": "优化隐藏后重开体验，默认保留主窗口壳，并让低内存模式先释放重内容再按需重建窗口。",
+        "en-US": "Improved reopen behavior after hiding the app by keeping the main window shell by default and making low memory mode release heavy content before rebuilding the window only when needed."
+      },
+      "highlights": {
+        "zh-CN": [
+          "普通模式下关闭到托盘后不再 30 秒销毁主 WebView，减少再次打开时看到启动转圈的概率。",
+          "低内存模式改为分阶段释放：先清理历史流、收藏区、工作区和预览缓存，长时间后台后才释放窗口壳。",
+          "将低内存模式的窗口壳释放延迟从 12 秒调整为 120 秒，短时间重开优先保持快速恢复。",
+          "收藏区和工作区现在会响应内存挂起与恢复，避免只释放历史流导致状态和内存策略不一致。",
+          "更新中英文设置说明，让用户更清楚低内存模式会在内存占用与唤起速度之间做取舍。"
+        ],
+        "en-US": [
+          "In normal mode, hiding to tray no longer destroys the main WebView after 30 seconds, reducing the chance of seeing the startup spinner on reopen.",
+          "Low memory mode now releases memory in stages: history, collection, workbench, and preview caches are cleared before the window shell is released after longer background time.",
+          "The low-memory window-shell release delay increased from 12 seconds to 120 seconds so short reopens prioritize fast restore.",
+          "Collection and Workbench now respond to memory suspend and resume signals, keeping their state cleanup aligned with History.",
+          "Updated bilingual settings copy so users can better understand the tradeoff between lower idle memory and wake-up speed."
+        ]
+      }
+    },
+    {
       "version": "0.3.10",
       "publishedAt": "2026-04-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-10",

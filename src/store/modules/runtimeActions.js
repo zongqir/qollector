@@ -32,6 +32,8 @@ export const createRuntimeActions = (set, clearHistorySnapshot) => ({
       showEditModal: false,
       editingItem: null,
       isMemorySuspended: false,
+      memorySuspendVersion: state.memorySuspendVersion + 1,
+      memoryResumeVersion: state.memoryResumeVersion + 1,
       hasPassword: false,
     }));
   },

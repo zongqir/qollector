@@ -269,6 +269,9 @@ function WorkbenchPanel() {
   const deleteWorkbench = useAppStore(s => s.deleteWorkbench);
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
+  const isMemorySuspended = useAppStore(s => s.isMemorySuspended);
+  const memorySuspendVersion = useAppStore(s => s.memorySuspendVersion);
+  const memoryResumeVersion = useAppStore(s => s.memoryResumeVersion);
 
   const activeWorkbench = useMemo(
     () => workbenches.find((workbench) => workbench.id === activeWorkbenchId)
@@ -348,13 +351,39 @@ function WorkbenchPanel() {
   ), [workbenches, getWorkbenchDisplayName, activeWorkbenchId, activeWorkbench]);
 
   useEffect(() => {
+    if (isMemorySuspended) return undefined;
     loadWorkbenches().catch((error) => {
       console.error('[Workbench] load workbenches failed:', error);
     });
-  }, [loadWorkbenches]);
+    return undefined;
+  }, [loadWorkbenches, isMemorySuspended, memoryResumeVersion]);
 
   useEffect(() => {
-    if (!workbenchStateLoaded) return undefined;
+    if (!isMemorySuspended) return;
+    setSelectedPinnedIds([]);
+    setWorkbenchSortMode(false);
+    setWorkbenchSortAnchorItemId(null);
+    setShowSortEntryToast(false);
+    setShowWorkbenchTypeFilter(false);
+    setShowWorkbenchDateFilter(false);
+    setShowWorkbenchTagFilter(false);
+    setShowWorkbenchSavedViews(false);
+    setShowWorkbenchRecentSearches(false);
+    setBackendWorkbenchUserTags([]);
+    setBackendFilteredPinnedIds(null);
+    setBackendPinnedItems(null);
+    setWorkbenchLoading(false);
+    setWorkbenchFiltering(false);
+    setWorkbenchLoadError('');
+    setWorkbenchFilterError('');
+    setShowWorkbenchSwitcher(false);
+    setShowWorkbenchManageMenu(false);
+    setTransientWorkbenchToast('');
+    setPendingUnpinItemId(null);
+  }, [isMemorySuspended, memorySuspendVersion]);
+
+  useEffect(() => {
+    if (!workbenchStateLoaded || isMemorySuspended) return undefined;
     let cancelled = false;
     setWorkbenchLoading(true);
     getWorkbenchPinnedItems(activeWorkbenchId || undefined)
@@ -379,7 +408,15 @@ function WorkbenchPanel() {
     return () => {
       cancelled = true;
     };
-  }, [activeWorkbenchId, itemsRevision, workbenchRefreshNonce, t, workbenchStateLoaded]);
+  }, [
+    activeWorkbenchId,
+    itemsRevision,
+    workbenchRefreshNonce,
+    t,
+    workbenchStateLoaded,
+    isMemorySuspended,
+    memoryResumeVersion,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -429,6 +466,7 @@ function WorkbenchPanel() {
   }, [workbenchTagSearchQuery]);
 
   useEffect(() => {
+    if (isMemorySuspended) return undefined;
     let cancelled = false;
     getUserTagsSvc(debouncedWorkbenchTagSearchQuery, 200, { onlyPinned: true })
       .then((tags) => {
@@ -448,7 +486,13 @@ function WorkbenchPanel() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedWorkbenchTagSearchQuery, backendPinnedItems, itemsRevision]);
+  }, [
+    debouncedWorkbenchTagSearchQuery,
+    backendPinnedItems,
+    itemsRevision,
+    isMemorySuspended,
+    memoryResumeVersion,
+  ]);
 
   const storePinnedIds = useMemo(
     () => getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, activeWorkbenchId),
@@ -508,6 +552,12 @@ function WorkbenchPanel() {
   ]);
 
   useEffect(() => {
+    if (isMemorySuspended) {
+      setBackendFilteredPinnedIds(null);
+      setWorkbenchFiltering(false);
+      setWorkbenchFilterError('');
+      return undefined;
+    }
     if (!workbenchBackendFilterRequest.shouldQueryBackend) {
       setBackendFilteredPinnedIds(null);
       setWorkbenchFiltering(false);
@@ -542,7 +592,15 @@ function WorkbenchPanel() {
     return () => {
       cancelled = true;
     };
-  }, [workbenchBackendFilterRequest, allPinnedItems.length, itemsRevision, workbenchRefreshNonce, t]);
+  }, [
+    workbenchBackendFilterRequest,
+    allPinnedItems.length,
+    itemsRevision,
+    workbenchRefreshNonce,
+    t,
+    isMemorySuspended,
+    memoryResumeVersion,
+  ]);
 
   const pinnedItems = useMemo(() => {
     if (!(backendFilteredPinnedIds instanceof Set)) {

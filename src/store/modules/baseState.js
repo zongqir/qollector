@@ -23,6 +23,8 @@ export const createBaseState = ({
   itemsRevision: 0,
   processedItemIds: new Set(),
   isMemorySuspended: false,
+  memorySuspendVersion: 0,
+  memoryResumeVersion: 0,
 
   // ========== 右栏面板状态机 ==========
   // 'workbench' | 'preview' | 'compare' | 'timeline'

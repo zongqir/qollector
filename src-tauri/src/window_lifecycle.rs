@@ -5,8 +5,7 @@ use crate::low_memory_mode::LowMemoryModeState;
 use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder};
 
 pub const MAIN_WINDOW_LABEL: &str = "main";
-pub const DEFAULT_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 30;
-pub const LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 12;
+pub const LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS: u64 = 120;
 
 #[derive(Default)]
 pub struct MainWindowLifecycleState {
@@ -61,15 +60,21 @@ pub fn schedule_main_window_release(app: AppHandle, reason: &str) {
         return;
     };
 
-    let release_delay_secs = if app
+    let low_memory_mode_enabled = app
         .try_state::<LowMemoryModeState>()
         .map(|mode| mode.is_enabled())
-        .unwrap_or(false)
-    {
-        LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS
-    } else {
-        DEFAULT_MAIN_WINDOW_RELEASE_DELAY_SECS
-    };
+        .unwrap_or(false);
+
+    if !low_memory_mode_enabled {
+        let generation = state.bump_release_generation();
+        println!(
+            "[MainWindow] keep hidden main webview generation={} reason={} (low memory mode disabled)",
+            generation, reason
+        );
+        return;
+    }
+
+    let release_delay_secs = LOW_MEMORY_MAIN_WINDOW_RELEASE_DELAY_SECS;
 
     let generation = state.bump_release_generation();
     println!(
