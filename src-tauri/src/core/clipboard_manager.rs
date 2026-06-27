@@ -20,6 +20,7 @@ use url::Host;
 const APP_NAME: &str = "Qollect";
 const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
 const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
+const CLIPBOARD_ROLLBACK_SUPPRESSION_WINDOW_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const MAX_AI_FILENAME_STEM_CHARS: usize = 64;
 const LOCAL_CODE_DETECT_MIN_CHARS: usize = 12;
@@ -27,12 +28,18 @@ const LOCAL_CODE_DETECT_MAX_CHARS: usize = 20_000;
 
 #[derive(Default)]
 struct DoubleCopyEmphasisState {
+    previous_hash: Option<String>,
     last_hash: Option<String>,
     last_source_app: Option<String>,
     last_seen_at_ms: u128,
     last_emphasis_at_ms: u128,
     last_emphasis_hash: Option<String>,
     last_emphasis_source_app: Option<String>,
+}
+
+struct ClipboardTransitionDecision {
+    should_pin_on_double_copy: bool,
+    suppress_rollback_duplicate: bool,
 }
 
 pub struct ClipboardManager {
@@ -338,7 +345,7 @@ impl ClipboardManager {
         let mut inserted_new_item = false;
 
         // Evaluate double-copy BEFORE acquiring repo lock so timing is accurate
-        let is_double_copy = Self::should_pin_on_double_copy(
+        let transition = Self::analyze_clipboard_transition(
             &double_copy_state,
             &content_hash,
             &source_app,
@@ -348,6 +355,13 @@ impl ClipboardManager {
 
         let repo_lock = repo.lock().await;
         if let Some(existing) = repo_lock.find_by_hash(&content_hash).await? {
+            if transition.suppress_rollback_duplicate {
+                println!(
+                    "[ClipboardRollback] Suppressed short rollback duplicate for existing item: {}",
+                    existing.id
+                );
+                return Ok(());
+            }
             println!("Duplicate detected, moving to top: {}", existing.id);
             repo_lock.touch(&existing.id).await?;
             item_id = existing.id;
@@ -413,7 +427,7 @@ impl ClipboardManager {
         let _ = app_handle.emit("clipboard-changed", ());
         println!("[Clipboard] item saved");
 
-        if is_double_copy {
+        if transition.should_pin_on_double_copy {
             let repo_lock = repo.lock().await;
             if let Some(existing) = repo_lock.find_by_id(&item_id).await? {
                 if !existing.is_pinned {
@@ -986,20 +1000,39 @@ impl ClipboardManager {
         Some(trimmed.to_string())
     }
 
-    fn should_pin_on_double_copy(
+    fn analyze_clipboard_transition(
         state: &Arc<Mutex<DoubleCopyEmphasisState>>,
         content_hash: &str,
         source_app: &str,
         enabled: bool,
         window_ms: u64,
-    ) -> bool {
+    ) -> ClipboardTransitionDecision {
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis())
             .unwrap_or(0);
+        Self::analyze_clipboard_transition_at(
+            state,
+            content_hash,
+            source_app,
+            enabled,
+            window_ms,
+            now_ms,
+        )
+    }
+
+    fn analyze_clipboard_transition_at(
+        state: &Arc<Mutex<DoubleCopyEmphasisState>>,
+        content_hash: &str,
+        source_app: &str,
+        enabled: bool,
+        window_ms: u64,
+        now_ms: u128,
+    ) -> ClipboardTransitionDecision {
         let window_ms = window_ms.clamp(300, 2500) as u128;
 
         let mut state = state.lock();
+        let previous_hash_matches = state.previous_hash.as_deref() == Some(content_hash);
         let same_hash = state.last_hash.as_deref() == Some(content_hash);
         let source_app_valid = !source_app.is_empty() && source_app != "Unknown";
         let last_source_app_valid = state
@@ -1019,26 +1052,40 @@ impl ClipboardManager {
             && state.last_emphasis_source_app.as_deref() == Some(source_app);
         let cooldown_ok = !same_as_last_emphasis
             || now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
+        let changed_from_last = state
+            .last_hash
+            .as_deref()
+            .map(|last| last != content_hash)
+            .unwrap_or(false);
+        let suppress_rollback_duplicate = previous_hash_matches
+            && changed_from_last
+            && delta_ms <= CLIPBOARD_ROLLBACK_SUPPRESSION_WINDOW_MS;
 
-        let should_pin = enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
+        let should_pin_on_double_copy =
+            enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
 
         println!(
-            "[DoubleCopy] enabled={} same_hash={} same_source_app={} source_app_valid={} last_source_app_valid={} interval_ok={} cooldown_ok={} same_as_last_emphasis={} delta_ms={} window_ms={} source_app={:?} last_source_app={:?} => {}",
+            "[ClipboardTransition] enabled={} same_hash={} previous_hash_matches={} same_source_app={} source_app_valid={} last_source_app_valid={} interval_ok={} cooldown_ok={} same_as_last_emphasis={} delta_ms={} window_ms={} rollback_suppressed={} source_app={:?} last_source_app={:?} => pin={}",
             enabled, same_hash, same_source_app, source_app_valid, last_source_app_valid,
-            interval_ok, cooldown_ok, same_as_last_emphasis, delta_ms, window_ms,
-            source_app, state.last_source_app, should_pin
+            previous_hash_matches, interval_ok, cooldown_ok, same_as_last_emphasis, delta_ms,
+            window_ms, suppress_rollback_duplicate, source_app, state.last_source_app,
+            should_pin_on_double_copy
         );
 
+        state.previous_hash = state.last_hash.clone();
         state.last_hash = Some(content_hash.to_string());
         state.last_source_app = Some(source_app.to_string());
         state.last_seen_at_ms = now_ms;
-        if should_pin {
+        if should_pin_on_double_copy {
             state.last_emphasis_at_ms = now_ms;
             state.last_emphasis_hash = Some(content_hash.to_string());
             state.last_emphasis_source_app = Some(source_app.to_string());
         }
 
-        should_pin
+        ClipboardTransitionDecision {
+            should_pin_on_double_copy,
+            suppress_rollback_duplicate,
+        }
     }
 
     /// Run auto-cleanup if enabled. Returns number of deleted items.
@@ -2551,5 +2598,67 @@ impl ClipboardManager {
 
         self.pin_by_hash_with_retry(&content_hash, max_pinned, 20, 75)
             .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_state() -> Arc<Mutex<DoubleCopyEmphasisState>> {
+        Arc::new(Mutex::new(DoubleCopyEmphasisState::default()))
+    }
+
+    #[test]
+    fn suppresses_short_rollback_duplicate_for_a_b_a_pattern() {
+        let state = make_state();
+
+        let first = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-a", "IME", true, 900, 10_000,
+        );
+        assert!(!first.should_pin_on_double_copy);
+        assert!(!first.suppress_rollback_duplicate);
+
+        let second = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-b", "IME", true, 900, 10_120,
+        );
+        assert!(!second.should_pin_on_double_copy);
+        assert!(!second.suppress_rollback_duplicate);
+
+        let third = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-a", "IME", true, 900, 10_260,
+        );
+        assert!(!third.should_pin_on_double_copy);
+        assert!(third.suppress_rollback_duplicate);
+    }
+
+    #[test]
+    fn keeps_normal_double_copy_behavior_for_same_hash() {
+        let state = make_state();
+
+        let first = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-a", "IME", true, 900, 20_000,
+        );
+        assert!(!first.should_pin_on_double_copy);
+        assert!(!first.suppress_rollback_duplicate);
+
+        let second = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-a", "IME", true, 900, 20_120,
+        );
+        assert!(second.should_pin_on_double_copy);
+        assert!(!second.suppress_rollback_duplicate);
+    }
+
+    #[test]
+    fn does_not_suppress_late_return_to_previous_hash() {
+        let state = make_state();
+
+        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-a", "IME", true, 900, 30_000);
+        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-b", "IME", true, 900, 30_120);
+
+        let third = ClipboardManager::analyze_clipboard_transition_at(
+            &state, "hash-a", "IME", true, 900, 31_500,
+        );
+        assert!(!third.suppress_rollback_duplicate);
     }
 }

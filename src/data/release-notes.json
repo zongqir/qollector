@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.3.12",
+      "publishedAt": "2026-06-27",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-12",
+      "summary": {
+        "zh-CN": "修复语音输入等“临时复制再恢复原剪贴板”场景下的排序异常，让真正的新内容稳定留在历史顶部。",
+        "en-US": "Fixed recency ordering for clipboard rollback flows such as voice input tools that temporarily copy new text and then restore the previous clipboard content."
+      },
+      "highlights": {
+        "zh-CN": [
+          "新增短时 A -> B -> A 剪贴板回滚识别，避免输入法恢复旧内容时把旧条目错误顶回第一。",
+          "语音输入、输入法上屏等“借用剪贴板再恢复”的流程里，真正的新文本会更稳定地保留在历史流顶部。",
+          "保留正常重复复制的既有行为，手动重新复制旧内容时仍然会按最近活动更新时间回到前面。",
+          "补充后端单元测试，覆盖短时回滚抑制、正常双击复制保持有效、超时回退不误判等场景。"
+        ],
+        "en-US": [
+          "Added short-window A -> B -> A clipboard rollback detection so restored older content no longer jumps back to the top by mistake.",
+          "In voice input and IME flows that temporarily borrow the clipboard, the real newly produced text now stays at the top more reliably.",
+          "Preserved the existing behavior for normal repeated copies, so intentionally copying an older item again still refreshes its recency.",
+          "Added backend unit tests covering rollback suppression, preserved double-copy behavior, and late-return cases that should not be suppressed."
+        ]
+      }
+    },
+    {
       "version": "0.3.11",
       "publishedAt": "2026-05-27",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-11",
