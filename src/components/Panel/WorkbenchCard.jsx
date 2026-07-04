@@ -9,7 +9,7 @@ import {
   parseUrl,
   getLinkPreviewTitle,
 } from '../../utils/formatters';
-import { getImageOriginal } from '../../utils/imageHelpers';
+import { getImageThumbnail } from '../../utils/imageHelpers';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getCardTagPreviewLimit } from '../../utils/cardDensity';
 import {
@@ -143,7 +143,7 @@ function WorkbenchCard({
         <div className="workbench-card-image panel-card-content-image">
           <img
             className="panel-card-content-image-media"
-            src={getImageOriginal(item.image_paths)}
+            src={getImageThumbnail(item.image_paths)}
             alt=""
             loading="lazy"
           />
