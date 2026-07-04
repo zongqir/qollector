@@ -4,9 +4,15 @@ import { hydrateItemIfNeeded, itemNeedsHydration } from './itemHydration';
 import { buildItemDerivations } from './itemsIndex';
 
 export const createEditModalActions = (set, get) => ({
-  openEditModal: (item = null) => {
+  openEditModal: (item = null, options = {}) => {
+    const initialFocus = options?.initialFocus === 'content' ? 'content' : 'note';
     if (item) {
-      set({ editModalMode: 'edit', editingItem: item, showEditModal: true });
+      set({
+        editModalMode: 'edit',
+        editingItem: item,
+        editModalInitialFocus: initialFocus,
+        showEditModal: true,
+      });
       if (itemNeedsHydration(item)) {
         const editingId = item.id;
         hydrateItemIfNeeded(item)
@@ -22,7 +28,12 @@ export const createEditModalActions = (set, get) => ({
           });
       }
     } else {
-      set({ editModalMode: 'new', editingItem: null, showEditModal: true });
+      set({
+        editModalMode: 'new',
+        editingItem: null,
+        editModalInitialFocus: null,
+        showEditModal: true,
+      });
     }
   },
 
@@ -89,13 +100,13 @@ export const createEditModalActions = (set, get) => ({
         });
       }
       await loadItems();
-      set({ showEditModal: false, editingItem: null });
+      set({ showEditModal: false, editingItem: null, editModalInitialFocus: null });
     } catch (error) {
       console.error('保存失败:', error);
     }
   },
 
   handleEditModalCancel: () => {
-    set({ showEditModal: false, editingItem: null });
+    set({ showEditModal: false, editingItem: null, editModalInitialFocus: null });
   },
 });

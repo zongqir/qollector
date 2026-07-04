@@ -137,6 +137,7 @@ export const createBaseState = ({
   showEditModal: false,
   editModalMode: 'new',
   editingItem: null,
+  editModalInitialFocus: null,
 
   // ========== Guided Tour ==========
   tourActive: false,

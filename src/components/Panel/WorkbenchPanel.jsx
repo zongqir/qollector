@@ -2012,6 +2012,10 @@ function WorkbenchPanel() {
           openEditModal(currentItem);
           closeContextMenu();
           return;
+        case 'editContent':
+          openEditModal(currentItem, { initialFocus: 'content' });
+          closeContextMenu();
+          return;
         case 'preview':
           openItemPreview(setPanelMode, currentItem);
           closeContextMenu();

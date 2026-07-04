@@ -16,7 +16,7 @@ const NOTE_COLORS = [
   { id: 'purple',  bg: '#f3eefa', dot: '#c4a8f0' },
 ];
 
-function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
+function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [note, setNote] = useState('');
@@ -31,6 +31,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   const [isPinned, setIsPinned] = useState(true);
   const [noteColor, setNoteColor] = useState('default');
   const textareaRef = useRef(null);
+  const noteEditorRef = useRef(null);
   const tagSuggestionsRef = useRef(null);
   const contentEditorRef = useRef(null);
   const items = useAppStore(s => s.items);
@@ -97,11 +98,11 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
       setNote('');
       setTags([]);
     }
-    setShowContentEditor(false);
+    setShowContentEditor(initialFocus === 'content');
     setNewTag('');
     setIsTagInputFocused(false);
     setActiveTagSuggestionIndex(-1);
-  }, [item, mode]);
+  }, [item, mode, initialFocus]);
 
   useEffect(() => {
     if (!showContentEditor) return;
@@ -110,9 +111,18 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
         behavior: 'smooth',
         block: 'start',
       });
+      contentEditorRef.current?.querySelector('textarea')?.focus();
     }, 60);
     return () => clearTimeout(timer);
   }, [showContentEditor]);
+
+  useEffect(() => {
+    if (mode !== 'edit' || initialFocus === 'content') return undefined;
+    const timer = setTimeout(() => {
+      noteEditorRef.current?.focus();
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [mode, initialFocus, item?.id]);
 
   const rankedUserTags = useMemo(() => {
     const statsByTag = new Map();
@@ -315,6 +325,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
   ]);
 
   const isNewMode = mode === 'new';
+  const isContentEditMode = !isNewMode && initialFocus === 'content';
   const canEdit = isNewMode || (item && item.type_ !== 'image');
   const contentPreview = (typeof content === 'string' ? content : '').trim();
 
@@ -410,7 +421,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
     <div className="edit-modal-overlay" onClick={onCancel}>
       <div className={`edit-modal ${showContentEditor ? 'content-expanded' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="edit-modal-header">
-          <h3>{isNewMode ? t('editModal.newTitle') : t('editModal.editTitle')}</h3>
+          <h3>{isNewMode ? t('editModal.newTitle') : isContentEditMode ? t('editModal.editContentTitle') : t('editModal.editTitle')}</h3>
           <button onClick={onCancel} className="edit-modal-close"><X size={20} /></button>
         </div>
 
@@ -418,12 +429,13 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
           <div className="edit-modal-field edit-modal-field-note-primary">
             <label className="edit-modal-label">{t('editModal.note')}</label>
             <textarea
+              ref={noteEditorRef}
               className="edit-modal-textarea edit-modal-textarea-note"
               placeholder={t('editModal.notePlaceholder')}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               onKeyDown={handleKeyDown}
-              autoFocus
+              autoFocus={!isContentEditMode}
               rows={6}
             />
             <div className="edit-modal-field-hint">{t('editModal.notePrimaryHint')}</div>
@@ -490,7 +502,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
           {canEdit && (
             <div ref={contentEditorRef} className="edit-modal-field edit-modal-field-content-secondary">
               <div className="edit-modal-content-toggle-row">
-                <label className="edit-modal-label">{t('editModal.contentOptional')}</label>
+                <label className="edit-modal-label">{isContentEditMode ? t('editModal.contentOriginal') : t('editModal.contentOptional')}</label>
                 <button
                   type="button"
                   className="edit-modal-content-toggle-btn"
@@ -533,7 +545,7 @@ function EditModal({ item, mode, isMiniMode, onSave, onCancel }) {
               className="edit-modal-btn submit"
               disabled={savePending || saveContinuePending}
             >
-              {t('editModal.savePrimary')}
+              {isContentEditMode ? t('editModal.saveContentPrimary') : t('editModal.savePrimary')}
             </button>
           </div>
         </div>

@@ -340,6 +340,7 @@ function AppUiOverlayHost({
   const showEditModal = useAppStore((s) => s.showEditModal);
   const editingItem = useAppStore((s) => s.editingItem);
   const editModalMode = useAppStore((s) => s.editModalMode);
+  const editModalInitialFocus = useAppStore((s) => s.editModalInitialFocus);
   const isMiniMode = useAppStore((s) => s.isMiniMode);
   const themeMode = useAppStore((s) => s.themeMode);
   const tourActive = useAppStore((s) => s.tourActive);
@@ -385,6 +386,7 @@ function AppUiOverlayHost({
           <EditModal
             item={editingItem}
             mode={editModalMode}
+            initialFocus={editModalInitialFocus}
             isMiniMode={isMiniMode}
             onSave={handleEditModalSave}
             onCancel={handleEditModalCancel}
