@@ -1,0 +1,46 @@
+- application "Qollect" [ref=e3]:
+  - generic [ref=e4]:
+    - group "视图预设" [ref=e8]:
+      - button "切换迷你模式 / 展开到上次视图 (Ctrl/Cmd+M)" [ref=e9] [cursor=pointer]
+      - button "切换到列表 (Ctrl/Cmd+1)" [ref=e15] [cursor=pointer]
+      - button "切换到工作区 (Ctrl/Cmd+2)" [ref=e17] [cursor=pointer]
+      - button "切换到全览 (Ctrl/Cmd+3)" [ref=e20] [cursor=pointer]
+      - button "切换到紧凑模式 (Ctrl/Cmd+Shift+D)" [ref=e27] [cursor=pointer]
+    - generic [ref=e31]:
+      - button "快速输入" [ref=e33] [cursor=pointer]
+      - generic [ref=e38]:
+        - button "窗口固定" [ref=e39] [cursor=pointer]
+        - button "最小化" [ref=e42] [cursor=pointer]
+        - button "最大化" [ref=e44] [cursor=pointer]
+        - button "关闭" [ref=e47] [cursor=pointer]
+  - generic [ref=e51]:
+    - generic [ref=e52]:
+      - banner [ref=e53]:
+        - generic [ref=e54]:
+          - textbox "搜索内容、标签、备注..." [ref=e56]
+          - button "AI 搜索" [ref=e57] [cursor=pointer]
+          - button "显示收藏" [ref=e61] [cursor=pointer]
+          - button "类型筛选" [ref=e65] [cursor=pointer]
+      - generic [ref=e72]: 加载中...
+    - generic [ref=e78]:
+      - generic [ref=e80]:
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - button "在这里写下你的想法..." [ref=e84] [cursor=pointer]
+            - textbox "记到“默认工作台”，回车添加..." [ref=e86]
+            - button "收起筛选" [expanded] [ref=e87] [cursor=pointer]
+          - button "切换工作台" [disabled] [ref=e92]:
+            - generic [ref=e97]: 默认
+        - generic [ref=e100]:
+          - generic [ref=e106]: “默认工作台”还是空的
+          - generic [ref=e107]: 点击左侧的放入工作台按钮，或直接把卡片拖到这里
+          - generic [ref=e108]: 这里是你的工作台，放入重要内容后可以在这里整理、合并、导出，让剪贴板变成你的素材库。
+      - generic:
+        - generic:
+          - generic:
+            - button "返回工作台"
+            - generic: 时间旅行
+          - generic:
+            - button "今天"
+            - button "昨天"
+          - generic: 这一天没有记录

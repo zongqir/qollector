@@ -1,0 +1,21 @@
+- application "Qollect" [ref=f1e3]:
+  - generic [ref=f1e4]:
+    - button "展开到上次视图" [ref=f1e108] [cursor=pointer]
+    - generic [ref=f1e31]:
+      - button "快速输入" [ref=f1e33] [cursor=pointer]
+      - generic [ref=f1e38]:
+        - button "窗口固定" [ref=f1e39] [cursor=pointer]
+        - button "最小化" [ref=f1e42] [cursor=pointer]
+        - button "关闭" [ref=f1e47] [cursor=pointer]
+  - generic [ref=f1e52]:
+    - banner [ref=f1e53]:
+      - generic [ref=f1e54]:
+        - textbox "搜索内容、标签、备注..." [active] [ref=f1e56]
+        - button "AI 搜索" [ref=f1e57] [cursor=pointer]
+        - button "显示全部" [pressed] [ref=f1e118] [cursor=pointer]
+        - button "显示工作台" [ref=f1e119] [cursor=pointer]
+        - button "类型筛选" [ref=f1e65] [cursor=pointer]
+    - status [ref=f1e124]:
+      - generic [ref=f1e125]: 还没有收藏内容
+      - generic [ref=f1e126]: 在历史流点星标即可加入收藏
+  - status [ref=f1e127]: 已切换到迷你模式

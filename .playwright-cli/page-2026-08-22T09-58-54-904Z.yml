@@ -1,0 +1,25 @@
+- application "Qollect" [ref=e3]:
+  - generic [ref=e4]:
+    - button "展开到上次视图" [ref=e109] [cursor=pointer]
+    - generic [ref=e31]:
+      - button "快速输入" [ref=e33] [cursor=pointer]
+      - generic [ref=e38]:
+        - button "窗口固定" [ref=e39] [cursor=pointer]
+        - button "最小化" [ref=e42] [cursor=pointer]
+        - button "关闭" [ref=e47] [cursor=pointer]
+  - generic [ref=e52]:
+    - banner [ref=e53]:
+      - generic [ref=e54]:
+        - textbox "搜索内容、标签、备注..." [active] [ref=e56]
+        - button "AI 搜索" [ref=e57] [cursor=pointer]
+        - button "显示收藏" [ref=e61] [cursor=pointer]
+        - button "显示工作台" [ref=e119] [cursor=pointer]
+        - button "类型筛选" [ref=e65] [cursor=pointer]
+    - status [ref=e123]:
+      - generic [ref=e74]:
+        - generic [ref=e124]: 还没有历史记录
+        - generic [ref=e125]: 先通过快速录入添加第一条内容，或重看引导了解核心流程。
+        - generic [ref=e126]:
+          - button "快速录入" [ref=e127] [cursor=pointer]
+          - button "重播引导" [ref=e128] [cursor=pointer]
+  - status [ref=e129]: 已切换到迷你模式
