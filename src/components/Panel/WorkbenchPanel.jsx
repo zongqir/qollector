@@ -208,6 +208,7 @@ function WorkbenchPanel() {
   const workbenchToastTimerRef = useRef(null);
   const workbenchUnpinConfirmTimerRef = useRef(null);
   const workbenchCardClickTimerRef = useRef(null);
+  const workbenchScrollbarHideTimerRef = useRef(null);
   const workbenchSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
 
@@ -1571,6 +1572,33 @@ function WorkbenchPanel() {
 
   const workbenchPanelRef = useRef(null);
 
+  const handleWorkbenchCardsPointerMove = useCallback((event) => {
+    const cards = workbenchCardsRef.current;
+    if (!cards || cards.scrollHeight <= cards.clientHeight) return;
+
+    const rect = cards.getBoundingClientRect();
+    const isNearScrollbar = event.clientX >= rect.right - 18;
+    cards.classList.toggle('is-scrollbar-near', isNearScrollbar);
+  }, []);
+
+  const handleWorkbenchCardsPointerLeave = useCallback(() => {
+    workbenchCardsRef.current?.classList.remove('is-scrollbar-near');
+  }, []);
+
+  const handleWorkbenchCardsScroll = useCallback(() => {
+    const cards = workbenchCardsRef.current;
+    if (!cards || cards.scrollHeight <= cards.clientHeight) return;
+
+    cards.classList.add('is-scrollbar-active');
+    if (workbenchScrollbarHideTimerRef.current) {
+      clearTimeout(workbenchScrollbarHideTimerRef.current);
+    }
+    workbenchScrollbarHideTimerRef.current = setTimeout(() => {
+      cards.classList.remove('is-scrollbar-active');
+      workbenchScrollbarHideTimerRef.current = null;
+    }, 700);
+  }, []);
+
   const {
     contextMenuRef,
     contextMenuState,
@@ -1700,6 +1728,10 @@ function WorkbenchPanel() {
       if (workbenchUnpinConfirmTimerRef.current) {
         clearTimeout(workbenchUnpinConfirmTimerRef.current);
         workbenchUnpinConfirmTimerRef.current = null;
+      }
+      if (workbenchScrollbarHideTimerRef.current) {
+        clearTimeout(workbenchScrollbarHideTimerRef.current);
+        workbenchScrollbarHideTimerRef.current = null;
       }
     }
   ), []);
@@ -2410,7 +2442,13 @@ function WorkbenchPanel() {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pinnedItemIds} strategy={rectSortingStrategy}>
-            <div ref={workbenchCardsRef} className={`workbench-cards ${isWorkbenchSortMode ? 'sort-mode' : ''}`}>
+            <div
+              ref={workbenchCardsRef}
+              className={`workbench-cards ${isWorkbenchSortMode ? 'sort-mode' : ''}`}
+              onPointerMove={handleWorkbenchCardsPointerMove}
+              onPointerLeave={handleWorkbenchCardsPointerLeave}
+              onScroll={handleWorkbenchCardsScroll}
+            >
               {pinnedItems.map((item, index) => (
                 <SortableWorkbenchCard
                   key={item.id}

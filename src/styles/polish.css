@@ -1639,13 +1639,13 @@
 .density-compact .app.mini-mode .workbench-cards {
   --workbench-card-column-min: 106px;
   --workbench-card-column-gap: 4px;
-  padding: 3px;
+  padding: 3px 2px;
 }
 
 .density-cozy .app.mini-mode .workbench-cards {
   --workbench-card-column-min: 114px;
   --workbench-card-column-gap: 5px;
-  padding: 4px;
+  padding: 4px 2px;
 }
 
 .density-compact .app.mini-mode .workbench-cards.sort-mode,
@@ -2261,4 +2261,90 @@ html:not(.dark-mode) .preview-tool-btn.secondary {
   .app-feedback-toast {
     animation: none !important;
   }
+}
+
+/* Normal desktop baseline: keep each view's own content model space-efficient. */
+.density-cozy .app:not(.mini-mode) {
+  --panel-rail-content-gap: 7px;
+  --history-panel-gutter-x: 8px;
+  --history-card-padding-x: 8px;
+  --history-rail-to-content-gap: 11px;
+}
+
+.density-cozy .app:not(.mini-mode) .titlebar {
+  height: 40px;
+}
+
+.density-cozy .app:not(.mini-mode) .header {
+  padding: 8px 10px;
+  gap: 5px;
+}
+
+.density-cozy .app:not(.mini-mode) .history-stream-scroller {
+  padding-block: 5px;
+}
+
+.density-cozy .app:not(.mini-mode) .history-stream-row .compact-card {
+  padding: 9px var(--history-card-padding-inline) 8px;
+}
+
+.density-cozy .app:not(.mini-mode) .collection-board {
+  gap: 8px;
+  padding: 8px;
+}
+
+.density-cozy .app:not(.mini-mode) .collection-tag-rail-wrap {
+  gap: 5px;
+  padding: 3px 2px 5px;
+}
+
+.density-cozy .app:not(.mini-mode) .collection-grid {
+  --collection-grid-gap: 9px;
+}
+
+.density-cozy .app:not(.mini-mode) .collection-card {
+  min-height: 146px;
+  padding: 10px;
+  gap: 7px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-panel {
+  padding: 4px 4px 6px;
+  gap: 2px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-filter-row {
+  margin: 5px 8px 0;
+  padding: 5px 7px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-filter-summary {
+  margin: 3px 8px 0;
+  min-height: 26px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-cards {
+  --workbench-card-column-gap: 6px;
+  padding: 4px 2px 6px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-card {
+  padding: 8px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-card-header {
+  margin-bottom: 4px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-card-content {
+  margin-bottom: 5px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-card-footer {
+  gap: 4px;
+}
+
+.density-cozy .app:not(.mini-mode) .workbench-bottom-bar {
+  gap: 6px;
+  padding: 6px 8px 2px;
 }

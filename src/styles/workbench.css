@@ -2318,7 +2318,7 @@
   .workbench-cards,
   .workbench-cards.sort-mode {
     grid-template-columns: minmax(0, 1fr);
-    padding: 0 4px 6px;
+    padding: 0 2px 6px;
     --workbench-card-column-gap: 4px;
   }
 
@@ -2622,11 +2622,11 @@
   .workbench-cards.sort-mode {
     --workbench-card-column-min: 156px;
     --workbench-card-column-gap: 7px;
-    padding: 1px 8px 8px;
+    padding: 1px 2px 8px;
   }
 
   .workbench-panel {
-    padding: 3px 6px 6px;
+    padding: 3px 2px 6px;
     gap: 1px;
   }
 
@@ -2783,7 +2783,7 @@
   }
 
   .workbench-panel {
-    padding: 2px 4px 5px;
+    padding: 2px 2px 5px;
   }
 
   .workbench-card {
