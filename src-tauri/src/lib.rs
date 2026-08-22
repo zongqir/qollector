@@ -1,5 +1,4 @@
 pub mod ai;
-pub mod beta_guard;
 pub mod commands;
 pub mod config;
 pub mod core;

@@ -1047,13 +1047,6 @@
     "uploadTo": "上传至",
     "confirmUpload": "确认上传"
   },
-  "beta": {
-    "expired": "Beta 版本已过期",
-    "expiredMessage": "此构建版本 ({{buildDate}}) 已于 {{expiryDate}} 过期，请下载最新版本继续使用。",
-    "upgradeHint": "请联系开发者获取最新版本",
-    "daysRemaining": "Beta 剩余 {{days}} 天",
-    "expiredBanner": "Beta 版本已过期，建议更新到最新版本"
-  },
   "update": {
     "available": "发现新版本 {{version}}",
     "downloadNow": "点击下载更新",

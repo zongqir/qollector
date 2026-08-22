@@ -426,9 +426,6 @@ function App() {
   const { t, i18n } = useTranslation();
   const appFeedbackTimerRef = useRef(null);
 
-  // Beta expiry state
-  const [betaExpired, setBetaExpired] = useState(false);
-  const [betaStatus, setBetaStatus] = useState(null);
   const [appFeedback, setAppFeedback] = useState(null);
 
   // Update state
@@ -577,23 +574,6 @@ function App() {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
-    };
-  }, []);
-
-  // Beta expiry check
-  useEffect(() => {
-    invoke('get_beta_status').then(status => {
-      setBetaStatus(status);
-      if (status.expired) setBetaExpired(true);
-    }).catch(err => console.warn('[BetaGuard] failed to get status:', err));
-
-    const unlistenBetaExpired = listen('beta-expired', (event) => {
-      setBetaStatus(event.payload);
-      setBetaExpired(true);
-    });
-
-    return () => {
-      unlistenBetaExpired.then(unlisten => unlisten());
     };
   }, []);
 
@@ -1543,34 +1523,6 @@ function App() {
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Beta expired soft banner */}
-      {betaExpired && !updateInfo && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9998,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          padding: '8px 16px', fontSize: 13,
-          background: 'rgba(217,119,6,0.95)', color: '#fff',
-          backdropFilter: 'blur(8px)',
-        }}>
-          <span>{t('beta.expiredBanner')}</span>
-          <button
-            onClick={async () => {
-              await checkForUpdate(false);
-              if (updateInfo?.update) {
-                await downloadAndInstall();
-              }
-            }}
-            disabled={updateChecking || (typeof updateProgress === 'number')}
-            style={{ background: '#fff', color: '#b45309', border: 'none', borderRadius: 6, padding: '4px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}
-          >
-            {updateChecking ? t('update.checking') :
-             typeof updateProgress === 'number' ? t('update.progress', { percent: Math.round(updateProgress) }) :
-             t('update.checkNow')}
-          </button>
-          {updateError && <span style={{ color: '#fecaca', fontSize: 12 }}>{updateError}</span>}
         </div>
       )}
 

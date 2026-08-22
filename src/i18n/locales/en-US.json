@@ -1082,13 +1082,6 @@
     "uploadTo": "Upload to",
     "confirmUpload": "Confirm Upload"
   },
-  "beta": {
-    "expired": "Beta Version Expired",
-    "expiredMessage": "This build ({{buildDate}}) expired on {{expiryDate}}. Please download the latest version to continue.",
-    "upgradeHint": "Please contact the developer for the latest version",
-    "daysRemaining": "Beta: {{days}} days remaining",
-    "expiredBanner": "Build expired, please update to the latest version"
-  },
   "update": {
     "available": "New version {{version}} available",
     "downloadNow": "Click to download update",

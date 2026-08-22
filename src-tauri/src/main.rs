@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ai;
-mod beta_guard;
 mod commands;
 mod config;
 mod core;
@@ -45,7 +44,6 @@ use shortcuts::{apply_shortcut_config, ShortcutAction, ShortcutBindingState};
 use startup_metrics::StartupMetricsState;
 use std::sync::Arc;
 use std::time::Instant;
-use tauri::Emitter;
 use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
@@ -370,14 +368,6 @@ fn main() {
                 println!("[Window] main window is ready");
             } else {
                 eprintln!("[Window] warning: failed to get main window in setup");
-            }
-
-            // Beta expiry check — emit event to frontend if expired
-            let beta_status = beta_guard::check_beta_expiry();
-            if beta_status.expired {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.emit("beta-expired", beta_status.clone());
-                }
             }
 
             // Restore database file header during startup.
@@ -851,7 +841,6 @@ fn main() {
             preview_file,
             open_file_path,
             reveal_file_path,
-            beta_guard::get_beta_status,
             crash_log::get_crash_log,
             crash_log::clear_crash_log,
             get_license_info,
