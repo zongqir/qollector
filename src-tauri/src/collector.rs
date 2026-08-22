@@ -28,8 +28,24 @@ struct CollectorEvent<'a> {
     captured_at: String,
     content_type: &'a str,
     content: &'a str,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    ai_tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     source_app: Option<String>,
+}
+
+fn ai_tags_from_item(item: &ClipboardItem) -> Vec<String> {
+    item.tags
+        .as_deref()
+        .and_then(|raw_tags| serde_json::from_str::<Vec<String>>(raw_tags).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|tag| {
+            let tag = tag.trim();
+            let ai_tag = tag.strip_prefix("AI:")?.trim();
+            (!ai_tag.is_empty()).then(|| ai_tag.to_string())
+        })
+        .collect()
 }
 
 pub fn is_recent(item: &ClipboardItem, now: i64) -> bool {
@@ -93,6 +109,7 @@ pub async fn upload_item(config: &CollectorConfig, item: Arc<ClipboardItem>) -> 
             .to_rfc3339(),
         content_type: &item.type_,
         content,
+        ai_tags: ai_tags_from_item(&item),
         source_app,
     };
 
@@ -126,5 +143,39 @@ mod tests {
 
         config.token = "token".to_string();
         assert!(is_ready(&config));
+    }
+
+    #[test]
+    fn extracts_only_ai_tags_from_item() {
+        let mut item = ClipboardItem::new_text(
+            "collector test".to_string(),
+            crate::core::models::WindowMetadata {
+                source_app: "test".to_string(),
+                window_title: "collector test".to_string(),
+                source_url: None,
+                is_self: false,
+            },
+        );
+        item.tags = Some(r#"["project", "AI: Rust", "AI:analysis", "AI:  "]"#.to_string());
+
+        assert_eq!(ai_tags_from_item(&item), vec!["Rust", "analysis"]);
+    }
+
+    #[test]
+    fn serializes_ai_tags_only_when_present() {
+        let base_event = |ai_tags: Vec<String>| CollectorEvent {
+            event_id: "event-1",
+            captured_at: "2026-08-22T10:20:30Z".to_string(),
+            content_type: "text",
+            content: "collector test",
+            ai_tags,
+            source_app: None,
+        };
+
+        let with_tags = serde_json::to_value(base_event(vec!["Rust".to_string()])).unwrap();
+        assert_eq!(with_tags["ai_tags"], serde_json::json!(["Rust"]));
+
+        let without_tags = serde_json::to_value(base_event(Vec::new())).unwrap();
+        assert!(without_tags.get("ai_tags").is_none());
     }
 }

@@ -37,6 +37,21 @@ func TestNormalizeKeepsShortText(t *testing.T) {
 	}
 }
 
+func TestNormalizeStoresAITags(t *testing.T) {
+	c := &collector{cfg: config{MaxTextChars: 20, PreviewChars: 2}}
+	event, err := c.normalize(incomingEvent{
+		ContentType: "text",
+		Content:     "hello",
+		AITags:      []string{" Rust ", "", "analysis"},
+	})
+	if err != nil {
+		t.Fatalf("normalize returned error: %v", err)
+	}
+	if got, want := strings.Join(event.AITags, ","), "Rust,analysis"; got != want {
+		t.Fatalf("unexpected AI tags %q", got)
+	}
+}
+
 func TestNormalizeRejectsNonTextContent(t *testing.T) {
 	c := &collector{cfg: config{MaxTextChars: 20, PreviewChars: 2}}
 	if _, err := c.normalize(incomingEvent{ContentType: "image/png", Content: "ignored"}); err == nil {

@@ -114,14 +114,18 @@ impl ClipboardManager {
             let repo = self.repository.clone();
             let config_repo = self.config_repo.clone();
             tokio::spawn(async move {
-                let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+                let interval_duration = std::time::Duration::from_secs(300);
+                let mut interval = tokio::time::interval_at(
+                    tokio::time::Instant::now() + interval_duration,
+                    interval_duration,
+                );
                 loop {
+                    interval.tick().await;
                     if let Err(error) =
                         Self::sync_recent_collector_items(repo.clone(), config_repo.clone()).await
                     {
                         eprintln!("[Collector] background sync skipped: {}", error);
                     }
-                    interval.tick().await;
                 }
             });
         }
@@ -532,28 +536,6 @@ impl ClipboardManager {
         drop(repo_lock);
         let _ = app_handle.emit("clipboard-changed", ());
         println!("[Clipboard] item saved");
-
-        if inserted_new_item {
-            let collector_item = Arc::new(item.clone());
-            let collector_repo = repo.clone();
-            let collector_config_repo = config_repo.clone();
-            tokio::spawn(async move {
-                let Ok(Some(config)) = collector_config_repo.load_collector_config().await else {
-                    return;
-                };
-                let item_id = collector_item.id.clone();
-                if collector::is_ready(&config) && collector::upload_item(&config, collector_item).await.is_ok() {
-                    if let Err(error) = collector_repo
-                        .lock()
-                        .await
-                        .mark_collector_uploaded(&item_id)
-                        .await
-                    {
-                        eprintln!("[Collector] failed to mark {} uploaded: {}", item_id, error);
-                    }
-                }
-            });
-        }
 
         if transition.should_pin_on_double_copy {
             let repo_lock = repo.lock().await;

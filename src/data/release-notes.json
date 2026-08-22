@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.2",
+      "publishedAt": "2026-08-22",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-2",
+      "summary": {
+        "zh-CN": "移除截图复制入口，并让自托管分析收集按批次携带本地 AI 标签。",
+        "en-US": "Removed screenshot copy and added batched self-hosted analysis uploads with local AI tags."
+      },
+      "highlights": {
+        "zh-CN": [
+          "移除截图识别复制入口与专用后台调用，保留图片条目 OCR。",
+          "自托管分析收集改为每 5 分钟批量上传，避免抢占本地 AI 标签生成。",
+          "上传事件可包含本地 AI 标签；用户手动标签不会上传。"
+        ],
+        "en-US": [
+          "Removed screenshot-to-copy entry points and dedicated backend calls while preserving image OCR.",
+          "Self-hosted analysis uploads now run in five-minute batches so local AI tagging can complete first.",
+          "Upload events can include local AI tags; manually added tags are not sent."
+        ]
+      }
+    },
+    {
       "version": "0.4.1",
       "publishedAt": "2026-08-22",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-1",

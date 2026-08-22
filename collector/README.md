@@ -75,9 +75,12 @@ Content-Type: application/json
   "captured_at": "2026-08-22T10:20:30.000Z",
   "content_type": "text/plain",
   "content": "clipboard text",
+  "ai_tags": ["project", "research"],
   "source_app": "example.exe"
 }
 ```
+
+客户端会每 5 分钟批量上传最近 24 小时内尚未上传的文本和链接记录；用户点击“立即同步”时会立刻执行同一批处理。`ai_tags` 是可选字段，仅包含客户端本地 AI 生成的标签；没有生成标签时会省略，用户手动标签不会上传。
 
 只接受文本类型。图片、二进制和其他类型会返回 `415`。超过 `QOLLECT_MAX_TEXT_CHARS` 的文本只保存前 `QOLLECT_PREVIEW_CHARS` 个 Unicode 字符，并标记 `truncated: true`，同时保留原始字符数和 SHA-256。
 

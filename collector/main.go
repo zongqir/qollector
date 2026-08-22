@@ -43,23 +43,25 @@ type config struct {
 }
 
 type incomingEvent struct {
-	EventID     string `json:"event_id"`
-	CapturedAt  string `json:"captured_at"`
-	ContentType string `json:"content_type"`
-	Content     string `json:"content"`
-	SourceApp   string `json:"source_app,omitempty"`
+	EventID     string   `json:"event_id"`
+	CapturedAt  string   `json:"captured_at"`
+	ContentType string   `json:"content_type"`
+	Content     string   `json:"content"`
+	AITags      []string `json:"ai_tags,omitempty"`
+	SourceApp   string   `json:"source_app,omitempty"`
 }
 
 type storedEvent struct {
-	EventID       string `json:"event_id"`
-	CapturedAt    string `json:"captured_at"`
-	ReceivedAt    string `json:"received_at"`
-	ContentType   string `json:"content_type"`
-	Content       string `json:"content"`
-	SourceApp     string `json:"source_app,omitempty"`
-	OriginalChars int    `json:"original_chars"`
-	ContentSHA256 string `json:"content_sha256"`
-	Truncated     bool   `json:"truncated"`
+	EventID       string   `json:"event_id"`
+	CapturedAt    string   `json:"captured_at"`
+	ReceivedAt    string   `json:"received_at"`
+	ContentType   string   `json:"content_type"`
+	Content       string   `json:"content"`
+	AITags        []string `json:"ai_tags,omitempty"`
+	SourceApp     string   `json:"source_app,omitempty"`
+	OriginalChars int      `json:"original_chars"`
+	ContentSHA256 string   `json:"content_sha256"`
+	Truncated     bool     `json:"truncated"`
 }
 
 type collector struct {
@@ -299,11 +301,22 @@ func (c *collector) normalize(event incomingEvent) (storedEvent, error) {
 		ReceivedAt:    time.Now().UTC().Format(time.RFC3339Nano),
 		ContentType:   contentType,
 		Content:       content,
+		AITags:        normalizeAITags(event.AITags),
 		SourceApp:     strings.TrimSpace(event.SourceApp),
 		OriginalChars: originalChars,
 		ContentSHA256: hex.EncodeToString(digest[:]),
 		Truncated:     truncated,
 	}, nil
+}
+
+func normalizeAITags(tags []string) []string {
+	result := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		if normalized := strings.TrimSpace(tag); normalized != "" {
+			result = append(result, normalized)
+		}
+	}
+	return result
 }
 
 func isTextContentType(contentType string) bool {
