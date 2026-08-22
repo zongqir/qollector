@@ -15,7 +15,6 @@ import {
   openWidgetWindow,
   closeWidgetWindow,
 } from './services/windowService';
-import { runSmartCopyCaptureWorkflow } from './services/smartCopyWorkflowService';
 import {
   QUICK_NOTE_SAVED_EVENT,
 } from './services/quickNoteService';
@@ -436,7 +435,6 @@ function App() {
   const [releaseNotesModal, setReleaseNotesModal] = useState(null);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [isQuickInputOpen, setIsQuickInputOpen] = useState(false);
-  const [smartCopyRunning, setSmartCopyRunning] = useState(false);
 
   const showAppFeedback = useCallback((text, type = 'info', duration = 1200) => {
     if (!text) return;
@@ -456,7 +454,6 @@ function App() {
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const autoLayoutSwitchEnabled = useAppStore(s => s.autoLayoutSwitchEnabled);
-  const smartCopyEntryEnabled = useAppStore(s => s.smartCopyEntryEnabled);
   const panelMode = useAppStore(s => s.panelMode);
 
   // Store actions
@@ -471,60 +468,12 @@ function App() {
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const setSelectedType = useAppStore(s => s.setSelectedType);
-  const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
 
   // Tour state
   const startTour = useAppStore(s => s.startTour);
   const [initialWindowModeReady, setInitialWindowModeReady] = useState(false);
   const [miniPrimaryContent, setMiniPrimaryContent] = useState(MINI_PRIMARY_CONTENT_HISTORY);
   const autoMiniSwitchPendingRef = useRef(false);
-
-  const mapSmartCopyErrorMessage = useCallback((error) => {
-    const raw = typeof error === 'string'
-      ? error
-      : String(error?.message || error || '');
-
-    if (raw === 'SMART_COPY_TIMEOUT') {
-      return t('smartCopy.timeout');
-    }
-    if (raw.includes('OCR service not initialized')) {
-      return t('smartCopy.ocrUnavailable');
-    }
-    if (raw.includes('OCR returned empty text')) {
-      return t('smartCopy.emptyText');
-    }
-    if (raw.includes('only supported on Windows')) {
-      return t('smartCopy.unsupportedPlatform');
-    }
-    return t('smartCopy.failed', { error: raw });
-  }, [t]);
-
-  const handleStartSmartCopy = useCallback(async () => {
-    if (smartCopyRunning) return;
-
-    setSmartCopyRunning(true);
-    showAppFeedback(t('smartCopy.captureStarted'), 'info', 1800);
-
-    try {
-      const result = await runSmartCopyCaptureWorkflow({
-        timeoutMs: 45000,
-        pollIntervalMs: 380,
-        copyToClipboard: false,
-      });
-
-      const normalizedText = typeof result?.text === 'string' ? result.text.trim() : '';
-      if (!normalizedText) {
-        throw new Error('OCR returned empty text');
-      }
-
-      await handleCopyPlainText(normalizedText, 'global');
-    } catch (error) {
-      console.error('[SmartCopy] failed:', error);
-      showAppFeedback(mapSmartCopyErrorMessage(error), 'error', 2600);
-    } finally {
-      setSmartCopyRunning(false);
-    }
-  }, [handleCopyPlainText, mapSmartCopyErrorMessage, showAppFeedback, smartCopyRunning, t]);
 
   // 初始化
   useEffect(() => {
@@ -1419,9 +1368,6 @@ function App() {
       <TitleBar
         isAlwaysOnTop={isAlwaysOnTop}
         onToggleAlwaysOnTop={toggleWindowAlwaysOnTop}
-        onStartSmartCopy={handleStartSmartCopy}
-        smartCopyRunning={smartCopyRunning}
-        showSmartCopyEntry={smartCopyEntryEnabled}
         onOpenQuickInput={handleOpenQuickInput}
         isQuickInputOpen={isQuickInputOpen}
         isMiniMode={isMiniMode}

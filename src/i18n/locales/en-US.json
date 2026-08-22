@@ -13,7 +13,6 @@
     "restore": "Restore",
     "close": "Close",
     "quickAdd": "Quick Input",
-    "smartCopy": "Smart Copy OCR",
     "miniMode": "Mini Mode",
     "exitMini": "Exit Mini Mode",
     "modeMini": "Mini",
@@ -278,15 +277,6 @@
       "miniDisabled": "Window restored. Exited Mini mode automatically."
     }
   },
-  "smartCopy": {
-    "captureStarted": "Select the area that contains text",
-    "processing": "Recognizing text from screenshot...",
-    "timeout": "No new screenshot detected. Please try again.",
-    "ocrUnavailable": "OCR service is not initialized. Enable OCR in Settings first.",
-    "emptyText": "No text was recognized from this screenshot",
-    "unsupportedPlatform": "System screenshot entry is not supported on this platform",
-    "failed": "Smart copy failed: {{error}}"
-  },
   "edit": {
     "content": "Content:",
     "note": "Note:",
@@ -432,9 +422,6 @@
       "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and workbench items are never removed.",
       "enableWidget": "Floating Widget",
       "enableWidgetHint": "Show a floating drop zone on screen for quickly adding content to the workbench",
-      "smartCopyEntry": "Show Smart Copy Button",
-      "smartCopyEntryHint": "Off by default. When enabled, trigger screenshot OCR from the title bar.",
-      "smartCopyEntryWhere": "Enabled: use the \"Smart Copy OCR\" button on the left side of the title bar.",
       "cleanupMaxItems": "Max items to keep",
       "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
       "cleanupMaxAgeDays": "Max days to keep",

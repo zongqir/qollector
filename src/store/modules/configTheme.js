@@ -29,7 +29,6 @@ export const createLoadConfigsAction = ({
         && (generalConfig.auto_paste_on_double_click || false),
       copyQollectSourceItems: Boolean(generalConfig.copy_qollect_source_items),
       widgetEnabled: generalConfig.widget_enabled || false,
-      smartCopyEntryEnabled: Boolean(generalConfig.smart_copy_entry_enabled),
       historyTagShortcutEnabled: generalConfig.history_tag_shortcut_enabled !== false,
       autoCleanupEnabled: generalConfig.auto_cleanup_enabled !== false,
       cleanupMaxItems: Math.max(100, Number(generalConfig.cleanup_max_items || 50000)),

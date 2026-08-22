@@ -13,7 +13,6 @@
     "restore": "还原",
     "close": "关闭",
     "quickAdd": "快速输入",
-    "smartCopy": "截图识别复制",
     "miniMode": "迷你模式",
     "exitMini": "退出迷你模式",
     "modeMini": "迷你模式",
@@ -397,9 +396,6 @@
       "autoCleanupHint": "超过条数或天数限制的数据会自动删除，收藏和工作台的内容不受影响",
       "enableWidget": "悬浮小球",
       "enableWidgetHint": "在屏幕角落显示快捷投放小球，可拖拽内容快速放入工作台",
-      "smartCopyEntry": "显示截图识别按钮",
-      "smartCopyEntryHint": "默认关闭。开启后可在标题栏触发截图识别复制",
-      "smartCopyEntryWhere": "已开启：可在标题栏左侧的“截图识别复制”按钮触发",
       "cleanupMaxItems": "最多保留条数",
       "cleanupMaxItemsHint": "超过此数量时，最旧的记录会被自动清理",
       "cleanupMaxAgeDays": "最多保留天数",
@@ -1182,15 +1178,6 @@
       "miniEnabled": "窗口较窄，已自动切换到迷你模式",
       "miniDisabled": "窗口恢复，已自动退出迷你模式"
     }
-  },
-  "smartCopy": {
-    "captureStarted": "请框选要提取文字的区域",
-    "processing": "正在识别截图文字...",
-    "timeout": "未检测到新的截图，请重试",
-    "ocrUnavailable": "OCR 服务未初始化，请先在设置里启用 OCR",
-    "emptyText": "截图中未识别到文字",
-    "unsupportedPlatform": "当前平台暂不支持系统截图入口",
-    "failed": "智能复制失败: {{error}}"
   },
   "shortcutHelp": {
     "title": "快捷键帮助",

@@ -316,12 +316,6 @@
   min-width: 0;
 }
 
-.titlebar-btn-group-capture {
-  padding: 0;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent-light) 30%, transparent);
-}
-
 .titlebar-layout-presets {
   display: inline-flex;
   align-items: center;
@@ -611,10 +605,6 @@
     min-width: 20px;
   }
 
-  .titlebar-btn-group-capture {
-    background: transparent;
-    padding: 0;
-  }
 }
 
 /* Mini mode titlebar */
@@ -681,11 +671,6 @@
 
 .app.mini-mode .titlebar-drag-hitbox {
   min-width: 16px;
-}
-
-.app.mini-mode .titlebar-btn-group-capture {
-  padding: 0;
-  background: transparent;
 }
 
 .app.mini-mode .titlebar-btn-divider {

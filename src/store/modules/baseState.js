@@ -113,7 +113,6 @@ export const createBaseState = ({
   copyQollectSourceItems: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,
-  smartCopyEntryEnabled: false,
   historyTagShortcutEnabled: true,
   autoCleanupEnabled: true,
   cleanupMaxItems: 50000,

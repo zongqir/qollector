@@ -34,7 +34,6 @@ use commands::native_drag_commands::*;
 use commands::ocr_commands::*;
 use commands::prompt_commands::*;
 use commands::share_commands::*;
-use commands::smart_copy_commands::*;
 use commands::sync_commands::*;
 use commands::workbench_commands::*;
 use core::clipboard_manager::ClipboardManager;
@@ -824,9 +823,6 @@ fn main() {
             generate_qr,
             share_via_s3,
             test_share_s3_connection,
-            start_system_screen_capture,
-            smart_copy_from_image_data,
-            smart_copy_from_image_path,
             get_sync_latest_slot,
             get_next_sync_source_seq_hint,
             publish_sync_slot_from_item,

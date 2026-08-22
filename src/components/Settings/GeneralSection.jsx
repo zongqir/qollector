@@ -470,35 +470,6 @@ function GeneralSection({
         </label>
         <label className="setting-toggle-row">
           <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.smartCopyEntry')}</span>
-            <span className="toggle-desc">{t('settings.general.smartCopyEntryHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.smart_copy_entry_enabled || false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, smart_copy_entry_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ smartCopyEntryEnabled: checked });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save smart_copy_entry_enabled config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
-        {generalConfig.smart_copy_entry_enabled && (
-          <small className="setting-hint setting-hint-inline">
-            {t('settings.general.smartCopyEntryWhere')}
-          </small>
-        )}
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
             <span className="toggle-label">{t('settings.general.autostart')}</span>
             <span className="toggle-desc">{t('settings.general.autostartHint')}</span>
           </span>
