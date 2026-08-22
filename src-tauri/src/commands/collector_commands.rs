@@ -1,6 +1,8 @@
 use crate::collector;
 use crate::commands::ai_commands::AIState;
+use crate::core::clipboard_manager::ClipboardManager;
 use crate::config::CollectorConfig;
+use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
@@ -33,4 +35,18 @@ pub async fn test_collector_connection(mut config: CollectorConfig) -> Result<()
         return Err("服务器地址不能为空".to_string());
     }
     collector::test_connection(&config).await
+}
+
+#[tauri::command]
+pub async fn get_collector_upload_status(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<collector::CollectorUploadStatus, String> {
+    manager.get_collector_upload_status().await
+}
+
+#[tauri::command]
+pub async fn sync_collector_items(
+    manager: State<'_, Arc<ClipboardManager>>,
+) -> Result<collector::CollectorSyncResult, String> {
+    manager.sync_collector_items().await
 }

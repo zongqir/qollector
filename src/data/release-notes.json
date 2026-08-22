@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.1",
+      "publishedAt": "2026-08-22",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-1",
+      "summary": {
+        "zh-CN": "为自托管分析收集补充可观测上传状态与手动同步。",
+        "en-US": "Added observable upload status and manual sync for the self-hosted analysis collector."
+      },
+      "highlights": {
+        "zh-CN": [
+          "设置页显示今日成功上传数和最近 24 小时待上传数，不展示剪贴板正文。",
+          "新增立即同步操作，返回本次成功、失败和剩余待上传数量。",
+          "修正关闭或未完整配置收集服务时，新的剪贴板条目被误记为已上传的问题。"
+        ],
+        "en-US": [
+          "Settings now show today's successful uploads and pending uploads from the last 24 hours without exposing clipboard content.",
+          "Added a Sync now action with uploaded, failed, and remaining counts for the current run.",
+          "Fixed new clipboard items being marked as uploaded when the collector is disabled or incomplete."
+        ]
+      }
+    },
+    {
       "version": "0.4.0",
       "publishedAt": "2026-08-22",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-0",

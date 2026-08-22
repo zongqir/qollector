@@ -466,7 +466,13 @@
       "privacyWarning": "Privacy notice: when enabled, new text and link clipboard records are sent to your server. Images, files, and binary content are not uploaded. Only the last 24 hours are attempted, with no long-term failed queue.",
       "test": "Test collector",
       "testSuccess": "Collector connection succeeded",
-      "testFailed": "Collector connection failed: {{error}}"
+      "testFailed": "Collector connection failed: {{error}}",
+      "todayUploaded": "Uploaded today",
+      "pending": "Pending upload",
+      "syncNow": "Sync now",
+      "syncing": "Syncing...",
+      "syncSuccess": "Uploaded {{uploaded}}, failed {{failed}}, pending {{pending}}",
+      "syncFailed": "Sync failed: {{error}}"
     },
     "mcp": {
       "enabled": "Enable MCP Service",

@@ -354,6 +354,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setCollectorConfig,
     collectorTesting,
     collectorTestResult,
+    collectorStatus,
+    collectorSyncing,
+    collectorSyncResult,
     showCollectorToken,
     setShowCollectorToken,
     actualMcpPort,
@@ -398,6 +401,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,
+    handleCollectorSync,
     saveIntegrations,
     getAiProviderValue,
     handleAiProviderChange,
@@ -851,6 +855,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 setCollectorConfig={setCollectorConfig}
                 collectorTesting={collectorTesting}
                 collectorTestResult={collectorTestResult}
+                collectorStatus={collectorStatus}
+                collectorSyncing={collectorSyncing}
+                collectorSyncResult={collectorSyncResult}
                 showCollectorToken={showCollectorToken}
                 setShowCollectorToken={setShowCollectorToken}
                 actualMcpPort={actualMcpPort}
@@ -861,6 +868,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 onToggleMcpEnabled={handleMcpEnabledChange}
                 onToggleCollectorEnabled={handleCollectorEnabledChange}
                 handleCollectorTest={handleCollectorTest}
+                handleCollectorSync={handleCollectorSync}
                 getAiProviderValue={getAiProviderValue}
                 handleAiProviderChange={handleAiProviderChange}
                 customName={customName}

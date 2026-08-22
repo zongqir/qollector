@@ -28,6 +28,9 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   });
   const [collectorTesting, setCollectorTesting] = useState(false);
   const [collectorTestResult, setCollectorTestResult] = useState(null);
+  const [collectorStatus, setCollectorStatus] = useState({ today_uploaded: 0, pending: 0 });
+  const [collectorSyncing, setCollectorSyncing] = useState(false);
+  const [collectorSyncResult, setCollectorSyncResult] = useState(null);
   const [showCollectorToken, setShowCollectorToken] = useState(false);
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
@@ -130,11 +133,12 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   }, [ocrConfig.current_provider, ocrConfig.credentials]);
 
   const loadIntegrationConfigs = async () => {
-    const [ai, ocr, mcp, collector, mcpPort, share] = await Promise.all([
+    const [ai, ocr, mcp, collector, collectorStatus, mcpPort, share] = await Promise.all([
       invoke('get_ai_config'),
       invoke('get_ocr_config'),
       invoke('get_mcp_config'),
       invoke('get_collector_config').catch(() => ({ enabled: false, endpoint: '', token: '' })),
+      invoke('get_collector_upload_status').catch(() => ({ today_uploaded: 0, pending: 0 })),
       invoke('get_mcp_port').catch(() => 38470),
       invoke('get_share_config').catch(() => ({
         provider: 'Litterbox',
@@ -156,6 +160,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     });
     setMcpConfig(mcp);
     setCollectorConfig(collector);
+    setCollectorStatus(collectorStatus);
     setActualMcpPort(mcpPort);
 
     const normalizedShareConfig = {
@@ -171,6 +176,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     setCollectorConfig(updated);
     try {
       await invoke('update_collector_config', { config: updated });
+      const status = await invoke('get_collector_upload_status');
+      setCollectorStatus(status);
     } catch (error) {
       console.error('save collector config failed:', error);
     }
@@ -186,6 +193,34 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       setCollectorTestResult({ success: false, message: t('settings.collector.testFailed', { error }) });
     } finally {
       setCollectorTesting(false);
+    }
+  };
+
+  const handleCollectorSync = async () => {
+    setCollectorSyncing(true);
+    setCollectorSyncResult(null);
+    try {
+      await invoke('update_collector_config', { config: collectorConfig });
+      const result = await invoke('sync_collector_items');
+      setCollectorStatus({
+        today_uploaded: result.today_uploaded,
+        pending: result.pending,
+      });
+      setCollectorSyncResult({
+        success: true,
+        message: t('settings.collector.syncSuccess', {
+          uploaded: result.uploaded,
+          failed: result.failed,
+          pending: result.pending,
+        }),
+      });
+    } catch (error) {
+      setCollectorSyncResult({
+        success: false,
+        message: t('settings.collector.syncFailed', { error }),
+      });
+    } finally {
+      setCollectorSyncing(false);
     }
   };
 
@@ -422,6 +457,9 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     setCollectorConfig,
     collectorTesting,
     collectorTestResult,
+    collectorStatus,
+    collectorSyncing,
+    collectorSyncResult,
     showCollectorToken,
     setShowCollectorToken,
     actualMcpPort,
@@ -466,6 +504,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,
+    handleCollectorSync,
     saveIntegrations,
     getAiProviderValue,
     handleAiProviderChange,

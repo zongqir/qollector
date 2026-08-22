@@ -13,6 +13,9 @@ function IntegrationsCoreSection({
   setCollectorConfig,
   collectorTesting,
   collectorTestResult,
+  collectorStatus,
+  collectorSyncing,
+  collectorSyncResult,
   showCollectorToken,
   setShowCollectorToken,
   actualMcpPort,
@@ -23,6 +26,7 @@ function IntegrationsCoreSection({
   onToggleMcpEnabled,
   onToggleCollectorEnabled,
   handleCollectorTest,
+  handleCollectorSync,
   getAiProviderValue,
   handleAiProviderChange,
   customName,
@@ -159,11 +163,19 @@ function IntegrationsCoreSection({
                   </div>
                 </div>
                 <div className="setting-item"><div className="info-box">{t('settings.collector.privacyWarning')}</div></div>
-                <div className="setting-actions">
+                <div className="collector-upload-status" aria-live="polite">
+                  <span>{t('settings.collector.todayUploaded')}: <strong>{collectorStatus.today_uploaded}</strong></span>
+                  <span>{t('settings.collector.pending')}: <strong>{collectorStatus.pending}</strong></span>
+                </div>
+                <div className="setting-actions collector-actions">
                   <button onClick={handleCollectorTest} disabled={collectorTesting} className="test-btn">
                     {collectorTesting ? t('settings.testing') : t('settings.collector.test')}
                   </button>
+                  <button onClick={handleCollectorSync} disabled={collectorSyncing} className="test-btn">
+                    {collectorSyncing ? t('settings.collector.syncing') : t('settings.collector.syncNow')}
+                  </button>
                   {collectorTestResult && <span className={`test-result ${collectorTestResult.success ? 'success' : 'error'}`}>{collectorTestResult.message}</span>}
+                  {collectorSyncResult && <span className={`test-result ${collectorSyncResult.success ? 'success' : 'error'}`}>{collectorSyncResult.message}</span>}
                 </div>
               </>
             )}

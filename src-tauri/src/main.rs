@@ -805,6 +805,8 @@ fn main() {
             get_collector_config,
             update_collector_config,
             test_collector_connection,
+            get_collector_upload_status,
+            sync_collector_items,
             get_startup_metrics,
             get_runtime_diagnostics,
             has_lock_password,

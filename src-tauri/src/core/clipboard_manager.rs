@@ -116,7 +116,11 @@ impl ClipboardManager {
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
                 loop {
-                    Self::sync_recent_collector_items(repo.clone(), config_repo.clone()).await;
+                    if let Err(error) =
+                        Self::sync_recent_collector_items(repo.clone(), config_repo.clone()).await
+                    {
+                        eprintln!("[Collector] background sync skipped: {}", error);
+                    }
                     interval.tick().await;
                 }
             });
@@ -180,14 +184,46 @@ impl ClipboardManager {
         Ok(())
     }
 
+    pub async fn get_collector_upload_status(&self) -> Result<collector::CollectorUploadStatus, String> {
+        Self::collector_upload_status(self.repository.clone()).await
+    }
+
+    pub async fn sync_collector_items(&self) -> Result<collector::CollectorSyncResult, String> {
+        Self::sync_recent_collector_items(self.repository.clone(), self.config_repo.clone()).await
+    }
+
+    async fn collector_upload_status(
+        repo: Arc<TokioMutex<ClipboardRepository>>,
+    ) -> Result<collector::CollectorUploadStatus, String> {
+        let recent_since = chrono::Utc::now().timestamp().saturating_sub(24 * 60 * 60);
+        let repo = repo.lock().await;
+        let today_uploaded = repo
+            .count_collector_uploads_since(collector::local_day_start())
+            .await
+            .map_err(|error| error.to_string())?;
+        let pending = repo
+            .count_recent_unuploaded_collector_items(recent_since)
+            .await
+            .map_err(|error| error.to_string())?;
+
+        Ok(collector::CollectorUploadStatus {
+            today_uploaded,
+            pending,
+        })
+    }
+
     async fn sync_recent_collector_items(
         repo: Arc<TokioMutex<ClipboardRepository>>,
         config_repo: Arc<ConfigRepository>,
-    ) {
+    ) -> Result<collector::CollectorSyncResult, String> {
         let config = match config_repo.load_collector_config().await {
             Ok(Some(config)) if config.enabled => config,
-            _ => return,
+            Ok(_) => return Err("请先启用自托管分析收集".to_string()),
+            Err(error) => return Err(error.to_string()),
         };
+        if !collector::is_ready(&config) {
+            return Err("请填写服务器地址和访问密码".to_string());
+        }
         let now = chrono::Utc::now().timestamp();
         let since = now.saturating_sub(24 * 60 * 60);
         let items = match repo
@@ -197,11 +233,11 @@ impl ClipboardManager {
             .await
         {
             Ok(items) => items,
-            Err(error) => {
-                eprintln!("[Collector] failed to load pending items: {}", error);
-                return;
-            }
+            Err(error) => return Err(error.to_string()),
         };
+
+        let mut uploaded = 0;
+        let mut failed = 0;
 
         for item in items {
             let item_id = item.id.clone();
@@ -209,10 +245,14 @@ impl ClipboardManager {
                 Ok(()) => {
                     if let Err(error) = repo.lock().await.mark_collector_uploaded(&item_id).await {
                         eprintln!("[Collector] failed to mark {} uploaded: {}", item_id, error);
+                        failed += 1;
+                    } else {
+                        uploaded += 1;
                     }
                 }
                 Err(error) => {
                     eprintln!("[Collector] upload {} skipped: {}", item_id, error);
+                    failed += 1;
                 }
             }
         }
@@ -222,6 +262,14 @@ impl ClipboardManager {
             .await
             .prune_collector_uploads(since.saturating_sub(24 * 60 * 60))
             .await;
+
+        let status = Self::collector_upload_status(repo).await?;
+        Ok(collector::CollectorSyncResult {
+            uploaded,
+            failed,
+            today_uploaded: status.today_uploaded,
+            pending: status.pending,
+        })
     }
 
     async fn handle_clipboard_change(
@@ -494,7 +542,7 @@ impl ClipboardManager {
                     return;
                 };
                 let item_id = collector_item.id.clone();
-                if collector::upload_item(&config, collector_item).await.is_ok() {
+                if collector::is_ready(&config) && collector::upload_item(&config, collector_item).await.is_ok() {
                     if let Err(error) = collector_repo
                         .lock()
                         .await

@@ -431,7 +431,13 @@
       "privacyWarning": "隐私提示：开启后，新的文本和链接复制记录会发送到你的服务器。图片、文件和二进制内容不会上传。仅处理最近 24 小时的记录，失败记录不会长期积压。",
       "test": "测试收集服务",
       "testSuccess": "收集服务连接成功",
-      "testFailed": "收集服务连接失败：{{error}}"
+      "testFailed": "收集服务连接失败：{{error}}",
+      "todayUploaded": "今日已上传",
+      "pending": "待上传",
+      "syncNow": "立即同步",
+      "syncing": "同步中...",
+      "syncSuccess": "本次成功 {{uploaded}} 条，失败 {{failed}} 条，待上传 {{pending}} 条",
+      "syncFailed": "同步失败：{{error}}"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

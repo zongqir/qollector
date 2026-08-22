@@ -798,6 +798,33 @@ impl ClipboardRepository {
         Ok(items)
     }
 
+    pub async fn count_recent_unuploaded_collector_items(
+        &self,
+        since: i64,
+    ) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*)
+            FROM clipboard_items ci
+            LEFT JOIN collector_uploads cu ON cu.item_id = ci.id
+            WHERE ci.is_deleted = 0
+              AND ci.created_at >= ?
+              AND ci.type IN ('text', 'link')
+              AND cu.item_id IS NULL
+            "#,
+        )
+        .bind(since)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn count_collector_uploads_since(&self, since: i64) -> Result<i64, sqlx::Error> {
+        sqlx::query_scalar("SELECT COUNT(*) FROM collector_uploads WHERE uploaded_at >= ?")
+            .bind(since)
+            .fetch_one(&self.pool)
+            .await
+    }
+
     pub async fn mark_collector_uploaded(&self, item_id: &str) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now().timestamp();
         sqlx::query(
