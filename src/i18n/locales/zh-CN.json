@@ -421,6 +421,18 @@
       "clearRecentDaySuccess": "已清理最近一天 {{count}} 条记录",
       "clearRecentDayFailed": "清理最近一天数据失败，请稍后重试"
     },
+    "collector": {
+      "title": "自托管分析收集",
+      "privacyHint": "将新的文本复制记录发送到你配置的服务器",
+      "endpoint": "服务器地址",
+      "endpointPlaceholder": "https://example.com",
+      "token": "访问密码",
+      "tokenPlaceholder": "填写 Docker Compose 中的 QOLLECT_TOKEN",
+      "privacyWarning": "隐私提示：开启后，新的文本和链接复制记录会发送到你的服务器。图片、文件和二进制内容不会上传。仅处理最近 24 小时的记录，失败记录不会长期积压。",
+      "test": "测试收集服务",
+      "testSuccess": "收集服务连接成功",
+      "testFailed": "收集服务连接失败：{{error}}"
+    },
     "mcp": {
       "enabled": "启用 MCP 服务",
       "enabledHint": "开启后，Claude Desktop 等 AI 助手可以搜索和读取你的剪贴板历史",

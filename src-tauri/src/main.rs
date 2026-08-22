@@ -2,6 +2,7 @@
 
 mod ai;
 mod commands;
+mod collector;
 mod config;
 mod core;
 mod crash_log;
@@ -21,6 +22,7 @@ mod window_lifecycle;
 
 use commands::ai_commands::*;
 use commands::clipboard_commands::*;
+use commands::collector_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
@@ -800,6 +802,9 @@ fn main() {
             get_mcp_current_port,
             get_general_config,
             update_general_config,
+            get_collector_config,
+            update_collector_config,
+            test_collector_connection,
             get_startup_metrics,
             get_runtime_diagnostics,
             has_lock_password,

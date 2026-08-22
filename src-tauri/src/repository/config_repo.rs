@@ -1,6 +1,7 @@
 use crate::ai::AIConfig;
 use crate::config::secure_store::{seal_json, unseal_json};
 use crate::config::GeneralConfig;
+use crate::config::CollectorConfig;
 use crate::lan_sync::LanSyncConfig;
 use crate::license::config::LicenseConfig;
 use crate::mcp::McpConfig;
@@ -245,6 +246,44 @@ impl ConfigRepository {
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, false)?;
             let mut config: GeneralConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            config.validate();
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn save_collector_config(&self, config: &CollectorConfig) -> Result<(), sqlx::Error> {
+        let value = encode_config_value(config, true)?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('collector_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#,
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn load_collector_config(&self) -> Result<Option<CollectorConfig>, sqlx::Error> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM app_config WHERE key = 'collector_config'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some((value,)) = row {
+            let decoded_value = decode_config_value(&value, true)?;
+            let mut config: CollectorConfig = serde_json::from_str(&decoded_value)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             config.validate();
             Ok(Some(config))

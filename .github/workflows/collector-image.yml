@@ -1,0 +1,38 @@
+name: Publish Qollect Collector Image
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "collector-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare image tags
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#collector-}"
+          echo "IMAGE_VERSION=${version}" >> "$GITHUB_ENV"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./collector
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/zongqir/qollect-collector:latest
+            ghcr.io/zongqir/qollect-collector:${{ env.IMAGE_VERSION }}

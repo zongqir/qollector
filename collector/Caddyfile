@@ -1,0 +1,3 @@
+{$QOLLECT_DOMAIN} {
+	reverse_proxy collector:8080
+}

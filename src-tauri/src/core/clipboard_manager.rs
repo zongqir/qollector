@@ -1,4 +1,5 @@
 use crate::ai::{AIConfig, AIService};
+use crate::collector;
 use crate::core::models::{
     ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
     WindowMetadata, Workbench,
@@ -108,6 +109,19 @@ impl ClipboardManager {
             });
         }
 
+        // Keep the remote analysis upload window bounded to the most recent day.
+        {
+            let repo = self.repository.clone();
+            let config_repo = self.config_repo.clone();
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+                loop {
+                    Self::sync_recent_collector_items(repo.clone(), config_repo.clone()).await;
+                    interval.tick().await;
+                }
+            });
+        }
+
         let repo = self.repository.clone();
         let config_repo = self.config_repo.clone();
         let image_dir = self.image_dir.clone();
@@ -164,6 +178,50 @@ impl ClipboardManager {
         self.platform.register_listener(callback)?;
 
         Ok(())
+    }
+
+    async fn sync_recent_collector_items(
+        repo: Arc<TokioMutex<ClipboardRepository>>,
+        config_repo: Arc<ConfigRepository>,
+    ) {
+        let config = match config_repo.load_collector_config().await {
+            Ok(Some(config)) if config.enabled => config,
+            _ => return,
+        };
+        let now = chrono::Utc::now().timestamp();
+        let since = now.saturating_sub(24 * 60 * 60);
+        let items = match repo
+            .lock()
+            .await
+            .get_recent_unuploaded_collector_items(since, 200)
+            .await
+        {
+            Ok(items) => items,
+            Err(error) => {
+                eprintln!("[Collector] failed to load pending items: {}", error);
+                return;
+            }
+        };
+
+        for item in items {
+            let item_id = item.id.clone();
+            match collector::upload_item(&config, Arc::new(item)).await {
+                Ok(()) => {
+                    if let Err(error) = repo.lock().await.mark_collector_uploaded(&item_id).await {
+                        eprintln!("[Collector] failed to mark {} uploaded: {}", item_id, error);
+                    }
+                }
+                Err(error) => {
+                    eprintln!("[Collector] upload {} skipped: {}", item_id, error);
+                }
+            }
+        }
+
+        let _ = repo
+            .lock()
+            .await
+            .prune_collector_uploads(since.saturating_sub(24 * 60 * 60))
+            .await;
     }
 
     async fn handle_clipboard_change(
@@ -426,6 +484,28 @@ impl ClipboardManager {
         drop(repo_lock);
         let _ = app_handle.emit("clipboard-changed", ());
         println!("[Clipboard] item saved");
+
+        if inserted_new_item {
+            let collector_item = Arc::new(item.clone());
+            let collector_repo = repo.clone();
+            let collector_config_repo = config_repo.clone();
+            tokio::spawn(async move {
+                let Ok(Some(config)) = collector_config_repo.load_collector_config().await else {
+                    return;
+                };
+                let item_id = collector_item.id.clone();
+                if collector::upload_item(&config, collector_item).await.is_ok() {
+                    if let Err(error) = collector_repo
+                        .lock()
+                        .await
+                        .mark_collector_uploaded(&item_id)
+                        .await
+                    {
+                        eprintln!("[Collector] failed to mark {} uploaded: {}", item_id, error);
+                    }
+                }
+            });
+        }
 
         if transition.should_pin_on_double_copy {
             let repo_lock = repo.lock().await;

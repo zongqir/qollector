@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.0",
+      "publishedAt": "2026-08-22",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-0",
+      "summary": {
+        "zh-CN": "新增自托管剪贴板文本分析收集能力，支持后台上传、隐私提示和轻量 Collector 服务部署。",
+        "en-US": "Added self-hosted clipboard text collection for background analysis with privacy notices and a lightweight Collector deployment."
+      },
+      "highlights": {
+        "zh-CN": [
+          "新增自托管分析收集设置，可配置服务器地址和访问密码。",
+          "仅上传文本和链接，图片、文件和二进制内容不会上传。",
+          "后台只处理最近 24 小时记录，失败不会形成长期积压。",
+          "提供连接测试、按天归档的 Go Collector 和 Docker Compose 部署方式。",
+          "支持 GHCR 镜像发布，并提供已有 Caddy/独立 Caddy 两种部署模式。"
+        ],
+        "en-US": [
+          "Added self-hosted collector settings with a configurable endpoint and access token.",
+          "Only text and link records are uploaded; images, files, and binary content are skipped.",
+          "Background retries are limited to the latest 24 hours without a long-lived failed queue.",
+          "Added a lightweight Go Collector with daily JSONL archives and Docker Compose deployment.",
+          "Added GHCR image publishing with existing-proxy and standalone-Caddy deployment modes."
+        ]
+      }
+    },
+    {
       "version": "0.3.12",
       "publishedAt": "2026-06-27",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-3-12",

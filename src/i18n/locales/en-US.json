@@ -456,6 +456,18 @@
       "clearRecentDaySuccess": "Cleared {{count}} records from the last day",
       "clearRecentDayFailed": "Failed to clear last-day data. Please try again."
     },
+    "collector": {
+      "title": "Self-hosted analysis collector",
+      "privacyHint": "Send new text clipboard records to your configured server",
+      "endpoint": "Server address",
+      "endpointPlaceholder": "https://example.com",
+      "token": "Access password",
+      "tokenPlaceholder": "Use the QOLLECT_TOKEN from Docker Compose",
+      "privacyWarning": "Privacy notice: when enabled, new text and link clipboard records are sent to your server. Images, files, and binary content are not uploaded. Only the last 24 hours are attempted, with no long-term failed queue.",
+      "test": "Test collector",
+      "testSuccess": "Collector connection succeeded",
+      "testFailed": "Collector connection failed: {{error}}"
+    },
     "mcp": {
       "enabled": "Enable MCP Service",
       "enabledHint": "When enabled, AI assistants like Claude Desktop can search and read your clipboard history",

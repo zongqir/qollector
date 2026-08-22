@@ -1,5 +1,6 @@
 pub mod ai;
 pub mod commands;
+pub mod collector;
 pub mod config;
 pub mod core;
 pub mod crash_log;

@@ -21,6 +21,14 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     port: 38470,
     mode: 'http',
   });
+  const [collectorConfig, setCollectorConfig] = useState({
+    enabled: false,
+    endpoint: '',
+    token: '',
+  });
+  const [collectorTesting, setCollectorTesting] = useState(false);
+  const [collectorTestResult, setCollectorTestResult] = useState(null);
+  const [showCollectorToken, setShowCollectorToken] = useState(false);
   const [actualMcpPort, setActualMcpPort] = useState(38470);
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
@@ -47,7 +55,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    ai: true, ocr: true, mcp: true, lanSync: true, share: true,
+    ai: true, ocr: true, mcp: true, collector: true, lanSync: true, share: true,
   });
 
   const toggleSection = (key) => {
@@ -122,10 +130,11 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   }, [ocrConfig.current_provider, ocrConfig.credentials]);
 
   const loadIntegrationConfigs = async () => {
-    const [ai, ocr, mcp, mcpPort, share] = await Promise.all([
+    const [ai, ocr, mcp, collector, mcpPort, share] = await Promise.all([
       invoke('get_ai_config'),
       invoke('get_ocr_config'),
       invoke('get_mcp_config'),
+      invoke('get_collector_config').catch(() => ({ enabled: false, endpoint: '', token: '' })),
       invoke('get_mcp_port').catch(() => 38470),
       invoke('get_share_config').catch(() => ({
         provider: 'Litterbox',
@@ -146,6 +155,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       current_provider: normalizeOcrProvider(ocr.current_provider),
     });
     setMcpConfig(mcp);
+    setCollectorConfig(collector);
     setActualMcpPort(mcpPort);
 
     const normalizedShareConfig = {
@@ -154,6 +164,29 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
     };
     setShareConfig(normalizedShareConfig);
+  };
+
+  const handleCollectorEnabledChange = async (enabled) => {
+    const updated = { ...collectorConfig, enabled };
+    setCollectorConfig(updated);
+    try {
+      await invoke('update_collector_config', { config: updated });
+    } catch (error) {
+      console.error('save collector config failed:', error);
+    }
+  };
+
+  const handleCollectorTest = async () => {
+    setCollectorTesting(true);
+    setCollectorTestResult(null);
+    try {
+      await invoke('test_collector_connection', { config: collectorConfig });
+      setCollectorTestResult({ success: true, message: t('settings.collector.testSuccess') });
+    } catch (error) {
+      setCollectorTestResult({ success: false, message: t('settings.collector.testFailed', { error }) });
+    } finally {
+      setCollectorTesting(false);
+    }
   };
 
   const handleAiEnabledChange = async (enabled) => {
@@ -217,11 +250,13 @@ function useIntegrationsSettings({ t, onConfigChange }) {
         invoke('update_ai_config', { config: aiConfigToSave }),
         invoke('update_ocr_config', { config: ocrConfigToSave }),
         invoke('update_mcp_config', { config: mcpConfig }),
+        invoke('update_collector_config', { config: collectorConfig }),
         invoke('update_share_config', { config: shareConfig }),
       ]);
 
       setAiConfig(aiConfigToSave);
-      setOcrConfig(ocrConfigToSave);
+    setOcrConfig(ocrConfigToSave);
+      setCollectorConfig(collectorConfig);
       return { success: true };
     } catch (error) {
       console.error('save integrations config failed:', error);
@@ -383,6 +418,12 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     setOcrConfig,
     mcpConfig,
     setMcpConfig,
+    collectorConfig,
+    setCollectorConfig,
+    collectorTesting,
+    collectorTestResult,
+    showCollectorToken,
+    setShowCollectorToken,
     actualMcpPort,
     customName,
     setCustomName,
@@ -423,6 +464,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     handleAiEnabledChange,
     handleOcrEnabledChange,
     handleMcpEnabledChange,
+    handleCollectorEnabledChange,
+    handleCollectorTest,
     saveIntegrations,
     getAiProviderValue,
     handleAiProviderChange,

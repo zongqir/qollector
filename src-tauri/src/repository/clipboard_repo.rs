@@ -251,7 +251,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 7;
+    const CURRENT_SCHEMA_VERSION: i64 = 8;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -316,7 +316,32 @@ impl ClipboardRepository {
             self.set_schema_version(7).await?;
             println!("[Schema] migrated to version 7");
         }
+        if db_version < 8 {
+            self.migrate_v7_to_v8().await?;
+            self.set_schema_version(8).await?;
+            println!("[Schema] migrated to version 8");
+        }
 
+        Ok(())
+    }
+
+    /// V7 -> V8: Remote collector upload state.
+    async fn migrate_v7_to_v8(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS collector_uploads (
+                item_id TEXT PRIMARY KEY,
+                uploaded_at INTEGER NOT NULL
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_collector_uploads_uploaded_at ON collector_uploads(uploaded_at)",
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -746,6 +771,55 @@ impl ClipboardRepository {
         .await?;
 
         Ok(items)
+    }
+
+    pub async fn get_recent_unuploaded_collector_items(
+        &self,
+        since: i64,
+        limit: i32,
+    ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let items = sqlx::query_as::<_, ClipboardItem>(
+            r#"
+            SELECT ci.*
+            FROM clipboard_items ci
+            LEFT JOIN collector_uploads cu ON cu.item_id = ci.id
+            WHERE ci.is_deleted = 0
+              AND ci.created_at >= ?
+              AND ci.type IN ('text', 'link')
+              AND cu.item_id IS NULL
+            ORDER BY ci.created_at ASC
+            LIMIT ?
+            "#,
+        )
+        .bind(since)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(items)
+    }
+
+    pub async fn mark_collector_uploaded(&self, item_id: &str) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query(
+            r#"
+            INSERT INTO collector_uploads (item_id, uploaded_at)
+            VALUES (?, ?)
+            ON CONFLICT(item_id) DO UPDATE SET uploaded_at = excluded.uploaded_at
+            "#,
+        )
+        .bind(item_id)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn prune_collector_uploads(&self, before: i64) -> Result<(), sqlx::Error> {
+        sqlx::query("DELETE FROM collector_uploads WHERE uploaded_at < ?")
+            .bind(before)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 
     /// 轻量查询：排除 embedding 和 original_content 大字段

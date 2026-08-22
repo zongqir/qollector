@@ -9,12 +9,20 @@ function IntegrationsCoreSection({
   aiConfig,
   ocrConfig,
   mcpConfig,
+  collectorConfig,
+  setCollectorConfig,
+  collectorTesting,
+  collectorTestResult,
+  showCollectorToken,
+  setShowCollectorToken,
   actualMcpPort,
   collapsedSections,
   toggleSection,
   onToggleAiEnabled,
   onToggleOcrEnabled,
   onToggleMcpEnabled,
+  onToggleCollectorEnabled,
+  handleCollectorTest,
   getAiProviderValue,
   handleAiProviderChange,
   customName,
@@ -103,6 +111,64 @@ function IntegrationsCoreSection({
             </span>
           </label>
         </div>
+        <label className="sg-row setting-toggle-row">
+          <span className="toggle-label-group">
+            <span className="toggle-label">{t('settings.collector.title')}</span>
+            <span className="toggle-desc">{t('settings.collector.privacyHint')}</span>
+          </span>
+          <span className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={collectorConfig.enabled}
+              onChange={(e) => onToggleCollectorEnabled(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+          </span>
+        </label>
+        {collectorConfig.enabled && (
+          <div className="settings-content">
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('collector')}>
+              {collapsedSections.collector ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.collector.title')}
+            </div>
+            {!collapsedSections.collector && (
+              <>
+                <div className="setting-item">
+                  <label>{t('settings.collector.endpoint')}</label>
+                  <input
+                    type="url"
+                    value={collectorConfig.endpoint}
+                    onChange={(e) => setCollectorConfig({ ...collectorConfig, endpoint: e.target.value })}
+                    placeholder={t('settings.collector.endpointPlaceholder')}
+                    className="setting-input"
+                  />
+                </div>
+                <div className="setting-item">
+                  <label>{t('settings.collector.token')}</label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showCollectorToken ? 'text' : 'password'}
+                      value={collectorConfig.token}
+                      onChange={(e) => setCollectorConfig({ ...collectorConfig, token: e.target.value })}
+                      placeholder={t('settings.collector.tokenPlaceholder')}
+                      className="setting-input"
+                    />
+                    <button type="button" onClick={() => setShowCollectorToken(!showCollectorToken)} className="password-toggle-btn">
+                      {showCollectorToken ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="setting-item"><div className="info-box">{t('settings.collector.privacyWarning')}</div></div>
+                <div className="setting-actions">
+                  <button onClick={handleCollectorTest} disabled={collectorTesting} className="test-btn">
+                    {collectorTesting ? t('settings.testing') : t('settings.collector.test')}
+                  </button>
+                  {collectorTestResult && <span className={`test-result ${collectorTestResult.success ? 'success' : 'error'}`}>{collectorTestResult.message}</span>}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {aiConfig.enabled && (
           <>
             <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ai')}>

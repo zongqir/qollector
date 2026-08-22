@@ -99,6 +99,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.enableAI'),
           t('settings.general.enableOCR'),
           t('settings.general.enableMCP'),
+          t('settings.collector.title'),
+          t('settings.collector.endpoint'),
           t('settings.ai.provider'),
           t('settings.ai.model'),
           t('settings.ocr.provider'),
@@ -348,6 +350,12 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setOcrConfig,
     mcpConfig,
     setMcpConfig,
+    collectorConfig,
+    setCollectorConfig,
+    collectorTesting,
+    collectorTestResult,
+    showCollectorToken,
+    setShowCollectorToken,
     actualMcpPort,
     customName,
     setCustomName,
@@ -388,6 +396,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     handleAiEnabledChange,
     handleOcrEnabledChange,
     handleMcpEnabledChange,
+    handleCollectorEnabledChange,
+    handleCollectorTest,
     saveIntegrations,
     getAiProviderValue,
     handleAiProviderChange,
@@ -837,12 +847,20 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 aiConfig={aiConfig}
                 ocrConfig={ocrConfig}
                 mcpConfig={mcpConfig}
+                collectorConfig={collectorConfig}
+                setCollectorConfig={setCollectorConfig}
+                collectorTesting={collectorTesting}
+                collectorTestResult={collectorTestResult}
+                showCollectorToken={showCollectorToken}
+                setShowCollectorToken={setShowCollectorToken}
                 actualMcpPort={actualMcpPort}
                 collapsedSections={collapsedSections}
                 toggleSection={toggleSection}
                 onToggleAiEnabled={handleAiEnabledChange}
                 onToggleOcrEnabled={handleOcrEnabledChange}
                 onToggleMcpEnabled={handleMcpEnabledChange}
+                onToggleCollectorEnabled={handleCollectorEnabledChange}
+                handleCollectorTest={handleCollectorTest}
                 getAiProviderValue={getAiProviderValue}
                 handleAiProviderChange={handleAiProviderChange}
                 customName={customName}
