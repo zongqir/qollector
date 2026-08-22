@@ -2,6 +2,21 @@
 
 一个只负责收集剪贴板文本事件的最小服务。它不调用 AI、不使用数据库，也不维护客户端待上传队列。
 
+## AI 与部署入口
+
+后续让 AI 部署或修改此服务时，先阅读本 README。它是 Collector 部署方式、环境变量、网络边界和 HTTP 契约的唯一入口；不要把桌面客户端的 `npm run tauri build` / Release 流程用于此服务。
+
+按任务继续读取：
+
+| 场景 | 必读文件 |
+| --- | --- |
+| 已有 Caddy/Nginx 等 HTTPS 反向代理 | `docker-compose.yml`、`.env.example` |
+| 没有反向代理，需要本服务自动申请 HTTPS 证书 | `docker-compose.standalone.yml`、`Caddyfile`、`.env.example` |
+| 修改 Collector 接收、鉴权、文本截断、归档或保留规则 | `main.go`、`main_test.go` |
+| 发布多架构 Docker 镜像 | `../.github/workflows/collector-image.yml` |
+
+`docker-compose.yml` 和 `docker-compose.standalone.yml` 只能选择一个：前者复用已有反向代理，后者自带 Caddy 并独占宿主机 `80/443`。
+
 ## 启动
 
 ```bash

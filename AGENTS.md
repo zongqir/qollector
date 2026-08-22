@@ -28,6 +28,19 @@ npm run build
 npm run tauri build
 ```
 
+## Collector 服务端 / Docker 部署（必读）
+
+当任务包含 `Collector`、剪贴板上传、服务器部署、Docker、Docker Compose、HTTPS、Caddy、日志归档或服务端 AI 分析时，**必须先完整阅读 [`collector/README.md`](collector/README.md)**，再修改配置、编排文件或给出部署命令。Collector 是独立的 Go 服务，不属于 Tauri 客户端构建或发版流程。
+
+按部署场景继续阅读对应文件：
+
+1. 服务器已有 Caddy/Nginx 等 HTTPS 反向代理：阅读 [`collector/docker-compose.yml`](collector/docker-compose.yml) 和 [`collector/.env.example`](collector/.env.example)。该模式只绑定 `127.0.0.1`，由现有反向代理对外提供 HTTPS。
+2. 服务器没有现成反向代理：阅读 [`collector/docker-compose.standalone.yml`](collector/docker-compose.standalone.yml)、[`collector/Caddyfile`](collector/Caddyfile) 和 [`collector/.env.example`](collector/.env.example)。该模式自带 Caddy 并占用 `80/443`。
+3. 变更 Collector 的接收、鉴权、文本截断、归档或保留行为：额外阅读 [`collector/main.go`](collector/main.go) 和 [`collector/main_test.go`](collector/main_test.go)。
+4. 发布 Collector 镜像：阅读 [`.github/workflows/collector-image.yml`](.github/workflows/collector-image.yml)；该流程由 `collector-v*` 标签触发，和桌面客户端 Release 分开。
+
+部署约束：两种 Compose 模式只能二选一；不要在已有 Caddy 的服务器再启动 standalone 模式；生产环境不要将 Collector 的纯 HTTP 端口直接暴露到公网；`QOLLECT_TOKEN` 必须在服务器的 `.env` 中设置为长随机值。
+
 ## 发版紧急清单（URGENT）
 
 当用户提到“发版 / 版本升级 / 发布更新”时，代理必须按 `docs/release-ai-runbook.md` 执行完整流程，不得跳步。
