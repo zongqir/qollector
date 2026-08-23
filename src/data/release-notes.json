@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.3",
+      "publishedAt": "2026-08-23",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-3",
+      "summary": {
+        "zh-CN": "新增可选输入补录，并完善自托管分析收集的同步状态、失败提示和输入法文本去重。",
+        "en-US": "Added optional input capture and improved self-hosted collector sync status, failure feedback, and IME text deduplication."
+      },
+      "highlights": {
+        "zh-CN": [
+          "在 Windows 上可选补录未进入剪贴板的已稳定输入内容，并提供一次性输入框支持检测；密码框和 Qollect 自身会自动跳过。",
+          "输入法逐步更新的文本会在同一条历史记录中就地更新，避免 A、A+B、A+B+C 形成多条重复记录。",
+          "自托管分析收集现显示最近同步时间；立即同步会汇总失败原因，便于定位服务器或网络问题。"
+        ],
+        "en-US": [
+          "On Windows, optionally capture settled text that never reaches the clipboard, with a one-time input-field support check; password fields and Qollect itself are skipped automatically.",
+          "Incremental IME text updates now revise one history item in place, preventing A, A+B, and A+B+C from becoming duplicate records.",
+          "The self-hosted collector now shows the latest sync time, and Sync now summarizes failure reasons to make server and network issues easier to diagnose."
+        ]
+      }
+    },
+    {
       "version": "0.4.2",
       "publishedAt": "2026-08-22",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-2",

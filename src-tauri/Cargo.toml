@@ -1,6 +1,6 @@
 [package]
 name = "qollect"
-version = "0.2.4"
+version = "0.4.3"
 edition = "2021"
 
 [lib]
@@ -71,6 +71,7 @@ windows = { version = "0.58", features = [
     "Storage_Streams",
     "Foundation",
 ] }
+uiautomation = { version = "0.25", features = ["event"] }
 drag = "2.1.0"
 winreg = "0.55"
 

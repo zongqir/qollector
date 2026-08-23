@@ -73,6 +73,9 @@ pub struct GeneralConfig {
     /// Accent color preset name (blue/purple/pink/red/orange/yellow/green/graphite).
     #[serde(default = "default_accent_color")]
     pub accent_color: String,
+    /// Capture settled text from supported focused input controls on Windows.
+    #[serde(default)]
+    pub input_capture_enabled: bool,
 }
 
 fn default_accent_color() -> String {
@@ -173,6 +176,7 @@ impl Default for GeneralConfig {
             auto_layout_switch_enabled: default_auto_layout_switch_enabled(),
             widget_enabled: false,
             accent_color: default_accent_color(),
+            input_capture_enabled: false,
         }
     }
 }

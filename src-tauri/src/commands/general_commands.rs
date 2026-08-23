@@ -1,6 +1,7 @@
 use crate::commands::ai_commands::AIState;
 use crate::config::GeneralConfig;
 use crate::low_memory_mode::LowMemoryModeState;
+use crate::commands::input_access_probe_commands::InputCaptureState;
 use crate::shortcuts::{apply_shortcut_config, ShortcutBindingState};
 use crate::startup_metrics::{StartupMetricsSnapshot, StartupMetricsState};
 use crate::window_lifecycle::{
@@ -36,6 +37,7 @@ pub async fn update_general_config(
     app: AppHandle,
     ai_state: State<'_, AIState>,
     shortcut_state: State<'_, Arc<ShortcutBindingState>>,
+    input_capture_state: State<'_, Arc<InputCaptureState>>,
     mut config: GeneralConfig,
 ) -> Result<(), String> {
     config.validate();
@@ -57,6 +59,8 @@ pub async fn update_general_config(
         }
         return Err(error.to_string());
     }
+
+    input_capture_state.set_enabled(config.input_capture_enabled);
 
     // Update tray menu language if it changed
     if config.language != previous_config.language {

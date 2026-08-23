@@ -1,11 +1,33 @@
+import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 
 const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
 
 const OCR_PROVIDERS = ['Native', 'SiliconFlow', 'DeepSeek', 'Aliyun', 'Tencent', 'Baidu'];
 
+function supportsInputCapture() {
+  if (typeof navigator === 'undefined') return false;
+  const platform = (navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || '')
+    .toLowerCase();
+  return platform.includes('win');
+}
+
+function formatSyncTime(timestamp) {
+  if (!timestamp) return null;
+  const date = new Date(timestamp * 1000);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 function IntegrationsCoreSection({
   t,
+  generalConfig,
+  setGeneralConfig,
   aiConfig,
   ocrConfig,
   mcpConfig,
@@ -64,6 +86,31 @@ function IntegrationsCoreSection({
   copySuccess,
   setCopySuccess,
 }) {
+  const [inputProbePending, setInputProbePending] = useState(false);
+  const [inputProbeResult, setInputProbeResult] = useState(null);
+  const inputCaptureSupported = supportsInputCapture();
+  const lastSync = formatSyncTime(collectorStatus.last_sync_at);
+
+  const runInputAccessProbe = async () => {
+    setInputProbePending(true);
+    setInputProbeResult(null);
+    const appWindow = getCurrentWindow();
+    const probe = invoke('probe_focused_text', { delayMs: 6000 });
+
+    try {
+      await appWindow.hide();
+      const result = await probe;
+      setInputProbeResult({ type: result.readable ? 'success' : 'neutral', result });
+    } catch (error) {
+      console.error('Focused text probe failed:', error);
+      setInputProbeResult({ type: 'error', error: String(error) });
+    } finally {
+      await appWindow.show().catch(() => {});
+      await appWindow.setFocus().catch(() => {});
+      setInputProbePending(false);
+    }
+  };
+
   return (
     <>
       <div className="settings-content">
@@ -114,6 +161,82 @@ function IntegrationsCoreSection({
               <span className="toggle-slider" />
             </span>
           </label>
+          {inputCaptureSupported && (
+            <>
+              <label className="sg-row setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.general.inputCapture')}</span>
+                  <span className="toggle-desc">{t('settings.general.inputCaptureHint')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={generalConfig.input_capture_enabled || false}
+                    onChange={async (event) => {
+                      const updated = {
+                        ...generalConfig,
+                        input_capture_enabled: event.target.checked,
+                      };
+                      setGeneralConfig(updated);
+                      try {
+                        await invoke('update_general_config', { config: updated });
+                      } catch (error) {
+                        console.error('Failed to save input capture config:', error);
+                        setGeneralConfig(generalConfig);
+                      }
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+              <div className="input-capture-tools">
+                <small className="setting-hint">{t('settings.general.inputAccessProbeHint')}</small>
+                <div className="setting-action-row">
+                  <button
+                    type="button"
+                    className="test-btn"
+                    disabled={inputProbePending}
+                    onClick={runInputAccessProbe}
+                  >
+                    {inputProbePending
+                      ? t('settings.general.inputAccessProbeRunning')
+                      : t('settings.general.inputAccessProbeAction')}
+                  </button>
+                </div>
+                {inputProbeResult?.result && (
+                  <div
+                    className={`input-access-probe-result ${inputProbeResult.type}`}
+                    role="status"
+                  >
+                    <strong>
+                      {inputProbeResult.result.readable
+                        ? t('settings.general.inputAccessProbeReadable')
+                        : inputProbeResult.result.is_password
+                          ? t('settings.general.inputAccessProbePassword')
+                          : t('settings.general.inputAccessProbeUnreadable')}
+                    </strong>
+                    <span>
+                      {t('settings.general.inputAccessProbeControl', {
+                        control: inputProbeResult.result.control_type || '-',
+                        framework: inputProbeResult.result.framework_id || '-',
+                      })}
+                    </span>
+                    {inputProbeResult.result.readable && (
+                      <pre>{inputProbeResult.result.text_preview || t('settings.general.inputAccessProbeEmpty')}</pre>
+                    )}
+                    {!inputProbeResult.result.readable && inputProbeResult.result.read_error && (
+                      <span>{inputProbeResult.result.read_error}</span>
+                    )}
+                  </div>
+                )}
+                {inputProbeResult?.error && (
+                  <small className="setting-status setting-status-emphasis error" role="alert">
+                    {t('settings.general.inputAccessProbeFailed', { error: inputProbeResult.error })}
+                  </small>
+                )}
+              </div>
+            </>
+          )}
         </div>
         <label className="sg-row setting-toggle-row">
           <span className="toggle-label-group">
@@ -166,6 +289,9 @@ function IntegrationsCoreSection({
                 <div className="collector-upload-status" aria-live="polite">
                   <span>{t('settings.collector.todayUploaded')}: <strong>{collectorStatus.today_uploaded}</strong></span>
                   <span>{t('settings.collector.pending')}: <strong>{collectorStatus.pending}</strong></span>
+                  <span className="collector-last-sync">
+                    {t('settings.collector.lastSync')}: <strong>{lastSync || t('settings.collector.noSyncRecord')}</strong>
+                  </span>
                 </div>
                 <div className="setting-actions collector-actions">
                   <button onClick={handleCollectorTest} disabled={collectorTesting} className="test-btn">

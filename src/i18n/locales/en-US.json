@@ -441,7 +441,19 @@
       "clearRecentDayAction": "Clear last-day data",
       "clearRecentDayPending": "Clearing...",
       "clearRecentDaySuccess": "Cleared {{count}} records from the last day",
-      "clearRecentDayFailed": "Failed to clear last-day data. Please try again."
+      "clearRecentDayFailed": "Failed to clear last-day data. Please try again.",
+      "inputAccessProbeTitle": "Input field support check",
+      "inputAccessProbeHint": "Use this check to see whether the target app exposes its input text. Qollect hides for 6 seconds, then reads the focused control once only; nothing is saved or uploaded.",
+      "inputAccessProbeAction": "Check current input field (6 seconds)",
+      "inputAccessProbeRunning": "Probing...",
+      "inputAccessProbeReadable": "This input field is readable through Windows automation",
+      "inputAccessProbeUnreadable": "This input field does not expose readable text",
+      "inputAccessProbePassword": "Password field skipped",
+      "inputAccessProbeControl": "Control: {{control}} · Framework: {{framework}}",
+      "inputAccessProbeEmpty": "(The field is readable but currently empty)",
+      "inputAccessProbeFailed": "Input access probe failed: {{error}}",
+      "inputCapture": "Capture input that does not reach the clipboard",
+      "inputCaptureHint": "Use this for direct IME input, chat boxes, and other text that never reaches the clipboard. Supported field text is added to the same history for search and self-hosted analysis. Password fields, Qollect itself, and text that existed before enabling are skipped."
     },
     "collector": {
       "title": "Self-hosted analysis collector",
@@ -456,9 +468,12 @@
       "testFailed": "Collector connection failed: {{error}}",
       "todayUploaded": "Uploaded today",
       "pending": "Pending upload",
+      "lastSync": "Last sync time",
+      "noSyncRecord": "No sync record yet",
       "syncNow": "Sync now",
       "syncing": "Syncing...",
       "syncSuccess": "Uploaded {{uploaded}}, failed {{failed}}, pending {{pending}}",
+      "syncFailureReason": "{{message}} ({{count}} items)",
       "syncFailed": "Sync failed: {{error}}"
     },
     "mcp": {

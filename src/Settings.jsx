@@ -99,6 +99,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.enableAI'),
           t('settings.general.enableOCR'),
           t('settings.general.enableMCP'),
+          t('settings.general.inputCapture'),
           t('settings.collector.title'),
           t('settings.collector.endpoint'),
           t('settings.ai.provider'),
@@ -847,6 +848,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
             <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsCore}>
               <IntegrationsCoreSection
                 t={t}
+                generalConfig={generalConfig}
+                setGeneralConfig={setGeneralConfig}
                 aiConfig={aiConfig}
                 ocrConfig={ocrConfig}
                 mcpConfig={mcpConfig}

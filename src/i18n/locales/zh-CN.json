@@ -415,7 +415,19 @@
       "clearRecentDayAction": "清理最近一天数据",
       "clearRecentDayPending": "清理中...",
       "clearRecentDaySuccess": "已清理最近一天 {{count}} 条记录",
-      "clearRecentDayFailed": "清理最近一天数据失败，请稍后重试"
+      "clearRecentDayFailed": "清理最近一天数据失败，请稍后重试",
+      "inputAccessProbeTitle": "输入框支持检测",
+      "inputAccessProbeHint": "用检测确认微信等目标应用是否开放输入框文本。点击后 Qollect 会隐藏 6 秒；检测只读取一次当前焦点控件，不保存、不上传。",
+      "inputAccessProbeAction": "检测当前输入框（6 秒）",
+      "inputAccessProbeRunning": "探测中...",
+      "inputAccessProbeReadable": "该输入框可通过 Windows 自动化读取",
+      "inputAccessProbeUnreadable": "该输入框没有暴露可读文本",
+      "inputAccessProbePassword": "已跳过密码输入框",
+      "inputAccessProbeControl": "控件：{{control}} · 框架：{{framework}}",
+      "inputAccessProbeEmpty": "（读取成功，但输入框当前为空）",
+      "inputAccessProbeFailed": "输入框探测失败：{{error}}",
+      "inputCapture": "补录未进入剪贴板的输入",
+      "inputCaptureHint": "用于输入法直输、聊天框等不会写入剪贴板的内容。开启后，支持的输入框文本会补录到同一历史记录，供搜索和自托管分析使用；密码框、Qollect 自身和开启前已有文本会跳过。"
     },
     "collector": {
       "title": "自托管分析收集",
@@ -430,9 +442,12 @@
       "testFailed": "收集服务连接失败：{{error}}",
       "todayUploaded": "今日已上传",
       "pending": "待上传",
+      "lastSync": "最近同步时间",
+      "noSyncRecord": "暂无同步记录",
       "syncNow": "立即同步",
       "syncing": "同步中...",
       "syncSuccess": "本次成功 {{uploaded}} 条，失败 {{failed}} 条，待上传 {{pending}} 条",
+      "syncFailureReason": "{{message}}（{{count}} 条）",
       "syncFailed": "同步失败：{{error}}"
     },
     "mcp": {

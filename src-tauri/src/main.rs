@@ -26,6 +26,7 @@ use commands::collector_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
+use commands::input_access_probe_commands::*;
 use commands::lan_sync_commands::*;
 use commands::license_commands::*;
 use commands::lock_commands::*;
@@ -528,6 +529,10 @@ fn main() {
                 }
 
                 app.manage(manager.clone());
+                let input_capture_state = Arc::new(InputCaptureState::new(
+                    general_config.input_capture_enabled,
+                ));
+                app.manage(input_capture_state.clone());
                 app.manage(drag_out_backend);
                 app.manage(ai_state);
                 app.manage(ocr_state);
@@ -592,6 +597,7 @@ fn main() {
                         eprintln!("Failed to start clipboard monitoring: {}", error);
                     }
                 });
+                start_input_capture_monitor(manager.clone(), input_capture_state);
                 init_meter.mark("spawn_clipboard_monitor");
                 startup_metrics_for_core_init.mark_monitor_spawn_complete();
                 (general_config, is_first_run_general_config)
@@ -801,6 +807,7 @@ fn main() {
             get_mcp_current_port,
             get_general_config,
             update_general_config,
+            probe_focused_text,
             get_collector_config,
             update_collector_config,
             test_collector_connection,

@@ -10,6 +10,7 @@ use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, Platfo
 use crate::repository::clipboard_repo::ClipboardRepository;
 use crate::repository::config_repo::ConfigRepository;
 use parking_lot::Mutex;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
@@ -95,6 +96,47 @@ impl ClipboardManager {
 
     pub fn is_paused(&self) -> bool {
         self.paused.load(Ordering::Relaxed)
+    }
+
+    pub fn get_active_window_info(&self) -> Result<WindowMetadata, ClipboardError> {
+        self.platform.get_active_window_info()
+    }
+
+    /// Store a settled focused-input snapshot without modifying the system clipboard.
+    pub async fn record_input_snapshot(
+        &self,
+        content: String,
+        metadata: WindowMetadata,
+    ) -> Result<String, sqlx::Error> {
+        let item = ClipboardItem::new_text(content, metadata);
+        // Repeated text entered at different times is still meaningful input history.
+        let item_id = item.id.clone();
+        self.insert_item(&item).await?;
+        let _ = self.app_handle.emit("clipboard-changed", ());
+        Ok(item_id)
+    }
+
+    /// Replace an accumulating IME snapshot without creating another history item.
+    pub async fn update_input_snapshot(
+        &self,
+        item_id: &str,
+        content: String,
+        metadata: WindowMetadata,
+    ) -> Result<(), sqlx::Error> {
+        let content_hash = ClipboardItem::calculate_text_hash(&content);
+        let metadata = serde_json::to_string(&metadata).unwrap_or_default();
+        let repo = self.repository.lock().await;
+        repo.update_input_snapshot(
+            item_id,
+            &content,
+            &content_hash,
+            &metadata,
+            chrono::Utc::now().timestamp(),
+        )
+        .await?;
+        drop(repo);
+        let _ = self.app_handle.emit("clipboard-changed", ());
+        Ok(())
     }
 
     pub async fn start_monitoring(&self) -> Result<(), ClipboardError> {
@@ -189,7 +231,7 @@ impl ClipboardManager {
     }
 
     pub async fn get_collector_upload_status(&self) -> Result<collector::CollectorUploadStatus, String> {
-        Self::collector_upload_status(self.repository.clone()).await
+        Self::collector_upload_status(self.repository.clone(), self.config_repo.clone()).await
     }
 
     pub async fn sync_collector_items(&self) -> Result<collector::CollectorSyncResult, String> {
@@ -198,6 +240,7 @@ impl ClipboardManager {
 
     async fn collector_upload_status(
         repo: Arc<TokioMutex<ClipboardRepository>>,
+        config_repo: Arc<ConfigRepository>,
     ) -> Result<collector::CollectorUploadStatus, String> {
         let recent_since = chrono::Utc::now().timestamp().saturating_sub(24 * 60 * 60);
         let repo = repo.lock().await;
@@ -210,9 +253,17 @@ impl ClipboardManager {
             .await
             .map_err(|error| error.to_string())?;
 
+        let last_sync_at = config_repo
+            .load_collector_config()
+            .await
+            .ok()
+            .flatten()
+            .and_then(|config| config.last_sync_at);
+
         Ok(collector::CollectorUploadStatus {
             today_uploaded,
             pending,
+            last_sync_at,
         })
     }
 
@@ -220,13 +271,17 @@ impl ClipboardManager {
         repo: Arc<TokioMutex<ClipboardRepository>>,
         config_repo: Arc<ConfigRepository>,
     ) -> Result<collector::CollectorSyncResult, String> {
-        let config = match config_repo.load_collector_config().await {
+        let mut config = match config_repo.load_collector_config().await {
             Ok(Some(config)) if config.enabled => config,
             Ok(_) => return Err("请先启用自托管分析收集".to_string()),
             Err(error) => return Err(error.to_string()),
         };
         if !collector::is_ready(&config) {
             return Err("请填写服务器地址和访问密码".to_string());
+        }
+        config.last_sync_at = Some(chrono::Utc::now().timestamp());
+        if let Err(error) = config_repo.save_collector_config(&config).await {
+            eprintln!("[Collector] failed to record sync time: {}", error);
         }
         let now = chrono::Utc::now().timestamp();
         let since = now.saturating_sub(24 * 60 * 60);
@@ -242,6 +297,7 @@ impl ClipboardManager {
 
         let mut uploaded = 0;
         let mut failed = 0;
+        let mut failure_counts: BTreeMap<String, i64> = BTreeMap::new();
 
         for item in items {
             let item_id = item.id.clone();
@@ -250,6 +306,9 @@ impl ClipboardManager {
                     if let Err(error) = repo.lock().await.mark_collector_uploaded(&item_id).await {
                         eprintln!("[Collector] failed to mark {} uploaded: {}", item_id, error);
                         failed += 1;
+                        *failure_counts
+                            .entry(format!("本地上传状态写入失败: {error}"))
+                            .or_insert(0) += 1;
                     } else {
                         uploaded += 1;
                     }
@@ -257,6 +316,7 @@ impl ClipboardManager {
                 Err(error) => {
                     eprintln!("[Collector] upload {} skipped: {}", item_id, error);
                     failed += 1;
+                    *failure_counts.entry(error).or_insert(0) += 1;
                 }
             }
         }
@@ -267,12 +327,26 @@ impl ClipboardManager {
             .prune_collector_uploads(since.saturating_sub(24 * 60 * 60))
             .await;
 
-        let status = Self::collector_upload_status(repo).await?;
+        let status = Self::collector_upload_status(repo, config_repo).await?;
+        let mut failure_reasons: Vec<collector::CollectorFailureReason> = failure_counts
+            .into_iter()
+            .map(|(message, count)| collector::CollectorFailureReason { message, count })
+            .collect();
+        failure_reasons.sort_by(|left, right| {
+            right
+                .count
+                .cmp(&left.count)
+                .then_with(|| left.message.cmp(&right.message))
+        });
+        failure_reasons.truncate(3);
+
         Ok(collector::CollectorSyncResult {
             uploaded,
             failed,
             today_uploaded: status.today_uploaded,
             pending: status.pending,
+            last_sync_at: status.last_sync_at,
+            failure_reasons,
         })
     }
 

@@ -8,6 +8,9 @@ pub struct CollectorConfig {
     pub endpoint: String,
     #[serde(default)]
     pub token: String,
+    /// Unix timestamp of the most recent collector sync attempt.
+    #[serde(default, alias = "last_successful_sync_at")]
+    pub last_sync_at: Option<i64>,
 }
 
 impl Default for CollectorConfig {
@@ -16,6 +19,7 @@ impl Default for CollectorConfig {
             enabled: false,
             endpoint: String::new(),
             token: String::new(),
+            last_sync_at: None,
         }
     }
 }

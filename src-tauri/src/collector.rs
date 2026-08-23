@@ -12,6 +12,7 @@ const MAX_UPLOAD_AGE_SECS: i64 = 24 * 60 * 60;
 pub struct CollectorUploadStatus {
     pub today_uploaded: i64,
     pub pending: i64,
+    pub last_sync_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -20,6 +21,14 @@ pub struct CollectorSyncResult {
     pub failed: i64,
     pub today_uploaded: i64,
     pub pending: i64,
+    pub last_sync_at: Option<i64>,
+    pub failure_reasons: Vec<CollectorFailureReason>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CollectorFailureReason {
+    pub message: String,
+    pub count: i64,
 }
 
 #[derive(Debug, Clone, Serialize)]

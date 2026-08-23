@@ -28,7 +28,11 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   });
   const [collectorTesting, setCollectorTesting] = useState(false);
   const [collectorTestResult, setCollectorTestResult] = useState(null);
-  const [collectorStatus, setCollectorStatus] = useState({ today_uploaded: 0, pending: 0 });
+  const [collectorStatus, setCollectorStatus] = useState({
+    today_uploaded: 0,
+    pending: 0,
+    last_sync_at: null,
+  });
   const [collectorSyncing, setCollectorSyncing] = useState(false);
   const [collectorSyncResult, setCollectorSyncResult] = useState(null);
   const [showCollectorToken, setShowCollectorToken] = useState(false);
@@ -138,7 +142,11 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       invoke('get_ocr_config'),
       invoke('get_mcp_config'),
       invoke('get_collector_config').catch(() => ({ enabled: false, endpoint: '', token: '' })),
-      invoke('get_collector_upload_status').catch(() => ({ today_uploaded: 0, pending: 0 })),
+      invoke('get_collector_upload_status').catch(() => ({
+        today_uploaded: 0,
+        pending: 0,
+        last_sync_at: null,
+      })),
       invoke('get_mcp_port').catch(() => 38470),
       invoke('get_share_config').catch(() => ({
         provider: 'Litterbox',
@@ -205,14 +213,23 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       setCollectorStatus({
         today_uploaded: result.today_uploaded,
         pending: result.pending,
+        last_sync_at: result.last_sync_at,
       });
+      setCollectorConfig((current) => ({
+        ...current,
+        last_sync_at: result.last_sync_at,
+      }));
+      const failureReason = (result.failure_reasons || [])
+        .slice(0, 3)
+        .map(({ message, count }) => t('settings.collector.syncFailureReason', { message, count }))
+        .join('；');
       setCollectorSyncResult({
-        success: true,
-        message: t('settings.collector.syncSuccess', {
+        success: result.failed === 0,
+        message: `${t('settings.collector.syncSuccess', {
           uploaded: result.uploaded,
           failed: result.failed,
           pending: result.pending,
-        }),
+        })}${failureReason ? ` ${failureReason}` : ''}`,
       });
     } catch (error) {
       setCollectorSyncResult({

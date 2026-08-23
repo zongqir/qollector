@@ -1267,6 +1267,45 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    pub async fn update_input_snapshot(
+        &self,
+        item_id: &str,
+        content: &str,
+        content_hash: &str,
+        metadata: &str,
+        updated_at: i64,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                content = ?, original_content = ?, content_hash = ?, metadata = ?,
+                content_updated = 1, updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(content)
+        .bind(content)
+        .bind(content_hash)
+        .bind(metadata)
+        .bind(updated_at)
+        .bind(item_id)
+        .execute(&self.pool)
+        .await?;
+
+        // The same item id may have been uploaded while an IME was still composing.
+        // Mark it pending again so the collector can send the final text.
+        sqlx::query("DELETE FROM collector_uploads WHERE item_id = ?")
+            .bind(item_id)
+            .execute(&self.pool)
+            .await?;
+
+        if let Ok(Some(item)) = self.find_by_id(item_id).await {
+            self.update_fts(&item).await;
+        }
+
+        Ok(())
+    }
+
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         let existing_tags: Option<String> =
             sqlx::query_scalar("SELECT tags FROM clipboard_items WHERE id = ? AND is_deleted = 0")
