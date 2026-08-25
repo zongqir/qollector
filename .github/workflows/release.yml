@@ -222,7 +222,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          R2_BASE="https://dl.135070.xyz/releases/${VERSION}"
+          R2_BASE="https://dl.zongqir.com/releases/${VERSION}"
 
           # Download the tauri-generated latest.json from GitHub Release
           gh release download "$VERSION" \
@@ -274,4 +274,4 @@ jobs:
               --remote
           done
 
-          echo "R2 upload complete: https://dl.135070.xyz/latest.json"
+          echo "R2 upload complete: https://dl.zongqir.com/latest.json"

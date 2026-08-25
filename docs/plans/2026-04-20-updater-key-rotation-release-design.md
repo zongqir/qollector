@@ -37,8 +37,8 @@ Rotate the Tauri updater signing keypair, publish a new patch release `0.3.8`, a
 6. Commit and push both repositories.
 7. Monitor the GitHub Release workflow and verify:
    - `https://github.com/zongqir/qollect/releases/tag/v0.3.8`
-   - `https://dl.135070.xyz/latest.json`
-   - `https://dl.135070.xyz/release-notes.json`
+   - `https://dl.zongqir.com/latest.json`
+   - `https://dl.zongqir.com/release-notes.json`
 
 ## Risks and Handling
 

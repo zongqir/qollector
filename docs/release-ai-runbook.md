@@ -125,8 +125,8 @@ npm run build
 最少检查：
 
 1. GitHub Release 页面存在目标版本。
-2. `https://dl.135070.xyz/latest.json` 可访问，版本号正确。
-3. `https://dl.135070.xyz/release-notes.json` 可访问，且含当前版本条目。
+2. `https://dl.zongqir.com/latest.json` 可访问，版本号正确。
+3. `https://dl.zongqir.com/release-notes.json` 可访问，且含当前版本条目。
 
 ---
 

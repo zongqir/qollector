@@ -2,6 +2,25 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.4",
+      "publishedAt": "2026-08-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-4",
+      "summary": {
+        "zh-CN": "更新分发与自动更新源切换至 dl.zongqir.com，优化全球下载稳定性。",
+        "en-US": "Migrate updater and distribution endpoints to dl.zongqir.com for improved download reliability."
+      },
+      "highlights": {
+        "zh-CN": [
+          "分发与自动更新源统一接入 dl.zongqir.com，保障客户端更新直连与下载体验。",
+          "优化 Cloudflare 边缘静态分发与 WAF 质询放行策略，提升跨地区访问稳定性。"
+        ],
+        "en-US": [
+          "Migrated distribution and updater endpoints to dl.zongqir.com for reliable client updates.",
+          "Optimized Cloudflare edge distribution and WAF challenge bypass rules for improved global availability."
+        ]
+      }
+    },
+    {
       "version": "0.4.3",
       "publishedAt": "2026-08-23",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-3",

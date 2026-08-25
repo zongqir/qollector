@@ -70,8 +70,8 @@ npm run build
 ### 发布后必验收
 
 1. `https://github.com/zongqir/qollect/releases/tag/v<version>` 可访问。
-2. `https://dl.135070.xyz/latest.json` 版本号正确。
-3. `https://dl.135070.xyz/release-notes.json` 包含当前版本条目。
+2. `https://dl.zongqir.com/latest.json` 版本号正确。
+3. `https://dl.zongqir.com/release-notes.json` 包含当前版本条目。
 
 ### 执行约束
 
