@@ -34,7 +34,7 @@ mod windows_impl {
     use parking_lot::Mutex;
     use std::sync::LazyLock;
     use std::time::{Duration, Instant};
-    use windows::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
+    use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
         VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN,
@@ -42,7 +42,7 @@ mod windows_impl {
     use windows::Win32::UI::WindowsAndMessaging::{
         CallNextHookEx, DispatchMessageW, GetDoubleClickTime, GetForegroundWindow, GetMessageW,
         GetSystemMetrics, GetWindowThreadProcessId, SetWindowsHookExW, TranslateMessage,
-        HC_ACTION, HHOOK, MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK, SM_CYDOUBLECLK,
+        UnhookWindowsHookEx, HC_ACTION, HHOOK, MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK, SM_CYDOUBLECLK,
         WH_MOUSE_LL, WM_LBUTTONDOWN, WM_LBUTTONUP,
     };
 
@@ -73,16 +73,17 @@ mod windows_impl {
         w_param: WPARAM,
         l_param: LPARAM,
     ) -> LRESULT {
-        if n_code >= HC_ACTION as i32 {
+        if n_code >= HC_ACTION as i32 && l_param.0 != 0 {
             let state_opt = COPY_ON_SELECT_STATE.lock().clone();
             if let Some(state) = state_opt {
                 if state.is_enabled() {
                     let msg = w_param.0 as u32;
-                    let info = *(l_param.0 as *const MSLLHOOKSTRUCT);
+                    let info = &*(l_param.0 as *const MSLLHOOKSTRUCT);
                     let pt = (info.pt.x, info.pt.y);
 
                     // Skip synthetic/injected events (bit 0 of flags is LLMHF_INJECTED)
-                    let is_injected = (info.flags.0 & 1) != 0;
+                    let flags_raw: u32 = std::mem::transmute_copy(&info.flags);
+                    let is_injected = (flags_raw & 1) != 0;
 
                     if !is_injected {
                         match msg {
@@ -149,7 +150,7 @@ mod windows_impl {
             }
         }
 
-        CallNextHookEx(None, n_code, w_param, l_param)
+        CallNextHookEx(HHOOK::default(), n_code, w_param, l_param)
     }
 
     fn is_excluded_context() -> bool {
@@ -218,18 +219,18 @@ mod windows_impl {
         *COPY_ON_SELECT_STATE.lock() = Some(state);
 
         std::thread::spawn(|| unsafe {
-            let hook: Result<HHOOK, _> =
-                SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), None, 0);
+            let hook: windows::core::Result<HHOOK> =
+                SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook_proc), HINSTANCE::default(), 0);
 
             match hook {
                 Ok(hhook) => {
                     println!("[CopyOnSelect] Low-level mouse hook installed successfully");
                     let mut msg = MSG::default();
-                    while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+                    while GetMessageW(&mut msg, HWND::default(), 0, 0).as_bool() {
                         let _ = TranslateMessage(&msg);
                         DispatchMessageW(&msg);
                     }
-                    let _ = windows::Win32::UI::WindowsAndMessaging::UnhookWindowsHookEx(hhook);
+                    let _ = UnhookWindowsHookEx(hhook);
                 }
                 Err(err) => {
                     eprintln!("[CopyOnSelect] Failed to install mouse hook: {}", err);
