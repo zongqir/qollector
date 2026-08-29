@@ -59,6 +59,27 @@ export default defineConfig({
         widget: resolve(__dirname, 'widget.html'),
         bubble: resolve(__dirname, 'bubble.html'),
       },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('pdfjs-dist')) {
+              return 'vendor-pdf';
+            }
+            if (id.includes('highlight.js')) {
+              return 'vendor-syntax';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react-virtuoso') || id.includes('@dnd-kit')) {
+              return 'vendor-ui-virtuoso';
+            }
+            if (id.includes('preact') || id.includes('zustand') || id.includes('i18next')) {
+              return 'vendor-core';
+            }
+          }
+        },
+      },
     },
   },
 });
