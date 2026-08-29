@@ -13,3 +13,4 @@ export const detectClientPlatform = () => {
 };
 
 export const SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK = detectClientPlatform() === 'windows';
+export const SUPPORTS_COPY_ON_SELECT = detectClientPlatform() === 'windows';

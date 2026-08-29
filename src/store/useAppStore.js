@@ -19,6 +19,7 @@ import {
   createUiActions,
   createWorkbenchActions,
   SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK,
+  SUPPORTS_COPY_ON_SELECT,
   readCollectionRecentSearches,
   clearHistorySnapshot,
   readHistoryRecentSearches,
@@ -66,6 +67,7 @@ const useAppStore = create((set, get) => ({
     invoke,
     applyAccentColor,
     supportsAutoPasteOnDoubleClick: SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK,
+    supportsCopyOnSelect: SUPPORTS_COPY_ON_SELECT,
   }),
 
   ...createItemActions(set, get),

@@ -61,6 +61,7 @@ export { createPanelVisibilityActions } from './panelVisibilityActions';
 export {
   detectClientPlatform,
   SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK,
+  SUPPORTS_COPY_ON_SELECT,
 } from './platformSupport';
 export { createRuntimeActions } from './runtimeActions';
 export { createSelectionActions } from './selectionActions';

@@ -68,6 +68,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.maxPinnedItems'),
           t('settings.general.startupDefaultView'),
           t('settings.general.autoPaste'),
+          t('settings.general.copyOnSelect'),
           t('settings.general.autoLayoutSwitch'),
           t('settings.general.lowMemoryMode'),
           t('settings.general.startTour'),

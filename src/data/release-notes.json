@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.5",
+      "publishedAt": "2026-08-29",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-5",
+      "summary": {
+        "zh-CN": "新增 Windows 平台可选的鼠标划选及双击选词自动复制功能。",
+        "en-US": "Added optional copy-on-select and double-click word selection copy for Windows."
+      },
+      "highlights": {
+        "zh-CN": [
+          "在 Windows 上支持开启「鼠标划选自动复制」，选中文本并松开鼠标后自动复制到剪贴板。",
+          "支持可选的「双击选词自动复制」子项，双击选中单词时自动触发复制。",
+          "内置防误触保护，自动排除 Qollect 自身窗口与修饰键组合操作，并复用全局 Hash 去重管道。"
+        ],
+        "en-US": [
+          "Added optional 'Copy on text selection' on Windows to auto-copy highlighted text upon mouse release.",
+          "Added optional 'Copy on double-click selection' sub-toggle for quick word copying.",
+          "Built-in accidental trigger prevention: ignores Qollect's own window, modifier keys, and leverages global Hash deduplication."
+        ]
+      }
+    },
+    {
       "version": "0.4.4",
       "publishedAt": "2026-08-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-4",

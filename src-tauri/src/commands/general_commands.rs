@@ -62,6 +62,15 @@ pub async fn update_general_config(
 
     input_capture_state.set_enabled(config.input_capture_enabled);
 
+    if let Some(copy_on_select_state) =
+        app.try_state::<Arc<crate::copy_on_select::CopyOnSelectState>>()
+    {
+        copy_on_select_state.update(
+            config.copy_on_select_enabled,
+            config.copy_on_select_double_click_enabled,
+        );
+    }
+
     // Update tray menu language if it changed
     if config.language != previous_config.language {
         crate::tray::update_tray_language(&app, &config.language);

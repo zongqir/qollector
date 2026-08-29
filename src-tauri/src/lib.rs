@@ -2,6 +2,7 @@ pub mod ai;
 pub mod commands;
 pub mod collector;
 pub mod config;
+pub mod copy_on_select;
 pub mod core;
 pub mod crash_log;
 pub mod http_client;

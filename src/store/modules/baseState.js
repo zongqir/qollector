@@ -110,6 +110,8 @@ export const createBaseState = ({
   historyStreamEnabled,
   lowMemoryModeEnabled: false,
   autoPasteOnDoubleClick: false,
+  copyOnSelectEnabled: false,
+  copyOnSelectDoubleClickEnabled: true,
   copyQollectSourceItems: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,

@@ -76,6 +76,16 @@ pub struct GeneralConfig {
     /// Capture settled text from supported focused input controls on Windows.
     #[serde(default)]
     pub input_capture_enabled: bool,
+    /// Enable copy-on-select on Windows.
+    #[serde(default)]
+    pub copy_on_select_enabled: bool,
+    /// Enable copy on double click word selection on Windows.
+    #[serde(default = "default_copy_on_select_double_click_enabled")]
+    pub copy_on_select_double_click_enabled: bool,
+}
+
+fn default_copy_on_select_double_click_enabled() -> bool {
+    true
 }
 
 fn default_accent_color() -> String {
@@ -177,6 +187,8 @@ impl Default for GeneralConfig {
             widget_enabled: false,
             accent_color: default_accent_color(),
             input_capture_enabled: false,
+            copy_on_select_enabled: false,
+            copy_on_select_double_click_enabled: default_copy_on_select_double_click_enabled(),
         }
     }
 }
