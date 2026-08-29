@@ -38,6 +38,7 @@ mod platform_impl {
 #[cfg(target_os = "linux")]
 mod platform_impl {
     use super::CursorPosition;
+    use x11rb::connection::Connection;
 
     pub fn get_cursor_position_impl() -> CursorPosition {
         if let Ok(pos) = query_x11_cursor() {

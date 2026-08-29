@@ -3,7 +3,9 @@ pub mod qr_generator;
 pub mod s3_uploader;
 pub mod service;
 
+#[allow(unused_imports)]
 pub use config::{S3Config, ShareConfig, ShareProvider};
+#[allow(unused_imports)]
 pub use service::{ShareMethod, ShareResult, UploadResponse};
 
 #[derive(Debug, thiserror::Error)]

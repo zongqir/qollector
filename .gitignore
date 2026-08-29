@@ -5,7 +5,9 @@ dist/
 .env
 
 # Rust
+target/
 src-tauri/target/
+tools/**/target/
 Cargo.lock
 target-start-up-check/
 

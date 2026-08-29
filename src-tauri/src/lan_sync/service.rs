@@ -347,7 +347,6 @@ impl LanSyncService {
         device_id: &str,
     ) -> Result<SyncApplyResult, String> {
         let identity = self.get_identity().await;
-        let config = self.get_config().await;
         let paired = self
             .manager
             .get_paired_sync_device(device_id)

@@ -1,12 +1,15 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::{ClipboardItem, SearchFilters, Workbench};
+#[cfg(target_os = "windows")]
 use crate::window_lifecycle::{
     cancel_main_window_release, hide_main_window_with_release, MAIN_WINDOW_LABEL,
 };
 use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::{Manager, State};
+#[cfg(target_os = "windows")]
+use tauri::Manager;
+use tauri::State;
 
 #[tauri::command]
 pub async fn get_recent_items(
@@ -309,6 +312,7 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
 
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = app;
         // Keep behavior extensible: other platforms currently fallback to copy-only.
         Ok(false)
     }
