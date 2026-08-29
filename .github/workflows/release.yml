@@ -10,33 +10,11 @@ jobs:
   release:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            args: ""
-          - platform: macos-latest
-            args: --target universal-apple-darwin
-          # Linux build is temporarily disabled.
-          # Re-enable by restoring:
-          # - platform: ubuntu-22.04
-          #   args: ""
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -77,12 +55,6 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Add macOS universal target
-        if: matrix.platform == 'macos-latest'
-        run: |
-          rustup target add aarch64-apple-darwin
-          rustup target add x86_64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -174,8 +146,8 @@ jobs:
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
-          updaterJsonKeepUniversal: true
-          args: ${{ matrix.args }}
+          updaterJsonKeepUniversal: false
+          args: ""
 
   upload-r2:
     needs: [release]
@@ -201,17 +173,15 @@ jobs:
           mkdir -p r2-upload/releases/${{ steps.version.outputs.version }}
           cd r2-upload/releases/${{ steps.version.outputs.version }}
 
-          # Download all assets from the GitHub Release
+          # Download Windows assets from GitHub Release
           gh release download "${{ steps.version.outputs.version }}" \
             --repo "${{ github.repository }}" \
             --pattern "*.exe" \
             --pattern "*.exe.sig" \
-            --pattern "*.dmg" \
-            --pattern "*.dmg.sig" \
-            --pattern "*.AppImage" \
-            --pattern "*.AppImage.sig" \
-            --pattern "*.deb" \
-            --pattern "*.deb.sig" \
+            --pattern "*.msi" \
+            --pattern "*.msi.sig" \
+            --pattern "*.zip" \
+            --pattern "*.zip.sig" \
             --clobber || true
 
           echo "Downloaded assets:"

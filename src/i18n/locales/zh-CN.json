@@ -385,6 +385,8 @@
       "copyOnSelectHint": "划选文字松开鼠标后自动复制到剪贴板（仅 Windows）",
       "copyOnSelectDoubleClick": "双击选词自动复制",
       "copyOnSelectDoubleClickHint": "双击选中单词或词语时也自动复制",
+      "quickActionBubble": "划选快捷动作气泡",
+      "quickActionBubbleHint": "划选命中特定特征（时间戳、链接、算式、色值、外文等）时浮现快捷操作气泡，无特征静默",
       "copyQollectSourceItems": "允许复制 Qollect 来源项",
       "copyQollectSourceItemsHint": "默认关闭。关闭时，来源为 Qollect / Quick Input / Quick Note 的内容会跳过复制动作。",
       "autostart": "开机自启动",

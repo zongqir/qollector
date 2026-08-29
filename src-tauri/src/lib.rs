@@ -12,6 +12,7 @@ pub mod low_memory_mode;
 pub mod mcp;
 pub mod ocr;
 pub mod platform;
+pub mod quick_action;
 pub mod repository;
 pub mod share;
 pub mod shortcuts;

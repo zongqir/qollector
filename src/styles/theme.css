@@ -225,6 +225,31 @@
   --widget-breathe-shadow-start: rgba(0, 0, 0, 0.3);
   --widget-breathe-shadow-mid: rgba(0, 0, 0, 0.25);
 
+  /* Quick Action Bubble tokens */
+  --bubble-bg: rgba(255, 255, 255, 0.94);
+  --bubble-border: rgba(0, 0, 0, 0.1);
+  --bubble-shadow-near: rgba(0, 0, 0, 0.08);
+  --bubble-shadow-far: rgba(0, 0, 0, 0.18);
+  --bubble-text: var(--text-primary);
+  --bubble-badge-timestamp-bg: rgba(245, 158, 11, 0.15);
+  --bubble-badge-timestamp-fg: #d97706;
+  --bubble-badge-url-bg: rgba(59, 130, 246, 0.15);
+  --bubble-badge-url-fg: #2563eb;
+  --bubble-badge-math-bg: rgba(16, 185, 129, 0.15);
+  --bubble-badge-math-fg: #059669;
+  --bubble-badge-color-bg: rgba(168, 85, 247, 0.15);
+  --bubble-badge-color-fg: #9333ea;
+  --bubble-badge-json-bg: rgba(6, 182, 212, 0.15);
+  --bubble-badge-json-fg: #0891b2;
+  --bubble-badge-base64-bg: rgba(249, 115, 22, 0.15);
+  --bubble-badge-base64-fg: #ea580c;
+  --bubble-badge-translation-bg: rgba(99, 102, 241, 0.15);
+  --bubble-badge-translation-fg: #4f46e5;
+  --bubble-btn-hover-bg: rgba(0, 122, 255, 0.1);
+  --bubble-btn-copied-bg: rgba(16, 185, 129, 0.18);
+  --bubble-btn-copied-fg: #059669;
+  --bubble-close-hover-bg: rgba(0, 0, 0, 0.08);
+
   /* Scheme C surface tokens */
   --surface-elevated: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.98));
   --surface-muted: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 0.88));
@@ -1233,6 +1258,31 @@
 
   /* 浮动按钮背景 */
   --float-btn-bg: rgba(var(--bg-secondary-rgb), calc(var(--glass-opacity) * 1.05));
+
+  /* Quick Action Bubble tokens (dark) */
+  --bubble-bg: rgba(26, 28, 35, 0.92);
+  --bubble-border: rgba(255, 255, 255, 0.12);
+  --bubble-shadow-near: rgba(0, 0, 0, 0.25);
+  --bubble-shadow-far: rgba(0, 0, 0, 0.45);
+  --bubble-text: #f1f5f9;
+  --bubble-badge-timestamp-bg: rgba(245, 158, 11, 0.22);
+  --bubble-badge-timestamp-fg: #fbbf24;
+  --bubble-badge-url-bg: rgba(59, 130, 246, 0.22);
+  --bubble-badge-url-fg: #60a5fa;
+  --bubble-badge-math-bg: rgba(16, 185, 129, 0.22);
+  --bubble-badge-math-fg: #34d399;
+  --bubble-badge-color-bg: rgba(168, 85, 247, 0.22);
+  --bubble-badge-color-fg: #c084fc;
+  --bubble-badge-json-bg: rgba(6, 182, 212, 0.22);
+  --bubble-badge-json-fg: #22d3ee;
+  --bubble-badge-base64-bg: rgba(249, 115, 22, 0.22);
+  --bubble-badge-base64-fg: #fb923c;
+  --bubble-badge-translation-bg: rgba(99, 102, 241, 0.22);
+  --bubble-badge-translation-fg: #818cf8;
+  --bubble-btn-hover-bg: rgba(0, 122, 255, 0.18);
+  --bubble-btn-copied-bg: rgba(16, 185, 129, 0.24);
+  --bubble-btn-copied-fg: #34d399;
+  --bubble-close-hover-bg: rgba(255, 255, 255, 0.15);
 
   /* 清除搜索按钮 */
   --clear-search-bg: rgba(255, 255, 255, 0.1);

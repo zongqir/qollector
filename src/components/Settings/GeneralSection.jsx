@@ -472,6 +472,30 @@ function GeneralSection({
         )}
         <label className="setting-toggle-row">
           <span className="toggle-label-group">
+            <span className="toggle-label">{t('settings.general.quickActionBubble')}</span>
+            <span className="toggle-desc">{t('settings.general.quickActionBubbleHint')}</span>
+          </span>
+          <span className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={generalConfig.quick_action_bubble_enabled || false}
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                const updated = { ...generalConfig, quick_action_bubble_enabled: checked };
+                setGeneralConfig(updated);
+                useAppStore.setState({ quickActionBubbleEnabled: checked });
+                try {
+                  await invoke('update_general_config', { config: updated });
+                } catch (error) {
+                  console.error('save quick_action_bubble config failed:', error);
+                }
+              }}
+            />
+            <span className="toggle-slider" />
+          </span>
+        </label>
+        <label className="setting-toggle-row">
+          <span className="toggle-label-group">
             <span className="toggle-label">{t('settings.general.copyQollectSourceItems')}</span>
             <span className="toggle-desc">{t('settings.general.copyQollectSourceItemsHint')}</span>
           </span>

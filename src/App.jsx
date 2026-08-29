@@ -14,6 +14,7 @@ import { createUpdaterProgressHandler } from './utils/updaterProgress';
 import {
   openWidgetWindow,
   closeWidgetWindow,
+  showBubbleWindow,
 } from './services/windowService';
 import {
   QUICK_NOTE_SAVED_EVENT,
@@ -496,8 +497,26 @@ function App() {
     loadConfigs({ applyStartupView: true });
 
     console.log('[Perf:App] Setting up event listeners at', performance.now().toFixed(1), 'ms');
-    const unlistenClipboardPromise = listen('clipboard-changed', () => {
+    const unlistenClipboardPromise = listen('clipboard-changed', async () => {
       loadItems();
+
+      const { quickActionBubbleEnabled } = useAppStore.getState();
+      if (quickActionBubbleEnabled) {
+        try {
+          const recent = await invoke('get_recent_items_light', { limit: 1 });
+          if (Array.isArray(recent) && recent.length > 0) {
+            const newest = recent[0];
+            if (newest && newest.type === 'text' && newest.content) {
+              const result = await invoke('analyze_quick_action', { text: newest.content });
+              if (result) {
+                await showBubbleWindow(result);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[QuickAction] failed to analyze clipboard item:', err);
+        }
+      }
     });
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();

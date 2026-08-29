@@ -112,6 +112,7 @@ export const createBaseState = ({
   autoPasteOnDoubleClick: false,
   copyOnSelectEnabled: false,
   copyOnSelectDoubleClickEnabled: true,
+  quickActionBubbleEnabled: false,
   copyQollectSourceItems: false,
   lastCopyWasAutoPaste: false,
   widgetEnabled: false,

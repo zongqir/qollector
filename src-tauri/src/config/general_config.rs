@@ -82,6 +82,9 @@ pub struct GeneralConfig {
     /// Enable copy on double click word selection on Windows.
     #[serde(default = "default_copy_on_select_double_click_enabled")]
     pub copy_on_select_double_click_enabled: bool,
+    /// Enable contextual quick action bubble on text selection.
+    #[serde(default)]
+    pub quick_action_bubble_enabled: bool,
 }
 
 fn default_copy_on_select_double_click_enabled() -> bool {
@@ -189,6 +192,7 @@ impl Default for GeneralConfig {
             input_capture_enabled: false,
             copy_on_select_enabled: false,
             copy_on_select_double_click_enabled: default_copy_on_select_double_click_enabled(),
+            quick_action_bubble_enabled: false,
         }
     }
 }

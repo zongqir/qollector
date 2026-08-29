@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.6",
+      "publishedAt": "2026-08-29",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-6",
+      "summary": {
+        "zh-CN": "新增划选快捷动作气泡（时间戳/链接/算式/色值/外文），精简 CI 发版流程并提速 3 倍。",
+        "en-US": "Added contextual quick action bubble for selections, streamlined CI release workflow for 3x faster builds."
+      },
+      "highlights": {
+        "zh-CN": [
+          "新增「划选快捷动作气泡」可选特性，划选时间戳、链接、数学算式、色值或外文词句时在光标旁展示极简毛玻璃微气泡。",
+          "零打扰智能模式：普通中文与常规文本完全静默无弹窗，一键操作后平滑淡出，支持 ESC 立即销毁与边缘防溢出。",
+          "精简 GitHub Actions 发版流水线，优化 Windows 专属打包构建，发布流程提速 3 倍以上。"
+        ],
+        "en-US": [
+          "Added optional 'Quick Action Bubble' on text selection, showing contextual frosted glass action pills for timestamps, URLs, math, colors, and translation.",
+          "Zero-interruption design: stays completely silent for ordinary text, provides one-click actions, and dismisses smoothly on escape or outside clicks.",
+          "Streamlined CI release workflow focused on Windows release packaging, speeding up build times by over 3x."
+        ]
+      }
+    },
+    {
       "version": "0.4.5",
       "publishedAt": "2026-08-29",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-5",

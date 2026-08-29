@@ -90,3 +90,109 @@ export const closeWidgetWindow = async () => {
     }
   }
 };
+
+export const BUBBLE_WINDOW_LABEL = 'bubble';
+
+export const showBubbleWindow = async (payload, cursorOverride = null) => {
+  let existing = await WebviewWindow.getByLabel(BUBBLE_WINDOW_LABEL);
+
+  const BUBBLE_WIDTH = 380;
+  const BUBBLE_HEIGHT = 44;
+
+  let x = 600;
+  let y = 400;
+
+  try {
+    const cursor = cursorOverride || await cursorPosition();
+    const monitor = await getMonitorAtCursor();
+    const scale = monitor?.scaleFactor || 1;
+
+    // Convert cursor to logical coordinates
+    const logicalCursorX = cursor.x / (cursorOverride ? 1 : scale);
+    const logicalCursorY = cursor.y / (cursorOverride ? 1 : scale);
+
+    x = logicalCursorX + 12;
+    y = logicalCursorY - 48;
+
+    if (monitor) {
+      const monitorX = monitor.position.x / scale;
+      const monitorY = monitor.position.y / scale;
+      const monitorW = monitor.size.width / scale;
+      const monitorH = monitor.size.height / scale;
+
+      // Avoid popping off-screen right
+      if (x + BUBBLE_WIDTH > monitorX + monitorW - 12) {
+        x = Math.max(monitorX + 12, logicalCursorX - BUBBLE_WIDTH - 12);
+      }
+      // Avoid popping off-screen top
+      if (y < monitorY + 10) {
+        y = logicalCursorY + 24;
+      }
+      // Avoid popping off-screen bottom
+      if (y + BUBBLE_HEIGHT > monitorY + monitorH - 10) {
+        y = monitorY + monitorH - BUBBLE_HEIGHT - 12;
+      }
+    }
+  } catch {
+    // fallback coordinates
+  }
+
+  if (!existing) {
+    existing = new WebviewWindow(BUBBLE_WINDOW_LABEL, {
+      url: resolveSubWindowUrl('bubble.html'),
+      title: 'Qollect Quick Action',
+      width: BUBBLE_WIDTH,
+      height: BUBBLE_HEIGHT,
+      x: Math.round(x),
+      y: Math.round(y),
+      resizable: false,
+      alwaysOnTop: true,
+      decorations: false,
+      transparent: true,
+      shadow: false,
+      skipTaskbar: true,
+      visible: false,
+    });
+
+    await new Promise((resolve) => {
+      existing.once('tauri://created', () => {
+        setTimeout(resolve, 80);
+      });
+      existing.once('tauri://error', (e) => {
+        console.error('bubble window creation failed:', e);
+        resolve();
+      });
+    });
+  } else {
+    try {
+      await existing.setPosition({
+        type: 'Logical',
+        x: Math.round(x),
+        y: Math.round(y),
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  try {
+    await existing.emit('quick-action-payload', payload);
+    await existing.show();
+  } catch (err) {
+    console.error('failed to show bubble window:', err);
+  }
+
+  return existing;
+};
+
+export const closeBubbleWindow = async () => {
+  const existing = await WebviewWindow.getByLabel(BUBBLE_WINDOW_LABEL);
+  if (existing) {
+    try {
+      await existing.hide();
+    } catch {
+      // ignore
+    }
+  }
+};
+
