@@ -36,14 +36,14 @@ mod windows_impl {
     use std::time::{Duration, Instant};
     use windows::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
-        VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN,
+        GetAsyncKeyState, GetDoubleClickTime, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD,
+        KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        CallNextHookEx, DispatchMessageW, GetDoubleClickTime, GetForegroundWindow, GetMessageW,
-        GetSystemMetrics, GetWindowThreadProcessId, SetWindowsHookExW, TranslateMessage,
-        UnhookWindowsHookEx, HC_ACTION, HHOOK, MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK, SM_CYDOUBLECLK,
-        WH_MOUSE_LL, WM_LBUTTONDOWN, WM_LBUTTONUP,
+        CallNextHookEx, DispatchMessageW, GetForegroundWindow, GetMessageW, GetSystemMetrics,
+        GetWindowThreadProcessId, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HHOOK,
+        MSG, MSLLHOOKSTRUCT, SM_CXDOUBLECLK, SM_CYDOUBLECLK, WH_MOUSE_LL, WM_LBUTTONDOWN,
+        WM_LBUTTONUP,
     };
 
     static COPY_ON_SELECT_STATE: LazyLock<Mutex<Option<Arc<CopyOnSelectState>>>> =
@@ -73,7 +73,7 @@ mod windows_impl {
         w_param: WPARAM,
         l_param: LPARAM,
     ) -> LRESULT {
-        if n_code >= HC_ACTION as i32 && l_param.0 != 0 {
+        if n_code >= 0 && l_param.0 != 0 {
             let state_opt = COPY_ON_SELECT_STATE.lock().clone();
             if let Some(state) = state_opt {
                 if state.is_enabled() {
