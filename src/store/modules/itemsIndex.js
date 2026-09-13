@@ -8,7 +8,13 @@ export const buildItemsById = (items) => {
   return map;
 };
 
-export const normalizeWorkbenchBucketId = (workbenchId) => String(workbenchId || '').trim();
+export const normalizeWorkbenchBucketId = (workbenchId) => {
+  const normalized = String(workbenchId || '').trim();
+  if (!normalized || normalized === 'default') {
+    return 'default';
+  }
+  return normalized;
+};
 
 const sortFavoriteItems = (left, right) => {
   const leftOrder = Number(left?.favorite_order);

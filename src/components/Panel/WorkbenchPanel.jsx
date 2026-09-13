@@ -15,8 +15,6 @@ import {
   Link,
   Braces,
   Layers,
-  LayoutGrid,
-  List,
 } from 'lucide-react';
 import {
   DndContext,
@@ -88,7 +86,6 @@ const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
 const WORKBENCH_FILTER_COLLAPSE_DEFAULT = false;
 const WORKBENCH_FILTER_SEARCH_SIZER_WIDTH = 108;
 const WORKBENCH_NARROW_QUICK_NOTE_THRESHOLD = 360;
-const WORKBENCH_VIEW_MODE_STORAGE_KEY = 'qollect.workbench.view.mode.v1';
 const WORKBENCH_BOTTOM_BAR_LAYOUT = {
   LABEL: 'label',
   COMPACT: 'compact',
@@ -182,13 +179,6 @@ function WorkbenchPanel() {
   const [workbenchBottomBarLayout, setWorkbenchBottomBarLayout] = useState(WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL);
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
-  const [workbenchViewMode, setWorkbenchViewMode] = useState(() => {
-    try {
-      return localStorage.getItem(WORKBENCH_VIEW_MODE_STORAGE_KEY) || 'canvas';
-    } catch {
-      return 'canvas';
-    }
-  });
   const [showWorkbenchSwitcher, setShowWorkbenchSwitcher] = useState(false);
   const [showWorkbenchManageMenu, setShowWorkbenchManageMenu] = useState(false);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
@@ -530,10 +520,17 @@ function WorkbenchPanel() {
     ];
     const normalizedWorkbenchId = normalizeWorkbenchBucketId(activeWorkbenchId);
     return mergedIds
-      .map((id) => itemsById?.get(id) || backendPinnedItemsById.get(id))
+      .map((id) => {
+        const fromStore = itemsById?.get(id);
+        const fromBackend = backendPinnedItemsById.get(id);
+        if (fromStore && fromBackend) {
+          return { ...fromBackend, ...fromStore };
+        }
+        return fromBackend || fromStore;
+      })
       .filter((item) => (
-        item?.is_pinned
-        && String(item.workbench_id || '').trim() === normalizedWorkbenchId
+        Boolean(item?.is_pinned)
+        && normalizeWorkbenchBucketId(item.workbench_id) === normalizedWorkbenchId
       ));
   }, [activeWorkbenchId, backendPinnedItems, backendPinnedItemsById, itemsById, storePinnedIds]);
   const allPinnedItems = pinnedBaseItems;
@@ -975,18 +972,6 @@ function WorkbenchPanel() {
       return next;
     });
   }, [dismissOpenDropdowns]);
-
-  const handleToggleWorkbenchViewMode = useCallback((targetMode) => {
-    setWorkbenchViewMode((prev) => {
-      const nextMode = targetMode || (prev === 'canvas' ? 'list' : 'canvas');
-      try {
-        localStorage.setItem(WORKBENCH_VIEW_MODE_STORAGE_KEY, nextMode);
-      } catch (error) {
-        console.warn('[Workbench] persist view mode failed:', error);
-      }
-      return nextMode;
-    });
-  }, []);
 
   const closeWorkbenchSwitcherOverlays = useCallback(() => {
     setShowWorkbenchManageMenu(false);
@@ -1646,6 +1631,11 @@ function WorkbenchPanel() {
     openContextMenu(item, index, event);
   }, [clearWorkbenchSortLongPressTimer, openContextMenu]);
 
+  const handleCanvasContextMenu = useCallback((item, event) => {
+    const index = pinnedItems.findIndex(candidate => candidate.id === item.id);
+    handleCardContextMenu(item, index >= 0 ? index : 0, event);
+  }, [handleCardContextMenu, pinnedItems]);
+
   useEffect(() => () => {
     if (workbenchCardClickTimerRef.current) {
       clearTimeout(workbenchCardClickTimerRef.current);
@@ -2199,43 +2189,6 @@ function WorkbenchPanel() {
     />
   );
 
-  if (allPinnedItems.length === 0) {
-    return (
-      <div
-        className={workbenchPanelClassName}
-        ref={workbenchPanelRef}
-        tabIndex={-1}
-        onDragOver={handleNativeDragOver}
-        onDrop={handleNativeDrop}
-      >
-        {quickNoteSection}
-        <div className={`workbench-empty state-panel panel-state-stack ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
-          <div className="workbench-empty-icon panel-state-icon">
-            <Package size={48} strokeWidth={1} />
-          </div>
-          <div className="workbench-empty-title state-panel__title panel-state-title">
-            {workbenchBackendError ? t('workbench.queryFailed') : t('workbench.emptyTitleForWorkbench', { name: activeWorkbenchLabel })}
-          </div>
-          <div className="workbench-empty-hint state-panel__hint panel-state-text">
-            {workbenchBackendError || t('workbench.emptyHint')}
-          </div>
-          {!workbenchBackendError && (
-            <div className="workbench-empty-guide state-panel__hint panel-state-text">{t('workbench.workspaceGuide')}</div>
-          )}
-          {workbenchBackendError && (
-            <button
-              type="button"
-              className="workbench-retry-btn state-retry-btn panel-state-action-btn"
-              onClick={handleRetryWorkbenchLoad}
-            >
-              {t('workbench.retryLoad')}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={workbenchPanelClassName}
@@ -2399,28 +2352,6 @@ function WorkbenchPanel() {
               </button>
             )}
 
-            <div className="workbench-view-mode-toggle" role="radiogroup" aria-label={t('workbench.viewMode')}>
-              <button
-                type="button"
-                className={`workbench-view-mode-btn ${workbenchViewMode === 'canvas' ? 'active' : ''}`}
-                onClick={() => handleToggleWorkbenchViewMode('canvas')}
-                title={t('workbench.canvasMode')}
-                aria-label={t('workbench.canvasMode')}
-              >
-                <LayoutGrid size={13} />
-                {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.canvasMode')}</span>}
-              </button>
-              <button
-                type="button"
-                className={`workbench-view-mode-btn ${workbenchViewMode === 'list' ? 'active' : ''}`}
-                onClick={() => handleToggleWorkbenchViewMode('list')}
-                title={t('workbench.listMode')}
-                aria-label={t('workbench.listMode')}
-              >
-                <List size={13} />
-                {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.listMode')}</span>}
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -2460,7 +2391,7 @@ function WorkbenchPanel() {
         </PanelSummaryRow>
       )}
 
-      {pinnedItems.length === 0 ? (
+      {backendFilteredPinnedIds instanceof Set && pinnedItems.length === 0 ? (
         <div className={`workbench-filter-empty state-panel panel-state-stack ${workbenchBackendError ? 'error state-panel--error' : ''}`.trim()}>
           <div className="workbench-empty-icon panel-state-icon">
             <Package size={42} strokeWidth={1} />
@@ -2485,7 +2416,7 @@ function WorkbenchPanel() {
             </button>
           )}
         </div>
-      ) : workbenchViewMode === 'canvas' ? (
+      ) : (
         <WorkbenchCanvas
           pinnedItems={pinnedItems}
           activeWorkbenchId={activeWorkbenchId}
@@ -2494,52 +2425,17 @@ function WorkbenchPanel() {
           onCopyItem={handleCopyAndAutoPaste}
           onUnpinItem={handleCardUnpin}
           onRefreshItems={handleRetryWorkbenchLoad}
+          onAddQuickNote={addQuickNote}
+          onEditItem={openEditModal}
+          onPreviewItem={handleCardPreview}
+          onSetCardBackground={setCardBackground}
+          onOpenItem={handleOpenItem}
+          onRevealInFolder={handleRevealInFolder}
+          onContextMenu={handleCanvasContextMenu}
+          supportsNativeExternalDrag={SUPPORTS_NATIVE_EXTERNAL_DRAG}
+          onStartExternalDrag={handleStartExternalDrag}
           t={t}
-          viewMode={workbenchViewMode}
-          onToggleViewMode={() => handleToggleWorkbenchViewMode('list')}
         />
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={pinnedItemIds} strategy={rectSortingStrategy}>
-            <div
-              ref={workbenchCardsRef}
-              className={`workbench-cards ${isWorkbenchSortMode ? 'sort-mode' : ''}`}
-              onPointerMove={handleWorkbenchCardsPointerMove}
-              onPointerLeave={handleWorkbenchCardsPointerLeave}
-              onScroll={handleWorkbenchCardsScroll}
-            >
-              {pinnedItems.map((item, index) => (
-                <SortableWorkbenchCard
-                  key={item.id}
-                  item={item}
-                  timeTick={workbenchTimeTick}
-                  isCopied={copiedItemId === item.id && copyFeedbackSource === 'workbench'}
-                  isMultiSelected={selectedPinnedIdSet.has(item.id)}
-                  isSortMode={isWorkbenchSortMode}
-                  isSortAnchor={isWorkbenchSortMode && workbenchSortAnchorItemId === item.id}
-                  isSelectionMode={isPinnedSelectionMode}
-                  sortableDisabled={!workbenchDragEnabled || isPinnedSelectionMode}
-                  isUnpinConfirmArmed={pendingUnpinItemId === item.id}
-                  onUnpin={() => handleCardUnpin(item)}
-                  onSetCardRef={(node) => setWorkbenchCardRef(item.id, node)}
-                  onCardPointerDown={(event) => handleWorkbenchCardPointerDown(item, event)}
-                  onCardPointerMove={handleWorkbenchCardPointerMove}
-                  onCardPointerUp={handleWorkbenchCardPointerUp}
-                  onCardPointerCancel={handleWorkbenchCardPointerUp}
-                  onCardPointerLeave={handleWorkbenchCardPointerUp}
-                  onPointerDownCapture={(event) => handleCardPointerDownCapture(item, index, event)}
-                  onClick={(event) => handleCardClick(item, index, event)}
-                  onDoubleClick={(event) => handleCardDoubleClick(item, event)}
-                  onContextMenu={(event) => handleCardContextMenu(item, index, event)}
-                  onOpenItem={handleOpenItem}
-                  onSetCardBackground={setCardBackground}
-                  supportsNativeExternalDrag={SUPPORTS_NATIVE_EXTERNAL_DRAG}
-                  onStartExternalDrag={handleStartExternalDrag}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
       )}
 
       <HistoryContextMenu

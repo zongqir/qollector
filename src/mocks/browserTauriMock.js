@@ -8,8 +8,8 @@
 if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
   console.log('[BrowserMock] Tauri native runtime not detected. Initializing Browser Dev Mock Shield...');
 
-  const STORAGE_KEY_ITEMS = 'qollect.mock.items.v4';
-  const STORAGE_KEY_WORKBENCHES = 'qollect.mock.workbenches.v4';
+  const STORAGE_KEY_ITEMS = 'qollect.mock.items.v7';
+  const STORAGE_KEY_WORKBENCHES = 'qollect.mock.workbenches.v7';
 
   const defaultMockWorkbenches = [
     { id: 'default', name: '默认工作台', is_default: true, sort_order: 0 },
@@ -20,20 +20,20 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
     {
       id: 'mock_note_1',
       type_: 'text',
-      content: '💡 欢迎体验 Qollector 灵动便签画布！\n\n- 拖动顶部手柄：自由放置到任意位置\n- 拖动右下角/边缘：自由拉宽、拉长或缩小便签\n- 双击卡片正文：直接就地打字编辑，自动保存\n- 单击卡片：一键直接复制到剪贴板',
+      content: '💡 欢迎体验 Qollector 灵动便签画布！\n\n- 双击空白处：随时新建便签\n- 拖动右下角角标：自由放大缩小\n- 双击卡片正文：就地打字编辑，自动保存\n- 单击卡片：一键直接复制到剪贴板',
       user_note: '',
       is_pinned: true,
       workbench_id: 'default',
       is_favorite: true,
       created_at: Math.floor(Date.now() / 1000) - 3600,
       updated_at: Math.floor(Date.now() / 1000) - 1800,
-      metadata: JSON.stringify({ card_background: 'yellow' }),
+      metadata: JSON.stringify({ card_bg: 'sand' }),
       tags: JSON.stringify(['便签', '指南']),
     },
     {
       id: 'mock_note_2',
       type_: 'code',
-      content: '// 便签画布支持多语言与代码高亮\nfunction calculateLayout(nodes) {\n  return nodes.map((node, i) => ({\n    ...node,\n    x: (i % 3) * 270 + 40,\n    y: Math.floor(i / 3) * 190 + 40\n  }));\n}',
+      content: '// 便签画布支持多语言与代码高亮\nfunction calculateLayout(nodes) {\n  return nodes.map((node, i) => ({\n    ...node,\n    x: (i % 3) * 280 + 40,\n    y: Math.floor(i / 3) * 200 + 40\n  }));\n}',
       code_language: 'javascript',
       user_note: '',
       is_pinned: true,
@@ -41,20 +41,20 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
       is_favorite: false,
       created_at: Math.floor(Date.now() / 1000) - 7200,
       updated_at: Math.floor(Date.now() / 1000) - 3600,
-      metadata: JSON.stringify({ card_background: 'blue' }),
+      metadata: JSON.stringify({ card_bg: 'sky' }),
       tags: JSON.stringify(['代码', 'JS']),
     },
     {
       id: 'mock_note_3',
       type_: 'text',
-      content: '📌 空间记忆（Spatial Memory）\n\n人类大脑对 2D 平面位置有极强的天然记忆力。\n你可以把不同类型的便签摆在不同区域，配合调色板标记，一目了然！',
+      content: '📌 空间记忆（Spatial Memory）\n\n人类大脑对 2D 平面位置有极强的天然记忆力。\n把不同类型的便签摆在不同区域，配合调色板标记，一目了然！',
       user_note: '',
       is_pinned: true,
       workbench_id: 'default',
       is_favorite: true,
       created_at: Math.floor(Date.now() / 1000) - 12000,
       updated_at: Math.floor(Date.now() / 1000) - 6000,
-      metadata: JSON.stringify({ card_background: 'green' }),
+      metadata: JSON.stringify({ card_bg: 'mint' }),
       tags: JSON.stringify(['设计', '效率']),
     },
     {
@@ -67,7 +67,7 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
       is_favorite: false,
       created_at: Math.floor(Date.now() / 1000) - 16000,
       updated_at: Math.floor(Date.now() / 1000) - 8000,
-      metadata: JSON.stringify({ card_background: 'pink' }),
+      metadata: JSON.stringify({ card_bg: 'rose' }),
       tags: JSON.stringify(['AI']),
     },
   ];
@@ -119,11 +119,11 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
 
       case 'get_workbench_pinned_items': {
         const targetWb = args.workbenchId || 'default';
-        return items.filter((i) => i.is_pinned && (i.workbench_id === targetWb || (!i.workbench_id && targetWb === 'default')));
+        return items.filter((i) => Boolean(i.is_pinned) && ((i.workbench_id || 'default') === targetWb));
       }
 
       case 'get_collection_favorite_items':
-        return items.filter((i) => i.is_favorite);
+        return items.filter((i) => Boolean(i.is_favorite));
 
       case 'get_workbenches':
         return workbenches;
@@ -155,7 +155,7 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
       case 'add_clipboard_item_manual':
       case 'add_quick_note': {
         const newItem = {
-          id: `item_${Date.now()}`,
+          id: `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           type_: args.contentType || 'text',
           content: args.content || '',
           user_note: '',
@@ -179,19 +179,31 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
       }
 
       case 'pin_item': {
+        const targetWb = args.workbenchId || 'default';
         const updated = items.map((i) =>
-          i.id === args.id ? { ...i, is_pinned: true, workbench_id: args.workbenchId || 'default' } : i
+          i.id === args.id ? { ...i, is_pinned: true, workbench_id: targetWb } : i
+        );
+        saveMockItems(updated);
+        return true;
+      }
+
+      case 'unpin_item': {
+        const updated = items.map((i) =>
+          i.id === args.id ? { ...i, is_pinned: false, workbench_id: null } : i
         );
         saveMockItems(updated);
         return true;
       }
 
       case 'toggle_pin_item': {
+        const targetWb = args.workbenchId || 'default';
+        const target = items.find((i) => i.id === args.id);
+        const nextPinned = target ? !target.is_pinned : true;
         const updated = items.map((i) =>
-          i.id === args.id ? { ...i, is_pinned: !i.is_pinned, workbench_id: args.workbenchId || 'default' } : i
+          i.id === args.id ? { ...i, is_pinned: nextPinned, workbench_id: nextPinned ? targetWb : null } : i
         );
         saveMockItems(updated);
-        return true;
+        return nextPinned;
       }
 
       case 'toggle_favorite_item': {
@@ -246,11 +258,59 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
       case 'load_general_config':
         return {
           language: 'zh-CN',
-          theme: 'dark',
+          theme_mode: 'system',
+          accent_color: 'blue',
           auto_start: false,
           history_retention_days: 30,
           max_history_items: 2000,
+          max_pinned_items: 50,
+          workbench_panel_enabled: true,
+          low_memory_mode_enabled: false,
+          auto_paste_on_double_click: false,
+          copy_on_select_enabled: false,
+          copy_on_select_double_click_enabled: true,
+          quick_action_bubble_enabled: true,
+          copy_qollect_source_items: true,
+          widget_enabled: false,
+          history_tag_shortcut_enabled: true,
+          auto_cleanup_enabled: true,
+          cleanup_max_items: 2000,
+          cleanup_max_age_days: 30,
+          startup_favorites_view_enabled: false,
+          auto_layout_switch_enabled: true,
         };
+
+      case 'update_general_config':
+        return true;
+
+      case 'get_ocr_config':
+        return {
+          enabled: true,
+          language: 'chi_sim+eng',
+        };
+
+      case 'has_lock_password':
+        return false;
+
+      case 'get_item_by_id':
+        return items.find((i) => i.id === args.id) || null;
+
+      case 'detect_and_update_code_language':
+        return null;
+
+      case 'get_startup_metrics':
+        return {};
+
+      case 'get_share_config':
+        return {
+          upload_service: 's3',
+        };
+
+      case 'open_url':
+      case 'open_external_url':
+      case 'open_item':
+        if (args.url) window.open(args.url, '_blank');
+        return true;
 
       case 'get_ai_config':
         return {
