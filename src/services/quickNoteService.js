@@ -14,26 +14,43 @@ const resolveMaxPinnedItems = async () => {
   }
 };
 
-export const saveQuickNote = async (content, source = QUICK_INPUT_SOURCE) => {
+export const saveQuickNote = async (
+  content,
+  source = QUICK_INPUT_SOURCE,
+  options = {},
+) => {
   const trimmed = content.trim();
   if (!trimmed) {
     return null;
   }
 
+  const {
+    autoFavorite = false,
+    autoPin = !autoFavorite,
+    workbenchId = null,
+  } = typeof options === 'boolean' ? { autoFavorite: options } : options;
+
   const itemId = await invoke('add_clipboard_item_manual', {
     content: trimmed,
     contentType: 'text',
     source,
-    autoFavorite: false,
+    autoFavorite: Boolean(autoFavorite),
   });
 
-  if (itemId) {
+  if (itemId && autoPin) {
     const maxPinned = await resolveMaxPinnedItems();
-    await invoke('pin_item', { id: itemId, maxPinned });
+    const pinPayload = { id: itemId, maxPinned };
+    if (workbenchId) {
+      pinPayload.workbenchId = workbenchId;
+    }
+    await invoke('pin_item', pinPayload);
   }
 
   await emit(QUICK_NOTE_SAVED_EVENT, {
     itemId: itemId ?? null,
+    autoFavorite: Boolean(autoFavorite),
+    autoPin: Boolean(autoPin),
+    workbenchId: workbenchId ?? null,
   });
 
   return itemId;

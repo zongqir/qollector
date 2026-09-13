@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Check, Palette, X } from 'lucide-react';
 import { saveQuickNote } from '../services/quickNoteService';
 import { QUICK_INPUT_SOURCE } from '../utils/sourceConstants';
+import useAppStore from '../store/useAppStore';
 
 const DRAFT_KEY = 'qollect-quick-input-draft-v1';
 const NOTE_COLOR_KEY = 'qollect-quick-note-color-v1';
@@ -74,6 +75,8 @@ function QuickNoteOverlay({
   onSaved,
 }) {
   const { t } = useTranslation();
+  const showFavoritesOnly = useAppStore((state) => state.showFavoritesOnly);
+  const activeWorkbenchId = useAppStore((state) => state.activeWorkbenchId);
   const textareaRef = useRef(null);
   const colorPanelRef = useRef(null);
   const [content, setContent] = useState('');
@@ -194,7 +197,11 @@ function QuickNoteOverlay({
     setSaving(true);
     setSaveError('');
     try {
-      await saveQuickNote(trimmed, QUICK_INPUT_SOURCE);
+      await saveQuickNote(trimmed, QUICK_INPUT_SOURCE, {
+        autoFavorite: Boolean(showFavoritesOnly),
+        autoPin: !showFavoritesOnly,
+        workbenchId: showFavoritesOnly ? null : activeWorkbenchId,
+      });
       clearDraft();
       setContent('');
       setShowColorPanel(false);
@@ -205,7 +212,7 @@ function QuickNoteOverlay({
     } finally {
       setSaving(false);
     }
-  }, [clearDraft, content, onSaved, saving, t]);
+  }, [activeWorkbenchId, clearDraft, content, onSaved, saving, showFavoritesOnly, t]);
 
   const handleTextareaKeyDown = useCallback((event) => {
     if (event.nativeEvent?.isComposing || event.isComposing || event.keyCode === 229) {
@@ -218,7 +225,7 @@ function QuickNoteOverlay({
       }
       return;
     }
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       void handleSave();
     }
@@ -275,7 +282,9 @@ function QuickNoteOverlay({
         <header className="quick-note-card-header">
           <div className="quick-note-card-drag-area" data-tauri-drag-region>
             <div className="quick-note-card-heading" data-tauri-drag-region="false">
-              <span className="quick-note-card-kicker">{t('quickInput.overlayTip')}</span>
+              <span className="quick-note-card-kicker">
+                {showFavoritesOnly ? t('quickInput.overlayTipCollection') : t('quickInput.overlayTipWorkbench')}
+              </span>
             </div>
             {showGlassIndicator && (
               <div className="glass-indicator quick-note-glass-indicator" data-tauri-drag-region="false">
