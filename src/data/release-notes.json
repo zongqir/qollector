@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.7",
+      "publishedAt": "2026-09-13",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-7",
+      "summary": {
+        "zh-CN": "全新上线灵动便签无限画布（Workbench Canvas）与双向拖拽，支持自由排版、多画布管理及磁吸连线。",
+        "en-US": "Introduced infinite Sticky Notes Canvas with bidirectional drag-and-drop, multi-canvas management, and magnetic card connectors."
+      },
+      "highlights": {
+        "zh-CN": [
+          "全新灵动便签画布（Workbench Canvas）：支持无限空间漫游、自由拖拽布局与角标缩放，打造 Apple Freeform / Miro 式的灵感整理台。",
+          "多画布管理系统：底部悬浮工具栏支持一键切换、新建、重命名与删除画布，便签位置与连线关系实时自动持久化。",
+          "双向无缝拖拽：支持从右侧历史流直接拖拽卡片落入画布指定位置，也可从画布拖出手柄快速移出至历史流。",
+          "卡片磁吸连线与视觉重构：支持四向磁吸连接线构建知识关系，精简卡片头部视觉，去除突兀底色与抢眼圆点。"
+        ],
+        "en-US": [
+          "New Sticky Notes Canvas (Workbench Canvas): Infinite canvas workspace with freeform dragging, tactile resizing, and grid auto-arrange.",
+          "Multi-Canvas Board Manager: Seamlessly switch, create, rename, and delete canvas boards with real-time auto-saving for layouts and edges.",
+          "Bidirectional Drag & Drop: Drag any item from History Stream directly onto the Canvas at drop coordinates, or drag off to unpin.",
+          "Magnetic Card Connectors: Connect cards across 4 directions with clean static flow lines, accompanied by a refined, distraction-free header design."
+        ]
+      }
+    },
+    {
       "version": "0.4.6",
       "publishedAt": "2026-08-29",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-6",
