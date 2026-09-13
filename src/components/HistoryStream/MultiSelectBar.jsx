@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Bot, Check, Columns2, Copy, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
+import { Bot, Check, Columns2, Copy, FileText, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
 
 function MultiSelectBar({
   selectedCount,
@@ -10,6 +10,7 @@ function MultiSelectBar({
   onBatchPinToggle,
   allSelectedArePinned,
   onMergeCopy,
+  onMergeToNote,
   canCompareSelected,
   onCompareSelected,
   canRunBatchAi,
@@ -112,6 +113,20 @@ function MultiSelectBar({
           <Copy size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
           <span>{t('multiSelect.mergeCopy')}</span>
         </button>
+        {onMergeToNote && (
+          <button
+            className="multi-select-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMergeToNote();
+            }}
+            disabled={batchFlagPending || batchAiRunningTask != null}
+            title={t('multiSelect.mergeToNote')}
+          >
+            <FileText size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
+            <span>{t('multiSelect.mergeToNote')}</span>
+          </button>
+        )}
         <button
           className="multi-select-btn"
           onClick={(e) => {

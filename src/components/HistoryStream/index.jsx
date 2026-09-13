@@ -24,6 +24,7 @@ import {
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { aiSearchItems, getUserTags, pinItem, searchItems } from '../../services/clipboardService';
+import { saveQuickNote } from '../../services/quickNoteService';
 import { getPinnedItemIdsForWorkbench } from '../../store/modules/itemsIndex';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
@@ -1690,6 +1691,27 @@ function HistoryStream({ style }) {
     copySelectedItemsMerged(filteredItems);
   }, [copySelectedItemsMerged, filteredItems]);
 
+  const handleMergeToWorkbenchNote = useCallback(async () => {
+    const selectedIdSet = new Set(selectedItemIds);
+    const selectedItems = filteredItems.filter((item) => selectedIdSet.has(item.id));
+    if (selectedItems.length === 0) return;
+    const mergedContent = selectedItems
+      .map((item) => (item.content || item.ocr_text || '').trim())
+      .filter(Boolean)
+      .join('\n\n---\n\n');
+    if (!mergedContent) return;
+    try {
+      await saveQuickNote(mergedContent, QUICK_INPUT_SOURCE, {
+        autoPin: true,
+        workbenchId: activeWorkbenchId,
+      });
+      clearSelection();
+      loadItems();
+    } catch (error) {
+      console.error('[HistoryStream] merge to note failed:', error);
+    }
+  }, [selectedItemIds, filteredItems, activeWorkbenchId, clearSelection, loadItems]);
+
   const selectedItemsForCompare = useMemo(() => {
     if (selectedItemIds.length < 2) return [];
     const selectedIdSet = new Set(selectedItemIds);
@@ -1795,6 +1817,7 @@ function HistoryStream({ style }) {
     onBatchPinToggle: handleBatchPinToggle,
     allSelectedArePinned,
     onMergeCopy: handleMergeCopySelected,
+    onMergeToNote: handleMergeToWorkbenchNote,
     canCompareSelected: selectedItemsForCompare.length >= 2,
     onCompareSelected: handleCompareSelected,
     canRunBatchAi,

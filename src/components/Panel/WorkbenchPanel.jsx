@@ -15,6 +15,8 @@ import {
   Link,
   Braces,
   Layers,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import {
   DndContext,
@@ -31,6 +33,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import useAppStore from '../../store/useAppStore';
+import WorkbenchCanvas from './WorkbenchCanvas';
 import SortableWorkbenchCard from './SortableWorkbenchCard';
 import WorkbenchQuickNoteSection from './WorkbenchQuickNoteSection';
 import WorkbenchSwitcher from './WorkbenchSwitcher';
@@ -85,6 +88,7 @@ const WORKBENCH_SEARCH_DEBOUNCE_MS = 260;
 const WORKBENCH_FILTER_COLLAPSE_DEFAULT = false;
 const WORKBENCH_FILTER_SEARCH_SIZER_WIDTH = 108;
 const WORKBENCH_NARROW_QUICK_NOTE_THRESHOLD = 360;
+const WORKBENCH_VIEW_MODE_STORAGE_KEY = 'qollect.workbench.view.mode.v1';
 const WORKBENCH_BOTTOM_BAR_LAYOUT = {
   LABEL: 'label',
   COMPACT: 'compact',
@@ -178,6 +182,13 @@ function WorkbenchPanel() {
   const [workbenchBottomBarLayout, setWorkbenchBottomBarLayout] = useState(WORKBENCH_BOTTOM_BAR_LAYOUT.LABEL);
   const [workbenchRefreshNonce, setWorkbenchRefreshNonce] = useState(0);
   const [isWorkbenchFiltersCollapsed, setIsWorkbenchFiltersCollapsed] = useState(() => readWorkbenchFilterCollapsed());
+  const [workbenchViewMode, setWorkbenchViewMode] = useState(() => {
+    try {
+      return localStorage.getItem(WORKBENCH_VIEW_MODE_STORAGE_KEY) || 'canvas';
+    } catch {
+      return 'canvas';
+    }
+  });
   const [showWorkbenchSwitcher, setShowWorkbenchSwitcher] = useState(false);
   const [showWorkbenchManageMenu, setShowWorkbenchManageMenu] = useState(false);
   const [workbenchTimeTick, setWorkbenchTimeTick] = useState(() => Date.now());
@@ -964,6 +975,18 @@ function WorkbenchPanel() {
       return next;
     });
   }, [dismissOpenDropdowns]);
+
+  const handleToggleWorkbenchViewMode = useCallback((targetMode) => {
+    setWorkbenchViewMode((prev) => {
+      const nextMode = targetMode || (prev === 'canvas' ? 'list' : 'canvas');
+      try {
+        localStorage.setItem(WORKBENCH_VIEW_MODE_STORAGE_KEY, nextMode);
+      } catch (error) {
+        console.warn('[Workbench] persist view mode failed:', error);
+      }
+      return nextMode;
+    });
+  }, []);
 
   const closeWorkbenchSwitcherOverlays = useCallback(() => {
     setShowWorkbenchManageMenu(false);
@@ -2375,6 +2398,29 @@ function WorkbenchPanel() {
                 {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.finishSortMode')}</span>}
               </button>
             )}
+
+            <div className="workbench-view-mode-toggle" role="radiogroup" aria-label={t('workbench.viewMode')}>
+              <button
+                type="button"
+                className={`workbench-view-mode-btn ${workbenchViewMode === 'canvas' ? 'active' : ''}`}
+                onClick={() => handleToggleWorkbenchViewMode('canvas')}
+                title={t('workbench.canvasMode')}
+                aria-label={t('workbench.canvasMode')}
+              >
+                <LayoutGrid size={13} />
+                {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.canvasMode')}</span>}
+              </button>
+              <button
+                type="button"
+                className={`workbench-view-mode-btn ${workbenchViewMode === 'list' ? 'active' : ''}`}
+                onClick={() => handleToggleWorkbenchViewMode('list')}
+                title={t('workbench.listMode')}
+                aria-label={t('workbench.listMode')}
+              >
+                <List size={13} />
+                {!shouldCollapseWorkbenchFilterText && <span>{t('workbench.listMode')}</span>}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2439,6 +2485,19 @@ function WorkbenchPanel() {
             </button>
           )}
         </div>
+      ) : workbenchViewMode === 'canvas' ? (
+        <WorkbenchCanvas
+          pinnedItems={pinnedItems}
+          activeWorkbenchId={activeWorkbenchId}
+          aiEnabled={aiEnabled}
+          uiLanguage={i18n.language}
+          onCopyItem={handleCopyAndAutoPaste}
+          onUnpinItem={handleCardUnpin}
+          onRefreshItems={handleRetryWorkbenchLoad}
+          t={t}
+          viewMode={workbenchViewMode}
+          onToggleViewMode={() => handleToggleWorkbenchViewMode('list')}
+        />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={pinnedItemIds} strategy={rectSortingStrategy}>

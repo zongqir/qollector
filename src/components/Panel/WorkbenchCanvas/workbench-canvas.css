@@ -1,0 +1,508 @@
+/* ==========================================================================
+   Workbench Canvas - Apple Freeform & Miro Style Sticky Notes Board
+   ========================================================================== */
+
+.workbench-canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, #1e222b 0%, #13151b 100%);
+}
+
+.workbench-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+.workbench-canvas-wrapper .react-flow {
+  background: transparent !important;
+}
+
+.workbench-canvas-wrapper .react-flow__pane {
+  cursor: grab;
+}
+
+.workbench-canvas-wrapper .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+/* Floating Bottom Controls */
+.workbench-canvas-toolbar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(22, 26, 34, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 30px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+
+.workbench-canvas-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  user-select: none;
+}
+
+.workbench-canvas-tool-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.workbench-canvas-tool-btn.primary {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.workbench-canvas-tool-btn.primary:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.workbench-canvas-tool-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ==========================================================================
+   Sticky Note Node - Real Pastel Paper Aesthetics
+   ========================================================================== */
+
+.sticky-note-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--sticky-bg, #fef08a);
+  border: 1px solid var(--sticky-border, rgba(0, 0, 0, 0.08));
+  color: var(--sticky-text, #1e293b);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.sticky-note-node:hover {
+  box-shadow: 0 18px 36px -6px rgba(0, 0, 0, 0.45), 0 12px 14px -6px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.sticky-note-node.selected {
+  box-shadow: 0 0 0 2.5px #3b82f6, 0 20px 40px -8px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+.sticky-note-node.is-copied {
+  animation: stickyCopyFlash 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stickyCopyFlash {
+  0% { transform: scale(0.96); }
+  50% { transform: scale(1.03); box-shadow: 0 0 0 4px #10b981, 0 12px 28px rgba(16, 185, 129, 0.3); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Vibrant Pastel Color Palettes (Miro / Apple Freeform Style)
+   ========================================================================== */
+
+/* 1. 经典奶黄 (Warm Yellow) - Default */
+.sticky-note-node[data-color="default"],
+.sticky-note-node[data-color="yellow"] {
+  --sticky-bg: #fef08a;
+  --sticky-border: #fde047;
+  --sticky-text: #1e293b;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(161, 98, 7, 0.15);
+  --sticky-badge-color: #854d0e;
+  --sticky-accent: #eab308;
+}
+
+/* 2. 清爽薄荷 (Mint Green) */
+.sticky-note-node[data-color="green"] {
+  --sticky-bg: #bbf7d0;
+  --sticky-border: #86efac;
+  --sticky-text: #14532d;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(21, 128, 61, 0.15);
+  --sticky-badge-color: #166534;
+  --sticky-accent: #22c55e;
+}
+
+/* 3. 天空冰蓝 (Sky Blue) */
+.sticky-note-node[data-color="blue"] {
+  --sticky-bg: #bae6fd;
+  --sticky-border: #7dd3fc;
+  --sticky-text: #0c4a6e;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(3, 105, 161, 0.15);
+  --sticky-badge-color: #075985;
+  --sticky-accent: #0ea5e9;
+}
+
+/* 4. 薰衣草紫 (Lavender Purple) */
+.sticky-note-node[data-color="purple"] {
+  --sticky-bg: #e9d5ff;
+  --sticky-border: #d8b4fe;
+  --sticky-text: #581c87;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(126, 34, 206, 0.15);
+  --sticky-badge-color: #6b21a8;
+  --sticky-accent: #a855f7;
+}
+
+/* 5. 浅樱粉 (Sakura Pink) */
+.sticky-note-node[data-color="pink"] {
+  --sticky-bg: #fecdd3;
+  --sticky-border: #fda4af;
+  --sticky-text: #881337;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(190, 18, 60, 0.15);
+  --sticky-badge-color: #9f1239;
+  --sticky-accent: #f43f5e;
+}
+
+/* 6. 蜜桃暖橙 (Peach Orange) */
+.sticky-note-node[data-color="orange"] {
+  --sticky-bg: #fed7aa;
+  --sticky-border: #fdba74;
+  --sticky-text: #7c2d12;
+  --sticky-header-bg: rgba(0, 0, 0, 0.04);
+  --sticky-btn-hover: rgba(0, 0, 0, 0.08);
+  --sticky-badge-bg: rgba(194, 65, 12, 0.15);
+  --sticky-badge-color: #9a3412;
+  --sticky-accent: #f97316;
+}
+
+/* 7. 暗夜黑曜 (Dark Obsidian - For Pro Dark Note Lovers) */
+.sticky-note-node[data-color="dark"] {
+  --sticky-bg: #1e2430;
+  --sticky-border: #334155;
+  --sticky-text: #f1f5f9;
+  --sticky-header-bg: rgba(255, 255, 255, 0.04);
+  --sticky-btn-hover: rgba(255, 255, 255, 0.1);
+  --sticky-badge-bg: rgba(59, 130, 246, 0.2);
+  --sticky-badge-color: #60a5fa;
+  --sticky-accent: #3b82f6;
+}
+
+/* ==========================================================================
+   Node Header
+   ========================================================================== */
+
+.sticky-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 6px 10px;
+  gap: 6px;
+  background: var(--sticky-header-bg, rgba(0, 0, 0, 0.04));
+  border-bottom: 1px solid var(--sticky-border, rgba(0, 0, 0, 0.06));
+  user-select: none;
+}
+
+.sticky-note-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sticky-note-drag-handle {
+  display: flex;
+  align-items: center;
+  color: var(--sticky-text, #1e293b);
+  opacity: 0.45;
+  cursor: grab;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.sticky-note-drag-handle:hover {
+  opacity: 0.9;
+}
+
+.sticky-note-drag-handle:active {
+  cursor: grabbing;
+}
+
+.sticky-note-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--sticky-badge-bg, rgba(0, 0, 0, 0.1));
+  color: var(--sticky-badge-color, #1e293b);
+  white-space: nowrap;
+}
+
+.sticky-note-time {
+  font-size: 10px;
+  opacity: 0.6;
+  color: var(--sticky-text, #1e293b);
+  white-space: nowrap;
+}
+
+.sticky-note-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.sticky-note-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--sticky-text, #1e293b);
+  opacity: 0.65;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  padding: 0;
+}
+
+.sticky-note-action-btn:hover {
+  opacity: 1;
+  background: var(--sticky-btn-hover, rgba(0, 0, 0, 0.08));
+}
+
+.sticky-note-action-btn.ai-btn:hover {
+  color: #9333ea;
+}
+
+.sticky-note-action-btn.danger:hover {
+  color: #dc2626;
+}
+
+/* ==========================================================================
+   Node Body & Text
+   ========================================================================== */
+
+.sticky-note-body {
+  position: relative;
+  flex: 1;
+  padding: 10px 14px 12px 14px;
+  overflow: auto;
+  font-size: 13.5px;
+  line-height: 1.55;
+  font-weight: 500;
+  color: var(--sticky-text, #1e293b);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.sticky-note-body::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.sticky-note-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  font-weight: 500;
+  padding: 0;
+  margin: 0;
+}
+
+/* AI Popover */
+.sticky-ai-popover {
+  position: absolute;
+  top: 36px;
+  right: 10px;
+  z-index: 50;
+  width: 160px;
+  background: rgba(26, 29, 36, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: stickyAiIn 0.15s ease-out;
+}
+
+@keyframes stickyAiIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sticky-ai-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.sticky-ai-item:hover {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+}
+
+.sticky-ai-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Color Picker Popover */
+.sticky-color-popover {
+  position: absolute;
+  top: 36px;
+  right: 32px;
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(26, 29, 36, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.sticky-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s;
+}
+
+.sticky-color-dot:hover {
+  transform: scale(1.2);
+}
+
+.sticky-color-dot.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Node Resizer Handles */
+.sticky-resize-handle {
+  width: 11px !important;
+  height: 11px !important;
+  border-radius: 50% !important;
+  background: #3b82f6 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  opacity: 0.9;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.sticky-resize-handle:hover {
+  transform: scale(1.3);
+  opacity: 1;
+}
+
+.sticky-resize-line {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+}
+
+/* View Mode Switcher */
+.workbench-view-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+}
+
+.workbench-view-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #9ca3af);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  gap: 4px;
+}
+
+.workbench-view-mode-btn:hover {
+  color: var(--text-primary, #f3f4f6);
+}
+
+.workbench-view-mode-btn.active {
+  background: var(--accent-color, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
