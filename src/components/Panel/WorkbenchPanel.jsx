@@ -1497,6 +1497,10 @@ function WorkbenchPanel() {
     }, PREVIEW_CLICK_DELAY_MS);
   }, [isWorkbenchSortMode, selectedPinnedIds.length, setPanelMode]);
 
+  const handleCanvasPreviewItem = useCallback((item) => {
+    openItemPreview(setPanelMode, item);
+  }, [setPanelMode]);
+
   const clearPendingUnpinConfirm = useCallback(() => {
     setPendingUnpinItemId(null);
     if (workbenchUnpinConfirmTimerRef.current) {
@@ -2427,7 +2431,7 @@ function WorkbenchPanel() {
           onRefreshItems={handleRetryWorkbenchLoad}
           onAddQuickNote={addQuickNote}
           onEditItem={openEditModal}
-          onPreviewItem={handleCardPreview}
+          onPreviewItem={handleCanvasPreviewItem}
           onSetCardBackground={setCardBackground}
           onOpenItem={handleOpenItem}
           onRevealInFolder={handleRevealInFolder}
