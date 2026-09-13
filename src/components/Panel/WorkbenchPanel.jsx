@@ -2181,7 +2181,7 @@ function WorkbenchPanel() {
       quickNote={quickNote}
       quickNotePlaceholder={t('workbench.quickNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
       expandedNotePlaceholder={t('workbench.expandedNotePlaceholderWithTarget', { name: activeWorkbenchLabel })}
-      workbenchSwitcher={shouldCompactWorkbenchTopRail ? null : toolbarWorkbenchSwitcher}
+      workbenchSwitcher={null}
       showFilterToggle={!shouldCompactWorkbenchTopRail}
       hasActiveFilters={hasWorkbenchFilters}
       isFiltersCollapsed={isWorkbenchFiltersCollapsed}

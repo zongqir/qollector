@@ -470,21 +470,19 @@ function WorkbenchCanvas({
     }
   }, [activeWorkbenchId, onAddQuickNote, onRefreshItems, t]);
 
-  // Double click empty canvas area to create a new note directly at mouse coordinates
-  const handlePaneDoubleClick = useCallback(
-    async (event) => {
-      if (
-        event.target.closest('.sticky-note-node') ||
-        event.target.closest('.workbench-canvas-toolbar') ||
-        event.target.closest('.workbench-canvas-empty-overlay') ||
-        event.target.closest('button') ||
-        event.target.closest('textarea')
-      ) {
+  const lastPaneClickRef = useRef({ time: 0, x: 0, y: 0 });
+  const lastCreatedNoteTimeRef = useRef(0);
+
+  const handleCreateNoteAtMouse = useCallback(
+    async (clientX, clientY) => {
+      const now = Date.now();
+      if (now - lastCreatedNoteTimeRef.current < 450) {
         return;
       }
+      lastCreatedNoteTimeRef.current = now;
 
       const position = reactFlowInstanceRef.current
-        ? reactFlowInstanceRef.current.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+        ? reactFlowInstanceRef.current.screenToFlowPosition({ x: clientX, y: clientY })
         : { x: 80, y: 80 };
 
       const noteX = Math.round(position.x - DEFAULT_NODE_WIDTH / 2);
@@ -517,10 +515,44 @@ function WorkbenchCanvas({
         }
         onRefreshItems?.();
       } catch (error) {
-        console.error('[WorkbenchCanvas] create note on double click failed:', error);
+        console.error('[WorkbenchCanvas] create note failed:', error);
       }
     },
     [activeWorkbenchId, onAddQuickNote, onRefreshItems, t]
+  );
+
+  const handlePaneClick = useCallback(
+    (event) => {
+      const now = Date.now();
+      const prev = lastPaneClickRef.current;
+      const timeDiff = now - prev.time;
+      const dist = Math.hypot(event.clientX - prev.x, event.clientY - prev.y);
+
+      lastPaneClickRef.current = { time: now, x: event.clientX, y: event.clientY };
+
+      // Double-click detected on empty pane (<= 350ms & within 20px)
+      if (timeDiff > 30 && timeDiff < 350 && dist < 20) {
+        handleCreateNoteAtMouse(event.clientX, event.clientY);
+      }
+    },
+    [handleCreateNoteAtMouse]
+  );
+
+  const handlePaneDoubleClick = useCallback(
+    (event) => {
+      if (
+        event.target?.closest?.('.sticky-note-node') ||
+        event.target?.closest?.('.workbench-canvas-toolbar') ||
+        event.target?.closest?.('.workbench-canvas-empty-overlay') ||
+        event.target?.closest?.('button') ||
+        event.target?.closest?.('textarea') ||
+        event.target?.closest?.('input')
+      ) {
+        return;
+      }
+      handleCreateNoteAtMouse(event.clientX, event.clientY);
+    },
+    [handleCreateNoteAtMouse]
   );
 
   const handleClearEdges = useCallback(() => {
@@ -570,6 +602,8 @@ function WorkbenchCanvas({
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
           onConnect={handleConnect}
+          onPaneClick={handlePaneClick}
+          onDoubleClick={handlePaneDoubleClick}
           connectionLineType="smoothstep"
           deleteKeyCode={['Backspace', 'Delete']}
           onInit={(instance) => {
