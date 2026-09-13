@@ -1804,35 +1804,37 @@ function WorkbenchPanel() {
     }
   }, [closeWorkbenchSwitcherOverlays, createWorkbench, showTransientToast, t]);
 
-  const handleRenameActiveWorkbench = useCallback(async () => {
-    if (!activeWorkbench || activeWorkbench.is_default) return;
+  const handleRenameWorkbenchById = useCallback(async (workbenchId) => {
+    const targetWb = workbenches.find((w) => w.id === workbenchId);
+    if (!targetWb || targetWb.is_default) return;
     closeWorkbenchSwitcherOverlays();
-    const currentName = String(activeWorkbench.name || '').trim();
+    const currentName = String(targetWb.name || '').trim();
     const nextName = window.prompt(t('workbench.renamePrompt'), currentName);
     if (!nextName || !nextName.trim() || nextName.trim() === currentName) return;
     try {
-      await renameWorkbench(activeWorkbench.id, nextName.trim());
+      await renameWorkbench(targetWb.id, nextName.trim());
       showTransientToast(t('workbench.renameSuccess', { name: nextName.trim() }));
     } catch (error) {
       const message = typeof error === 'string' ? error : String(error?.message || error || '');
       showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
     }
-  }, [activeWorkbench, closeWorkbenchSwitcherOverlays, renameWorkbench, showTransientToast, t]);
+  }, [closeWorkbenchSwitcherOverlays, renameWorkbench, showTransientToast, t, workbenches]);
 
-  const handleDeleteActiveWorkbench = useCallback(async () => {
-    if (!activeWorkbench || activeWorkbench.is_default) return;
+  const handleDeleteWorkbenchById = useCallback(async (workbenchId) => {
+    const targetWb = workbenches.find((w) => w.id === workbenchId);
+    if (!targetWb || targetWb.is_default) return;
     closeWorkbenchSwitcherOverlays();
-    const workbenchName = String(activeWorkbench.name || '').trim();
+    const workbenchName = String(targetWb.name || '').trim();
     const confirmed = window.confirm(t('workbench.deleteConfirm', { name: workbenchName }));
     if (!confirmed) return;
     try {
-      await deleteWorkbench(activeWorkbench.id);
+      await deleteWorkbench(targetWb.id);
       showTransientToast(t('workbench.deleteSuccess', { name: workbenchName }));
     } catch (error) {
       const message = typeof error === 'string' ? error : String(error?.message || error || '');
       showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
     }
-  }, [activeWorkbench, closeWorkbenchSwitcherOverlays, deleteWorkbench, showTransientToast, t]);
+  }, [closeWorkbenchSwitcherOverlays, deleteWorkbench, showTransientToast, t, workbenches]);
 
   const batchActions = useWorkbenchBatchActions({
     selectedPinnedItems,
@@ -2169,8 +2171,8 @@ function WorkbenchPanel() {
       onSelectWorkbench={handleSelectWorkbench}
       onCreateWorkbench={handleCreateWorkbench}
       onToggleManageMenu={handleToggleWorkbenchManageMenu}
-      onRenameWorkbench={handleRenameActiveWorkbench}
-      onDeleteWorkbench={handleDeleteActiveWorkbench}
+      onRenameWorkbench={() => handleRenameWorkbenchById(activeWorkbench?.id)}
+      onDeleteWorkbench={() => handleDeleteWorkbenchById(activeWorkbench?.id)}
     />
   );
   const quickNoteSection = (
@@ -2423,7 +2425,13 @@ function WorkbenchPanel() {
       ) : (
         <WorkbenchCanvas
           pinnedItems={pinnedItems}
+          workbenches={workbenches}
           activeWorkbenchId={activeWorkbenchId}
+          activeWorkbenchLabel={activeWorkbenchLabel}
+          onSelectWorkbench={handleSelectWorkbench}
+          onCreateWorkbench={handleCreateWorkbench}
+          onRenameWorkbench={handleRenameWorkbenchById}
+          onDeleteWorkbench={handleDeleteWorkbenchById}
           aiEnabled={aiEnabled}
           uiLanguage={i18n.language}
           onCopyItem={handleCopyAndAutoPaste}

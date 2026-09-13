@@ -259,27 +259,25 @@
   cursor: grabbing;
 }
 
-.sticky-note-type-icon {
+.sticky-note-type-pill {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft, var(--border-color)) 88%, transparent);
-  background: color-mix(in srgb, var(--surface-muted, var(--bg-secondary)) 78%, transparent);
+  gap: 4px;
   color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: transparent;
   flex-shrink: 0;
+  opacity: 0.85;
 }
 
-.sticky-note-badge {
+.sticky-note-type-name {
   font-size: 10px;
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-muted, var(--bg-secondary)) 80%, transparent);
-  color: var(--text-secondary);
-  white-space: nowrap;
+  letter-spacing: 0.03em;
 }
 
 .sticky-note-time {
@@ -828,6 +826,287 @@
 }
 
 /* ==========================================================================
+   Canvas Board Switcher Popover & Management
+   ========================================================================== */
+
+.workbench-canvas-board-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workbench-canvas-tool-btn.board-btn {
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 170px;
+}
+
+.workbench-canvas-tool-btn.board-btn.active {
+  background: var(--wb-toolbar-btn-hover);
+}
+
+.workbench-canvas-board-label {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-canvas-chevron {
+  opacity: 0.6;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.workbench-canvas-chevron.open {
+  transform: rotate(180deg);
+}
+
+.workbench-canvas-board-popover {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 0;
+  z-index: 70;
+  width: 240px;
+  background: var(--wb-popover-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--wb-popover-border);
+  border-radius: 14px;
+  box-shadow: var(--wb-popover-shadow);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: stickyAiIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workbench-canvas-board-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px 7px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--wb-popover-border) 80%, transparent);
+}
+
+.workbench-canvas-board-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.workbench-canvas-board-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: none;
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 12%, transparent);
+  color: var(--accent-color, #3b82f6);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.workbench-canvas-board-create-btn:hover {
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 22%, transparent);
+  transform: translateY(-0.5px);
+}
+
+.workbench-canvas-board-create-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 4px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--wb-popover-border) 60%, transparent);
+}
+
+.workbench-canvas-board-create-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11.5px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.workbench-canvas-board-create-input:focus {
+  border-color: var(--accent-color, #3b82f6);
+}
+
+.workbench-canvas-board-create-submit {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent-color, #3b82f6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: filter 0.12s ease;
+}
+
+.workbench-canvas-board-create-submit:hover {
+  filter: brightness(1.1);
+}
+
+.workbench-canvas-board-list {
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 2px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workbench-canvas-board-list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.workbench-canvas-board-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--scrollbar-thumb, rgba(0,0,0,0.15)) 80%, transparent);
+  border-radius: 3px;
+}
+
+.workbench-canvas-board-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  gap: 6px;
+  user-select: none;
+}
+
+.workbench-canvas-board-item:hover {
+  background: var(--wb-popover-item-hover, rgba(0, 0, 0, 0.05));
+}
+
+.workbench-canvas-board-item.active {
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 12%, transparent);
+}
+
+.workbench-canvas-board-item.active .workbench-canvas-board-name {
+  font-weight: 600;
+  color: var(--accent-color, #3b82f6);
+}
+
+.workbench-canvas-board-item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.workbench-canvas-board-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.workbench-canvas-board-indicator.active {
+  background: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 6px var(--accent-color, #3b82f6);
+}
+
+.workbench-canvas-board-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.workbench-canvas-board-tag {
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--surface-muted, var(--bg-secondary)) 75%, transparent);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.workbench-canvas-board-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.workbench-canvas-board-item:hover .workbench-canvas-board-item-actions {
+  opacity: 1;
+}
+
+.workbench-canvas-board-action-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+
+.workbench-canvas-board-action-btn:hover {
+  background: var(--btn-hover-bg, rgba(0, 0, 0, 0.08));
+  color: var(--text-primary);
+}
+
+.workbench-canvas-board-action-btn.danger:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* Status Pill */
+.workbench-canvas-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 0 4px;
+  user-select: none;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.workbench-canvas-status-pill .wb-saved-icon {
+  color: #10b981;
+}
+
+.workbench-canvas-tool-btn.danger-hover:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ==========================================================================
    Mini & Narrow Mode Responsive
    ========================================================================== */
 
@@ -844,6 +1123,14 @@
     height: 28px;
     padding: 0 8px;
     font-size: 11px;
+  }
+
+  .workbench-canvas-board-label {
+    max-width: 70px;
+  }
+
+  .workbench-canvas-status-pill {
+    display: none;
   }
 }
 

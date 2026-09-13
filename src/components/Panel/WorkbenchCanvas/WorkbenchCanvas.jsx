@@ -19,6 +19,13 @@ import {
   Plus,
   LayoutGrid,
   Sparkles,
+  Layers,
+  ChevronDown,
+  Pencil,
+  Trash2,
+  Check,
+  CheckCircle2,
+  Unlink,
 } from 'lucide-react';
 
 const NODE_TYPES = {
@@ -56,7 +63,24 @@ const persistSavedLayout = (workbenchId, layout) => {
 const loadSavedEdges = (workbenchId) => {
   try {
     const raw = localStorage.getItem(getCanvasEdgesStorageKey(workbenchId));
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((edge) => ({
+      ...edge,
+      animated: false,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 14,
+        height: 14,
+        color: 'var(--accent-color, #3b82f6)',
+      },
+      style: {
+        stroke: 'var(--accent-color, #3b82f6)',
+        strokeWidth: 2,
+        ...(edge.style || {}),
+      },
+    }));
   } catch {
     return [];
   }
@@ -102,7 +126,13 @@ const findNextAvailablePosition = (layoutMap) => {
 
 function WorkbenchCanvas({
   pinnedItems = [],
+  workbenches = [],
   activeWorkbenchId,
+  activeWorkbenchLabel,
+  onSelectWorkbench,
+  onCreateWorkbench,
+  onRenameWorkbench,
+  onDeleteWorkbench,
   aiEnabled = false,
   uiLanguage = 'zh-CN',
   onCopyItem,
@@ -122,6 +152,9 @@ function WorkbenchCanvas({
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
+  const [showBoardMenu, setShowBoardMenu] = useState(false);
+  const [isCreatingInline, setIsCreatingInline] = useState(false);
+  const [newBoardName, setNewBoardName] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() =>
     typeof document !== 'undefined'
       ? document.documentElement.classList.contains('dark-mode')
@@ -131,6 +164,7 @@ function WorkbenchCanvas({
   const saveTimeoutRef = useRef(null);
   const layoutMapRef = useRef({});
   const hasFittedInitialViewRef = useRef(false);
+  const boardSwitcherRef = useRef(null);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -141,6 +175,19 @@ function WorkbenchCanvas({
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
+
+  // Dismiss board switcher on outside pointerdown
+  useEffect(() => {
+    if (!showBoardMenu) return undefined;
+    const handleClickOutside = (event) => {
+      if (boardSwitcherRef.current && !boardSwitcherRef.current.contains(event.target)) {
+        setShowBoardMenu(false);
+        setIsCreatingInline(false);
+      }
+    };
+    window.addEventListener('pointerdown', handleClickOutside);
+    return () => window.removeEventListener('pointerdown', handleClickOutside);
+  }, [showBoardMenu]);
 
   // Load layout map and edges for this workbench
   useEffect(() => {
@@ -330,7 +377,7 @@ function WorkbenchCanvas({
           ...params,
           id: `edge_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           type: 'smoothstep',
-          animated: true,
+          animated: false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
             width: 14,
@@ -476,6 +523,43 @@ function WorkbenchCanvas({
     [activeWorkbenchId, onAddQuickNote, onRefreshItems, t]
   );
 
+  const handleClearEdges = useCallback(() => {
+    if (edges.length === 0) return;
+    const confirmed = window.confirm(
+      t ? t('workbench.clearEdgesConfirm') || '确定清除当前画布上的所有连接线吗？' : '确定清除当前画布上的所有连接线吗？'
+    );
+    if (!confirmed) return;
+    setEdges([]);
+    persistSavedEdges(activeWorkbenchId, []);
+  }, [activeWorkbenchId, edges.length, t]);
+
+  const handleInlineCreateSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const trimmed = newBoardName.trim();
+      if (!trimmed) {
+        setIsCreatingInline(false);
+        return;
+      }
+      try {
+        await onCreateWorkbench?.(trimmed);
+        setNewBoardName('');
+        setIsCreatingInline(false);
+        setShowBoardMenu(false);
+      } catch (error) {
+        console.error('[WorkbenchCanvas] create canvas failed:', error);
+      }
+    },
+    [newBoardName, onCreateWorkbench]
+  );
+
+  const currentBoardDisplayName = useMemo(() => {
+    if (activeWorkbenchLabel) return activeWorkbenchLabel;
+    const found = workbenches.find((w) => w.id === activeWorkbenchId);
+    if (found?.name) return found.name;
+    return t ? t('workbench.defaultWorkbench') || '默认画布' : '默认画布';
+  }, [activeWorkbenchId, activeWorkbenchLabel, t, workbenches]);
+
   return (
     <div className="workbench-canvas-container" onDoubleClick={handlePaneDoubleClick}>
       <div className="workbench-canvas-wrapper">
@@ -538,6 +622,137 @@ function WorkbenchCanvas({
 
       {/* Floating Canvas Controls */}
       <div className="workbench-canvas-toolbar" role="toolbar">
+        {/* Canvas Board Switcher & Management */}
+        <div className="workbench-canvas-board-wrapper" ref={boardSwitcherRef}>
+          <button
+            type="button"
+            className={`workbench-canvas-tool-btn board-btn ${showBoardMenu ? 'active' : ''}`}
+            onClick={() => setShowBoardMenu((prev) => !prev)}
+            title={t ? t('workbench.switchWorkbench') || '切换画布' : '切换画布'}
+          >
+            <Layers size={13} />
+            <span className="workbench-canvas-board-label">{currentBoardDisplayName}</span>
+            <ChevronDown
+              size={12}
+              className={`workbench-canvas-chevron ${showBoardMenu ? 'open' : ''}`}
+            />
+          </button>
+
+          {showBoardMenu && (
+            <div className="workbench-canvas-board-popover">
+              <div className="workbench-canvas-board-popover-header">
+                <div className="workbench-canvas-board-popover-title">
+                  <Layers size={13} />
+                  <span>{t ? t('workbench.myCanvases') || '我的画布' : '我的画布'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="workbench-canvas-board-create-btn"
+                  onClick={() => setIsCreatingInline((prev) => !prev)}
+                  title={t ? t('workbench.createCanvas') || '新建画布' : '新建画布'}
+                >
+                  <Plus size={13} />
+                  <span>{t ? t('workbench.createCanvas') || '新建' : '新建'}</span>
+                </button>
+              </div>
+
+              {isCreatingInline && (
+                <form
+                  className="workbench-canvas-board-create-form"
+                  onSubmit={handleInlineCreateSubmit}
+                >
+                  <input
+                    type="text"
+                    className="workbench-canvas-board-create-input"
+                    value={newBoardName}
+                    onChange={(e) => setNewBoardName(e.target.value)}
+                    placeholder={t ? t('workbench.enterCanvasName') || '输入画布名称并回车...' : '输入画布名称并回车...'}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setIsCreatingInline(false);
+                        setNewBoardName('');
+                      }
+                    }}
+                  />
+                  <button type="submit" className="workbench-canvas-board-create-submit">
+                    <Check size={13} />
+                  </button>
+                </form>
+              )}
+
+              <div className="workbench-canvas-board-list">
+                {workbenches.map((wb) => {
+                  const isActive =
+                    wb.id === activeWorkbenchId || (!activeWorkbenchId && wb.is_default);
+                  const isDefault = Boolean(wb.is_default);
+                  return (
+                    <div
+                      key={wb.id}
+                      className={`workbench-canvas-board-item ${isActive ? 'active' : ''}`}
+                      onClick={() => {
+                        onSelectWorkbench?.(wb.id);
+                        setShowBoardMenu(false);
+                        setIsCreatingInline(false);
+                      }}
+                    >
+                      <div className="workbench-canvas-board-item-main">
+                        <span className={`workbench-canvas-board-indicator ${isActive ? 'active' : ''}`} />
+                        <span className="workbench-canvas-board-name">
+                          {wb.name || (t ? t('workbench.defaultWorkbench') : '默认画布')}
+                        </span>
+                        {isDefault && (
+                          <span className="workbench-canvas-board-tag">
+                            {t ? t('workbench.defaultBadge') || '默认' : '默认'}
+                          </span>
+                        )}
+                      </div>
+
+                      {!isDefault && (
+                        <div
+                          className="workbench-canvas-board-item-actions"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="workbench-canvas-board-action-btn"
+                            onClick={() => onRenameWorkbench?.(wb.id)}
+                            title={t ? t('workbench.renameCanvas') || '重命名' : '重命名'}
+                          >
+                            <Pencil size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            className="workbench-canvas-board-action-btn danger"
+                            onClick={() => onDeleteWorkbench?.(wb.id)}
+                            title={t ? t('workbench.deleteCanvas') || '删除' : '删除'}
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="workbench-canvas-tool-divider" />
+
+        {/* Real-time Status Badge */}
+        <div
+          className="workbench-canvas-status-pill"
+          title={t ? t('workbench.canvasAutoSaved') || '所有便签位置与连线均已实时保存' : '已自动保存'}
+        >
+          <CheckCircle2 size={12} className="wb-saved-icon" />
+          <span>{nodes.length} {t ? t('workbench.countLabel', { count: nodes.length }) || '条' : '条'}</span>
+        </div>
+
+        <div className="workbench-canvas-tool-divider" />
+
+        {/* Primary Action: Add Sticky Note */}
         <button
           type="button"
           className="workbench-canvas-tool-btn primary"
@@ -547,8 +762,6 @@ function WorkbenchCanvas({
           <Plus size={14} />
           <span>{t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}</span>
         </button>
-
-        <div className="workbench-canvas-tool-divider" />
 
         <button
           type="button"
@@ -569,6 +782,18 @@ function WorkbenchCanvas({
           <LayoutGrid size={13} />
           <span>{t ? t('workbench.autoArrange') || '整理' : '整理'}</span>
         </button>
+
+        {edges.length > 0 && (
+          <button
+            type="button"
+            className="workbench-canvas-tool-btn danger-hover"
+            onClick={handleClearEdges}
+            title={t ? t('workbench.clearEdges') || '清空连线' : '清空连线'}
+          >
+            <Unlink size={13} />
+            <span>{t ? t('workbench.clearEdges') || '清除连线' : '清除连线'}</span>
+          </button>
+        )}
       </div>
     </div>
   );

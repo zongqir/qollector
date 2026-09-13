@@ -69,7 +69,7 @@ const CardTypeIcon = ({ type, hasCodeLanguage }) => {
     case 'image': return <Image size={size} />;
     case 'file': return <FileText size={size} />;
     case 'link': return <Link size={size} />;
-    default: return <Type size={size} />;
+    default: return null;
   }
 };
 
@@ -161,7 +161,7 @@ function StickyNoteNode({ data, selected }) {
       case 'url':
         return t ? t('item.type.link') || '链接' : '链接';
       default:
-        return t ? t('workbench.canvasMode') || '便签' : '便签';
+        return '';
     }
   }, [item?.code_language, item?.type_, t]);
 
@@ -366,10 +366,12 @@ function StickyNoteNode({ data, selected }) {
             >
               <GripVertical size={13} />
             </div>
-            <span className="sticky-note-type-icon" aria-hidden="true">
-              <CardTypeIcon type={item?.type_} hasCodeLanguage={Boolean(item?.code_language)} />
-            </span>
-            <span className="sticky-note-badge">{typeBadgeText}</span>
+            {(Boolean(item?.code_language) || ['image', 'file', 'link', 'url'].includes(item?.type_)) && (
+              <div className="sticky-note-type-pill">
+                <CardTypeIcon type={item?.type_} hasCodeLanguage={Boolean(item?.code_language)} />
+                {typeBadgeText ? <span className="sticky-note-type-name">{typeBadgeText}</span> : null}
+              </div>
+            )}
             {formattedTime && <span className="sticky-note-time">{formattedTime}</span>}
             {sourceApp && (
               <span className="sticky-note-source" title={sourceApp}>
