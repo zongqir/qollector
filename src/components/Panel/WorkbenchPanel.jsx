@@ -1791,42 +1791,53 @@ function WorkbenchPanel() {
     workbenches,
   ]);
 
-  const handleCreateWorkbench = useCallback(async () => {
+  const handleCreateWorkbench = useCallback(async (name) => {
     closeWorkbenchSwitcherOverlays();
-    const nextName = window.prompt(t('workbench.createPrompt'), '');
-    if (!nextName || !nextName.trim()) return;
+    let nextName = typeof name === 'string' ? name.trim() : '';
+    if (!nextName) {
+      const promptName = window.prompt(t('workbench.createPrompt'), '');
+      if (!promptName || !promptName.trim()) return;
+      nextName = promptName.trim();
+    }
     try {
-      await createWorkbench(nextName.trim());
-      showTransientToast(t('workbench.createSuccess', { name: nextName.trim() }));
+      await createWorkbench(nextName);
+      showTransientToast(t('workbench.createSuccess', { name: nextName }));
     } catch (error) {
       const message = typeof error === 'string' ? error : String(error?.message || error || '');
       showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
     }
   }, [closeWorkbenchSwitcherOverlays, createWorkbench, showTransientToast, t]);
 
-  const handleRenameWorkbenchById = useCallback(async (workbenchId) => {
+  const handleRenameWorkbenchById = useCallback(async (workbenchId, newName) => {
     const targetWb = workbenches.find((w) => w.id === workbenchId);
     if (!targetWb || targetWb.is_default) return;
     closeWorkbenchSwitcherOverlays();
     const currentName = String(targetWb.name || '').trim();
-    const nextName = window.prompt(t('workbench.renamePrompt'), currentName);
-    if (!nextName || !nextName.trim() || nextName.trim() === currentName) return;
+    let nextName = typeof newName === 'string' ? newName.trim() : '';
+    if (!nextName) {
+      const promptName = window.prompt(t('workbench.renamePrompt'), currentName);
+      if (!promptName || !promptName.trim() || promptName.trim() === currentName) return;
+      nextName = promptName.trim();
+    }
+    if (nextName === currentName) return;
     try {
-      await renameWorkbench(targetWb.id, nextName.trim());
-      showTransientToast(t('workbench.renameSuccess', { name: nextName.trim() }));
+      await renameWorkbench(targetWb.id, nextName);
+      showTransientToast(t('workbench.renameSuccess', { name: nextName }));
     } catch (error) {
       const message = typeof error === 'string' ? error : String(error?.message || error || '');
       showTransientToast(message || t('workbench.actionFailed', { error: 'Unknown error' }));
     }
   }, [closeWorkbenchSwitcherOverlays, renameWorkbench, showTransientToast, t, workbenches]);
 
-  const handleDeleteWorkbenchById = useCallback(async (workbenchId) => {
+  const handleDeleteWorkbenchById = useCallback(async (workbenchId, confirmedDirectly = false) => {
     const targetWb = workbenches.find((w) => w.id === workbenchId);
     if (!targetWb || targetWb.is_default) return;
     closeWorkbenchSwitcherOverlays();
     const workbenchName = String(targetWb.name || '').trim();
-    const confirmed = window.confirm(t('workbench.deleteConfirm', { name: workbenchName }));
-    if (!confirmed) return;
+    if (!confirmedDirectly) {
+      const confirmed = window.confirm(t('workbench.deleteConfirm', { name: workbenchName }));
+      if (!confirmed) return;
+    }
     try {
       await deleteWorkbench(targetWb.id);
       showTransientToast(t('workbench.deleteSuccess', { name: workbenchName }));

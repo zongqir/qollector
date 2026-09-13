@@ -96,9 +96,6 @@ pub async fn add_clipboard_item_manual(
 
     let mut item = match content_type.as_str() {
         "text" => {
-            if content.trim().is_empty() {
-                return Err("文本内容为空".to_string());
-            }
             ClipboardItem::new_text(content, metadata.clone())
         }
         "file" => {

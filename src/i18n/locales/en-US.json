@@ -1,4 +1,11 @@
 {
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "clear": "Clear",
+    "confirm": "Confirm"
+  },
   "app": {
     "title": "Qollect",
     "slogan": "Effortless mark. Instant recall.",
@@ -862,6 +869,7 @@
     "createCanvas": "New Canvas",
     "renameCanvas": "Rename Canvas",
     "deleteCanvas": "Delete Canvas",
+    "confirmDelete": "Delete this canvas?",
     "canvasAutoSaved": "Saved",
     "canvasItemCount": "{{count}} notes",
     "clearEdges": "Clear Edges",

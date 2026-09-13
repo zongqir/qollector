@@ -27,6 +27,7 @@ import {
   Check,
   CheckCircle2,
   Unlink,
+  X,
 } from 'lucide-react';
 
 const NODE_TYPES = {
@@ -69,6 +70,7 @@ const loadSavedEdges = (workbenchId) => {
     if (!Array.isArray(parsed)) return [];
     return parsed.map((edge) => ({
       ...edge,
+      type: 'default', // Smooth curved bezier line
       animated: false,
       markerEnd: {
         type: MarkerType.ArrowClosed,
@@ -125,6 +127,101 @@ const findNextAvailablePosition = (layoutMap) => {
   return { x: 40, y: 40 };
 };
 
+/**
+ * Connection-Aware & Flow-Aware topological arrangement.
+ * Orders connected chains in topological levels (source before target)
+ * and dynamically calculates comfortable columns to keep text readable.
+ */
+const computeArrangedLayout = (nodes, edges) => {
+  if (!nodes || nodes.length === 0) return { arrangedNodes: [], layoutMap: {} };
+
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const outgoing = new Map();
+  const incoming = new Map();
+  const inDegree = new Map();
+
+  nodes.forEach((n) => {
+    outgoing.set(n.id, new Set());
+    incoming.set(n.id, new Set());
+    inDegree.set(n.id, 0);
+  });
+
+  (edges || []).forEach((e) => {
+    if (nodeMap.has(e.source) && nodeMap.has(e.target)) {
+      outgoing.get(e.source).add(e.target);
+      incoming.get(e.target).add(e.source);
+      inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
+    }
+  });
+
+  // Calculate topological levels
+  const levels = new Map();
+  const visited = new Set();
+  const rootNodes = nodes.filter((n) => (inDegree.get(n.id) || 0) === 0 && outgoing.get(n.id).size > 0);
+
+  const queue = rootNodes.map((n) => ({ id: n.id, level: 0 }));
+  queue.forEach((item) => {
+    levels.set(item.id, 0);
+    visited.add(item.id);
+  });
+
+  while (queue.length > 0) {
+    const { id, level } = queue.shift();
+    const children = Array.from(outgoing.get(id) || []);
+    children.forEach((childId) => {
+      const nextLevel = level + 1;
+      const currentLevel = levels.get(childId) ?? 0;
+      levels.set(childId, Math.max(currentLevel, nextLevel));
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        queue.push({ id: childId, level: nextLevel });
+      }
+    });
+  }
+
+  // Connected nodes sorted by topological level
+  const connectedNodes = nodes
+    .filter((n) => outgoing.get(n.id).size > 0 || (incoming.get(n.id)?.size || 0) > 0)
+    .sort((a, b) => (levels.get(a.id) ?? 0) - (levels.get(b.id) ?? 0));
+
+  // Standalone unconnected nodes
+  const standaloneNodes = nodes.filter(
+    (n) => outgoing.get(n.id).size === 0 && (incoming.get(n.id)?.size || 0) === 0
+  );
+
+  const orderedNodes = [...connectedNodes, ...standaloneNodes];
+
+  const total = orderedNodes.length;
+  let dynamicCols = 3;
+  if (total <= 2) dynamicCols = total || 1;
+  else if (total <= 4) dynamicCols = 2;
+  else if (total <= 8) dynamicCols = 3;
+  else dynamicCols = 4;
+
+  const layoutMap = {};
+  const arrangedNodes = orderedNodes.map((node, index) => {
+    const col = index % dynamicCols;
+    const row = Math.floor(index / dynamicCols);
+    const existing = node.style || {};
+    const width = typeof existing.width === 'number' ? existing.width : DEFAULT_NODE_WIDTH;
+    const height = typeof existing.height === 'number' ? existing.height : DEFAULT_NODE_HEIGHT;
+
+    const position = {
+      x: 40 + col * (DEFAULT_NODE_WIDTH + GRID_GAP),
+      y: 40 + row * (DEFAULT_NODE_HEIGHT + GRID_GAP),
+    };
+
+    layoutMap[node.id] = { ...position, width, height };
+    return {
+      ...node,
+      position,
+      style: { ...node.style, width, height },
+    };
+  });
+
+  return { arrangedNodes, layoutMap };
+};
+
 function WorkbenchCanvas({
   pinnedItems = [],
   workbenches = [],
@@ -156,6 +253,10 @@ function WorkbenchCanvas({
   const [showBoardMenu, setShowBoardMenu] = useState(false);
   const [isCreatingInline, setIsCreatingInline] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
+  const [editingBoardId, setEditingBoardId] = useState(null);
+  const [editingBoardName, setEditingBoardName] = useState('');
+  const [deletingBoardId, setDeletingBoardId] = useState(null);
+  const [showClearEdgesConfirm, setShowClearEdgesConfirm] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() =>
     typeof document !== 'undefined'
       ? document.documentElement.classList.contains('dark-mode')
@@ -166,6 +267,7 @@ function WorkbenchCanvas({
   const layoutMapRef = useRef({});
   const hasFittedInitialViewRef = useRef(false);
   const boardSwitcherRef = useRef(null);
+  const clearEdgesBtnRef = useRef(null);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -177,18 +279,23 @@ function WorkbenchCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // Dismiss board switcher on outside pointerdown
+  // Dismiss board switcher or clear-edges confirm on outside pointerdown
   useEffect(() => {
-    if (!showBoardMenu) return undefined;
+    if (!showBoardMenu && !showClearEdgesConfirm) return undefined;
     const handleClickOutside = (event) => {
-      if (boardSwitcherRef.current && !boardSwitcherRef.current.contains(event.target)) {
+      if (showBoardMenu && boardSwitcherRef.current && !boardSwitcherRef.current.contains(event.target)) {
         setShowBoardMenu(false);
         setIsCreatingInline(false);
+        setEditingBoardId(null);
+        setDeletingBoardId(null);
+      }
+      if (showClearEdgesConfirm && clearEdgesBtnRef.current && !clearEdgesBtnRef.current.contains(event.target)) {
+        setShowClearEdgesConfirm(false);
       }
     };
     window.addEventListener('pointerdown', handleClickOutside);
     return () => window.removeEventListener('pointerdown', handleClickOutside);
-  }, [showBoardMenu]);
+  }, [showBoardMenu, showClearEdgesConfirm]);
 
   // Load layout map and edges for this workbench
   useEffect(() => {
@@ -377,7 +484,7 @@ function WorkbenchCanvas({
         const newEdge = {
           ...params,
           id: `edge_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          type: 'smoothstep',
+          type: 'default', // Smooth curved bezier line
           animated: false,
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -399,7 +506,7 @@ function WorkbenchCanvas({
   );
 
   const handleFitView = useCallback(() => {
-    reactFlowInstanceRef.current?.fitView({ padding: 0.18, maxZoom: 1.2, duration: 350 });
+    reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 350 });
   }, []);
 
   // Smooth fitView on initial load when nodes arrive
@@ -407,47 +514,32 @@ function WorkbenchCanvas({
     if (nodes.length > 0 && !hasFittedInitialViewRef.current && reactFlowInstanceRef.current) {
       hasFittedInitialViewRef.current = true;
       const timer = setTimeout(() => {
-        reactFlowInstanceRef.current?.fitView({ padding: 0.18, maxZoom: 1.2, duration: 300 });
+        reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 300 });
       }, 80);
       return () => clearTimeout(timer);
     }
   }, [nodes.length]);
 
   const handleAutoArrange = useCallback(() => {
-    const layoutMap = {};
-    const arrangedNodes = nodes.map((node, index) => {
-      const col = index % GRID_COLS;
-      const row = Math.floor(index / GRID_COLS);
-      const position = {
-        x: 40 + col * (DEFAULT_NODE_WIDTH + GRID_GAP),
-        y: 40 + row * (DEFAULT_NODE_HEIGHT + GRID_GAP),
-      };
-      const width = DEFAULT_NODE_WIDTH;
-      const height = DEFAULT_NODE_HEIGHT;
-      layoutMap[node.id] = { ...position, width, height };
-      return {
-        ...node,
-        position,
-        style: { ...node.style, width, height },
-      };
-    });
-
+    const { arrangedNodes, layoutMap } = computeArrangedLayout(nodes, edges);
     layoutMapRef.current = layoutMap;
     persistSavedLayout(activeWorkbenchId, layoutMap);
     setNodes(arrangedNodes);
-    window.setTimeout(() => handleFitView(), 50);
-  }, [activeWorkbenchId, handleFitView, nodes]);
+    window.setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 350 });
+    }, 60);
+  }, [activeWorkbenchId, edges, nodes]);
 
   const handleAddNewNote = useCallback(async () => {
     try {
-      const defaultText = t ? t('workbench.expandedNotePlaceholder') || '输入笔记...' : '输入笔记...';
+      // Create blank note; grey hint text will be provided by placeholder
       const nextPos = findNextAvailablePosition(layoutMapRef.current);
 
       let rawResult = null;
       if (onAddQuickNote) {
-        rawResult = await onAddQuickNote(defaultText);
+        rawResult = await onAddQuickNote('');
       } else {
-        rawResult = await saveQuickNote(defaultText, QUICK_INPUT_SOURCE, {
+        rawResult = await saveQuickNote('', QUICK_INPUT_SOURCE, {
           autoPin: true,
           workbenchId: activeWorkbenchId,
         });
@@ -469,7 +561,7 @@ function WorkbenchCanvas({
     } catch (error) {
       console.error('[WorkbenchCanvas] add note failed:', error);
     }
-  }, [activeWorkbenchId, onAddQuickNote, onRefreshItems, t]);
+  }, [activeWorkbenchId, onAddQuickNote, onRefreshItems]);
 
   const lastPaneClickRef = useRef({ time: 0, x: 0, y: 0 });
   const lastCreatedNoteTimeRef = useRef(0);
@@ -490,12 +582,12 @@ function WorkbenchCanvas({
       const noteY = Math.round(position.y - 30);
 
       try {
-        const defaultText = t ? t('workbench.expandedNotePlaceholder') || '输入笔记...' : '输入笔记...';
+        // Create blank note; grey hint text will be provided by placeholder
         let rawResult = null;
         if (onAddQuickNote) {
-          rawResult = await onAddQuickNote(defaultText);
+          rawResult = await onAddQuickNote('');
         } else {
-          rawResult = await saveQuickNote(defaultText, QUICK_INPUT_SOURCE, {
+          rawResult = await saveQuickNote('', QUICK_INPUT_SOURCE, {
             autoPin: true,
             workbenchId: activeWorkbenchId,
           });
@@ -519,7 +611,7 @@ function WorkbenchCanvas({
         console.error('[WorkbenchCanvas] create note failed:', error);
       }
     },
-    [activeWorkbenchId, onAddQuickNote, onRefreshItems, t]
+    [activeWorkbenchId, onAddQuickNote, onRefreshItems]
   );
 
   const handlePaneClick = useCallback(
@@ -556,15 +648,11 @@ function WorkbenchCanvas({
     [handleCreateNoteAtMouse]
   );
 
-  const handleClearEdges = useCallback(() => {
-    if (edges.length === 0) return;
-    const confirmed = window.confirm(
-      t ? t('workbench.clearEdgesConfirm') || '确定清除当前画布上的所有连接线吗？' : '确定清除当前画布上的所有连接线吗？'
-    );
-    if (!confirmed) return;
+  const handleConfirmClearEdges = useCallback(() => {
     setEdges([]);
     persistSavedEdges(activeWorkbenchId, []);
-  }, [activeWorkbenchId, edges.length, t]);
+    setShowClearEdgesConfirm(false);
+  }, [activeWorkbenchId]);
 
   const handleInlineCreateSubmit = useCallback(
     async (e) => {
@@ -686,12 +774,12 @@ function WorkbenchCanvas({
           onPaneClick={handlePaneClick}
           onDoubleClick={handlePaneDoubleClick}
           zoomOnDoubleClick={false}
-          connectionLineType="smoothstep"
+          connectionLineType="default"
           deleteKeyCode={['Backspace', 'Delete']}
           onInit={(instance) => {
             reactFlowInstanceRef.current = instance;
             if (nodes.length > 0) {
-              instance.fitView({ padding: 0.18, maxZoom: 1.2 });
+              instance.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75 });
             }
           }}
           minZoom={0.2}
@@ -743,7 +831,12 @@ function WorkbenchCanvas({
           <button
             type="button"
             className={`workbench-canvas-tool-btn board-btn ${showBoardMenu ? 'active' : ''}`}
-            onClick={() => setShowBoardMenu((prev) => !prev)}
+            onClick={() => {
+              setShowBoardMenu((prev) => !prev);
+              setIsCreatingInline(false);
+              setEditingBoardId(null);
+              setDeletingBoardId(null);
+            }}
             title={t ? t('workbench.switchWorkbench') || '切换画布' : '切换画布'}
           >
             <Layers size={13} />
@@ -764,7 +857,11 @@ function WorkbenchCanvas({
                 <button
                   type="button"
                   className="workbench-canvas-board-create-btn"
-                  onClick={() => setIsCreatingInline((prev) => !prev)}
+                  onClick={() => {
+                    setIsCreatingInline((prev) => !prev);
+                    setEditingBoardId(null);
+                    setDeletingBoardId(null);
+                  }}
                   title={t ? t('workbench.createCanvas') || '新建画布' : '新建画布'}
                 >
                   <Plus size={13} />
@@ -776,6 +873,7 @@ function WorkbenchCanvas({
                 <form
                   className="workbench-canvas-board-create-form"
                   onSubmit={handleInlineCreateSubmit}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <input
                     type="text"
@@ -802,6 +900,80 @@ function WorkbenchCanvas({
                   const isActive =
                     wb.id === activeWorkbenchId || (!activeWorkbenchId && wb.is_default);
                   const isDefault = Boolean(wb.is_default);
+                  const isEditing = editingBoardId === wb.id;
+                  const isDeleting = deletingBoardId === wb.id;
+
+                  if (isEditing) {
+                    return (
+                      <form
+                        key={wb.id}
+                        className="workbench-canvas-board-inline-form"
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const trimmed = editingBoardName.trim();
+                          if (trimmed && trimmed !== wb.name) {
+                            await onRenameWorkbench?.(wb.id, trimmed);
+                          }
+                          setEditingBoardId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="text"
+                          className="workbench-canvas-board-inline-input"
+                          value={editingBoardName}
+                          onChange={(e) => setEditingBoardName(e.target.value)}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                              setEditingBoardId(null);
+                            }
+                          }}
+                        />
+                        <button type="submit" className="workbench-canvas-board-inline-btn success" title={t ? t('common.save') || '保存' : '保存'}>
+                          <Check size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          className="workbench-canvas-board-inline-btn"
+                          onClick={() => setEditingBoardId(null)}
+                          title={t ? t('common.cancel') || '取消' : '取消'}
+                        >
+                          <X size={11} />
+                        </button>
+                      </form>
+                    );
+                  }
+
+                  if (isDeleting) {
+                    return (
+                      <div
+                        key={wb.id}
+                        className="workbench-canvas-board-delete-confirm-row"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="wb-delete-hint">{t ? t('workbench.confirmDelete') || '确定删除？' : '确定删除？'}</span>
+                        <button
+                          type="button"
+                          className="wb-inline-confirm-btn danger"
+                          onClick={async () => {
+                            await onDeleteWorkbench?.(wb.id, true);
+                            setDeletingBoardId(null);
+                          }}
+                        >
+                          {t ? t('common.delete') || '删除' : '删除'}
+                        </button>
+                        <button
+                          type="button"
+                          className="wb-inline-confirm-btn cancel"
+                          onClick={() => setDeletingBoardId(null)}
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={wb.id}
@@ -810,6 +982,8 @@ function WorkbenchCanvas({
                         onSelectWorkbench?.(wb.id);
                         setShowBoardMenu(false);
                         setIsCreatingInline(false);
+                        setEditingBoardId(null);
+                        setDeletingBoardId(null);
                       }}
                     >
                       <div className="workbench-canvas-board-item-main">
@@ -832,7 +1006,11 @@ function WorkbenchCanvas({
                           <button
                             type="button"
                             className="workbench-canvas-board-action-btn"
-                            onClick={() => onRenameWorkbench?.(wb.id)}
+                            onClick={() => {
+                              setEditingBoardId(wb.id);
+                              setEditingBoardName(wb.name || '');
+                              setDeletingBoardId(null);
+                            }}
                             title={t ? t('workbench.renameCanvas') || '重命名' : '重命名'}
                           >
                             <Pencil size={11} />
@@ -840,7 +1018,10 @@ function WorkbenchCanvas({
                           <button
                             type="button"
                             className="workbench-canvas-board-action-btn danger"
-                            onClick={() => onDeleteWorkbench?.(wb.id)}
+                            onClick={() => {
+                              setDeletingBoardId(wb.id);
+                              setEditingBoardId(null);
+                            }}
                             title={t ? t('workbench.deleteCanvas') || '删除' : '删除'}
                           >
                             <Trash2 size={11} />
@@ -863,7 +1044,9 @@ function WorkbenchCanvas({
           title={t ? t('workbench.canvasAutoSaved') || '所有便签位置与连线均已实时保存' : '已自动保存'}
         >
           <CheckCircle2 size={12} className="wb-saved-icon" />
-          <span>{nodes.length} {t ? t('workbench.countLabel', { count: nodes.length }) || '条' : '条'}</span>
+          <span className="wb-status-count-text">
+            {t ? t('workbench.countLabel', { count: nodes.length }) : `${nodes.length} 条`}
+          </span>
         </div>
 
         <div className="workbench-canvas-tool-divider" />
@@ -876,7 +1059,7 @@ function WorkbenchCanvas({
           title={t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}
         >
           <Plus size={14} />
-          <span>{t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}</span>
+          <span className="wb-tool-btn-text">{t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}</span>
         </button>
 
         <button
@@ -886,7 +1069,7 @@ function WorkbenchCanvas({
           title={t ? t('workbench.fitView') || '全览居中' : '全览居中'}
         >
           <Maximize2 size={13} />
-          <span>{t ? t('workbench.fitView') || '全览' : '全览'}</span>
+          <span className="wb-tool-btn-text">{t ? t('workbench.fitView') || '全览' : '全览'}</span>
         </button>
 
         <button
@@ -896,19 +1079,45 @@ function WorkbenchCanvas({
           title={t ? t('workbench.autoArrange') || '自动整齐排列' : '自动排列'}
         >
           <LayoutGrid size={13} />
-          <span>{t ? t('workbench.autoArrange') || '整理' : '整理'}</span>
+          <span className="wb-tool-btn-text">{t ? t('workbench.autoArrange') || '整理' : '整理'}</span>
         </button>
 
         {edges.length > 0 && (
-          <button
-            type="button"
-            className="workbench-canvas-tool-btn danger-hover"
-            onClick={handleClearEdges}
-            title={t ? t('workbench.clearEdges') || '清空连线' : '清空连线'}
-          >
-            <Unlink size={13} />
-            <span>{t ? t('workbench.clearEdges') || '清除连线' : '清除连线'}</span>
-          </button>
+          <div className="workbench-canvas-clear-edges-wrapper" ref={clearEdgesBtnRef}>
+            <button
+              type="button"
+              className={`workbench-canvas-tool-btn danger-hover ${showClearEdgesConfirm ? 'active' : ''}`}
+              onClick={() => setShowClearEdgesConfirm((prev) => !prev)}
+              title={t ? t('workbench.clearEdges') || '清空连线' : '清空连线'}
+            >
+              <Unlink size={13} />
+              <span className="wb-tool-btn-text">{t ? t('workbench.clearEdges') || '清除连线' : '清除连线'}</span>
+            </button>
+
+            {showClearEdgesConfirm && (
+              <div className="workbench-canvas-confirm-popover" onClick={(e) => e.stopPropagation()}>
+                <span className="wb-confirm-msg">
+                  {t ? t('workbench.clearEdgesConfirm') || '确定清除所有连线？' : '确定清除所有连线？'}
+                </span>
+                <div className="wb-confirm-actions">
+                  <button
+                    type="button"
+                    className="wb-confirm-btn danger"
+                    onClick={handleConfirmClearEdges}
+                  >
+                    {t ? t('common.clear') || '清除' : '清除'}
+                  </button>
+                  <button
+                    type="button"
+                    className="wb-confirm-btn cancel"
+                    onClick={() => setShowClearEdgesConfirm(false)}
+                  >
+                    {t ? t('common.cancel') || '取消' : '取消'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

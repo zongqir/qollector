@@ -100,8 +100,46 @@ function StickyNoteNode({ data, selected }) {
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [localContent, setLocalContent] = useState(() => item?.content || '');
+  const saveContentTimeoutRef = useRef(null);
   const aiMenuRef = useRef(null);
   const colorPickerRef = useRef(null);
+
+  // Sync external content changes (e.g. from AI or refresh)
+  useEffect(() => {
+    setLocalContent(item?.content || '');
+  }, [item?.content]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveContentTimeoutRef.current) {
+        clearTimeout(saveContentTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleContentChange = useCallback(
+    (e) => {
+      const newText = e.target.value;
+      setLocalContent(newText);
+      if (saveContentTimeoutRef.current) {
+        clearTimeout(saveContentTimeoutRef.current);
+      }
+      saveContentTimeoutRef.current = setTimeout(() => {
+        onUpdateContent?.(item?.id, newText);
+      }, 350);
+    },
+    [item?.id, onUpdateContent]
+  );
+
+  const handleContentBlur = useCallback(() => {
+    if (saveContentTimeoutRef.current) {
+      clearTimeout(saveContentTimeoutRef.current);
+      saveContentTimeoutRef.current = null;
+    }
+    onUpdateContent?.(item?.id, localContent);
+  }, [item?.id, localContent, onUpdateContent]);
 
   // Popover dismiss on outside pointerdown
   useEffect(() => {
@@ -330,11 +368,19 @@ function StickyNoteNode({ data, selected }) {
 
     return (
       <div className="sticky-note-text-display">
-        {getContentPreview(item?.content) || (
-          <span style={{ color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-            {t ? t('workbench.exportEmptyLine') || '(空白便签)' : '(空白便签)'}
-          </span>
-        )}
+        <textarea
+          className="sticky-note-textarea nodrag nopan nowheel"
+          value={localContent}
+          onChange={handleContentChange}
+          onBlur={handleContentBlur}
+          placeholder={t ? t('workbench.expandedNotePlaceholder') || '写下你的想法...' : '写下你的想法...'}
+          spellCheck={false}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.target.blur();
+            }
+          }}
+        />
       </div>
     );
   };
@@ -347,6 +393,9 @@ function StickyNoteNode({ data, selected }) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onDoubleClick={(e) => {
+        if (e.target?.closest?.('textarea') || e.target?.closest?.('input') || e.target?.closest?.('button') || e.target?.closest?.('a')) {
+          return;
+        }
         e.stopPropagation();
         onCopy?.(item);
       }}

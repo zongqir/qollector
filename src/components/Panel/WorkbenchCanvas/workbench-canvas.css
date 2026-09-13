@@ -70,6 +70,7 @@
   overflow: hidden;
   background: var(--wb-canvas-bg);
   transition: background 0.25s ease;
+  container-type: inline-size;
 }
 
 .workbench-canvas-wrapper {
@@ -372,10 +373,49 @@
 
 .sticky-note-text-display {
   width: 100%;
+  height: 100%;
+  min-height: 80px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.sticky-note-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 70px;
+  flex: 1;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: inherit;
+  cursor: text;
+  overflow-y: auto;
+  overflow-x: hidden;
   word-break: break-word;
   overflow-wrap: break-word;
-  white-space: pre-wrap;
+}
+
+.sticky-note-textarea::placeholder {
+  color: var(--text-tertiary);
+  font-style: italic;
+  opacity: 0.65;
+}
+
+.sticky-note-textarea::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sticky-note-textarea::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--scrollbar-thumb, rgba(0, 0, 0, 0.15)) 70%, transparent);
+  border-radius: 3px;
 }
 
 .sticky-note-image {
@@ -1098,6 +1138,107 @@
   background: rgba(239, 68, 68, 0.12);
 }
 
+.workbench-canvas-board-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 12%, transparent);
+  border-radius: 8px;
+}
+
+.workbench-canvas-board-inline-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11.5px;
+  border-radius: 5px;
+  border: 1px solid var(--accent-color, #3b82f6);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.workbench-canvas-board-inline-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.workbench-canvas-board-inline-btn.success {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.workbench-canvas-board-inline-btn.success:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.workbench-canvas-board-inline-btn:hover {
+  background: var(--btn-hover-bg, rgba(0, 0, 0, 0.08));
+  color: var(--text-primary);
+}
+
+.workbench-canvas-board-delete-confirm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  gap: 6px;
+}
+
+.wb-delete-hint {
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.wb-inline-confirm-btn {
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: filter 0.12s ease;
+}
+
+.wb-inline-confirm-btn.danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.wb-inline-confirm-btn.danger:hover {
+  filter: brightness(1.1);
+}
+
+.wb-inline-confirm-btn.cancel {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wb-inline-confirm-btn.cancel:hover {
+  color: var(--text-primary);
+}
+
 /* Status Pill */
 .workbench-canvas-status-pill {
   display: inline-flex;
@@ -1113,16 +1254,130 @@
 
 .workbench-canvas-status-pill .wb-saved-icon {
   color: #10b981;
+  flex-shrink: 0;
 }
 
-.workbench-canvas-tool-btn.danger-hover:hover {
+.workbench-canvas-tool-btn.danger-hover:hover,
+.workbench-canvas-tool-btn.danger-hover.active {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
+}
+
+/* Clear Edges Popover */
+.workbench-canvas-clear-edges-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workbench-canvas-confirm-popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  z-index: 70;
+  min-width: 170px;
+  background: var(--wb-popover-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--wb-popover-border);
+  border-radius: 12px;
+  box-shadow: var(--wb-popover-shadow);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: stickyAiIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wb-confirm-msg {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.wb-confirm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.wb-confirm-btn {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.wb-confirm-btn.danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.wb-confirm-btn.danger:hover {
+  background: #dc2626;
+}
+
+.wb-confirm-btn.cancel {
+  background: var(--btn-hover-bg, rgba(0, 0, 0, 0.06));
+  color: var(--text-secondary);
+}
+
+.wb-confirm-btn.cancel:hover {
+  color: var(--text-primary);
 }
 
 /* ==========================================================================
    Mini & Narrow Mode Responsive
    ========================================================================== */
+
+@container (max-width: 520px) {
+  .workbench-canvas-toolbar {
+    bottom: 10px;
+    padding: 4px 6px;
+    gap: 3px;
+    max-width: calc(100% - 16px);
+  }
+
+  .wb-tool-btn-text {
+    display: none !important;
+  }
+
+  .workbench-canvas-tool-btn {
+    height: 28px;
+    padding: 0 7px;
+    min-width: 28px;
+    gap: 0;
+  }
+
+  .workbench-canvas-tool-btn.primary {
+    padding: 0 9px;
+    gap: 3px;
+  }
+
+  .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
+    display: inline !important;
+    font-size: 11px;
+  }
+
+  .workbench-canvas-board-label {
+    max-width: 56px;
+  }
+
+  .workbench-canvas-status-pill {
+    padding: 0 2px;
+    font-size: 10px;
+  }
+
+  .workbench-canvas-tool-divider {
+    height: 14px;
+  }
+}
 
 @media (max-width: 560px) {
   .workbench-canvas-toolbar {
@@ -1130,7 +1385,15 @@
     padding: 4px 8px;
     gap: 4px;
     max-width: calc(100% - 24px);
-    overflow-x: auto;
+  }
+
+  .wb-tool-btn-text {
+    display: none;
+  }
+
+  .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
+    display: inline;
+    font-size: 11px;
   }
 
   .workbench-canvas-tool-btn {
@@ -1140,11 +1403,7 @@
   }
 
   .workbench-canvas-board-label {
-    max-width: 70px;
-  }
-
-  .workbench-canvas-status-pill {
-    display: none;
+    max-width: 65px;
   }
 }
 

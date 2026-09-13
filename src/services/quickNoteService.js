@@ -15,14 +15,11 @@ const resolveMaxPinnedItems = async () => {
 };
 
 export const saveQuickNote = async (
-  content,
+  content = '',
   source = QUICK_INPUT_SOURCE,
   options = {},
 ) => {
-  const trimmed = content.trim();
-  if (!trimmed) {
-    return null;
-  }
+  const noteContent = typeof content === 'string' ? content : '';
 
   const {
     autoFavorite = false,
@@ -31,7 +28,7 @@ export const saveQuickNote = async (
   } = typeof options === 'boolean' ? { autoFavorite: options } : options;
 
   const itemId = await invoke('add_clipboard_item_manual', {
-    content: trimmed,
+    content: noteContent,
     contentType: 'text',
     source,
     autoFavorite: Boolean(autoFavorite),

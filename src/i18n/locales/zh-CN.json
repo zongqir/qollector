@@ -1,4 +1,11 @@
 {
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "clear": "清除",
+    "confirm": "确定"
+  },
   "app": {
     "title": "Qollect",
     "slogan": "无感标记，一触即回",
@@ -836,6 +843,7 @@
     "createCanvas": "新建画布",
     "renameCanvas": "重命名画布",
     "deleteCanvas": "删除画布",
+    "confirmDelete": "确定删除？",
     "canvasAutoSaved": "已保存",
     "canvasItemCount": "{{count}} 张便签",
     "clearEdges": "清空连线",

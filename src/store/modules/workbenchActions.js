@@ -92,13 +92,12 @@ export const createWorkbenchActions = (set, get) => ({
     return nextActiveWorkbenchId;
   },
 
-  addQuickNote: async (content) => {
-    if (!content.trim()) return;
+  addQuickNote: async (content = '') => {
     try {
       const { maxPinnedItems, loadItems, activeWorkbenchId } = get();
       // 创建新条目
       const itemId = await invoke('add_clipboard_item_manual', {
-        content: content.trim(),
+        content: typeof content === 'string' ? content : '',
         contentType: 'text',
         source: QUICK_NOTE_SOURCE,
         autoFavorite: false,
