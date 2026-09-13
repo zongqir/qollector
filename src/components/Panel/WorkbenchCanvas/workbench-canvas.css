@@ -654,54 +654,68 @@
    ========================================================================== */
 
 .sticky-handle {
-  width: 10px !important;
-  height: 10px !important;
+  width: 8px !important;
+  height: 8px !important;
   border-radius: 50% !important;
-  background: var(--accent-color, #3b82f6) !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  background: color-mix(in srgb, var(--surface-muted, var(--bg-secondary)) 70%, var(--border-color)) !important;
+  border: 1.5px solid color-mix(in srgb, var(--border-color) 85%, var(--text-tertiary)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
   opacity: 0;
-  transition: opacity 0.18s ease, transform 0.18s ease, background-color 0.18s ease !important;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
   z-index: 25 !important;
   cursor: crosshair !important;
 }
 
 .dark-mode .sticky-handle {
-  border-color: #1e293b !important;
+  background: color-mix(in srgb, var(--surface-muted, var(--bg-secondary)) 85%, var(--border-color)) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
 }
 
-.sticky-note-node:hover .sticky-handle,
+/* Very subtle presence on card hover so it doesn't distract reading */
+.sticky-note-node:hover .sticky-handle {
+  opacity: 0.36;
+}
+
 .sticky-note-node.selected .sticky-handle {
-  opacity: 0.75;
+  opacity: 0.55;
+  border-color: color-mix(in srgb, var(--accent-color, #3b82f6) 60%, var(--border-color)) !important;
 }
 
+/* High-intent direct hover on the handle: smoothly blooms into accent color */
 .sticky-handle:hover {
   opacity: 1 !important;
-  transform: scale(1.4) !important;
-  background: #2563eb !important;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.28) !important;
+  transform: scale(1.35) !important;
+  background: var(--accent-color, #3b82f6) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 3.5px rgba(59, 130, 246, 0.22), 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.dark-mode .sticky-handle:hover {
+  border-color: #0f172a !important;
+  box-shadow: 0 0 0 3.5px rgba(59, 130, 246, 0.32), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 }
 
 .sticky-handle-top {
-  top: -5px !important;
+  top: -4px !important;
   left: 50% !important;
   transform: translateX(-50%);
 }
 
 .sticky-handle-right {
-  right: -5px !important;
+  right: -4px !important;
   top: 50% !important;
   transform: translateY(-50%);
 }
 
 .sticky-handle-bottom {
-  bottom: -5px !important;
+  bottom: -4px !important;
   left: 50% !important;
   transform: translateX(-50%);
 }
 
 .sticky-handle-left {
-  left: -5px !important;
+  left: -4px !important;
   top: 50% !important;
   transform: translateY(-50%);
 }
