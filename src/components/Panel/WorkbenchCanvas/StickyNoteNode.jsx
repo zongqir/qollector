@@ -1,5 +1,5 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { NodeResizer } from '@xyflow/react';
+import { NodeResizer, Handle, Position } from '@xyflow/react';
 import {
   Pencil,
   Sparkles,
@@ -582,6 +582,19 @@ function StickyNoteNode({ data, selected }) {
           })}
         </div>
       )}
+
+      {/* 4-Direction Magnetic Connection Handles (Top, Right, Bottom, Left) */}
+      <Handle type="target" position={Position.Top} id="top-target" className="sticky-handle sticky-handle-top" />
+      <Handle type="source" position={Position.Top} id="top-source" className="sticky-handle sticky-handle-top" />
+
+      <Handle type="target" position={Position.Right} id="right-target" className="sticky-handle sticky-handle-right" />
+      <Handle type="source" position={Position.Right} id="right-source" className="sticky-handle sticky-handle-right" />
+
+      <Handle type="target" position={Position.Bottom} id="bottom-target" className="sticky-handle sticky-handle-bottom" />
+      <Handle type="source" position={Position.Bottom} id="bottom-source" className="sticky-handle sticky-handle-bottom" />
+
+      <Handle type="target" position={Position.Left} id="left-target" className="sticky-handle sticky-handle-left" />
+      <Handle type="source" position={Position.Left} id="left-source" className="sticky-handle sticky-handle-left" />
 
       {/* Edge Resizer Handles (Rendered after card for high z-index priority) */}
       <NodeResizer

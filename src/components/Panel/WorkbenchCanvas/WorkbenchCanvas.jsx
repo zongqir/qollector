@@ -4,6 +4,9 @@ import {
   Background,
   BackgroundVariant,
   applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './workbench-canvas.css';
@@ -30,6 +33,9 @@ const GRID_COLS = 3;
 const getCanvasLayoutStorageKey = (workbenchId) =>
   `qollect.workbench.canvas.layout.${workbenchId || 'default'}.v1`;
 
+const getCanvasEdgesStorageKey = (workbenchId) =>
+  `qollect.workbench.canvas.edges.${workbenchId || 'default'}.v1`;
+
 const loadSavedLayout = (workbenchId) => {
   try {
     const raw = localStorage.getItem(getCanvasLayoutStorageKey(workbenchId));
@@ -44,6 +50,23 @@ const persistSavedLayout = (workbenchId, layout) => {
     localStorage.setItem(getCanvasLayoutStorageKey(workbenchId), JSON.stringify(layout));
   } catch (error) {
     console.warn('[WorkbenchCanvas] save layout failed:', error);
+  }
+};
+
+const loadSavedEdges = (workbenchId) => {
+  try {
+    const raw = localStorage.getItem(getCanvasEdgesStorageKey(workbenchId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistSavedEdges = (workbenchId, edges) => {
+  try {
+    localStorage.setItem(getCanvasEdgesStorageKey(workbenchId), JSON.stringify(edges));
+  } catch (error) {
+    console.warn('[WorkbenchCanvas] save edges failed:', error);
   }
 };
 
@@ -97,6 +120,7 @@ function WorkbenchCanvas({
   t,
 }) {
   const [nodes, setNodes] = useState([]);
+  const [edges, setEdges] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(() =>
     typeof document !== 'undefined'
@@ -118,9 +142,10 @@ function WorkbenchCanvas({
     return () => observer.disconnect();
   }, []);
 
-  // Load layout map for this workbench
+  // Load layout map and edges for this workbench
   useEffect(() => {
     layoutMapRef.current = loadSavedLayout(activeWorkbenchId);
+    setEdges(loadSavedEdges(activeWorkbenchId));
   }, [activeWorkbenchId]);
 
   const handleUpdateNodeContent = useCallback(
@@ -287,6 +312,44 @@ function WorkbenchCanvas({
     [activeWorkbenchId]
   );
 
+  const handleEdgesChange = useCallback(
+    (changes) => {
+      setEdges((currentEdges) => {
+        const nextEdges = applyEdgeChanges(changes, currentEdges);
+        persistSavedEdges(activeWorkbenchId, nextEdges);
+        return nextEdges;
+      });
+    },
+    [activeWorkbenchId]
+  );
+
+  const handleConnect = useCallback(
+    (params) => {
+      setEdges((currentEdges) => {
+        const newEdge = {
+          ...params,
+          id: `edge_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          type: 'smoothstep',
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 14,
+            height: 14,
+            color: 'var(--accent-color, #3b82f6)',
+          },
+          style: {
+            stroke: 'var(--accent-color, #3b82f6)',
+            strokeWidth: 2,
+          },
+        };
+        const nextEdges = addEdge(newEdge, currentEdges);
+        persistSavedEdges(activeWorkbenchId, nextEdges);
+        return nextEdges;
+      });
+    },
+    [activeWorkbenchId]
+  );
+
   const handleFitView = useCallback(() => {
     reactFlowInstanceRef.current?.fitView({ padding: 0.18, maxZoom: 1.2, duration: 350 });
   }, []);
@@ -418,8 +481,13 @@ function WorkbenchCanvas({
       <div className="workbench-canvas-wrapper">
         <ReactFlow
           nodes={nodes}
+          edges={edges}
           nodeTypes={NODE_TYPES}
           onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={handleConnect}
+          connectionLineType="smoothstep"
+          deleteKeyCode={['Backspace', 'Delete']}
           onInit={(instance) => {
             reactFlowInstanceRef.current = instance;
             if (nodes.length > 0) {
