@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.8",
+      "publishedAt": "2026-09-13",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-8",
+      "summary": {
+        "zh-CN": "工作台便签画布交互大升级：支持点击卡片即刻就地编辑、平滑贝塞尔流线、窄窗智能折叠与全内联画布管理。",
+        "en-US": "Major canvas UX upgrade: inline note editing, smooth Bezier flowlines, responsive toolbar folding, and inline canvas management."
+      },
+      "highlights": {
+        "zh-CN": [
+          "卡片即点即编：便签正文接入原生内联文本框，点击即可直接输入与编辑，支持防抖自动保存与失焦保存。",
+          "平滑贝塞尔曲线：连线升级为自然柔和的贝塞尔流线，告别机械直角折线。",
+          "智能拓扑整理与字号保护：自动排列感知连线流向与先后逻辑，自适应排布列数，并防止缩放过小影响阅读。",
+          "全内联画布管理：新建、重命名、删除画布以及清除连线均在界面就地交互完成，彻底告别系统原生弹窗。",
+          "窄窗与迷你模式自适应：底部浮动工具栏支持容器感知，次要操作智能收拢为图标胶囊，小窗下依然整齐不挤压。"
+        ],
+        "en-US": [
+          "Direct Inline Note Editing: Click into any note on the canvas to write and edit instantly with auto-save.",
+          "Smooth Bezier Curves: Card connections now flow through graceful, organic Bezier curves instead of sharp step lines.",
+          "Topology-Aware Arrange & Font Protection: Smart arrangement preserves connection flow order and balances column density.",
+          "100% Inline Canvas Management: Create, rename, delete canvases and clear edges inline without native browser prompts.",
+          "Responsive Toolbar Folding: Bottom controls adapt intelligently in narrow and mini window modes."
+        ]
+      }
+    },
+    {
       "version": "0.4.7",
       "publishedAt": "2026-09-13",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-7",
