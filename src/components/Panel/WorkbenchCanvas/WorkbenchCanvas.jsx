@@ -604,6 +604,7 @@ function WorkbenchCanvas({
           onConnect={handleConnect}
           onPaneClick={handlePaneClick}
           onDoubleClick={handlePaneDoubleClick}
+          zoomOnDoubleClick={false}
           connectionLineType="smoothstep"
           deleteKeyCode={['Backspace', 'Delete']}
           onInit={(instance) => {
