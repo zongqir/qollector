@@ -1909,14 +1909,13 @@ function HistoryStream({ style }) {
           const targetItem = items.find((i) => i.id === id);
           if (targetItem && (targetItem.is_pinned || fromCanvas)) {
             await togglePin(targetItem);
-            showTransientToast(t('workbench.removeFromWorkbench') || '已移出工作台');
           }
         }
       } catch (err) {
         console.error('[HistoryStream] drop unpin item failed:', err);
       }
     },
-    [items, showTransientToast, t, togglePin]
+    [items, togglePin]
   );
 
   return (
