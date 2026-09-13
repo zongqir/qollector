@@ -22,6 +22,7 @@ import {
 } from '../../utils/cardBackgrounds';
 import useAppStore from '../../store/useAppStore';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
+import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 const FileIconLazy = lazy(() =>
@@ -313,6 +314,22 @@ function CompactCard({
       }}
       title={`${formatDate(item.updated_at, i18n.language)} - ${getSourceApp(item.metadata)}`}
       onDoubleClick={onDoubleClick}
+      draggable={!isSelectionMode}
+      onDragStart={(e) => {
+        if (
+          e.target.closest('button, input, textarea, a, select, .color-picker-popover, [data-longpress-ignore="true"]')
+        ) {
+          e.preventDefault();
+          return;
+        }
+        e.dataTransfer.setData(INTERNAL_DRAG_MIME, JSON.stringify({ id: item.id }));
+        e.dataTransfer.setData('text/plain', item.content || '');
+        e.dataTransfer.effectAllowed = 'copyMove';
+        document.documentElement.setAttribute('data-internal-drag', 'true');
+      }}
+      onDragEnd={() => {
+        document.documentElement.removeAttribute('data-internal-drag');
+      }}
     >
       <div className="compact-card-header panel-card-header">
         {isSelectionMode && (

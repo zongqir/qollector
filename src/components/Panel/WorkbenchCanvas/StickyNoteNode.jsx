@@ -38,6 +38,7 @@ import {
   getCardBackgroundIdFromMetadata,
   getCardBackgroundPreset,
 } from '../../../utils/cardBackgrounds';
+import { INTERNAL_DRAG_MIME } from '../../../constants/dragDrop';
 
 // Lazy load FileIcon to reduce bundle size
 const FileIconLazy = lazy(() =>
@@ -363,6 +364,17 @@ function StickyNoteNode({ data, selected }) {
             <div
               className="sticky-note-drag-handle"
               title={t ? t('workbench.dragMove') || '按住拖动' : '按住拖动'}
+              draggable={true}
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData(INTERNAL_DRAG_MIME, JSON.stringify({ id: item?.id, fromCanvas: true }));
+                e.dataTransfer.setData('text/plain', item?.content || '');
+                e.dataTransfer.effectAllowed = 'copyMove';
+                document.documentElement.setAttribute('data-internal-drag', 'true');
+              }}
+              onDragEnd={() => {
+                document.documentElement.removeAttribute('data-internal-drag');
+              }}
             >
               <GripVertical size={13} />
             </div>

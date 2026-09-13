@@ -26,6 +26,7 @@ import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { aiSearchItems, getUserTags, pinItem, searchItems } from '../../services/clipboardService';
 import { saveQuickNote } from '../../services/quickNoteService';
 import { getPinnedItemIdsForWorkbench } from '../../store/modules/itemsIndex';
+import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -1890,8 +1891,43 @@ function HistoryStream({ style }) {
     setBackendSearchRefreshNonce((current) => current + 1);
   }, []);
 
+  const handleHistoryStreamDragOver = useCallback((e) => {
+    if (e.dataTransfer.types.includes(INTERNAL_DRAG_MIME.toLowerCase()) || e.dataTransfer.types.includes(INTERNAL_DRAG_MIME)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }, []);
+
+  const handleHistoryStreamDrop = useCallback(
+    async (e) => {
+      const rawData = e.dataTransfer.getData(INTERNAL_DRAG_MIME);
+      if (!rawData) return;
+      try {
+        e.preventDefault();
+        const { id, fromCanvas } = JSON.parse(rawData);
+        if (id) {
+          const targetItem = items.find((i) => i.id === id);
+          if (targetItem && (targetItem.is_pinned || fromCanvas)) {
+            await togglePin(targetItem);
+            showTransientToast(t('workbench.removeFromWorkbench') || '已移出工作台');
+          }
+        }
+      } catch (err) {
+        console.error('[HistoryStream] drop unpin item failed:', err);
+      }
+    },
+    [items, showTransientToast, t, togglePin]
+  );
+
   return (
-    <div ref={historyRootRef} className="history-stream" style={style} onClick={handleHistoryStreamClick}>
+    <div
+      ref={historyRootRef}
+      className="history-stream"
+      style={style}
+      onClick={handleHistoryStreamClick}
+      onDragOver={handleHistoryStreamDragOver}
+      onDrop={handleHistoryStreamDrop}
+    >
       <SearchBar {...searchBarProps} />
 
       {showAiSearchPanel && (

@@ -11,9 +11,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import './workbench-canvas.css';
 import StickyNoteNode from './StickyNoteNode';
-import { updateItem } from '../../../services/clipboardService';
+import { updateItem, pinItem } from '../../../services/clipboardService';
 import { saveQuickNote } from '../../../services/quickNoteService';
 import { QUICK_INPUT_SOURCE } from '../../../utils/sourceConstants';
+import { INTERNAL_DRAG_MIME } from '../../../constants/dragDrop';
 import {
   Maximize2,
   Plus,
@@ -585,6 +586,81 @@ function WorkbenchCanvas({
     [newBoardName, onCreateWorkbench]
   );
 
+  const handleCanvasDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleCanvasDrop = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const rawQollect = e.dataTransfer.getData(INTERNAL_DRAG_MIME);
+      const rawText = e.dataTransfer.getData('text/plain');
+
+      const position = reactFlowInstanceRef.current
+        ? reactFlowInstanceRef.current.screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        : { x: 80, y: 80 };
+
+      const noteX = Math.round(position.x - DEFAULT_NODE_WIDTH / 2);
+      const noteY = Math.round(position.y - 30);
+
+      if (rawQollect) {
+        try {
+          const { id } = JSON.parse(rawQollect);
+          if (id) {
+            // Update node layout coordinate
+            layoutMapRef.current[id] = {
+              x: Math.max(20, noteX),
+              y: Math.max(20, noteY),
+              width: DEFAULT_NODE_WIDTH,
+              height: DEFAULT_NODE_HEIGHT,
+            };
+            persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+
+            // Pin to current active workbench
+            await pinItem(id, { workbenchId: activeWorkbenchId });
+            onRefreshItems?.();
+            return;
+          }
+        } catch (err) {
+          console.error('[WorkbenchCanvas] drop pin item failed:', err);
+        }
+      }
+
+      // If external plain text was dropped onto canvas, create a new note at mouse drop coordinate
+      if (rawText && rawText.trim()) {
+        try {
+          let rawResult = null;
+          if (onAddQuickNote) {
+            rawResult = await onAddQuickNote(rawText.trim());
+          } else {
+            rawResult = await saveQuickNote(rawText.trim(), QUICK_INPUT_SOURCE, {
+              autoPin: true,
+              workbenchId: activeWorkbenchId,
+            });
+          }
+          const newId = typeof rawResult === 'string' || typeof rawResult === 'number'
+            ? rawResult
+            : rawResult?.id;
+
+          if (newId) {
+            layoutMapRef.current[newId] = {
+              x: Math.max(20, noteX),
+              y: Math.max(20, noteY),
+              width: DEFAULT_NODE_WIDTH,
+              height: DEFAULT_NODE_HEIGHT,
+            };
+            persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+          }
+          onRefreshItems?.();
+        } catch (err) {
+          console.error('[WorkbenchCanvas] drop create note failed:', err);
+        }
+      }
+    },
+    [activeWorkbenchId, onAddQuickNote, onRefreshItems]
+  );
+
   const currentBoardDisplayName = useMemo(() => {
     if (activeWorkbenchLabel) return activeWorkbenchLabel;
     const found = workbenches.find((w) => w.id === activeWorkbenchId);
@@ -593,7 +669,12 @@ function WorkbenchCanvas({
   }, [activeWorkbenchId, activeWorkbenchLabel, t, workbenches]);
 
   return (
-    <div className="workbench-canvas-container" onDoubleClick={handlePaneDoubleClick}>
+    <div
+      className="workbench-canvas-container"
+      onDoubleClick={handlePaneDoubleClick}
+      onDragOver={handleCanvasDragOver}
+      onDrop={handleCanvasDrop}
+    >
       <div className="workbench-canvas-wrapper">
         <ReactFlow
           nodes={nodes}
