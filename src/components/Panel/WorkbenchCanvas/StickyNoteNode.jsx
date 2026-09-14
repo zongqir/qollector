@@ -101,13 +101,17 @@ function StickyNoteNode({ data, selected }) {
   const [aiRunning, setAiRunning] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [localContent, setLocalContent] = useState(() => item?.content || '');
+  const lastSavedContentRef = useRef(item?.content || '');
   const saveContentTimeoutRef = useRef(null);
   const aiMenuRef = useRef(null);
   const colorPickerRef = useRef(null);
 
-  // Sync external content changes (e.g. from AI or refresh)
+  // Sync external content changes (e.g. from AI or external edit)
   useEffect(() => {
-    setLocalContent(item?.content || '');
+    if (item?.content !== undefined && item?.content !== lastSavedContentRef.current) {
+      lastSavedContentRef.current = item.content;
+      setLocalContent(item.content);
+    }
   }, [item?.content]);
 
   // Clean up timer on unmount
@@ -127,8 +131,12 @@ function StickyNoteNode({ data, selected }) {
         clearTimeout(saveContentTimeoutRef.current);
       }
       saveContentTimeoutRef.current = setTimeout(() => {
-        onUpdateContent?.(item?.id, newText);
-      }, 350);
+        saveContentTimeoutRef.current = null;
+        if (newText !== lastSavedContentRef.current) {
+          lastSavedContentRef.current = newText;
+          onUpdateContent?.(item?.id, newText);
+        }
+      }, 500);
     },
     [item?.id, onUpdateContent]
   );
@@ -138,7 +146,10 @@ function StickyNoteNode({ data, selected }) {
       clearTimeout(saveContentTimeoutRef.current);
       saveContentTimeoutRef.current = null;
     }
-    onUpdateContent?.(item?.id, localContent);
+    if (localContent !== lastSavedContentRef.current) {
+      lastSavedContentRef.current = localContent;
+      onUpdateContent?.(item?.id, localContent);
+    }
   }, [item?.id, localContent, onUpdateContent]);
 
   // Popover dismiss on outside pointerdown
@@ -252,6 +263,8 @@ function StickyNoteNode({ data, selected }) {
         });
         const output = typeof response?.output === 'string' ? response.output.trim() : '';
         if (output) {
+          lastSavedContentRef.current = output;
+          setLocalContent(output);
           onUpdateContent?.(item.id, output);
         }
       } catch (error) {
@@ -665,6 +678,7 @@ function StickyNoteNode({ data, selected }) {
         minHeight={110}
         maxWidth={1200}
         maxHeight={900}
+        color="transparent"
         isVisible={selected || isHovered}
         lineClassName="sticky-resize-line"
         handleClassName="sticky-resize-handle"

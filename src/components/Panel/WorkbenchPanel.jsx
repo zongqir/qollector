@@ -235,6 +235,7 @@ function WorkbenchPanel() {
   const deleteItem = useAppStore(s => s.deleteItem);
   const setFocusedIndex = useAppStore(s => s.setFocusedIndex);
   const openEditModal = useAppStore(s => s.openEditModal);
+  const updateItemContent = useAppStore(s => s.updateItemContent);
   const searchQuery = useAppStore(s => s.workbenchSearchQuery);
   const workbenchRecentSearches = useAppStore(s => s.workbenchRecentSearches);
   const workbenches = useAppStore(s => s.workbenches);
@@ -842,7 +843,7 @@ function WorkbenchPanel() {
   ]);
   const shouldShowWorkbenchSummaryRow = workbenchFilterSummaryParts.length > 0
     || Boolean(workbenchBackendError && pinnedItems.length > 0)
-    || (isWorkbenchBusy && pinnedItems.length > 0);
+    || (hasWorkbenchFilters && isWorkbenchBusy && pinnedItems.length > 0);
   const isWorkbenchSortMode = workbenchSortMode && selectedPinnedIds.length === 0;
   const workbenchDragEnabled = isWorkbenchSortMode && pinnedItems.length > 1;
   const handleRetryWorkbenchLoad = useCallback(() => {
@@ -2484,6 +2485,7 @@ function WorkbenchPanel() {
           onCopyItem={handleCopyAndAutoPaste}
           onUnpinItem={handleCardUnpin}
           onRefreshItems={handleRetryWorkbenchLoad}
+          onUpdateItemContent={updateItemContent}
           onAddQuickNote={addQuickNote}
           onEditItem={openEditModal}
           onPreviewItem={handleCanvasPreviewItem}

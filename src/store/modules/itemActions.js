@@ -433,5 +433,37 @@ export const createItemActions = (set, get) => ({
     }
   },
 
+  updateItemContent: async (itemId, newContent) => {
+    if (!itemId) return;
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const existing = get().itemsById?.get(itemId);
+    const updatedItem = {
+      ...(existing || {}),
+      id: itemId,
+      content: newContent,
+      updated_at: updatedAt,
+    };
+    try {
+      await invoke('update_item', { item: updatedItem });
+      set((state) => {
+        const nextItems = state.items.map((candidate) =>
+          candidate.id === itemId
+            ? { ...candidate, content: newContent, updated_at: updatedAt }
+            : candidate
+        );
+        const nextPreviewItem = state.previewItem?.id === itemId
+          ? { ...state.previewItem, content: newContent, updated_at: updatedAt }
+          : state.previewItem;
+        return {
+          items: nextItems,
+          ...buildItemDerivations(nextItems),
+          previewItem: nextPreviewItem,
+        };
+      });
+    } catch (error) {
+      console.error('[itemActions] updateItemContent failed:', error);
+    }
+  },
+
   setFocusedIndex: (index) => set({ focusedIndex: index }),
 });

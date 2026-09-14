@@ -300,6 +300,7 @@ function WorkbenchCanvas({
   onCopyItem,
   onUnpinItem,
   onRefreshItems,
+  onUpdateItemContent,
   onAddQuickNote,
   onEditItem,
   onPreviewItem,
@@ -387,20 +388,40 @@ function WorkbenchCanvas({
   const handleUpdateNodeContent = useCallback(
     async (itemId, newContent) => {
       const targetItem = pinnedItems.find((i) => i.id === itemId);
-      if (!targetItem) return;
+      if (!targetItem || targetItem.content === newContent) return;
+      const updatedItem = {
+        ...targetItem,
+        content: newContent,
+        updated_at: Math.floor(Date.now() / 1000),
+      };
+
+      // 1. Immediately update target node in React Flow state without triggering full canvas reload
+      setNodes((prevNodes) =>
+        prevNodes.map((n) =>
+          n.id === itemId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  item: updatedItem,
+                },
+              }
+            : n
+        )
+      );
+
+      // 2. Persist to SQLite and store in-place
       try {
-        const updatedItem = {
-          ...targetItem,
-          content: newContent,
-          updated_at: Math.floor(Date.now() / 1000),
-        };
-        await updateItem(updatedItem);
-        onRefreshItems?.();
+        if (onUpdateItemContent) {
+          await onUpdateItemContent(itemId, newContent);
+        } else {
+          await updateItem(updatedItem);
+        }
       } catch (error) {
         console.error('[WorkbenchCanvas] update item content failed:', error);
       }
     },
-    [onRefreshItems, pinnedItems]
+    [onUpdateItemContent, pinnedItems]
   );
 
   const handleResizeNode = useCallback((nodeId, width, height) => {
@@ -433,8 +454,26 @@ function WorkbenchCanvas({
   const handleCopy = useCallback(
     (item) => {
       setCopiedId(item.id);
+      setNodes((prevNodes) =>
+        prevNodes.map((n) =>
+          n.id === item.id
+            ? { ...n, data: { ...n.data, isCopied: true } }
+            : n.data?.isCopied
+            ? { ...n, data: { ...n.data, isCopied: false } }
+            : n
+        )
+      );
       onCopyItem?.(item);
-      window.setTimeout(() => setCopiedId(null), 1200);
+      window.setTimeout(() => {
+        setCopiedId(null);
+        setNodes((prevNodes) =>
+          prevNodes.map((n) =>
+            n.id === item.id
+              ? { ...n, data: { ...n.data, isCopied: false } }
+              : n
+          )
+        );
+      }, 1200);
     },
     [onCopyItem]
   );
@@ -508,12 +547,31 @@ function WorkbenchCanvas({
       persistSavedLayout(canonicalWorkbenchId, layoutMap);
     }
 
-    setNodes(nextNodes);
+    setNodes((prevNodes) => {
+      const prevMap = new Map(prevNodes.map((n) => [n.id, n]));
+      return nextNodes.map((newNode) => {
+        const prev = prevMap.get(newNode.id);
+        if (!prev) return newNode;
+        return {
+          ...newNode,
+          position: prev.position || newNode.position,
+          selected: prev.selected ?? false,
+          measured: prev.measured,
+          data: (
+            prev.data?.item === newNode.data.item &&
+            prev.data?.isCopied === newNode.data.isCopied &&
+            prev.data?.uiLanguage === newNode.data.uiLanguage &&
+            prev.data?.aiEnabled === newNode.data.aiEnabled
+          )
+            ? prev.data
+            : newNode.data,
+        };
+      });
+    });
   }, [
     pinnedItems,
     canonicalWorkbenchId,
     aiEnabled,
-    copiedId,
     handleCopy,
     handleResizeNode,
     handleResizeNodeEnd,
@@ -537,26 +595,32 @@ function WorkbenchCanvas({
       setNodes((currentNodes) => {
         const nextNodes = applyNodeChanges(changes, currentNodes);
 
-        if (saveTimeoutRef.current) {
-          clearTimeout(saveTimeoutRef.current);
+        const hasGeometryChanges = changes.some(
+          (c) => c.type === 'position' || c.type === 'dimensions'
+        );
+
+        if (hasGeometryChanges) {
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+          saveTimeoutRef.current = setTimeout(() => {
+            nextNodes.forEach((node) => {
+              const existing = layoutMapRef.current[node.id] || {};
+              const rawW = node.style?.width || node.measured?.width || existing.width || DEFAULT_NODE_WIDTH;
+              const rawH = node.style?.height || node.measured?.height || existing.height || DEFAULT_NODE_HEIGHT;
+              const width = typeof rawW === 'number' ? Math.round(rawW) : parseInt(rawW, 10) || DEFAULT_NODE_WIDTH;
+              const height = typeof rawH === 'number' ? Math.round(rawH) : parseInt(rawH, 10) || DEFAULT_NODE_HEIGHT;
+              layoutMapRef.current[node.id] = {
+                ...existing,
+                x: Math.round(node.position.x),
+                y: Math.round(node.position.y),
+                width,
+                height,
+              };
+            });
+            persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
+          }, 200);
         }
-        saveTimeoutRef.current = setTimeout(() => {
-          nextNodes.forEach((node) => {
-            const existing = layoutMapRef.current[node.id] || {};
-            const rawW = node.style?.width || node.measured?.width || existing.width || DEFAULT_NODE_WIDTH;
-            const rawH = node.style?.height || node.measured?.height || existing.height || DEFAULT_NODE_HEIGHT;
-            const width = typeof rawW === 'number' ? Math.round(rawW) : parseInt(rawW, 10) || DEFAULT_NODE_WIDTH;
-            const height = typeof rawH === 'number' ? Math.round(rawH) : parseInt(rawH, 10) || DEFAULT_NODE_HEIGHT;
-            layoutMapRef.current[node.id] = {
-              ...existing,
-              x: Math.round(node.position.x),
-              y: Math.round(node.position.y),
-              width,
-              height,
-            };
-          });
-          persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
-        }, 200);
 
         return nextNodes;
       });

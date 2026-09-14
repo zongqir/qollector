@@ -1,4 +1,4 @@
-﻿* {
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -8,6 +8,11 @@ html {
   width: 100%;
   height: 100%;
   background: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent-color, #007aff) 22%, transparent);
+  color: inherit;
 }
 
 @font-face {

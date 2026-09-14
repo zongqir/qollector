@@ -19,7 +19,7 @@
   /* Sticky Note Base Card (Light Mode) */
   --wb-card-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   --wb-card-shadow-hover: 0 14px 28px -4px rgba(0, 0, 0, 0.12), 0 6px 12px -2px rgba(0, 0, 0, 0.05);
-  --wb-card-shadow-selected: 0 0 0 2.5px #3b82f6, 0 16px 32px -4px rgba(0, 0, 0, 0.14);
+  --wb-card-shadow-selected: 0 0 0 1.5px color-mix(in srgb, var(--border-color) 70%, rgba(0, 0, 0, 0.18)), 0 14px 28px -4px rgba(0, 0, 0, 0.12);
 
   /* Popovers in Light Mode */
   --wb-popover-bg: rgba(255, 255, 255, 0.96);
@@ -48,7 +48,7 @@
   /* Sticky Note Base Card (Dark Mode) */
   --wb-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
   --wb-card-shadow-hover: 0 18px 36px -6px rgba(0, 0, 0, 0.55), 0 12px 14px -6px rgba(0, 0, 0, 0.3);
-  --wb-card-shadow-selected: 0 0 0 2.5px #3b82f6, 0 20px 40px -8px rgba(0, 0, 0, 0.6);
+  --wb-card-shadow-selected: 0 0 0 1.5px rgba(255, 255, 255, 0.22), 0 18px 36px -6px rgba(0, 0, 0, 0.55);
 
   /* Popovers in Dark Mode */
   --wb-popover-bg: rgba(26, 29, 36, 0.95);
@@ -192,12 +192,40 @@
    Sticky Note Node - Organic Rounded Corners & Seamless Paper
    ========================================================================== */
 
+.react-flow__node:focus,
+.react-flow__node:focus-visible,
+.react-flow__node.selected {
+  outline: none !important;
+}
+
+/* Neutralize unstyled React Flow NodeResizer blue rectangular border and blue square handles */
+.react-flow {
+  --xy-resize-background-color: transparent !important;
+  --xy-resize-background-color-default: transparent !important;
+}
+
+.react-flow__resize-control.line,
+.sticky-resize-line {
+  border-color: transparent !important;
+  display: none !important;
+}
+
+.react-flow__resize-control.handle,
+.sticky-resize-handle {
+  display: none !important;
+  opacity: 0 !important;
+  background-color: transparent !important;
+  border: none !important;
+  pointer-events: none !important;
+}
+
 .sticky-note-node {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: visible;
   cursor: pointer;
+  outline: none !important;
 }
 
 .sticky-note-card {
@@ -237,9 +265,14 @@
 }
 
 .sticky-note-node.selected .sticky-note-card {
-  box-shadow: 0 0 0 2px var(--accent-color, #3b82f6), var(--wb-card-shadow-selected);
-  border-color: var(--accent-color, #3b82f6);
+  box-shadow: var(--wb-card-shadow-selected);
+  border-color: var(--border-hover, color-mix(in srgb, var(--text-primary) 30%, var(--border-color)));
   transform: translateY(-2px);
+}
+
+.sticky-note-node[data-custom-bg="true"].selected .sticky-note-card {
+  border-color: color-mix(in srgb, var(--wb-card-accent) 65%, var(--border-color));
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--wb-card-accent) 32%, transparent), var(--wb-card-shadow-hover);
 }
 
 .sticky-note-node.is-copied .sticky-note-card {
@@ -436,6 +469,19 @@
   overflow-x: hidden;
   word-break: break-word;
   overflow-wrap: break-word;
+}
+
+.sticky-note-textarea:focus,
+.sticky-note-textarea:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.sticky-note-textarea::selection {
+  background: color-mix(in srgb, var(--accent-color, #007aff) 22%, transparent) !important;
+  color: inherit !important;
 }
 
 .sticky-note-textarea::placeholder {
@@ -753,8 +799,12 @@
 }
 
 .sticky-note-node.selected .sticky-handle {
-  opacity: 0.55;
-  border-color: color-mix(in srgb, var(--accent-color, #3b82f6) 60%, var(--border-color)) !important;
+  opacity: 0.25;
+  border-color: color-mix(in srgb, var(--border-color) 85%, var(--text-tertiary)) !important;
+}
+
+.sticky-note-node.selected:hover .sticky-handle {
+  opacity: 0.45;
 }
 
 /* High-intent direct hover on the handle: smoothly blooms into accent color */
