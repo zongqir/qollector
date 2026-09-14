@@ -1,6 +1,6 @@
 import http from 'node:http';
 import net from 'node:net';
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 
 const host = process.env.TAURI_DEV_HOST || 'localhost';
 const port = Number(process.env.TAURI_DEV_PORT || 5173);
@@ -116,6 +116,43 @@ function startDevServer() {
   });
 }
 
+function getConflictingProcessInfo(targetPort) {
+  try {
+    if (process.platform === 'win32') {
+      const output = execSync('netstat -ano -p tcp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const lines = output.split('\n');
+      const pids = new Set();
+      for (const line of lines) {
+        if (line.includes(`:${targetPort}`) && line.includes('LISTENING')) {
+          const parts = line.trim().split(/\s+/);
+          const pid = parts[parts.length - 1];
+          if (pid && !isNaN(Number(pid))) {
+            pids.add(pid);
+          }
+        }
+      }
+      if (pids.size > 0) {
+        const pidList = Array.from(pids).join(',');
+        const psOutput = execSync(
+          `powershell -NoProfile -Command "Get-Process -Id ${pidList} -ErrorAction SilentlyContinue | ForEach-Object { \\"$($_.Id) ($($_.ProcessName))\\" }"`,
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+        );
+        const details = psOutput.trim().split('\n').map((l) => l.trim()).filter(Boolean).join(', ');
+        return details || Array.from(pids).join(', ');
+      }
+    } else {
+      const output = execSync(`lsof -i :${targetPort} -sTCP:LISTEN -t`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+      const pid = output.trim();
+      if (pid) {
+        return `PID ${pid}`;
+      }
+    }
+  } catch {
+    // fallback gracefully
+  }
+  return null;
+}
+
 async function main() {
   if (await hasReusableVite()) {
     console.log(`[dev:ensure] Reusing existing Vite server at http://${host}:${port}`);
@@ -131,8 +168,10 @@ async function main() {
       }
     }
 
+    const conflict = getConflictingProcessInfo(port);
+    const detailMsg = conflict ? ` (PID/Process: ${conflict})` : '';
     console.error(
-      `[dev:ensure] Port ${port} is already occupied by a non-Vite process. ` +
+      `[dev:ensure] Port ${port} is already occupied by a non-Vite process${detailMsg}. ` +
       'Please free the port or stop the conflicting app.',
     );
     process.exit(1);

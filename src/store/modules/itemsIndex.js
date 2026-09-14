@@ -8,9 +8,12 @@ export const buildItemsById = (items) => {
   return map;
 };
 
-export const normalizeWorkbenchBucketId = (workbenchId) => {
+export const normalizeWorkbenchBucketId = (workbenchId, defaultWorkbenchId) => {
   const normalized = String(workbenchId || '').trim();
   if (!normalized || normalized === 'default') {
+    return 'default';
+  }
+  if (defaultWorkbenchId && normalized === String(defaultWorkbenchId).trim()) {
     return 'default';
   }
   return normalized;
@@ -84,12 +87,21 @@ export const buildPinnedItemIdsByWorkbench = (items) => {
   return idsByWorkbench;
 };
 
-export const getPinnedItemIdsForWorkbench = (pinnedItemIdsByWorkbench, workbenchId) => (
-  pinnedItemIdsByWorkbench?.get(normalizeWorkbenchBucketId(workbenchId)) || []
-);
+export const getPinnedItemIdsForWorkbench = (pinnedItemIdsByWorkbench, workbenchId, defaultWorkbenchId) => {
+  if (!pinnedItemIdsByWorkbench) return [];
+  const normalized = normalizeWorkbenchBucketId(workbenchId, defaultWorkbenchId);
+  if (normalized === 'default') {
+    const defaultBucket = pinnedItemIdsByWorkbench.get('default') || [];
+    const uuidBucket = defaultWorkbenchId ? (pinnedItemIdsByWorkbench.get(defaultWorkbenchId) || []) : [];
+    if (uuidBucket.length === 0) return defaultBucket;
+    const seen = new Set(defaultBucket);
+    return [...defaultBucket, ...uuidBucket.filter((id) => !seen.has(id))];
+  }
+  return pinnedItemIdsByWorkbench.get(normalized) || [];
+};
 
-export const getPinnedItemsForWorkbench = (itemsById, pinnedItemIdsByWorkbench, workbenchId) => (
-  getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, workbenchId)
+export const getPinnedItemsForWorkbench = (itemsById, pinnedItemIdsByWorkbench, workbenchId, defaultWorkbenchId) => (
+  getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, workbenchId, defaultWorkbenchId)
     .map((id) => itemsById?.get(id))
     .filter(Boolean)
 );

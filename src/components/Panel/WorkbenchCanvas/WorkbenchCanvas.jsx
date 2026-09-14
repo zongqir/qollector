@@ -39,15 +39,25 @@ const DEFAULT_NODE_HEIGHT = 190;
 const GRID_GAP = 24;
 const GRID_COLS = 3;
 
+const isDefaultWorkbench = (workbenchId, defaultWorkbenchId) => {
+  const normalized = String(workbenchId || '').trim();
+  return !normalized || normalized === 'default' || (defaultWorkbenchId && normalized === String(defaultWorkbenchId).trim());
+};
+
 const getCanvasLayoutStorageKey = (workbenchId) =>
   `qollect.workbench.canvas.layout.${workbenchId || 'default'}.v1`;
 
 const getCanvasEdgesStorageKey = (workbenchId) =>
   `qollect.workbench.canvas.edges.${workbenchId || 'default'}.v1`;
 
-const loadSavedLayout = (workbenchId) => {
+const loadSavedLayout = (workbenchId, defaultWorkbenchId) => {
   try {
-    const raw = localStorage.getItem(getCanvasLayoutStorageKey(workbenchId));
+    const isDefault = isDefaultWorkbench(workbenchId, defaultWorkbenchId);
+    const key = isDefault ? 'default' : workbenchId;
+    let raw = localStorage.getItem(getCanvasLayoutStorageKey(key));
+    if (!raw && isDefault && defaultWorkbenchId) {
+      raw = localStorage.getItem(getCanvasLayoutStorageKey(defaultWorkbenchId));
+    }
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -62,9 +72,14 @@ const persistSavedLayout = (workbenchId, layout) => {
   }
 };
 
-const loadSavedEdges = (workbenchId) => {
+const loadSavedEdges = (workbenchId, defaultWorkbenchId) => {
   try {
-    const raw = localStorage.getItem(getCanvasEdgesStorageKey(workbenchId));
+    const isDefault = isDefaultWorkbench(workbenchId, defaultWorkbenchId);
+    const key = isDefault ? 'default' : workbenchId;
+    let raw = localStorage.getItem(getCanvasEdgesStorageKey(key));
+    if (!raw && isDefault && defaultWorkbenchId) {
+      raw = localStorage.getItem(getCanvasEdgesStorageKey(defaultWorkbenchId));
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -97,19 +112,41 @@ const persistSavedEdges = (workbenchId, edges) => {
   }
 };
 
+const getColsForWidth = (containerWidth, totalNodes = 100) => {
+  if (containerWidth && containerWidth > 0) {
+    if (containerWidth < 580) return 1;
+    if (containerWidth < 900) return Math.min(2, totalNodes || 1);
+    if (containerWidth < 1240) return Math.min(3, totalNodes || 1);
+    return Math.min(4, totalNodes || 1);
+  }
+  if (totalNodes <= 2) return totalNodes || 1;
+  if (totalNodes <= 4) return 2;
+  if (totalNodes <= 8) return 3;
+  return 4;
+};
+
 /**
  * Smart collision-free slot finder.
  * Finds the first unoccupied grid slot so new notes never stack on top of existing notes.
  */
-const findNextAvailablePosition = (layoutMap) => {
+const findNextAvailablePosition = (layoutMap, containerWidth = 0) => {
   const occupied = Object.values(layoutMap || {}).filter(
     (p) => p && typeof p.x === 'number' && typeof p.y === 'number'
   );
 
+  const cols = getColsForWidth(containerWidth, 100);
+  const gap = GRID_GAP;
+  const colWidth = DEFAULT_NODE_WIDTH;
+  const totalGridWidth = cols * colWidth + (cols - 1) * gap;
+  const startX = containerWidth > totalGridWidth
+    ? Math.max(20, Math.floor((containerWidth - totalGridWidth) / 2))
+    : 24;
+  const startY = 24;
+
   for (let row = 0; row < 100; row++) {
-    for (let col = 0; col < GRID_COLS; col++) {
-      const candidateX = 40 + col * (DEFAULT_NODE_WIDTH + GRID_GAP);
-      const candidateY = 40 + row * (DEFAULT_NODE_HEIGHT + GRID_GAP);
+    for (let col = 0; col < cols; col++) {
+      const candidateX = startX + col * (colWidth + gap);
+      const candidateY = startY + row * (DEFAULT_NODE_HEIGHT + gap);
 
       const isOccupied = occupied.some((p) => {
         const w = p.width || DEFAULT_NODE_WIDTH;
@@ -124,7 +161,7 @@ const findNextAvailablePosition = (layoutMap) => {
       }
     }
   }
-  return { x: 40, y: 40 };
+  return { x: startX, y: startY };
 };
 
 /**
@@ -132,8 +169,10 @@ const findNextAvailablePosition = (layoutMap) => {
  * Orders connected chains in topological levels (source before target)
  * and dynamically calculates comfortable columns to keep text readable.
  */
-const computeArrangedLayout = (nodes, edges) => {
-  if (!nodes || nodes.length === 0) return { arrangedNodes: [], layoutMap: {} };
+const computeArrangedLayout = (nodes, edges, containerWidth = 0) => {
+  if (!nodes || nodes.length === 0) {
+    return { arrangedNodes: [], layoutMap: {}, cols: 1, startX: 24, startY: 24, totalGridWidth: 0 };
+  }
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
   const outgoing = new Map();
@@ -190,13 +229,37 @@ const computeArrangedLayout = (nodes, edges) => {
   );
 
   const orderedNodes = [...connectedNodes, ...standaloneNodes];
-
   const total = orderedNodes.length;
-  let dynamicCols = 3;
-  if (total <= 2) dynamicCols = total || 1;
-  else if (total <= 4) dynamicCols = 2;
-  else if (total <= 8) dynamicCols = 3;
-  else dynamicCols = 4;
+
+  const dynamicCols = getColsForWidth(containerWidth, total);
+  const gap = GRID_GAP;
+  const colWidth = DEFAULT_NODE_WIDTH;
+  const totalGridWidth = dynamicCols * colWidth + (dynamicCols - 1) * gap;
+
+  // Center horizontally inside containerWidth if possible
+  const startX = containerWidth > totalGridWidth
+    ? Math.max(20, Math.floor((containerWidth - totalGridWidth) / 2))
+    : 24;
+  const startY = 24;
+
+  // Calculate dynamic row heights to prevent overlap when notes vary in height
+  const rowHeights = new Map();
+  orderedNodes.forEach((node, index) => {
+    const row = Math.floor(index / dynamicCols);
+    const existing = node.style || {};
+    const rawH = existing.height || node.measured?.height || DEFAULT_NODE_HEIGHT;
+    const h = typeof rawH === 'number' ? rawH : parseInt(rawH, 10) || DEFAULT_NODE_HEIGHT;
+    const currentMax = rowHeights.get(row) || DEFAULT_NODE_HEIGHT;
+    rowHeights.set(row, Math.max(currentMax, h));
+  });
+
+  const rowY = new Map();
+  let currentY = startY;
+  const numRows = Math.ceil(total / dynamicCols);
+  for (let r = 0; r < numRows; r++) {
+    rowY.set(r, currentY);
+    currentY += (rowHeights.get(r) || DEFAULT_NODE_HEIGHT) + gap;
+  }
 
   const layoutMap = {};
   const arrangedNodes = orderedNodes.map((node, index) => {
@@ -207,8 +270,8 @@ const computeArrangedLayout = (nodes, edges) => {
     const height = typeof existing.height === 'number' ? existing.height : DEFAULT_NODE_HEIGHT;
 
     const position = {
-      x: 40 + col * (DEFAULT_NODE_WIDTH + GRID_GAP),
-      y: 40 + row * (DEFAULT_NODE_HEIGHT + GRID_GAP),
+      x: startX + col * (colWidth + gap),
+      y: rowY.get(row) ?? (startY + row * (DEFAULT_NODE_HEIGHT + gap)),
     };
 
     layoutMap[node.id] = { ...position, width, height };
@@ -219,13 +282,14 @@ const computeArrangedLayout = (nodes, edges) => {
     };
   });
 
-  return { arrangedNodes, layoutMap };
+  return { arrangedNodes, layoutMap, cols: dynamicCols, startX, startY, totalGridWidth, totalGridHeight: currentY - gap };
 };
 
 function WorkbenchCanvas({
   pinnedItems = [],
   workbenches = [],
   activeWorkbenchId,
+  defaultWorkbenchId,
   activeWorkbenchLabel,
   onSelectWorkbench,
   onCreateWorkbench,
@@ -263,11 +327,18 @@ function WorkbenchCanvas({
       : false
   );
   const reactFlowInstanceRef = useRef(null);
+  const containerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
   const layoutMapRef = useRef({});
   const hasFittedInitialViewRef = useRef(false);
   const boardSwitcherRef = useRef(null);
   const clearEdgesBtnRef = useRef(null);
+  const [isArranging, setIsArranging] = useState(false);
+  const isArrangingRef = useRef(false);
+
+  const canonicalWorkbenchId = useMemo(() => {
+    return isDefaultWorkbench(activeWorkbenchId, defaultWorkbenchId) ? 'default' : activeWorkbenchId;
+  }, [activeWorkbenchId, defaultWorkbenchId]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
@@ -299,9 +370,19 @@ function WorkbenchCanvas({
 
   // Load layout map and edges for this workbench
   useEffect(() => {
-    layoutMapRef.current = loadSavedLayout(activeWorkbenchId);
-    setEdges(loadSavedEdges(activeWorkbenchId));
-  }, [activeWorkbenchId]);
+    layoutMapRef.current = loadSavedLayout(canonicalWorkbenchId, defaultWorkbenchId);
+    setEdges(loadSavedEdges(canonicalWorkbenchId, defaultWorkbenchId));
+    const timer = setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({
+        padding: 0.12,
+        maxZoom: 1.0,
+        minZoom: 0.35,
+        duration: 250,
+        includeHiddenNodes: true,
+      });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [canonicalWorkbenchId, defaultWorkbenchId]);
 
   const handleUpdateNodeContent = useCallback(
     async (itemId, newContent) => {
@@ -344,9 +425,9 @@ function WorkbenchCanvas({
 
   const handleResizeNodeEnd = useCallback(
     () => {
-      persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+      persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
     },
-    [activeWorkbenchId]
+    [canonicalWorkbenchId]
   );
 
   const handleCopy = useCallback(
@@ -356,6 +437,22 @@ function WorkbenchCanvas({
       window.setTimeout(() => setCopiedId(null), 1200);
     },
     [onCopyItem]
+  );
+
+  const handleUnpinNode = useCallback(
+    (item) => {
+      if (item?.id) {
+        delete layoutMapRef.current[item.id];
+        persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
+        setEdges((prevEdges) => {
+          const nextEdges = prevEdges.filter((e) => e.source !== item.id && e.target !== item.id);
+          persistSavedEdges(canonicalWorkbenchId, nextEdges);
+          return nextEdges;
+        });
+      }
+      onUnpinItem?.(item);
+    },
+    [canonicalWorkbenchId, onUnpinItem]
   );
 
   // Synchronize pinned items to React Flow nodes with collision-free slot allocation
@@ -374,7 +471,7 @@ function WorkbenchCanvas({
         if (saved.width) width = saved.width;
         if (saved.height) height = saved.height;
       } else {
-        position = findNextAvailablePosition(layoutMap);
+        position = findNextAvailablePosition(layoutMap, containerRef.current?.clientWidth);
         layoutMap[item.id] = { ...position, width, height };
         hasNewUnsavedPositions = true;
       }
@@ -397,7 +494,7 @@ function WorkbenchCanvas({
           onStartExternalDrag,
           onResizeNode: handleResizeNode,
           onResizeNodeEnd: handleResizeNodeEnd,
-          onUnpin: onUnpinItem,
+          onUnpin: handleUnpinNode,
           onCopy: handleCopy,
           isCopied: copiedId === item.id,
           t,
@@ -408,18 +505,19 @@ function WorkbenchCanvas({
     });
 
     if (hasNewUnsavedPositions) {
-      persistSavedLayout(activeWorkbenchId, layoutMap);
+      persistSavedLayout(canonicalWorkbenchId, layoutMap);
     }
 
     setNodes(nextNodes);
   }, [
     pinnedItems,
-    activeWorkbenchId,
+    canonicalWorkbenchId,
     aiEnabled,
     copiedId,
     handleCopy,
     handleResizeNode,
     handleResizeNodeEnd,
+    handleUnpinNode,
     handleUpdateNodeContent,
     onEditItem,
     onPreviewItem,
@@ -429,7 +527,6 @@ function WorkbenchCanvas({
     onContextMenu,
     supportsNativeExternalDrag,
     onStartExternalDrag,
-    onUnpinItem,
     t,
     uiLanguage,
   ]);
@@ -458,24 +555,24 @@ function WorkbenchCanvas({
               height,
             };
           });
-          persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+          persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
         }, 200);
 
         return nextNodes;
       });
     },
-    [activeWorkbenchId]
+    [canonicalWorkbenchId]
   );
 
   const handleEdgesChange = useCallback(
     (changes) => {
       setEdges((currentEdges) => {
         const nextEdges = applyEdgeChanges(changes, currentEdges);
-        persistSavedEdges(activeWorkbenchId, nextEdges);
+        persistSavedEdges(canonicalWorkbenchId, nextEdges);
         return nextEdges;
       });
     },
-    [activeWorkbenchId]
+    [canonicalWorkbenchId]
   );
 
   const handleConnect = useCallback(
@@ -498,50 +595,85 @@ function WorkbenchCanvas({
           },
         };
         const nextEdges = addEdge(newEdge, currentEdges);
-        persistSavedEdges(activeWorkbenchId, nextEdges);
+        persistSavedEdges(canonicalWorkbenchId, nextEdges);
         return nextEdges;
       });
     },
-    [activeWorkbenchId]
+    [canonicalWorkbenchId]
   );
 
   const handleFitView = useCallback(() => {
-    reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 350 });
+    reactFlowInstanceRef.current?.fitView({
+      padding: 0.12,
+      maxZoom: 1.0,
+      minZoom: 0.2,
+      duration: 300,
+      includeHiddenNodes: true,
+    });
   }, []);
 
-  // Smooth fitView on initial load when nodes arrive
+  // View alignment on initial load when nodes arrive
   useEffect(() => {
     if (nodes.length > 0 && !hasFittedInitialViewRef.current && reactFlowInstanceRef.current) {
       hasFittedInitialViewRef.current = true;
-      const timer = setTimeout(() => {
-        reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 300 });
-      }, 80);
-      return () => clearTimeout(timer);
+      const cw = containerRef.current?.clientWidth || 0;
+      const targetZoom = cw > 0 && cw < 580
+        ? Math.min(1.0, Math.max(0.7, (cw - 32) / DEFAULT_NODE_WIDTH))
+        : 1.0;
+      reactFlowInstanceRef.current.setViewport({ x: 0, y: 0, zoom: targetZoom });
     }
   }, [nodes.length]);
 
   const handleAutoArrange = useCallback(() => {
-    const { arrangedNodes, layoutMap } = computeArrangedLayout(nodes, edges);
-    layoutMapRef.current = layoutMap;
-    persistSavedLayout(activeWorkbenchId, layoutMap);
-    setNodes(arrangedNodes);
-    window.setTimeout(() => {
-      reactFlowInstanceRef.current?.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75, duration: 350 });
-    }, 60);
-  }, [activeWorkbenchId, edges, nodes]);
+    if (isArrangingRef.current) return;
+    isArrangingRef.current = true;
+    setIsArranging(true);
+
+    try {
+      const containerWidth = containerRef.current?.clientWidth || 0;
+      const currentNodes = reactFlowInstanceRef.current?.getNodes() || nodes;
+
+      const { arrangedNodes, layoutMap } = computeArrangedLayout(
+        currentNodes,
+        edges,
+        containerWidth
+      );
+      layoutMapRef.current = layoutMap;
+      persistSavedLayout(canonicalWorkbenchId, layoutMap);
+      setNodes(arrangedNodes);
+
+      if (reactFlowInstanceRef.current && arrangedNodes.length > 0) {
+        reactFlowInstanceRef.current.fitView({
+          padding: 0.12,
+          maxZoom: 1.0,
+          minZoom: 0.35,
+          duration: 280,
+          includeHiddenNodes: true,
+        });
+      }
+    } catch (err) {
+      console.error('[WorkbenchCanvas] auto-arrange error:', err);
+    } finally {
+      window.setTimeout(() => {
+        isArrangingRef.current = false;
+        setIsArranging(false);
+      }, 290);
+    }
+  }, [canonicalWorkbenchId, edges, nodes]);
 
   const handleAddNewNote = useCallback(async () => {
     try {
       // Create blank note; grey hint text will be provided by placeholder
-      const nextPos = findNextAvailablePosition(layoutMapRef.current);
+      const nextPos = findNextAvailablePosition(layoutMapRef.current, containerRef.current?.clientWidth);
 
       let rawResult = null;
+      const targetWbId = canonicalWorkbenchId === 'default' ? (defaultWorkbenchId || undefined) : canonicalWorkbenchId;
       if (onAddQuickNote) {
         rawResult = await onAddQuickNote('');
       } else {
         rawResult = await saveQuickNote('', QUICK_INPUT_SOURCE, {
           autoPin: true,
-          workbenchId: activeWorkbenchId,
+          workbenchId: targetWbId,
         });
       }
 
@@ -555,13 +687,13 @@ function WorkbenchCanvas({
           width: DEFAULT_NODE_WIDTH,
           height: DEFAULT_NODE_HEIGHT,
         };
-        persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+        persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
       }
       onRefreshItems?.();
     } catch (error) {
       console.error('[WorkbenchCanvas] add note failed:', error);
     }
-  }, [activeWorkbenchId, onAddQuickNote, onRefreshItems]);
+  }, [canonicalWorkbenchId, defaultWorkbenchId, onAddQuickNote, onRefreshItems]);
 
   const lastPaneClickRef = useRef({ time: 0, x: 0, y: 0 });
   const lastCreatedNoteTimeRef = useRef(0);
@@ -584,12 +716,13 @@ function WorkbenchCanvas({
       try {
         // Create blank note; grey hint text will be provided by placeholder
         let rawResult = null;
+        const targetWbId = canonicalWorkbenchId === 'default' ? (defaultWorkbenchId || undefined) : canonicalWorkbenchId;
         if (onAddQuickNote) {
           rawResult = await onAddQuickNote('');
         } else {
           rawResult = await saveQuickNote('', QUICK_INPUT_SOURCE, {
             autoPin: true,
-            workbenchId: activeWorkbenchId,
+            workbenchId: targetWbId,
           });
         }
 
@@ -604,14 +737,14 @@ function WorkbenchCanvas({
             width: DEFAULT_NODE_WIDTH,
             height: DEFAULT_NODE_HEIGHT,
           };
-          persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+          persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
         }
         onRefreshItems?.();
       } catch (error) {
         console.error('[WorkbenchCanvas] create note failed:', error);
       }
     },
-    [activeWorkbenchId, onAddQuickNote, onRefreshItems]
+    [canonicalWorkbenchId, defaultWorkbenchId, onAddQuickNote, onRefreshItems]
   );
 
   const handlePaneClick = useCallback(
@@ -650,9 +783,9 @@ function WorkbenchCanvas({
 
   const handleConfirmClearEdges = useCallback(() => {
     setEdges([]);
-    persistSavedEdges(activeWorkbenchId, []);
+    persistSavedEdges(canonicalWorkbenchId, []);
     setShowClearEdgesConfirm(false);
-  }, [activeWorkbenchId]);
+  }, [canonicalWorkbenchId]);
 
   const handleInlineCreateSubmit = useCallback(
     async (e) => {
@@ -692,6 +825,7 @@ function WorkbenchCanvas({
       const noteX = Math.round(position.x - DEFAULT_NODE_WIDTH / 2);
       const noteY = Math.round(position.y - 30);
 
+      const targetWbId = canonicalWorkbenchId === 'default' ? (defaultWorkbenchId || undefined) : canonicalWorkbenchId;
       if (rawQollect) {
         try {
           const { id } = JSON.parse(rawQollect);
@@ -703,10 +837,10 @@ function WorkbenchCanvas({
               width: DEFAULT_NODE_WIDTH,
               height: DEFAULT_NODE_HEIGHT,
             };
-            persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+            persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
 
             // Pin to current active workbench
-            await pinItem(id, { workbenchId: activeWorkbenchId });
+            await pinItem(id, { workbenchId: targetWbId });
             onRefreshItems?.();
             return;
           }
@@ -724,7 +858,7 @@ function WorkbenchCanvas({
           } else {
             rawResult = await saveQuickNote(rawText.trim(), QUICK_INPUT_SOURCE, {
               autoPin: true,
-              workbenchId: activeWorkbenchId,
+              workbenchId: targetWbId,
             });
           }
           const newId = typeof rawResult === 'string' || typeof rawResult === 'number'
@@ -738,7 +872,7 @@ function WorkbenchCanvas({
               width: DEFAULT_NODE_WIDTH,
               height: DEFAULT_NODE_HEIGHT,
             };
-            persistSavedLayout(activeWorkbenchId, layoutMapRef.current);
+            persistSavedLayout(canonicalWorkbenchId, layoutMapRef.current);
           }
           onRefreshItems?.();
         } catch (err) {
@@ -746,7 +880,7 @@ function WorkbenchCanvas({
         }
       }
     },
-    [activeWorkbenchId, onAddQuickNote, onRefreshItems]
+    [canonicalWorkbenchId, defaultWorkbenchId, onAddQuickNote, onRefreshItems]
   );
 
   const currentBoardDisplayName = useMemo(() => {
@@ -763,7 +897,7 @@ function WorkbenchCanvas({
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
     >
-      <div className="workbench-canvas-wrapper">
+      <div className="workbench-canvas-wrapper" ref={containerRef}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -774,19 +908,28 @@ function WorkbenchCanvas({
           onPaneClick={handlePaneClick}
           onDoubleClick={handlePaneDoubleClick}
           zoomOnDoubleClick={false}
+          panOnScroll={true}
+          panOnDrag={true}
+          zoomOnScroll={false}
+          zoomOnPinch={true}
           connectionLineType="default"
           deleteKeyCode={['Backspace', 'Delete']}
           onInit={(instance) => {
             reactFlowInstanceRef.current = instance;
             if (nodes.length > 0) {
-              instance.fitView({ padding: 0.16, maxZoom: 1.0, minZoom: 0.75 });
+              instance.fitView({ padding: 0.12, maxZoom: 1.0, minZoom: 0.35, includeHiddenNodes: true });
+            } else {
+              const cw = containerRef.current?.clientWidth || 0;
+              const targetZoom = cw > 0 && cw < 580
+                ? Math.min(1.0, Math.max(0.7, (cw - 32) / DEFAULT_NODE_WIDTH))
+                : 1.0;
+              instance.setViewport({ x: 0, y: 0, zoom: targetZoom });
             }
           }}
           minZoom={0.2}
           maxZoom={2.5}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           proOptions={{ hideAttribution: true }}
-          fitView={nodes.length > 0}
         >
           <Background
             variant={BackgroundVariant.Dots}
@@ -1057,6 +1200,7 @@ function WorkbenchCanvas({
           className="workbench-canvas-tool-btn primary"
           onClick={handleAddNewNote}
           title={t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}
+          aria-label={t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}
         >
           <Plus size={14} />
           <span className="wb-tool-btn-text">{t ? t('workbench.createStickyNote') || '新建便签' : '新建便签'}</span>
@@ -1067,6 +1211,7 @@ function WorkbenchCanvas({
           className="workbench-canvas-tool-btn"
           onClick={handleFitView}
           title={t ? t('workbench.fitView') || '全览居中' : '全览居中'}
+          aria-label={t ? t('workbench.fitView') || '全览' : '全览'}
         >
           <Maximize2 size={13} />
           <span className="wb-tool-btn-text">{t ? t('workbench.fitView') || '全览' : '全览'}</span>
@@ -1074,11 +1219,13 @@ function WorkbenchCanvas({
 
         <button
           type="button"
-          className="workbench-canvas-tool-btn"
+          className={`workbench-canvas-tool-btn ${isArranging ? 'is-arranging' : ''}`}
           onClick={handleAutoArrange}
+          disabled={isArranging}
           title={t ? t('workbench.autoArrange') || '自动整齐排列' : '自动排列'}
+          aria-label={t ? t('workbench.autoArrange') || '整理' : '整理'}
         >
-          <LayoutGrid size={13} />
+          <LayoutGrid size={13} className={isArranging ? 'wb-spin-icon' : ''} />
           <span className="wb-tool-btn-text">{t ? t('workbench.autoArrange') || '整理' : '整理'}</span>
         </button>
 
@@ -1089,6 +1236,7 @@ function WorkbenchCanvas({
               className={`workbench-canvas-tool-btn danger-hover ${showClearEdgesConfirm ? 'active' : ''}`}
               onClick={() => setShowClearEdgesConfirm((prev) => !prev)}
               title={t ? t('workbench.clearEdges') || '清空连线' : '清空连线'}
+              aria-label={t ? t('workbench.clearEdges') || '清除连线' : '清除连线'}
             >
               <Unlink size={13} />
               <span className="wb-tool-btn-text">{t ? t('workbench.clearEdges') || '清除连线' : '清除连线'}</span>

@@ -144,10 +144,12 @@ export const createItemActions = (set, get) => ({
 
   togglePin: async (item) => {
     try {
-      const { maxPinnedItems, activeWorkbenchId } = get();
+      const { maxPinnedItems, activeWorkbenchId, workbenches } = get();
+      const defaultWorkbench = Array.isArray(workbenches) ? workbenches.find((w) => w.is_default) : null;
+      const targetWorkbenchId = activeWorkbenchId || defaultWorkbench?.id || null;
       const nextPinnedState = await toggleItemPin(item.id, {
         maxPinned: maxPinnedItems,
-        workbenchId: activeWorkbenchId,
+        workbenchId: targetWorkbenchId,
       });
       const now = Math.floor(Date.now() / 1000);
 
@@ -156,7 +158,8 @@ export const createItemActions = (set, get) => ({
         const unpinnedByLimitIds = new Set();
         const pinnedIdsInActiveWorkbench = getPinnedItemIdsForWorkbench(
           state.pinnedItemIdsByWorkbench,
-          activeWorkbenchId,
+          targetWorkbenchId,
+          defaultWorkbench?.id,
         ).filter((id) => id !== item.id);
         const alreadyPinnedItems = pinnedIdsInActiveWorkbench
           .map((id) => state.itemsById?.get(id))
@@ -192,7 +195,7 @@ export const createItemActions = (set, get) => ({
               is_pinned: nextPinnedState,
               pinned_at: nextPinnedState ? now : null,
               pin_order: nextPinnedState ? nextPinOrder : null,
-              workbench_id: nextPinnedState ? activeWorkbenchId : null,
+              workbench_id: nextPinnedState ? targetWorkbenchId : null,
               updated_at: now,
             };
           }
@@ -218,7 +221,7 @@ export const createItemActions = (set, get) => ({
             is_pinned: nextPinnedState,
             pinned_at: nextPinnedState ? now : null,
             pin_order: nextPinnedState ? nextPinOrder : null,
-            workbench_id: nextPinnedState ? activeWorkbenchId : null,
+            workbench_id: nextPinnedState ? targetWorkbenchId : null,
             updated_at: now,
           };
         } else if (previewItem && unpinnedByLimitIds.has(previewItem.id)) {

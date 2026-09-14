@@ -110,6 +110,9 @@
   border-radius: 30px;
   box-shadow: var(--wb-toolbar-shadow);
   pointer-events: auto;
+  max-width: calc(100% - 20px);
+  box-sizing: border-box;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -129,6 +132,18 @@
   cursor: pointer;
   transition: all 0.15s ease-out;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.workbench-canvas-tool-btn svg {
+  flex-shrink: 0;
+}
+
+.wb-tool-btn-text {
+  white-space: nowrap;
+  display: inline-block;
+  line-height: 1;
 }
 
 .workbench-canvas-tool-btn:hover:not(:disabled) {
@@ -147,10 +162,30 @@
   transform: translateY(-1px);
 }
 
+.workbench-canvas-tool-btn.is-arranging {
+  opacity: 0.8;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.workbench-canvas-tool-btn .wb-spin-icon {
+  animation: wb-spin 0.6s linear infinite;
+}
+
+@keyframes wb-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .workbench-canvas-tool-divider {
   width: 1px;
   height: 18px;
   background: var(--wb-toolbar-divider);
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -887,12 +922,16 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .workbench-canvas-tool-btn.board-btn {
   font-weight: 600;
   color: var(--text-primary);
   max-width: 170px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .workbench-canvas-tool-btn.board-btn.active {
@@ -901,6 +940,7 @@
 
 .workbench-canvas-board-label {
   max-width: 110px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1336,42 +1376,104 @@
    Mini & Narrow Mode Responsive
    ========================================================================== */
 
-@container (max-width: 520px) {
+/* Tier 1: Compact canvas (<= 640px) - Collapse secondary button text to icon-only */
+@container (max-width: 640px) {
   .workbench-canvas-toolbar {
-    bottom: 10px;
-    padding: 4px 6px;
-    gap: 3px;
+    bottom: 12px;
+    padding: 4px 8px;
+    gap: 4px;
     max-width: calc(100% - 16px);
   }
 
   .wb-tool-btn-text {
-    display: none !important;
+    display: none;
   }
 
   .workbench-canvas-tool-btn {
     height: 28px;
-    padding: 0 7px;
+    padding: 0 8px;
     min-width: 28px;
     gap: 0;
   }
 
   .workbench-canvas-tool-btn.primary {
-    padding: 0 9px;
-    gap: 3px;
+    padding: 0 10px;
+    gap: 4px;
+    min-width: unset;
   }
 
   .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
-    display: inline !important;
-    font-size: 11px;
+    display: inline-block !important;
+    font-size: 11.5px;
   }
 
   .workbench-canvas-board-label {
-    max-width: 56px;
+    max-width: 80px;
+    font-size: 11.5px;
+  }
+
+  .workbench-canvas-status-pill {
+    padding: 0 3px;
+    font-size: 10.5px;
+  }
+
+  .workbench-canvas-tool-divider {
+    height: 16px;
+  }
+}
+
+/* Tier 2: Mini canvas (<= 420px, e.g. 320x450) - All buttons collapse to icon-only */
+@container (max-width: 420px) {
+  .workbench-canvas-toolbar {
+    bottom: 10px;
+    padding: 3px 6px;
+    gap: 3px;
+    max-width: calc(100% - 12px);
+  }
+
+  .wb-tool-btn-text,
+  .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
+    display: none !important;
+  }
+
+  .workbench-canvas-tool-btn {
+    height: 28px;
+    padding: 0;
+    min-width: 28px;
+    width: 28px;
+    border-radius: 14px;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .workbench-canvas-tool-btn.primary {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border-radius: 14px;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .workbench-canvas-board-label {
+    max-width: 52px;
+    font-size: 11px;
+  }
+
+  .workbench-canvas-tool-btn.board-btn {
+    padding: 0 5px;
+    gap: 3px;
+    height: 28px;
+    width: auto;
+    min-width: 0;
+    border-radius: 14px;
   }
 
   .workbench-canvas-status-pill {
     padding: 0 2px;
     font-size: 10px;
+    gap: 3px;
   }
 
   .workbench-canvas-tool-divider {
@@ -1379,12 +1481,13 @@
   }
 }
 
-@media (max-width: 560px) {
+/* Viewport media query fallback */
+@media (max-width: 640px) {
   .workbench-canvas-toolbar {
     bottom: 12px;
     padding: 4px 8px;
     gap: 4px;
-    max-width: calc(100% - 24px);
+    max-width: calc(100% - 16px);
   }
 
   .wb-tool-btn-text {
@@ -1392,8 +1495,8 @@
   }
 
   .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
-    display: inline;
-    font-size: 11px;
+    display: inline-block;
+    font-size: 11.5px;
   }
 
   .workbench-canvas-tool-btn {
@@ -1403,7 +1506,34 @@
   }
 
   .workbench-canvas-board-label {
-    max-width: 65px;
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 420px) {
+  .wb-tool-btn-text,
+  .workbench-canvas-tool-btn.primary .wb-tool-btn-text {
+    display: none !important;
+  }
+
+  .workbench-canvas-tool-btn.primary {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border-radius: 14px;
+    justify-content: center;
+  }
+
+  .workbench-canvas-tool-btn.board-btn {
+    padding: 0 5px;
+    gap: 3px;
+    width: auto;
+    min-width: 0;
+  }
+
+  .workbench-canvas-board-label {
+    max-width: 52px;
   }
 }
 

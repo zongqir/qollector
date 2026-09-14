@@ -196,7 +196,14 @@ fn append_common_search_filters(
     if let Some(workbench_id) = &filters.workbench_id {
         let escaped = escape_sql_literal(workbench_id.trim());
         if !escaped.is_empty() {
-            sql.push_str(&format!(" AND {} = '{}'", workbench_column, escaped));
+            if escaped == "default" {
+                sql.push_str(&format!(
+                    " AND ({} = 'default' OR {} IS NULL OR TRIM({}) = '')",
+                    workbench_column, workbench_column, workbench_column
+                ));
+            } else {
+                sql.push_str(&format!(" AND {} = '{}'", workbench_column, escaped));
+            }
         }
     }
 
@@ -1584,12 +1591,18 @@ impl ClipboardRepository {
         &self,
         workbench_id: &str,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let default_workbench_id = self.ensure_default_workbench().await?;
+        let is_default = workbench_id == default_workbench_id || workbench_id == "default";
+
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT * FROM clipboard_items
-             WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ?
+             WHERE is_deleted = 0 AND is_pinned = 1 AND (
+               workbench_id = ? OR (? = 1 AND (workbench_id IS NULL OR TRIM(workbench_id) = '' OR workbench_id = 'default'))
+             )
              ORDER BY pinned_at ASC, created_at ASC, id ASC",
         )
-        .bind(workbench_id)
+        .bind(if is_default { &default_workbench_id } else { workbench_id })
+        .bind(if is_default { 1 } else { 0 })
         .fetch_all(&self.pool)
         .await?;
 
@@ -1601,9 +1614,26 @@ impl ClipboardRepository {
         &self,
         workbench_id: &str,
     ) -> Result<Vec<ClipboardItem>, sqlx::Error> {
+        let default_workbench_id = self.ensure_default_workbench().await?;
+        let is_default = workbench_id == default_workbench_id || workbench_id == "default";
+
+        if is_default {
+            // Self-healing backfill for any legacy or unassigned pinned items
+            let _ = sqlx::query(
+                "UPDATE clipboard_items
+                 SET workbench_id = ?
+                 WHERE is_deleted = 0 AND is_pinned = 1 AND (workbench_id IS NULL OR TRIM(workbench_id) = '' OR workbench_id = 'default')",
+            )
+            .bind(&default_workbench_id)
+            .execute(&self.pool)
+            .await;
+        }
+
         let items = sqlx::query_as::<_, ClipboardItem>(
             "SELECT * FROM clipboard_items
-             WHERE is_deleted = 0 AND is_pinned = 1 AND workbench_id = ?
+             WHERE is_deleted = 0 AND is_pinned = 1 AND (
+               workbench_id = ? OR (? = 1 AND (workbench_id IS NULL OR TRIM(workbench_id) = '' OR workbench_id = 'default'))
+             )
              ORDER BY
                CASE WHEN pin_order IS NULL OR pin_order <= 0 THEN 1 ELSE 0 END ASC,
                pin_order ASC,
@@ -1611,7 +1641,8 @@ impl ClipboardRepository {
                created_at DESC,
                id DESC",
         )
-        .bind(workbench_id)
+        .bind(if is_default { &default_workbench_id } else { workbench_id })
+        .bind(if is_default { 1 } else { 0 })
         .fetch_all(&self.pool)
         .await?;
 

@@ -275,12 +275,24 @@ function WorkbenchPanel() {
   const memorySuspendVersion = useAppStore(s => s.memorySuspendVersion);
   const memoryResumeVersion = useAppStore(s => s.memoryResumeVersion);
 
+  const defaultWorkbench = useMemo(
+    () => workbenches.find((workbench) => workbench.is_default) || null,
+    [workbenches],
+  );
+  const defaultWorkbenchId = defaultWorkbench?.id || null;
+
   const activeWorkbench = useMemo(
     () => workbenches.find((workbench) => workbench.id === activeWorkbenchId)
-      || workbenches.find((workbench) => workbench.is_default)
+      || defaultWorkbench
       || null,
-    [workbenches, activeWorkbenchId],
+    [workbenches, activeWorkbenchId, defaultWorkbench],
   );
+
+  const resolvedWorkbenchId = activeWorkbench?.id || activeWorkbenchId || defaultWorkbenchId || null;
+  const isCurrentDefaultWorkbench = !activeWorkbenchId
+    || activeWorkbenchId === 'default'
+    || (defaultWorkbenchId && activeWorkbenchId === defaultWorkbenchId)
+    || Boolean(activeWorkbench?.is_default);
   const isWorkbenchSplitView = workbenchPanelEnabled && historyStreamEnabled;
 
   const getWorkbenchDisplayName = useCallback((workbench) => {
@@ -388,7 +400,7 @@ function WorkbenchPanel() {
     if (!workbenchStateLoaded || isMemorySuspended) return undefined;
     let cancelled = false;
     setWorkbenchLoading(true);
-    getWorkbenchPinnedItems(activeWorkbenchId || undefined)
+    getWorkbenchPinnedItems(resolvedWorkbenchId || undefined)
       .then((results) => {
         if (cancelled) return;
         setBackendPinnedItems(Array.isArray(results) ? results : []);
@@ -411,7 +423,7 @@ function WorkbenchPanel() {
       cancelled = true;
     };
   }, [
-    activeWorkbenchId,
+    resolvedWorkbenchId,
     itemsRevision,
     workbenchRefreshNonce,
     t,
@@ -497,8 +509,8 @@ function WorkbenchPanel() {
   ]);
 
   const storePinnedIds = useMemo(
-    () => getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, activeWorkbenchId),
-    [pinnedItemIdsByWorkbench, activeWorkbenchId],
+    () => getPinnedItemIdsForWorkbench(pinnedItemIdsByWorkbench, activeWorkbenchId, defaultWorkbenchId),
+    [pinnedItemIdsByWorkbench, activeWorkbenchId, defaultWorkbenchId],
   );
   const backendPinnedItemsById = useMemo(() => {
     const map = new Map();
@@ -518,21 +530,44 @@ function WorkbenchPanel() {
       ...orderedBackendIds,
       ...storePinnedIds.filter((id) => !seenIds.has(id)),
     ];
-    const normalizedWorkbenchId = normalizeWorkbenchBucketId(activeWorkbenchId);
     return mergedIds
       .map((id) => {
         const fromStore = itemsById?.get(id);
         const fromBackend = backendPinnedItemsById.get(id);
         if (fromStore && fromBackend) {
-          return { ...fromBackend, ...fromStore };
+          return {
+            ...fromBackend,
+            ...fromStore,
+            workbench_id: fromBackend.workbench_id || fromStore.workbench_id,
+          };
         }
         return fromBackend || fromStore;
       })
-      .filter((item) => (
-        Boolean(item?.is_pinned)
-        && normalizeWorkbenchBucketId(item.workbench_id) === normalizedWorkbenchId
-      ));
-  }, [activeWorkbenchId, backendPinnedItems, backendPinnedItemsById, itemsById, storePinnedIds]);
+      .filter((item) => {
+        if (!item || item.is_pinned === false) return false;
+
+        // If returned directly by backend for this workbench, keep it!
+        if (backendPinnedItemsById.has(item.id)) return true;
+
+        // For items only in store, check if they belong to this workbench
+        if (isCurrentDefaultWorkbench) {
+          return (
+            !item.workbench_id
+            || item.workbench_id === 'default'
+            || (defaultWorkbenchId && item.workbench_id === defaultWorkbenchId)
+          );
+        }
+        return item.workbench_id === resolvedWorkbenchId;
+      });
+  }, [
+    backendPinnedItems,
+    backendPinnedItemsById,
+    storePinnedIds,
+    itemsById,
+    isCurrentDefaultWorkbench,
+    defaultWorkbenchId,
+    resolvedWorkbenchId,
+  ]);
   const allPinnedItems = pinnedBaseItems;
 
   const workbenchBackendFilterRequest = useMemo(() => {
@@ -544,7 +579,7 @@ function WorkbenchPanel() {
       selectedDateRange,
       baseFilters: {
         is_pinned: true,
-        ...(activeWorkbenchId ? { workbench_id: activeWorkbenchId } : {}),
+        ...(resolvedWorkbenchId ? { workbench_id: resolvedWorkbenchId } : {}),
       },
       triggerMode: SEARCH_REQUEST_TRIGGER_MODE.ADDITIONAL_STRUCTURED_FILTER,
       t,
@@ -555,7 +590,7 @@ function WorkbenchPanel() {
     showFavoritesOnly,
     selectedTags,
     selectedDateRange,
-    activeWorkbenchId,
+    resolvedWorkbenchId,
     t,
     i18n.language,
   ]);
@@ -868,16 +903,16 @@ function WorkbenchPanel() {
     const nextOrderedItems = arrayMove(allPinnedItems, oldIndex, newIndex);
     const orderedIds = nextOrderedItems.map(item => item.id);
     setBackendPinnedItems(nextOrderedItems);
-    reorderWorkbenchPinnedItems(orderedIds, activeWorkbenchId || undefined).catch(async (error) => {
+    reorderWorkbenchPinnedItems(orderedIds, resolvedWorkbenchId || undefined).catch(async (error) => {
       console.error('[Workbench] persist pinned order failed:', error);
       try {
-        const latest = await getWorkbenchPinnedItems(activeWorkbenchId || undefined);
+        const latest = await getWorkbenchPinnedItems(resolvedWorkbenchId || undefined);
         setBackendPinnedItems(Array.isArray(latest) ? latest : []);
       } catch (refreshError) {
         console.error('[Workbench] refresh pinned items after reorder failed:', refreshError);
       }
     });
-  }, [activeWorkbenchId, allPinnedItems, isWorkbenchSortMode]);
+  }, [resolvedWorkbenchId, allPinnedItems, isWorkbenchSortMode]);
 
   const handleWorkbenchTypeChange = useCallback((nextType) => {
     setSelectedType(nextType);
@@ -2437,7 +2472,8 @@ function WorkbenchPanel() {
         <WorkbenchCanvas
           pinnedItems={pinnedItems}
           workbenches={workbenches}
-          activeWorkbenchId={activeWorkbenchId}
+          activeWorkbenchId={resolvedWorkbenchId || activeWorkbenchId}
+          defaultWorkbenchId={defaultWorkbenchId}
           activeWorkbenchLabel={activeWorkbenchLabel}
           onSelectWorkbench={handleSelectWorkbench}
           onCreateWorkbench={handleCreateWorkbench}

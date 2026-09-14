@@ -460,6 +460,7 @@ function App() {
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
   const loadConfigs = useAppStore(s => s.loadConfigs);
+  const loadWorkbenches = useAppStore(s => s.loadWorkbenches);
   const setShowSettings = useAppStore(s => s.setShowSettings);
   const setIsAlwaysOnTop = useAppStore(s => s.setIsAlwaysOnTop);
   const setIsMiniMode = useAppStore(s => s.setIsMiniMode);
@@ -482,6 +483,7 @@ function App() {
 
     console.log('[Perf:App] Calling loadItems() at', performance.now().toFixed(1), 'ms');
     loadItems();
+    loadWorkbenches().catch((err) => console.error('[Perf:App] loadWorkbenches failed:', err));
     let prewarmTimer = null;
     let idleHandle = null;
     const warmup = () => {
