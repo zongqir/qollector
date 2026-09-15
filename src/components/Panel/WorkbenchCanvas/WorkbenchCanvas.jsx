@@ -666,14 +666,37 @@ function WorkbenchCanvas({
     [canonicalWorkbenchId]
   );
 
+  const [isFittingView, setIsFittingView] = useState(false);
+  const fitViewTimerRef = useRef(null);
+
   const handleFitView = useCallback(() => {
+    if (isFittingView) return;
+    setIsFittingView(true);
+
+    if (fitViewTimerRef.current) {
+      clearTimeout(fitViewTimerRef.current);
+    }
+
     reactFlowInstanceRef.current?.fitView({
-      padding: 0.12,
+      padding: 0.14,
       maxZoom: 1.0,
       minZoom: 0.2,
-      duration: 300,
+      duration: 380,
       includeHiddenNodes: true,
     });
+
+    fitViewTimerRef.current = setTimeout(() => {
+      setIsFittingView(false);
+      fitViewTimerRef.current = null;
+    }, 550);
+  }, [isFittingView]);
+
+  useEffect(() => {
+    return () => {
+      if (fitViewTimerRef.current) {
+        clearTimeout(fitViewTimerRef.current);
+      }
+    };
   }, []);
 
   // View alignment on initial load when nodes arrive
@@ -961,7 +984,7 @@ function WorkbenchCanvas({
       onDragOver={handleCanvasDragOver}
       onDrop={handleCanvasDrop}
     >
-      <div className="workbench-canvas-wrapper" ref={containerRef}>
+      <div className={`workbench-canvas-wrapper ${isFittingView ? 'wb-focal-bounce' : ''}`} ref={containerRef}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1272,13 +1295,17 @@ function WorkbenchCanvas({
 
         <button
           type="button"
-          className="workbench-canvas-tool-btn"
+          className={`workbench-canvas-tool-btn ${isFittingView ? 'is-fitting' : ''}`}
           onClick={handleFitView}
-          title={t ? t('workbench.fitView') || '全览居中' : '全览居中'}
-          aria-label={t ? t('workbench.fitView') || '全览' : '全览'}
+          title={t ? t('workbench.fitViewTooltip') || '居中全貌 (复位视野)' : '居中全貌 (复位视野)'}
+          aria-label={t ? t('workbench.fitView') || '居中全貌' : '居中全貌'}
         >
-          <Maximize2 size={13} />
-          <span className="wb-tool-btn-text">{t ? t('workbench.fitView') || '全览' : '全览'}</span>
+          <Maximize2 size={13} className={isFittingView ? 'wb-fit-bounce' : ''} />
+          <span className="wb-tool-btn-text">
+            {isFittingView
+              ? (t ? t('workbench.fitViewActive') || '已居中' : '已居中')
+              : (t ? t('workbench.fitView') || '居中全貌' : '居中全貌')}
+          </span>
         </button>
 
         <button

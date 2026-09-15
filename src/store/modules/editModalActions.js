@@ -5,7 +5,7 @@ import { buildItemDerivations } from './itemsIndex';
 
 export const createEditModalActions = (set, get) => ({
   openEditModal: (item = null, options = {}) => {
-    const initialFocus = options?.initialFocus === 'content' ? 'content' : 'note';
+    const initialFocus = options?.initialFocus === 'note' ? 'note' : 'content';
     if (item) {
       set({
         editModalMode: 'edit',

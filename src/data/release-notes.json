@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.4.9",
+      "publishedAt": "2026-09-16",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-9",
+      "summary": {
+        "zh-CN": "编辑卡片体验全新升级，工作台便签与多画布数据分桶彻底修复，画布置顶居中全貌灵动反馈。",
+        "en-US": "Revamped card editing workflow with prominent text editor, robust workbench canvas board data isolation, and organic fit-view focal feedback."
+      },
+      "highlights": {
+        "zh-CN": [
+          "原文优先编辑弹窗：编辑弹窗全面重构，原文内容置顶为主编辑区并支持字符统计，备注与标签轻量收拢，小窗及极窄迷你模式自适应排版。",
+          "工作台多画布数据分桶修复：彻底解决便签在默认工作台与自定义画板之间的归属判定、关联丢失与去重问题，画布状态更可靠稳定。",
+          "便签正文直接持久化：便签内容支持独立更新通道，修改直接落库与即时同步，免去整卡重建开销。",
+          "居中全貌灵动视野反馈：画布居中全览增加触觉动效与卡片微弹聚焦反馈，重置视野一目了然。",
+          "图片预览支持：编辑卡片弹窗支持图片类型条目的原图缩略预览。"
+        ],
+        "en-US": [
+          "Content-First Card Editor: Redesigned modal prioritizes direct content editing with live character count, compact notes and tags, and full mini-window responsiveness.",
+          "Workbench Board Isolation: Resolved data scoping and bucket deduplication across default and custom canvas boards, ensuring notes stay in place.",
+          "Direct Note Persistence: Added dedicated fast-path persistence for note content edits without full card reloads.",
+          "Dynamic Fit-View Feedback: Center View now delivers tactile button bounce, node pulse feedback, and clear state acknowledgment.",
+          "Image Preview Support: Card editor now supports native thumbnail previews for image items."
+        ]
+      }
+    },
+    {
       "version": "0.4.8",
       "publishedAt": "2026-09-13",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-8",

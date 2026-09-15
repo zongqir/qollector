@@ -501,9 +501,9 @@ function StickyNoteNode({ data, selected }) {
               className="sticky-note-action-btn"
               onClick={(e) => {
                 stopActionClick(e);
-                onEditItem?.(item);
+                onEditItem?.(item, { initialFocus: 'content' });
               }}
-              title={t ? t('item.editNote') || '编辑' : '编辑'}
+              title={t ? t('workbench.editCard') || '编辑卡片' : '编辑卡片'}
             >
               <Pencil size={12} />
             </button>

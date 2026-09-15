@@ -11,7 +11,7 @@ html {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--accent-color, #007aff) 22%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 22%, transparent);
   color: inherit;
 }
 

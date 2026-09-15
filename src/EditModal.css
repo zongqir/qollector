@@ -36,10 +36,6 @@
   transition: transform 0.22s ease;
 }
 
-.edit-modal.content-expanded {
-  transform: translateY(-26px);
-}
-
 @keyframes slideUp {
   from {
     transform: translateY(20px);
@@ -99,18 +95,51 @@
   margin-bottom: 0;
 }
 
-.edit-modal-field-note-primary {
-  margin-bottom: 14px;
+.edit-modal-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.edit-modal-char-count {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.edit-modal-field-content {
+  margin-bottom: 12px;
+}
+
+.edit-modal-field-note {
+  margin-bottom: 12px;
 }
 
 .edit-modal-field-tags {
   margin-bottom: 10px;
 }
 
-.edit-modal-field-content-secondary {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border-light);
+.edit-modal-field-image-preview {
+  margin-bottom: 12px;
+}
+
+.edit-modal-image-container {
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 180px;
+  overflow: hidden;
+}
+
+.edit-modal-image {
+  max-width: 100%;
+  max-height: 164px;
+  object-fit: contain;
+  border-radius: 4px;
 }
 
 .edit-modal-label {
@@ -170,65 +199,25 @@
   color: var(--text-tertiary);
 }
 
-/* 内容输入框 - 更大 */
+/* 原文内容输入框 - 主编辑区 */
 .edit-modal-textarea-content {
-  min-height: 180px;
+  min-height: 160px;
+  max-height: 360px;
   font-size: 13px;
+  font-family: inherit;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: break-word;
 }
 
+/* 备注输入框 - 辅助紧凑区 */
 .edit-modal-textarea-note {
-  min-height: 140px;
-  font-size: 14px;
-  line-height: 1.55;
+  min-height: 68px;
+  max-height: 160px;
+  font-size: 13px;
+  line-height: 1.5;
   white-space: pre-wrap;
-}
-
-.edit-modal-field-hint {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-
-.edit-modal-content-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.edit-modal-content-toggle-btn {
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1;
-  padding: 6px 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.edit-modal-content-toggle-btn:hover {
-  border-color: var(--accent-color);
-  color: var(--accent-color);
-  background: var(--accent-light);
-}
-
-.edit-modal-content-preview {
-  border: 1px dashed var(--border-input);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  max-height: 88px;
-  overflow: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 /* 已有标签显示 - 紧凑 */
@@ -675,14 +664,14 @@
     padding: 12px;
   }
 
-  .edit-modal-textarea-note {
-    min-height: 108px;
+  .edit-modal-textarea-content {
+    min-height: 120px;
+    max-height: 220px;
   }
 
-  .edit-modal-content-toggle-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+  .edit-modal-textarea-note {
+    min-height: 56px;
+    max-height: 110px;
   }
 
   .edit-modal-footer {
@@ -711,4 +700,22 @@
     justify-content: center;
     order: 2;
   }
+}
+
+.edit-modal.is-mini {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+}
+
+.edit-modal.is-mini .edit-modal-textarea-content {
+  min-height: 110px;
+  max-height: 180px;
+}
+
+.edit-modal.is-mini .edit-modal-textarea-note {
+  min-height: 52px;
+  max-height: 90px;
 }

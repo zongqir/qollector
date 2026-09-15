@@ -5,6 +5,7 @@ import { X, Check, Plus, Pin, PinOff, Tag } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import { pinItem } from './services/clipboardService';
 import { QUICK_INPUT_SOURCE } from './utils/sourceConstants';
+import { getImageThumbnail } from './utils/imageHelpers';
 import './EditModal.css';
 
 const NOTE_COLORS = [
@@ -24,7 +25,6 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
   const [newTag, setNewTag] = useState('');
   const [isTagInputFocused, setIsTagInputFocused] = useState(false);
   const [activeTagSuggestionIndex, setActiveTagSuggestionIndex] = useState(-1);
-  const [showContentEditor, setShowContentEditor] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
   const [savePending, setSavePending] = useState(false);
   const [saveContinuePending, setSaveContinuePending] = useState(false);
@@ -98,31 +98,22 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
       setNote('');
       setTags([]);
     }
-    setShowContentEditor(initialFocus === 'content');
     setNewTag('');
     setIsTagInputFocused(false);
     setActiveTagSuggestionIndex(-1);
-  }, [item, mode, initialFocus]);
+  }, [item, mode]);
 
   useEffect(() => {
-    if (!showContentEditor) return;
+    if (mode !== 'edit') return undefined;
     const timer = setTimeout(() => {
-      contentEditorRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-      contentEditorRef.current?.querySelector('textarea')?.focus();
+      if (initialFocus === 'note' || (item && item.type_ === 'image')) {
+        noteEditorRef.current?.focus();
+      } else {
+        contentEditorRef.current?.focus();
+      }
     }, 60);
     return () => clearTimeout(timer);
-  }, [showContentEditor]);
-
-  useEffect(() => {
-    if (mode !== 'edit' || initialFocus === 'content') return undefined;
-    const timer = setTimeout(() => {
-      noteEditorRef.current?.focus();
-    }, 60);
-    return () => clearTimeout(timer);
-  }, [mode, initialFocus, item?.id]);
+  }, [mode, initialFocus, item]);
 
   const rankedUserTags = useMemo(() => {
     const statsByTag = new Map();
@@ -419,14 +410,60 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
 
   return (
     <div className="edit-modal-overlay" onClick={onCancel}>
-      <div className={`edit-modal ${showContentEditor ? 'content-expanded' : ''}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`edit-modal ${isMiniMode ? 'is-mini' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="edit-modal-header">
-          <h3>{isNewMode ? t('editModal.newTitle') : isContentEditMode ? t('editModal.editContentTitle') : t('editModal.editTitle')}</h3>
-          <button onClick={onCancel} className="edit-modal-close"><X size={20} /></button>
+          <h3>
+            {isNewMode
+              ? t('editModal.newTitle')
+              : isContentEditMode
+                ? t('editModal.editContentTitle')
+                : t('editModal.editTitle')}
+          </h3>
+          <button onClick={onCancel} className="edit-modal-close" title={t('common.cancel')}>
+            <X size={18} />
+          </button>
         </div>
 
         <div className="edit-modal-body">
-          <div className="edit-modal-field edit-modal-field-note-primary">
+          {/* 原文内容区域 (优先置顶展示) */}
+          {canEdit ? (
+            <div className="edit-modal-field edit-modal-field-content">
+              <div className="edit-modal-field-header">
+                <label className="edit-modal-label">{t('editModal.contentOriginal')}</label>
+                {content ? (
+                  <span className="edit-modal-char-count">
+                    {t('editModal.charCount', { count: content.length })}
+                  </span>
+                ) : null}
+              </div>
+              <textarea
+                ref={contentEditorRef}
+                className="edit-modal-textarea edit-modal-textarea-content"
+                placeholder={t('editModal.contentPlaceholder')}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={7}
+              />
+            </div>
+          ) : item?.type_ === 'image' && item.image_paths ? (
+            <div className="edit-modal-field edit-modal-field-image-preview">
+              <label className="edit-modal-label">{t('editModal.imagePreview') || '图片'}</label>
+              <div className="edit-modal-image-container">
+                <img
+                  src={getImageThumbnail(item.image_paths)}
+                  alt="Clipboard image"
+                  className="edit-modal-image"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {/* 备注区域 (次要字段，位于内容之后) */}
+          <div className="edit-modal-field edit-modal-field-note">
             <label className="edit-modal-label">{t('editModal.note')}</label>
             <textarea
               ref={noteEditorRef}
@@ -435,12 +472,11 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               onKeyDown={handleKeyDown}
-              autoFocus={!isContentEditMode}
-              rows={6}
+              rows={3}
             />
-            <div className="edit-modal-field-hint">{t('editModal.notePrimaryHint')}</div>
           </div>
 
+          {/* 标签区域 */}
           <div className="edit-modal-field edit-modal-field-tags">
             <label className="edit-modal-label">{t('editModal.tags')}</label>
             <div className="edit-modal-tag-input-wrapper">
@@ -459,7 +495,12 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
                   setTimeout(() => setIsTagInputFocused(false), 120);
                 }}
               />
-              <button onClick={handleAddTag} className="edit-modal-tag-add-btn">
+              <button
+                type="button"
+                onClick={handleAddTag}
+                className="edit-modal-tag-add-btn"
+                title={t('editModal.addTag')}
+              >
                 +
               </button>
             </div>
@@ -481,53 +522,25 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
                 ))}
               </div>
             )}
-          </div>
 
-          {tags.length > 0 && (
-            <div className="edit-modal-tags">
-              {tags.map((tag, index) => (
-                <span key={index} className="edit-modal-tag">
-                  {tag}
-                  <button
-                    onClick={() => handleRemoveTag(tag)}
-                    className="edit-modal-tag-remove"
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {canEdit && (
-            <div ref={contentEditorRef} className="edit-modal-field edit-modal-field-content-secondary">
-              <div className="edit-modal-content-toggle-row">
-                <label className="edit-modal-label">{isContentEditMode ? t('editModal.contentOriginal') : t('editModal.contentOptional')}</label>
-                <button
-                  type="button"
-                  className="edit-modal-content-toggle-btn"
-                  onClick={() => setShowContentEditor(prev => !prev)}
-                >
-                  {showContentEditor ? t('editModal.collapseContentEditor') : t('editModal.expandContentEditor')}
-                </button>
+            {tags.length > 0 && (
+              <div className="edit-modal-tags">
+                {tags.map((tag, index) => (
+                  <span key={index} className="edit-modal-tag">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="edit-modal-tag-remove"
+                      title={t('common.delete') || '删除'}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
               </div>
-
-              {!showContentEditor ? (
-                <div className="edit-modal-content-preview">
-                  {contentPreview || t('editModal.contentSecondaryHint')}
-                </div>
-              ) : (
-                <textarea
-                  className="edit-modal-textarea edit-modal-textarea-content"
-                  placeholder={t('editModal.contentPlaceholder')}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  rows={8}
-                />
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="edit-modal-footer">
@@ -537,15 +550,16 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
             <span className="hint-item">{t('editModal.cancelHint')}</span>
           </div>
           <div className="edit-modal-actions">
-            <button onClick={onCancel} className="edit-modal-btn cancel">
+            <button type="button" onClick={onCancel} className="edit-modal-btn cancel">
               {t('edit.cancel')}
             </button>
             <button
+              type="button"
               onClick={handleSave}
               className="edit-modal-btn submit"
               disabled={savePending || saveContinuePending}
             >
-              {isContentEditMode ? t('editModal.saveContentPrimary') : t('editModal.savePrimary')}
+              {t('editModal.savePrimary')}
             </button>
           </div>
         </div>

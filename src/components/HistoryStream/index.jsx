@@ -857,7 +857,7 @@ function HistoryStream({ style }) {
           closeContextMenu();
           return;
         case 'editNote':
-          openEditModal(currentItem);
+          openEditModal(currentItem, { initialFocus: 'note' });
           closeContextMenu();
           return;
         case 'editContent':
