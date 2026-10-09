@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.0",
+      "publishedAt": "2026-10-09",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-0",
+      "summary": {
+        "zh-CN": "大版本重构：全面剥离画布与复杂工作台，架构净减负 1.2 万行，回归极速“全量历史流 + 精选收藏夹”双流模型与常驻高保真深度预览。",
+        "en-US": "Major v0.5.0 redesign: completely removed canvas and heavy workbench for 12k+ LOC reduction, returning to lightning-fast history stream + favorites collection with persistent rich preview."
+      },
+      "highlights": {
+        "zh-CN": [
+          "轻量架构全面回归：物理拔除 ReactFlow 画布、手柄连线及独立工作台系统，卸载重型依赖，应用冷启动与内存占用显著改善。",
+          "经典双流高效交互：主视口收敛为极简的“全量历史流（滚动淘汰）”与“精选收藏板（长期留存）”，一键切换无认知负担。",
+          "常驻高保真深度预览：右侧面板重构为专属 PreviewPanel，支持长文本快速滚动、代码语法高亮、大图缩略与 OCR 文本提取，未选中条目时呈现精致毛玻璃空态。",
+          "数据无损平滑迁移：内置 SQLite Schema V9 原子迁移，历史工作台中的钉选内容与便签 100% 自动安全平移至收藏夹，老用户资产零丢失。",
+          "便签与拖拽直达收藏：快捷便签录入与外部文件拖入默认标记为收藏保存，避免被历史清理规则误淘。"
+        ],
+        "en-US": [
+          "Lightweight Core Refactor: Completely eliminated ReactFlow canvas whiteboard, bezier flowlines, and heavy workbench, slashing 12k+ LOC and optimizing startup memory.",
+          "Dual-Stream Simplicity: Main view refined into high-frequency History Stream (auto-pruned) and Curated Favorites Board (permanent assets) with zero cognitive friction.",
+          "Dedicated Rich Preview Panel: Right pane transformed into permanent high-fidelity PreviewPanel with syntax highlighting, deep text scrolling, image lightbox, and OCR text tools.",
+          "Zero-Loss Database Migration: Automated SQLite Schema V9 migration safely promotes all legacy workbench and sticky note items into favorites without data loss.",
+          "Direct Asset Persistence: Quick Notes and external dropped files are automatically favorited by default, immune to history auto-cleanup."
+        ]
+      }
+    },
+    {
       "version": "0.4.9",
       "publishedAt": "2026-09-16",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-4-9",
