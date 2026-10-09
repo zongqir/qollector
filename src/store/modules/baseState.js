@@ -5,11 +5,7 @@ export const createBaseState = ({
   historyRecentSearches,
   collectionRecentSearches,
   savedFilterViews,
-  workbenchRecentSearches,
-  workbenchSavedFilterViews,
   historyStreamEnabled,
-  initialActiveWorkbenchId,
-  initialWorkbenchSearchScope,
 }) => {
   const itemDerivations = buildItemDerivations(initialHistorySnapshot);
   return ({
@@ -27,10 +23,10 @@ export const createBaseState = ({
   memoryResumeVersion: 0,
 
   // ========== 右栏面板状态机 ==========
-  // 'workbench' | 'preview' | 'compare' | 'timeline'
-  panelMode: 'workbench',
+  // 'preview' | 'compare' | 'timeline'
+  panelMode: 'preview',
   previewItem: null,
-  previewReturnMode: 'workbench',
+  previewReturnMode: 'preview',
   previewReturnViewMode: 'all',
   compareCandidateIds: [],
   compareItemIds: [],
@@ -61,22 +57,6 @@ export const createBaseState = ({
   customDateEnd: '',
   savedFilterViews,
   activeFilterViewId: null,
-
-  // ========== 工作区筛选（独立于历史流） ==========
-  workbenchSearchQuery: '',
-  workbenchRecentSearches,
-  workbenches: [],
-  activeWorkbenchId: initialActiveWorkbenchId || null,
-  activeWorkbenchSearchScope: initialWorkbenchSearchScope || 'current',
-  workbenchStateLoaded: false,
-  workbenchSelectedType: 'all',
-  workbenchSelectedTags: [],
-  workbenchShowFavoritesOnly: false,
-  workbenchSelectedDateRange: null,
-  workbenchCustomDateStart: '',
-  workbenchCustomDateEnd: '',
-  workbenchSavedFilterViews,
-  workbenchActiveFilterViewId: null,
 
   // ========== 多选状态 ==========
   selectedItemIds: [],

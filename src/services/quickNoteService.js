@@ -22,9 +22,7 @@ export const saveQuickNote = async (
   const noteContent = typeof content === 'string' ? content : '';
 
   const {
-    autoFavorite = false,
-    autoPin = !autoFavorite,
-    workbenchId = null,
+    autoFavorite = true,
   } = typeof options === 'boolean' ? { autoFavorite: options } : options;
 
   const itemId = await invoke('add_clipboard_item_manual', {
@@ -34,20 +32,9 @@ export const saveQuickNote = async (
     autoFavorite: Boolean(autoFavorite),
   });
 
-  if (itemId && autoPin) {
-    const maxPinned = await resolveMaxPinnedItems();
-    const pinPayload = { id: itemId, maxPinned };
-    if (workbenchId) {
-      pinPayload.workbenchId = workbenchId;
-    }
-    await invoke('pin_item', pinPayload);
-  }
-
   await emit(QUICK_NOTE_SAVED_EVENT, {
     itemId: itemId ?? null,
     autoFavorite: Boolean(autoFavorite),
-    autoPin: Boolean(autoPin),
-    workbenchId: workbenchId ?? null,
   });
 
   return itemId;

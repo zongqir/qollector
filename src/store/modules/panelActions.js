@@ -29,7 +29,7 @@ export const createPanelActions = (set, get) => ({
         return {
           panelMode: 'preview',
           previewItem: item,
-          previewReturnMode: keepCompareContext ? 'compare' : 'workbench',
+          previewReturnMode: keepCompareContext ? 'compare' : 'preview',
           previewReturnViewMode: explicitReturnViewMode || inferPreviewReturnViewMode(state),
           compareCandidateIds: keepCompareContext ? state.compareCandidateIds : [],
           compareItemIds: keepCompareContext ? state.compareItemIds : [],
@@ -56,9 +56,9 @@ export const createPanelActions = (set, get) => ({
       const fallbackCompareItemIds = normalizeCompareItemIds(compareCandidateIds);
       if (fallbackCompareItemIds.length < 2) {
         set({
-          panelMode: 'workbench',
+          panelMode: 'preview',
           previewItem: null,
-          previewReturnMode: 'workbench',
+          previewReturnMode: 'preview',
           previewReturnViewMode: 'all',
           compareCandidateIds: [],
           compareItemIds: [],
@@ -77,7 +77,7 @@ export const createPanelActions = (set, get) => ({
         return {
           panelMode: 'compare',
           previewItem: null,
-          previewReturnMode: 'workbench',
+          previewReturnMode: 'preview',
           previewReturnViewMode: inferPreviewReturnViewMode(state),
           compareCandidateIds,
           compareItemIds: canKeepCurrentPair ? state.compareItemIds : fallbackCompareItemIds,
@@ -89,7 +89,7 @@ export const createPanelActions = (set, get) => ({
       set({
         panelMode: 'timeline',
         previewItem: null,
-        previewReturnMode: 'workbench',
+        previewReturnMode: 'preview',
         previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
@@ -98,9 +98,9 @@ export const createPanelActions = (set, get) => ({
       get().loadTimelineData('today');
     } else {
       set({
-        panelMode: 'workbench',
+        panelMode: 'preview',
         previewItem: null,
-        previewReturnMode: 'workbench',
+        previewReturnMode: 'preview',
         previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
@@ -139,20 +139,14 @@ export const createPanelActions = (set, get) => ({
         return {
           panelMode: 'compare',
           previewItem: null,
-          previewReturnMode: 'workbench',
+          previewReturnMode: 'preview',
           previewReturnViewMode: inferPreviewReturnViewMode(state),
         };
       }
-      const restoreLeft = state.previewReturnViewMode === 'left';
-      const restoreRight = state.previewReturnViewMode === 'right';
-      const restoredViewMode = restoreLeft ? 'left' : restoreRight ? 'right' : 'all';
       return {
-        panelMode: 'workbench',
+        panelMode: 'preview',
         previewItem: null,
-        previewReturnMode: 'workbench',
-        previewReturnViewMode: restoredViewMode,
-        workbenchPanelEnabled: !restoreLeft,
-        historyStreamEnabled: restoreLeft ? true : !restoreRight,
+        previewReturnMode: 'preview',
         compareCandidateIds: [],
         compareItemIds: [],
       };
@@ -161,9 +155,9 @@ export const createPanelActions = (set, get) => ({
 
   switchToWorkbench: () => {
     set({
-      panelMode: 'workbench',
+      panelMode: 'preview',
       previewItem: null,
-      previewReturnMode: 'workbench',
+      previewReturnMode: 'preview',
       previewReturnViewMode: inferPreviewReturnViewMode(get()),
       compareCandidateIds: [],
       compareItemIds: [],

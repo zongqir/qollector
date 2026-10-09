@@ -328,6 +328,11 @@ impl ClipboardRepository {
             self.set_schema_version(8).await?;
             println!("[Schema] migrated to version 8");
         }
+        if db_version < 9 {
+            self.migrate_v8_to_v9().await?;
+            self.set_schema_version(9).await?;
+            println!("[Schema] migrated to version 9: promoted all pinned items to favorite");
+        }
 
         Ok(())
     }
@@ -346,6 +351,18 @@ impl ClipboardRepository {
         .await?;
         sqlx::query(
             "CREATE INDEX IF NOT EXISTS idx_collector_uploads_uploaded_at ON collector_uploads(uploaded_at)",
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// V8 -> V9: Promote all workbench pinned items to favorite to prevent data loss.
+    async fn migrate_v8_to_v9(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE clipboard_items
+             SET is_favorite = 1
+             WHERE is_pinned = 1 AND is_deleted = 0",
         )
         .execute(&self.pool)
         .await?;

@@ -17,7 +17,6 @@ import {
   createTagActions,
   createTimelineActions,
   createUiActions,
-  createWorkbenchActions,
   SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK,
   SUPPORTS_COPY_ON_SELECT,
   readCollectionRecentSearches,
@@ -26,21 +25,13 @@ import {
   readHistorySnapshot,
   readHistoryStreamEnabled,
   readSavedFilterViews,
-  readActiveWorkbenchId,
-  readWorkbenchRecentSearches,
-  readWorkbenchSearchScope,
-  readWorkbenchSavedFilterViews,
 } from './modules';
 
 const initialHistorySnapshot = readHistorySnapshot();
 const initialHistoryRecentSearches = readHistoryRecentSearches();
 const initialCollectionRecentSearches = readCollectionRecentSearches();
 const initialSavedFilterViews = readSavedFilterViews();
-const initialWorkbenchRecentSearches = readWorkbenchRecentSearches();
-const initialWorkbenchSavedFilterViews = readWorkbenchSavedFilterViews();
 const initialHistoryStreamEnabled = readHistoryStreamEnabled();
-const initialActiveWorkbenchId = readActiveWorkbenchId();
-const initialWorkbenchSearchScope = readWorkbenchSearchScope();
 
 const useAppStore = create((set, get) => ({
   ...createBaseState({
@@ -48,11 +39,7 @@ const useAppStore = create((set, get) => ({
     historyRecentSearches: initialHistoryRecentSearches,
     collectionRecentSearches: initialCollectionRecentSearches,
     savedFilterViews: initialSavedFilterViews,
-    workbenchRecentSearches: initialWorkbenchRecentSearches,
-    workbenchSavedFilterViews: initialWorkbenchSavedFilterViews,
     historyStreamEnabled: initialHistoryStreamEnabled,
-    initialActiveWorkbenchId,
-    initialWorkbenchSearchScope,
   }),
   ...createPanelActions(set, get),
 
@@ -86,8 +73,6 @@ const useAppStore = create((set, get) => ({
 
   ...createUiActions(set),
   ...createRuntimeActions(set, clearHistorySnapshot),
-
-  ...createWorkbenchActions(set, get),
 }));
 
 export default useAppStore;

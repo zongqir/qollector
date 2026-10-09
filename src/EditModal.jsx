@@ -247,15 +247,8 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
         content: content.trim(),
         contentType: 'text',
         source: QUICK_INPUT_SOURCE,
-        autoFavorite: false,
+        autoFavorite: true,
       });
-      if (itemId) {
-        const { maxPinnedItems, activeWorkbenchId } = useAppStore.getState();
-        await pinItem(itemId, {
-          maxPinned: maxPinnedItems,
-          workbenchId: activeWorkbenchId,
-        });
-      }
       await useAppStore.getState().loadItems();
       setContent('');
       setSavedToast(true);

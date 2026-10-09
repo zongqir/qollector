@@ -76,7 +76,6 @@ function QuickNoteOverlay({
 }) {
   const { t } = useTranslation();
   const showFavoritesOnly = useAppStore((state) => state.showFavoritesOnly);
-  const activeWorkbenchId = useAppStore((state) => state.activeWorkbenchId);
   const textareaRef = useRef(null);
   const colorPanelRef = useRef(null);
   const [content, setContent] = useState('');
@@ -198,9 +197,7 @@ function QuickNoteOverlay({
     setSaveError('');
     try {
       await saveQuickNote(trimmed, QUICK_INPUT_SOURCE, {
-        autoFavorite: Boolean(showFavoritesOnly),
-        autoPin: !showFavoritesOnly,
-        workbenchId: showFavoritesOnly ? null : activeWorkbenchId,
+        autoFavorite: true,
       });
       clearDraft();
       setContent('');
@@ -212,7 +209,7 @@ function QuickNoteOverlay({
     } finally {
       setSaving(false);
     }
-  }, [activeWorkbenchId, clearDraft, content, onSaved, saving, showFavoritesOnly, t]);
+  }, [clearDraft, content, onSaved, saving, t]);
 
   const handleTextareaKeyDown = useCallback((event) => {
     if (event.nativeEvent?.isComposing || event.isComposing || event.keyCode === 229) {

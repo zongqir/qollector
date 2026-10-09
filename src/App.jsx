@@ -761,7 +761,7 @@ function App() {
   const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
   const showStandalonePanel = !isMiniMode
     && !workbenchPanelEnabled
-    && panelMode !== 'workbench';
+    && (panelMode === 'compare' || panelMode === 'timeline');
   const showHistoryStream = isMiniMode
     ? !showMiniPanel
     : !showStandalonePanel && (historyStreamEnabled || !workbenchPanelEnabled);
@@ -940,8 +940,8 @@ function App() {
     if (state.showFavoritesOnly) return MINI_PRIMARY_CONTENT_HISTORY;
     if (activeDesktopViewModeRef.current === VIEW_MODE_LEFT) return MINI_PRIMARY_CONTENT_HISTORY;
 
-    // Mini 模式默认回到历史流，只有明确处于 panel-only 或强 panel 语义时才保留面板。
-    if (state.panelMode !== 'workbench') {
+    // Mini 模式默认回到历史流，只有处于对比或时间线时才保留面板。
+    if (state.panelMode === 'compare' || state.panelMode === 'timeline') {
       return MINI_PRIMARY_CONTENT_PANEL;
     }
 

@@ -18,7 +18,7 @@ function TimelinePanel() {
   const setPanelMode = useAppStore(s => s.setPanelMode);
 
   const handleBackToWorkbench = () => {
-    setPanelMode('workbench');
+    setPanelMode('preview');
   };
 
   const handleDateSwitch = (date) => {

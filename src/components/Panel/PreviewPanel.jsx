@@ -125,8 +125,29 @@ function PreviewPanel() {
   }, [livePreviewItem, previewItem, previewItemId]);
 
   if (!item) {
-    switchToWorkbench();
-    return null;
+    return (
+      <div className="preview-panel preview-panel--empty" ref={panelRef}>
+        <div className="preview-empty-state" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          color: 'var(--text-tertiary, #94a3b8)',
+          textAlign: 'center',
+          padding: '32px',
+          gap: '12px',
+        }}>
+          <Inbox size={42} strokeWidth={1.4} opacity={0.5} />
+          <div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-secondary, #cbd5e1)' }}>
+            {t('preview.noItemSelected', '未选择条目')}
+          </div>
+          <div style={{ fontSize: '12px', maxWidth: '280px', lineHeight: 1.5, opacity: 0.8 }}>
+            {t('preview.selectHint', '在左侧点击或使用方向键选中条目以查看高保真预览与详情')}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const isCopied = copiedItemId === item.id && copyFeedbackSource === 'preview';
@@ -364,14 +385,6 @@ function PreviewPanel() {
     }, duration);
   }, []);
 
-  // 鏀堕泦骞跺垏鍥炴敹闆嗙
-  const handlePreviewPinToggle = async () => {
-    const wasPinned = item.is_pinned;
-    await togglePin(item);
-    if (wasPinned) {
-      switchToWorkbench();
-    }
-  };
 
   // 寮€濮嬬紪杈戝唴瀹?
   const handleStartEditContent = () => {
@@ -768,13 +781,6 @@ function PreviewPanel() {
             title={item.is_favorite ? t('item.unfavorite') : t('item.favorite')}
           >
             <Star size={16} fill={item.is_favorite ? 'currentColor' : 'none'} />
-          </button>
-          <button
-            className={`preview-action-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-            onClick={handlePreviewPinToggle}
-            title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
-          >
-            <Inbox size={16} />
           </button>
           {shouldShowSaveImageButton && (
             <button

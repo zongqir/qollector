@@ -121,16 +121,10 @@ async function extractDroppedText(dataTransfer) {
 function DragDrop({ onItemAdded }) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
-  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
-  const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
 
   const onItemAddedRef = useRef(onItemAdded);
   onItemAddedRef.current = onItemAdded;
 
-  const maxPinnedItemsRef = useRef(maxPinnedItems);
-  maxPinnedItemsRef.current = maxPinnedItems;
-  const switchToWorkbenchRef = useRef(switchToWorkbench);
-  switchToWorkbenchRef.current = switchToWorkbench;
   const cleanupRef = useRef(null);
   const nativeDropDragActiveRef = useRef(false);
   const domDragActiveRef = useRef(false);
@@ -165,31 +159,21 @@ function DragDrop({ onItemAdded }) {
       }, 120);
     };
 
-    const pinDroppedItem = async (id) => {
-      const { activeWorkbenchId } = useAppStore.getState();
-      await pinItem(id, {
-        maxPinned: maxPinnedItemsRef.current,
-        workbenchId: activeWorkbenchId,
-      });
-    };
-
     const addDroppedPathItems = async (paths) => {
       const uniquePaths = normalizeUniqueStrings(paths);
       if (uniquePaths.length === 0) {
         return 0;
       }
 
-      switchToWorkbenchRef.current?.();
       let insertedCount = 0;
 
       for (const filePath of uniquePaths) {
         if (isImagePath(filePath)) {
           try {
-            const itemId = await invoke('add_image_file', {
+            await invoke('add_image_file', {
               filePath,
               dedupeByHash: true,
             });
-            await pinDroppedItem(itemId);
             onItemAddedRef.current?.();
             insertedCount += 1;
           } catch (error) {
@@ -199,12 +183,12 @@ function DragDrop({ onItemAdded }) {
         }
 
         try {
-          const itemId = await invoke('add_clipboard_item_manual', {
+          await invoke('add_clipboard_item_manual', {
             contentType: 'file',
             content: filePath,
+            autoFavorite: true,
             dedupeByHash: true,
           });
-          await pinDroppedItem(itemId);
           onItemAddedRef.current?.();
           insertedCount += 1;
         } catch (error) {
@@ -219,15 +203,13 @@ function DragDrop({ onItemAdded }) {
       const normalized = content.trim();
       if (!normalized) return false;
 
-      switchToWorkbenchRef.current?.();
-
-      const itemId = await invoke('add_clipboard_item_manual', {
+      await invoke('add_clipboard_item_manual', {
         contentType: 'text',
         content: normalized,
+        autoFavorite: true,
         dedupeByHash: true,
       });
 
-      await pinDroppedItem(itemId);
       onItemAddedRef.current?.();
       return true;
     };

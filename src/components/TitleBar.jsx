@@ -249,16 +249,6 @@ function TitleBar({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onSelectViewMode?.('right')}
-                    className={`titlebar-layout-btn ${currentViewMode === 'right' ? 'active' : ''}`}
-                    title={t('titlebar.layoutReviewShortcut')}
-                    aria-label={t('titlebar.layoutReviewShortcut')}
-                    data-tauri-drag-region="false"
-                  >
-                    <SquareKanban size={13} />
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => onSelectViewMode?.('all')}
                     className={`titlebar-layout-btn ${currentViewMode === 'all' ? 'active' : ''}`}
                     title={t('titlebar.layoutAllShortcut')}
