@@ -1,7 +1,6 @@
 use crate::config::GeneralConfig;
 use parking_lot::Mutex;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::AppHandle;
 

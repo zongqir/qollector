@@ -538,51 +538,6 @@ fn main() {
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
 
-                // License state
-                let mut license_config = config_repo
-                    .load_license_config()
-                    .await
-                    .ok()
-                    .flatten()
-                    .unwrap_or_default();
-
-                // Dev mode: bypass license check
-                #[cfg(debug_assertions)]
-                {
-                    license_config.status = crate::license::config::LicenseStatus::Active;
-                }
-
-                println!("License config loaded: status={:?}", license_config.status);
-                let license_state = LicenseState {
-                    config: Arc::new(Mutex::new(license_config)),
-                    config_repo: config_repo.clone(),
-                };
-                app.manage(license_state);
-
-                let initial_lan_sync_config = lan_sync_config_opt.unwrap_or_default();
-                let lan_sync_service = Arc::new(lan_sync::LanSyncService::new(
-                    manager.clone(),
-                    initial_lan_sync_config,
-                ));
-                let lan_sync_config = lan_sync_service.get_config().await;
-                if let Err(error) = config_repo.save_lan_sync_config(&lan_sync_config).await {
-                    eprintln!("[LAN Sync] failed to persist runtime config: {}", error);
-                }
-                if lan_sync_config.enabled {
-                    if let Err(error) = lan_sync_service.start().await {
-                        eprintln!("[LAN Sync] startup failed: {}", error);
-                    } else {
-                        println!(
-                            "[LAN Sync] service started on port {}",
-                            lan_sync_config.service_port
-                        );
-                    }
-                }
-                let lan_sync_state = LanSyncState {
-                    config_repo: config_repo.clone(),
-                    service: lan_sync_service,
-                };
-                app.manage(lan_sync_state);
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
 
@@ -798,33 +753,11 @@ fn main() {
             generate_qr,
             share_via_s3,
             test_share_s3_connection,
-            get_sync_latest_slot,
-            get_next_sync_source_seq_hint,
-            publish_sync_slot_from_item,
-            publish_sync_slot_payload,
-            apply_remote_sync_slot,
-            get_lan_sync_config,
-            update_lan_sync_config,
-            get_lan_sync_identity,
-            get_lan_sync_running,
-            get_lan_discovered_devices,
-            start_lan_pair_code,
-            get_lan_pair_code_session,
-            cancel_lan_pair_code,
-            pair_lan_device,
-            get_lan_paired_devices,
-            unpair_lan_device,
-            push_latest_slot_to_lan_device,
-            pull_latest_slot_from_lan_device,
             preview_file,
             open_file_path,
             reveal_file_path,
             crash_log::get_crash_log,
             crash_log::clear_crash_log,
-            get_license_info,
-            activate_license,
-            deactivate_license,
-            check_license_valid,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -846,12 +779,6 @@ fn main() {
                     }
                 }
                 tauri::RunEvent::Exit => {
-                    if let Some(lan_state) = app.try_state::<LanSyncState>() {
-                        let service = lan_state.service.clone();
-                        tauri::async_runtime::spawn(async move {
-                            service.stop().await;
-                        });
-                    }
                     println!("[Shutdown] Application exiting");
                     tray::perform_shutdown(app);
                 }

@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.1",
+      "publishedAt": "2026-10-12",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-1",
+      "summary": {
+        "zh-CN": "深度减负与体验重构：精简视图模式、修复预览交互闭环，物理移除悬浮窗、局域网同步及许可证模块，轻装上阵。",
+        "en-US": "Deep simplification & UX refinement: streamlined view modes, resolved preview flow deadlocks, physically removed floating widget, LAN sync, and license modules."
+      },
+      "highlights": {
+        "zh-CN": [
+          "模式精简与紧凑常驻：统一为迷你模式与多功能模式双态流转，彻底移除宽松模式，默认并唯一保持紧凑视图。",
+          "预览交互深度闭环：修复详情返回与小窗切换死锁，预览恢复为按需抽屉浮层唤起，返回彻底关闭抽屉，不再进入空白占位。",
+          "彻底物理移除悬浮窗：完全拔除悬浮小球与桌面气泡窗口全部代码及入口，大幅减少后台常驻进程与渲染开销。",
+          "彻底物理移除局域网同步：清理局域网设备发现、配对握手与底层网络服务，精简网络模块依赖。",
+          "全面解除付费与限制逻辑：彻底移除许可证激活与付费门槛，Beta 版全功能保持纯净无扰、即开即用。"
+        ],
+        "en-US": [
+          "Streamlined Modes & Compact Default: Window modes unified into Mini Mode and Full Mode, eliminating cozy density and fixing compact view as the single crisp standard.",
+          "Closed-Loop Preview UX: Fixed return navigation and mini-mode transition deadlocks; preview is now an on-demand drawer overlay that dismisses cleanly.",
+          "Complete Removal of Floating Widgets: Fully excised the floating widget ball and desktop bubble window to trim background runtime footprint.",
+          "Complete Removal of LAN Device Sync: Cleaned out mDNS discovery, device pairing, and background sync services for leaner networking.",
+          "Decoupled License & Paywall Logic: Stripped license activation and paywall checks, delivering a pure, distraction-free Beta experience."
+        ]
+      }
+    },
+    {
       "version": "0.5.0",
       "publishedAt": "2026-10-09",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-0",

@@ -1825,8 +1825,6 @@ impl ClipboardManager {
             .await?;
         let _ = repo.clear_user_tag_index().await;
         let _ = repo.delete_all_raw_formats().await;
-        let _ = repo.clear_sync_latest_slot().await;
-        let _ = repo.clear_paired_sync_devices().await;
         Ok(())
     }
 

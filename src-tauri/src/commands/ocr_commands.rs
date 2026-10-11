@@ -1,4 +1,3 @@
-use crate::commands::license_commands::LicenseState;
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::ocr::{OcrConfig, OcrService};
 use crate::repository::config_repo::ConfigRepository;
@@ -123,16 +122,7 @@ pub async fn update_ocr_config(
 pub async fn recognize_image(
     image_path: String,
     state: State<'_, OcrState>,
-    _license_state: State<'_, LicenseState>,
 ) -> Result<String, String> {
-    // License gate - temporarily disabled for beta
-    // {
-    //     let license = license_state.config.lock();
-    //     if license.status != LicenseStatus::Active {
-    //         return Err("PRO_REQUIRED".to_string());
-    //     }
-    // }
-
     let service_opt = {
         let service_guard = state.service.lock();
         service_guard.clone()
@@ -154,17 +144,8 @@ pub async fn recognize_and_update(
     item_id: String,
     image_path: String,
     state: State<'_, OcrState>,
-    _license_state: State<'_, LicenseState>,
     manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
-    // License gate - temporarily disabled for beta
-    // {
-    //     let license = license_state.config.lock();
-    //     if license.status != LicenseStatus::Active {
-    //         return Err("PRO_REQUIRED".to_string());
-    //     }
-    // }
-
     // OCR recognition
     let service_opt = {
         let service_guard = state.service.lock();
