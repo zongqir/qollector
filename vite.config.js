@@ -56,8 +56,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        widget: resolve(__dirname, 'widget.html'),
-        bubble: resolve(__dirname, 'bubble.html'),
       },
       output: {
         manualChunks(id) {

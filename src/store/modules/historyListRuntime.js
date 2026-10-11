@@ -1,7 +1,5 @@
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_ITEMS_IN_MEMORY = 150;
-const LOW_MEMORY_PAGE_SIZE = 20;
-const LOW_MEMORY_MAX_ITEMS_IN_MEMORY = 80;
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -67,10 +65,6 @@ export const mergeUniqueById = (baseItems, incomingItems) => {
   return Array.from(map.values()).sort(sortByUpdatedAtDesc);
 };
 
-export const getItemsMemoryCap = (lowMemoryModeEnabled) => (
-  lowMemoryModeEnabled ? LOW_MEMORY_MAX_ITEMS_IN_MEMORY : MAX_ITEMS_IN_MEMORY
-);
+export const getItemsMemoryCap = () => MAX_ITEMS_IN_MEMORY;
 
-export const getItemsPageSize = (lowMemoryModeEnabled) => (
-  lowMemoryModeEnabled ? LOW_MEMORY_PAGE_SIZE : DEFAULT_PAGE_SIZE
-);
+export const getItemsPageSize = () => DEFAULT_PAGE_SIZE;

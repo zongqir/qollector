@@ -8,12 +8,10 @@ import {
 } from './historyListRuntime';
 import {
   persistHistorySnapshot,
-  readHistorySnapshot,
 } from './historySnapshot';
 import { buildItemDerivations } from './itemsIndex';
 
 let loadItemsRequestSeq = 0;
-let suspendedItemsSnapshot = null;
 
 const createCodeLanguageBatchUpdater = (set) => {
   let pendingById = new Map();
@@ -61,7 +59,7 @@ export const createDataLoadingActions = (set, get) => ({
     const requestSeq = ++loadItemsRequestSeq;
     console.log('[Perf:Store] loadItems START at', performance.now().toFixed(1), 'ms');
     try {
-      const pageSize = getItemsPageSize(get().lowMemoryModeEnabled);
+      const pageSize = getItemsPageSize();
       console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
       const result = await getRecentItemsLight(pageSize);
       console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
@@ -112,13 +110,13 @@ export const createDataLoadingActions = (set, get) => ({
   },
 
   loadMore: async () => {
-    const { hasMore, loadingMore, items, itemsRevision, lowMemoryModeEnabled } = get();
+    const { hasMore, loadingMore, items, itemsRevision } = get();
     if (!hasMore || loadingMore) return;
     set({ loadingMore: true });
     const requestOffset = items.length;
     const requestRevision = itemsRevision;
-    const pageSize = getItemsPageSize(lowMemoryModeEnabled);
-    const memoryCap = getItemsMemoryCap(lowMemoryModeEnabled);
+    const pageSize = getItemsPageSize();
+    const memoryCap = getItemsMemoryCap();
     try {
       const more = await getMoreItems(pageSize, requestOffset);
       if (get().itemsRevision !== requestRevision) return;
@@ -158,52 +156,5 @@ export const createDataLoadingActions = (set, get) => ({
     } finally {
       set({ loadingMore: false });
     }
-  },
-
-  suspendForMinimize: () => {
-    const state = get();
-    if (state.isMemorySuspended) return;
-    suspendedItemsSnapshot = state.items;
-    persistHistorySnapshot(state.items);
-
-    set({
-      items: [],
-      ...buildItemDerivations([]),
-      hasMore: true,
-      loadingMore: false,
-      historyLoadStopReason: null,
-      itemsRevision: state.itemsRevision + 1,
-      processedItemIds: new Set(),
-      panelMode: 'workbench',
-      previewItem: null,
-      previewReturnMode: 'workbench',
-      compareCandidateIds: [],
-      compareItemIds: [],
-      isMemorySuspended: true,
-      memorySuspendVersion: state.memorySuspendVersion + 1,
-    });
-    console.log('[MemorySuspend] detached heavy list state while minimized');
-  },
-
-  resumeFromMinimize: async () => {
-    const state = get();
-    if (!state.isMemorySuspended) return;
-
-    const snapshot = Array.isArray(suspendedItemsSnapshot)
-      ? suspendedItemsSnapshot
-      : readHistorySnapshot();
-    suspendedItemsSnapshot = null;
-    set((current) => ({
-      isMemorySuspended: false,
-      items: snapshot,
-      ...buildItemDerivations(snapshot),
-      hasMore: true,
-      loadingMore: false,
-      historyLoadStopReason: null,
-      loading: snapshot.length === 0,
-      memoryResumeVersion: current.memoryResumeVersion + 1,
-    }));
-    console.log('[MemorySuspend] restoring list state after window became visible');
-    await get().loadItems();
   },
 });

@@ -57,35 +57,6 @@ pub struct ClipboardItem {
     pub content_updated: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct SyncLatestSlot {
-    pub slot_id: String,
-    pub payload_json: String,
-    pub payload_type: String,
-    pub source_device_id: String,
-    pub source_seq: i64,
-    pub logical_ts_ms: i64,
-    pub content_hash: String,
-    pub updated_at_ms: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SyncIncomingSlot {
-    pub payload_json: String,
-    pub payload_type: String,
-    pub source_device_id: String,
-    pub source_seq: i64,
-    pub logical_ts_ms: i64,
-    pub content_hash: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SyncApplyResult {
-    pub applied: bool,
-    pub reason: String,
-    pub slot: Option<SyncLatestSlot>,
-}
-
 impl ClipboardItem {
     pub fn new_text(content: String, metadata: WindowMetadata) -> Self {
         let hash = Self::calculate_text_hash(&content);

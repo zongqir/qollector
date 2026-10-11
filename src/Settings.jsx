@@ -9,7 +9,6 @@ import useAppStore from './store/useAppStore';
 import { createUpdaterProgressHandler } from './utils/updaterProgress';
 import DataSecurityDataSection from './components/Settings/DataSecurityDataSection';
 import DataSecuritySecuritySection from './components/Settings/DataSecuritySecuritySection';
-import IntegrationsLanSyncSection from './components/Settings/IntegrationsLanSyncSection';
 import IntegrationsShareSection from './components/Settings/IntegrationsShareSection';
 import IntegrationsCoreSection from './components/Settings/IntegrationsCoreSection';
 import GeneralSection from './components/Settings/GeneralSection';
@@ -24,7 +23,6 @@ const SETTINGS_SEARCH_ANCHOR = {
   general: 'general-main',
   shortcuts: 'shortcuts-main',
   integrationsCore: 'integrations-core',
-  integrationsLanSync: 'integrations-lan-sync',
   integrationsShare: 'integrations-share',
   data: 'data-security-data',
   security: 'data-security-security',
@@ -70,7 +68,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.autoPaste'),
           t('settings.general.copyOnSelect'),
           t('settings.general.autoLayoutSwitch'),
-          t('settings.general.lowMemoryMode'),
           t('settings.general.startTour'),
         ],
       },
@@ -82,9 +79,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         title: t('settings.tabs.shortcuts'),
         keywords: [
           t('settings.shortcuts.toggleWindow'),
-          t('settings.shortcuts.ctrlShiftC'),
           t('settings.shortcuts.tagQuickAdd'),
-          t('settings.shortcuts.emphasisCopy'),
         ],
       },
       {
@@ -107,19 +102,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.ai.model'),
           t('settings.ocr.provider'),
           t('settings.mcp.port'),
-        ],
-      },
-      {
-        id: 'integrations-lan',
-        tab: 'integrations',
-        tabLabel: t('settings.lanSync.title'),
-        anchor: SETTINGS_SEARCH_ANCHOR.integrationsLanSync,
-        title: t('settings.lanSync.title'),
-        keywords: [
-          t('settings.lanSync.enabled'),
-          t('settings.lanSync.deviceName'),
-          t('settings.lanSync.pairCode'),
-          t('settings.lanSync.discovered'),
         ],
       },
       {
@@ -172,7 +154,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         title: t('settings.tabs.about'),
         keywords: [
           t('settings.about.website'),
-          t('settings.about.betaNotice'),
         ],
       },
     ];
@@ -226,10 +207,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     max_pinned_items: 10,
     language: 'zh-CN',
     theme_mode: themeMode || 'system',
-    double_copy_emphasis_enabled: true,
-    double_copy_window_ms: 900,
-    ctrl_shift_c_shortcut_enabled: true,
-    copy_pin_shortcut: 'ctrl+shift+c',
     toggle_window_shortcut_enabled: true,
     toggle_window_shortcut: 'alt+x',
     history_tag_shortcut_enabled: true,
@@ -239,7 +216,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     copy_qollect_source_items: false,
     startup_favorites_view_enabled: false,
     autostart_enabled: true,
-    low_memory_mode_enabled: false,
     auto_layout_switch_enabled: true,
   });
   const [lockHasPassword, setLockHasPassword] = useState(false);
@@ -266,13 +242,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   // About / Update
   const [appVersion, setAppVersion] = useState('');
 
-  // License
-  const [licenseConfig, setLicenseConfig] = useState(null);
-  const [licenseKeyInput, setLicenseKeyInput] = useState('');
-  const [licenseActivating, setLicenseActivating] = useState(false);
-  const [licenseDeactivating, setLicenseDeactivating] = useState(false);
-  const [licenseError, setLicenseError] = useState('');
-  const [licenseSuccess, setLicenseSuccess] = useState('');
   const [aboutUpdateStatus, setAboutUpdateStatus] = useState(null); // null | 'checking' | 'downloading' | 'installing' | 'ready' | 'upToDate' | 'error'
   const [aboutUpdateError, setAboutUpdateError] = useState('');
   const [aboutUpdateVersion, setAboutUpdateVersion] = useState('');
@@ -463,13 +432,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
       setGeneralConfig(general);
       setLockHasPassword(hasLock);
       await loadIntegrationConfigs();
-
-      try {
-        const license = await invoke('get_license_info');
-        setLicenseConfig(license);
-      } catch (e) {
-        console.error('Failed to load license config:', e);
-      }
     } catch (error) {
       console.error('Settings operation failed:', error);
     }
@@ -499,53 +461,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
   const handleClose = () => {
     if (onConfigChange) onConfigChange();
     onClose();
-  };
-
-  const handleActivateLicense = async () => {
-    if (!licenseKeyInput.trim()) return;
-    setLicenseActivating(true);
-    setLicenseError('');
-    setLicenseSuccess('');
-    try {
-      const result = await invoke('activate_license', { key: licenseKeyInput.trim() });
-      setLicenseConfig(result);
-      setLicenseKeyInput('');
-      setLicenseSuccess(t('license.activateSuccess'));
-      if (onConfigChange) onConfigChange();
-    } catch (err) {
-      const msg = String(err);
-      if (msg.includes('max_devices') || msg.includes('Maximum')) {
-        setLicenseError(t('license.maxDevices'));
-      } else if (msg.includes('invalid') || msg.includes('Invalid')) {
-        setLicenseError(t('license.invalidKey'));
-      } else {
-        setLicenseError(msg);
-      }
-    } finally {
-      setLicenseActivating(false);
-    }
-  };
-
-  const handleDeactivateLicense = async () => {
-    setLicenseDeactivating(true);
-    setLicenseError('');
-    setLicenseSuccess('');
-    try {
-      await invoke('deactivate_license');
-      const updated = await invoke('get_license_info');
-      setLicenseConfig(updated);
-      setLicenseSuccess(t('license.deactivateSuccess'));
-      if (onConfigChange) onConfigChange();
-    } catch (err) {
-      setLicenseError(String(err));
-    } finally {
-      setLicenseDeactivating(false);
-    }
-  };
-
-  const maskLicenseKey = (key) => {
-    if (!key || key.length < 10) return key || '';
-    return key.substring(0, 7) + '****' + key.substring(key.length - 4);
   };
 
   const handleIntegrationsSave = async () => {
@@ -840,7 +755,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 getTagShortcutDisplay={getTagShortcutDisplay}
                 shortcutError={shortcutError}
                 restoreShortcutDefaults={restoreShortcutDefaults}
-                getWheelNextNumber={getWheelNextNumber}
               />
             </div>
           )}
@@ -971,16 +885,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           )}
 
           {activeTab === 'integrations' && (
-            <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsLanSync}>
-              <IntegrationsLanSyncSection
-                t={t}
-                collapsed={collapsedSections.lanSync}
-                onToggle={() => toggleSection('lanSync')}
-              />
-            </div>
-          )}
-
-          {activeTab === 'integrations' && (
             <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.integrationsShare}>
               <IntegrationsShareSection
                 t={t}
@@ -995,86 +899,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
               />
             </div>
           )}
-
-          {/* License panel - temporarily hidden for beta
-          {activeTab === 'license' && (
-            <div className="settings-section">
-              <div className="setting-group-title">{t('license.title')}</div>
-              <div className="setting-group" style={{ gap: 16 }}>
-                <div className="sg-row" style={{ justifyContent: 'space-between' }}>
-                  <span className="toggle-label">{t('license.status')}</span>
-                  <span style={{
-                    fontWeight: 600,
-                    color: licenseConfig?.status === 'Active' ? '#22c55e' : 'var(--text-secondary)',
-                  }}>
-                    {licenseConfig?.status === 'Active' ? t('license.pro') : t('license.free')}
-                  </span>
-                </div>
-
-                {licenseConfig?.status === 'Active' && (
-                  <>
-                    <div className="sg-row" style={{ justifyContent: 'space-between' }}>
-                      <span className="toggle-label">{t('license.devices')}</span>
-                      <span>{t('license.devicesCount', {
-                        current: licenseConfig.activated_devices || 0,
-                        max: licenseConfig.max_devices || 3,
-                      })}</span>
-                    </div>
-                    <div className="sg-row" style={{ justifyContent: 'space-between' }}>
-                      <span className="toggle-label">{t('license.currentKey')}</span>
-                      <span style={{ fontFamily: 'monospace', fontSize: 12, opacity: 0.7 }}>
-                        {maskLicenseKey(licenseConfig.license_key)}
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleDeactivateLicense}
-                      disabled={licenseDeactivating}
-                      className="cancel-btn"
-                      style={{ alignSelf: 'flex-start' }}
-                    >
-                      {licenseDeactivating ? t('license.deactivating') : t('license.deactivate')}
-                    </button>
-                  </>
-                )}
-
-                {licenseConfig?.status !== 'Active' && (
-                  <>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="text"
-                        value={licenseKeyInput}
-                        onChange={(e) => setLicenseKeyInput(e.target.value)}
-                        placeholder={t('license.keyPlaceholder')}
-                        className="setting-input"
-                        style={{ flex: 1, fontFamily: 'monospace' }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleActivateLicense()}
-                      />
-                      <button
-                        onClick={handleActivateLicense}
-                        disabled={licenseActivating || !licenseKeyInput.trim()}
-                        className="save-btn"
-                      >
-                        {licenseActivating ? t('license.activating') : t('license.activate')}
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {licenseError && (
-                  <div style={{ color: '#f87171', fontSize: 12 }}>{licenseError}</div>
-                )}
-                {licenseSuccess && (
-                  <div style={{ color: '#22c55e', fontSize: 12 }}>{licenseSuccess}</div>
-                )}
-
-                <div style={{ marginTop: 8, padding: '12px 16px', borderRadius: 8, background: 'var(--bg-tertiary)', fontSize: 13 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('license.paidFeatures')}</div>
-                  <div style={{ opacity: 0.7 }}>{t('license.paidFeatureList')}</div>
-                </div>
-              </div>
-            </div>
-          )}
-          */}
 
           {activeTab === 'about' && (
             <div className="settings-anchor-target" data-settings-anchor={SETTINGS_SEARCH_ANCHOR.about}>

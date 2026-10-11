@@ -8,14 +8,11 @@ use tauri::AppHandle;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShortcutAction {
     None,
-    CopyPin,
     ToggleWindow,
 }
 
 #[derive(Debug, Clone, Default)]
 struct ShortcutBindingsSnapshot {
-    copy_pin_shortcut: Option<String>,
-    copy_pin_id: Option<u32>,
     toggle_window_shortcut: Option<String>,
     toggle_window_id: Option<u32>,
 }
@@ -28,9 +25,6 @@ pub struct ShortcutBindingState {
 impl ShortcutBindingState {
     pub fn action_for_shortcut_id(&self, shortcut_id: u32) -> ShortcutAction {
         let snapshot = self.inner.lock();
-        if snapshot.copy_pin_id == Some(shortcut_id) {
-            return ShortcutAction::CopyPin;
-        }
         if snapshot.toggle_window_id == Some(shortcut_id) {
             return ShortcutAction::ToggleWindow;
         }
@@ -174,37 +168,11 @@ pub fn apply_shortcut_config(
 
     let mut desired = ShortcutBindingsSnapshot::default();
     let mut desired_items: Vec<(ShortcutAction, String)> = Vec::new();
-    let mut desired_ids: HashMap<u32, ShortcutAction> = HashMap::new();
-
-    if config.ctrl_shift_c_shortcut_enabled {
-        let (shortcut_text, parsed) =
-            parse_shortcut(&config.copy_pin_shortcut, "copy_pin_shortcut")?;
-        let id = parsed.id();
-        if let Some(existing) = desired_ids.insert(id, ShortcutAction::CopyPin) {
-            return Err(format!(
-                "Shortcut conflict between {:?} and {:?}: {}",
-                existing,
-                ShortcutAction::CopyPin,
-                shortcut_text
-            ));
-        }
-        desired.copy_pin_shortcut = Some(shortcut_text.clone());
-        desired.copy_pin_id = Some(id);
-        desired_items.push((ShortcutAction::CopyPin, shortcut_text));
-    }
 
     if config.toggle_window_shortcut_enabled {
         let (shortcut_text, parsed) =
             parse_shortcut(&config.toggle_window_shortcut, "toggle_window_shortcut")?;
         let id = parsed.id();
-        if let Some(existing) = desired_ids.insert(id, ShortcutAction::ToggleWindow) {
-            return Err(format!(
-                "Shortcut conflict between {:?} and {:?}: {}",
-                existing,
-                ShortcutAction::ToggleWindow,
-                shortcut_text
-            ));
-        }
         desired.toggle_window_shortcut = Some(shortcut_text.clone());
         desired.toggle_window_id = Some(id);
         desired_items.push((ShortcutAction::ToggleWindow, shortcut_text));
@@ -213,9 +181,6 @@ pub fn apply_shortcut_config(
     let previous = state.snapshot();
     let global_shortcut = app.global_shortcut();
 
-    if let Some(shortcut) = previous.copy_pin_shortcut.as_deref() {
-        let _ = global_shortcut.unregister(shortcut);
-    }
     if let Some(shortcut) = previous.toggle_window_shortcut.as_deref() {
         let _ = global_shortcut.unregister(shortcut);
     }
@@ -225,9 +190,6 @@ pub fn apply_shortcut_config(
         if let Err(error) = global_shortcut.register(shortcut.as_str()) {
             for registered in &registered_now {
                 let _ = global_shortcut.unregister(registered.as_str());
-            }
-            if let Some(shortcut) = previous.copy_pin_shortcut.as_deref() {
-                let _ = global_shortcut.register(shortcut);
             }
             if let Some(shortcut) = previous.toggle_window_shortcut.as_deref() {
                 let _ = global_shortcut.register(shortcut);

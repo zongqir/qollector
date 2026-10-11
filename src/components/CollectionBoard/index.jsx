@@ -219,9 +219,6 @@ function CollectionBoard({
   const [showSortEntryToast, setShowSortEntryToast] = useState(false);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const [collectionHintsExpanded, setCollectionHintsExpanded] = useState(false);
-  const isMemorySuspended = useAppStore(s => s.isMemorySuspended);
-  const memorySuspendVersion = useAppStore(s => s.memorySuspendVersion);
-  const memoryResumeVersion = useAppStore(s => s.memoryResumeVersion);
   const colorPickerRef = useRef(null);
   const collectionGridRef = useRef(null);
   const collectionCardRefsRef = useRef(new Map());
@@ -278,23 +275,6 @@ function CollectionBoard({
   }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
 
   useEffect(() => {
-    if (!isMemorySuspended) return;
-    setBackendItems([]);
-    setBackendFilteredFavoriteIds(null);
-    setBackendCollectionUserTags([]);
-    setBackendLoading(false);
-    setBackendFiltering(false);
-    setBackendError('');
-    setBackendFilterError('');
-    setActiveItemId(null);
-    setOpenColorPickerItemId(null);
-    setShowTagEditor(false);
-    setCollectionSortMode(false);
-    setCollectionSortAnchorItemId(null);
-  }, [isMemorySuspended, memorySuspendVersion]);
-
-  useEffect(() => {
-    if (isMemorySuspended) return undefined;
     let cancelled = false;
     setBackendLoading(true);
     setBackendError('');
@@ -318,10 +298,9 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [itemsRevision, collectionRefreshNonce, isMemorySuspended, memoryResumeVersion]);
+  }, [itemsRevision, collectionRefreshNonce]);
 
   useEffect(() => {
-    if (isMemorySuspended) return undefined;
     let cancelled = false;
     getUserTagsSvc(debouncedCollectionTagQuery, 200, { onlyFavorite: true })
       .then((tags) => {
@@ -341,7 +320,7 @@ function CollectionBoard({
     return () => {
       cancelled = true;
     };
-  }, [debouncedCollectionTagQuery, backendItems, isMemorySuspended, memoryResumeVersion]);
+  }, [debouncedCollectionTagQuery, backendItems]);
 
   const collectionBackendFilterRequest = useMemo(() => {
     const query = debouncedSearchQuery.trim();
@@ -391,12 +370,6 @@ function CollectionBoard({
   ]);
 
   useEffect(() => {
-    if (isMemorySuspended) {
-      setBackendFilteredFavoriteIds(null);
-      setBackendFiltering(false);
-      setBackendFilterError('');
-      return undefined;
-    }
     if (!collectionBackendFilterRequest.shouldQueryBackend) {
       setBackendFilteredFavoriteIds(null);
       setBackendFiltering(false);
@@ -435,8 +408,6 @@ function CollectionBoard({
     itemsRevision,
     t,
     collectionRefreshNonce,
-    isMemorySuspended,
-    memoryResumeVersion,
   ]);
 
   const orderedFavoriteItems = useMemo(

@@ -8,10 +8,8 @@ use tauri::{
 };
 
 use crate::core::clipboard_manager::ClipboardManager;
-use crate::low_memory_mode::AppExitState;
 use crate::window_lifecycle::{
-    cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
-    MAIN_WINDOW_LABEL,
+    ensure_main_window, hide_main_window, AppExitState, MAIN_WINDOW_LABEL,
 };
 
 /// Shared tray language state so menu event handlers always use the latest language.
@@ -218,7 +216,6 @@ pub fn setup_tray(
                 "settings" => {
                     let app_handle = app.clone();
                     tauri::async_runtime::spawn(async move {
-                        cancel_main_window_release(&app_handle, "tray_settings_show");
                         match ensure_main_window(&app_handle) {
                             Ok(window) => {
                                 let _ = window.show();
@@ -320,12 +317,11 @@ fn toggle_main_window(app: &tauri::AppHandle) {
             let is_minimized = window.is_minimized().unwrap_or(false);
 
             if is_visible && !is_minimized {
-                hide_main_window_with_release(&app_handle, "tray_toggle_hide");
+                hide_main_window(&app_handle);
                 return;
             }
         }
 
-        cancel_main_window_release(&app_handle, "tray_toggle_show");
         match ensure_main_window(&app_handle) {
             Ok(window) => {
                 let _ = window.show();

@@ -1580,10 +1580,10 @@ function HistoryStream({ style }) {
   }, [setShowSettings]);
 
   const handleOpenCollectionPreview = useCallback((item) => {
-    if (!item || isMiniMode) return;
+    if (!item) return;
     const returnViewMode = workbenchPanelEnabled ? 'all' : 'left';
     openItemPreview(setPanelMode, item, { returnViewMode });
-  }, [isMiniMode, setPanelMode, workbenchPanelEnabled]);
+  }, [setPanelMode, workbenchPanelEnabled]);
 
   const searchBarProps = useMemo(() => ({
     searchQuery: activeTopSearchQuery,

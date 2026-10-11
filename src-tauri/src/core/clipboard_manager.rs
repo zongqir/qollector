@@ -1,10 +1,6 @@
 use crate::ai::{AIConfig, AIService};
 use crate::collector;
-use crate::core::models::{
-    ClipboardContent, ClipboardItem, SyncApplyResult, SyncIncomingSlot, SyncLatestSlot,
-    WindowMetadata, Workbench,
-};
-use crate::lan_sync::PairedSyncDevice;
+use crate::core::models::{ClipboardContent, ClipboardItem, WindowMetadata, Workbench};
 use crate::ocr::OcrService;
 use crate::platform::clipboard_trait::{ClipboardCallback, ClipboardError, PlatformClipboard};
 use crate::repository::clipboard_repo::ClipboardRepository;
@@ -20,8 +16,6 @@ use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use url::Host;
 
 const APP_NAME: &str = "Qollect";
-const DOUBLE_COPY_MIN_INTERVAL_MS: u128 = 60;
-const DOUBLE_COPY_COOLDOWN_MS: u128 = 900;
 const CLIPBOARD_ROLLBACK_SUPPRESSION_WINDOW_MS: u128 = 900;
 const LINK_PREVIEW_MAX_BYTES: usize = 262_144;
 const MAX_AI_FILENAME_STEM_CHARS: usize = 64;
@@ -29,18 +23,14 @@ const LOCAL_CODE_DETECT_MIN_CHARS: usize = 12;
 const LOCAL_CODE_DETECT_MAX_CHARS: usize = 20_000;
 
 #[derive(Default)]
-struct DoubleCopyEmphasisState {
+struct ClipboardTransitionState {
     previous_hash: Option<String>,
     last_hash: Option<String>,
     last_source_app: Option<String>,
     last_seen_at_ms: u128,
-    last_emphasis_at_ms: u128,
-    last_emphasis_hash: Option<String>,
-    last_emphasis_source_app: Option<String>,
 }
 
 struct ClipboardTransitionDecision {
-    should_pin_on_double_copy: bool,
     suppress_rollback_duplicate: bool,
 }
 
@@ -52,7 +42,7 @@ pub struct ClipboardManager {
     ai_config: Arc<Mutex<AIConfig>>,
     ocr_config: Arc<Mutex<Option<OcrService>>>,
     ai_semaphore: Arc<Semaphore>, // AI request serialization control
-    double_copy_state: Arc<Mutex<DoubleCopyEmphasisState>>,
+    transition_state: Arc<Mutex<ClipboardTransitionState>>,
     app_handle: AppHandle,
     pub paused: Arc<AtomicBool>,
     last_cleanup_at: Arc<AtomicI64>,
@@ -79,7 +69,7 @@ impl ClipboardManager {
             ai_config,
             ocr_config,
             ai_semaphore: Arc::new(Semaphore::new(1)), // Allow only one AI request at a time.
-            double_copy_state: Arc::new(Mutex::new(DoubleCopyEmphasisState::default())),
+            transition_state: Arc::new(Mutex::new(ClipboardTransitionState::default())),
             app_handle,
             paused: Arc::new(AtomicBool::new(false)),
             last_cleanup_at: Arc::new(AtomicI64::new(0)),
@@ -178,7 +168,7 @@ impl ClipboardManager {
         let ai_config = self.ai_config.clone();
         let ocr_config = self.ocr_config.clone();
         let ai_semaphore = self.ai_semaphore.clone();
-        let double_copy_state = self.double_copy_state.clone();
+        let transition_state = self.transition_state.clone();
         let app_handle = self.app_handle.clone();
         let paused = self.paused.clone();
         let last_cleanup_at = self.last_cleanup_at.clone();
@@ -190,7 +180,7 @@ impl ClipboardManager {
             let ai_config = ai_config.clone();
             let ocr_config = ocr_config.clone();
             let ai_semaphore = ai_semaphore.clone();
-            let double_copy_state = double_copy_state.clone();
+            let transition_state = transition_state.clone();
             let app_handle = app_handle.clone();
             let paused = paused.clone();
             let last_cleanup_at = last_cleanup_at.clone();
@@ -208,7 +198,7 @@ impl ClipboardManager {
                     ai_config,
                     ocr_config,
                     ai_semaphore,
-                    double_copy_state,
+                    transition_state,
                     app_handle,
                 )
                 .await
@@ -359,7 +349,7 @@ impl ClipboardManager {
         ai_config: Arc<Mutex<AIConfig>>,
         ocr_config: Arc<Mutex<Option<OcrService>>>,
         ai_semaphore: Arc<Semaphore>,
-        double_copy_state: Arc<Mutex<DoubleCopyEmphasisState>>,
+        transition_state: Arc<Mutex<ClipboardTransitionState>>,
         app_handle: AppHandle,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
@@ -528,13 +518,10 @@ impl ClipboardManager {
         let mut item_id = item.id.clone();
         let mut inserted_new_item = false;
 
-        // Evaluate double-copy BEFORE acquiring repo lock so timing is accurate
         let transition = Self::analyze_clipboard_transition(
-            &double_copy_state,
+            &transition_state,
             &content_hash,
             &source_app,
-            general_config.double_copy_emphasis_enabled,
-            general_config.double_copy_window_ms,
         );
 
         let repo_lock = repo.lock().await;
@@ -610,37 +597,6 @@ impl ClipboardManager {
         drop(repo_lock);
         let _ = app_handle.emit("clipboard-changed", ());
         println!("[Clipboard] item saved");
-
-        if transition.should_pin_on_double_copy {
-            let repo_lock = repo.lock().await;
-            if let Some(existing) = repo_lock.find_by_id(&item_id).await? {
-                if !existing.is_pinned {
-                    let default_workbench_id = repo_lock.ensure_default_workbench().await?;
-                    let pinned_items = repo_lock
-                        .get_pinned_items_in_workbench(&default_workbench_id)
-                        .await?;
-                    println!(
-                        "[DoubleCopyPin] item_id={} pinned_count={} max_pinned_items={}",
-                        item_id,
-                        pinned_items.len(),
-                        general_config.max_pinned_items
-                    );
-                    if pinned_items.len() >= general_config.max_pinned_items {
-                        if let Some(oldest_pinned) = pinned_items.first() {
-                            println!(
-                                "[DoubleCopyPin] unpin oldest item_id={} before pinning {}",
-                                oldest_pinned.id, item_id
-                            );
-                            repo_lock.unpin(&oldest_pinned.id).await?;
-                        }
-                    }
-                    repo_lock
-                        .set_pinned(&item_id, true, Some(&default_workbench_id))
-                        .await?;
-                    let _ = app_handle.emit("clipboard-changed", ());
-                }
-            }
-        }
 
         // Process AI tags and OCR asynchronously for new items only.
         let repo_clone = repo.clone();
@@ -1185,57 +1141,26 @@ impl ClipboardManager {
     }
 
     fn analyze_clipboard_transition(
-        state: &Arc<Mutex<DoubleCopyEmphasisState>>,
+        state: &Arc<Mutex<ClipboardTransitionState>>,
         content_hash: &str,
         source_app: &str,
-        enabled: bool,
-        window_ms: u64,
     ) -> ClipboardTransitionDecision {
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis())
             .unwrap_or(0);
-        Self::analyze_clipboard_transition_at(
-            state,
-            content_hash,
-            source_app,
-            enabled,
-            window_ms,
-            now_ms,
-        )
+        Self::analyze_clipboard_transition_at(state, content_hash, source_app, now_ms)
     }
 
     fn analyze_clipboard_transition_at(
-        state: &Arc<Mutex<DoubleCopyEmphasisState>>,
+        state: &Arc<Mutex<ClipboardTransitionState>>,
         content_hash: &str,
         source_app: &str,
-        enabled: bool,
-        window_ms: u64,
         now_ms: u128,
     ) -> ClipboardTransitionDecision {
-        let window_ms = window_ms.clamp(300, 2500) as u128;
-
         let mut state = state.lock();
         let previous_hash_matches = state.previous_hash.as_deref() == Some(content_hash);
-        let same_hash = state.last_hash.as_deref() == Some(content_hash);
-        let source_app_valid = !source_app.is_empty() && source_app != "Unknown";
-        let last_source_app_valid = state
-            .last_source_app
-            .as_deref()
-            .map(|s| !s.is_empty() && s != "Unknown")
-            .unwrap_or(false);
-        // If source app cannot be identified on either side, do not block double-copy.
-        let same_source_app = if source_app_valid && last_source_app_valid {
-            state.last_source_app.as_deref() == Some(source_app)
-        } else {
-            true
-        };
         let delta_ms = now_ms.saturating_sub(state.last_seen_at_ms);
-        let interval_ok = delta_ms >= DOUBLE_COPY_MIN_INTERVAL_MS && delta_ms <= window_ms;
-        let same_as_last_emphasis = state.last_emphasis_hash.as_deref() == Some(content_hash)
-            && state.last_emphasis_source_app.as_deref() == Some(source_app);
-        let cooldown_ok = !same_as_last_emphasis
-            || now_ms.saturating_sub(state.last_emphasis_at_ms) >= DOUBLE_COPY_COOLDOWN_MS;
         let changed_from_last = state
             .last_hash
             .as_deref()
@@ -1245,29 +1170,12 @@ impl ClipboardManager {
             && changed_from_last
             && delta_ms <= CLIPBOARD_ROLLBACK_SUPPRESSION_WINDOW_MS;
 
-        let should_pin_on_double_copy =
-            enabled && same_hash && same_source_app && interval_ok && cooldown_ok;
-
-        println!(
-            "[ClipboardTransition] enabled={} same_hash={} previous_hash_matches={} same_source_app={} source_app_valid={} last_source_app_valid={} interval_ok={} cooldown_ok={} same_as_last_emphasis={} delta_ms={} window_ms={} rollback_suppressed={} source_app={:?} last_source_app={:?} => pin={}",
-            enabled, same_hash, same_source_app, source_app_valid, last_source_app_valid,
-            previous_hash_matches, interval_ok, cooldown_ok, same_as_last_emphasis, delta_ms,
-            window_ms, suppress_rollback_duplicate, source_app, state.last_source_app,
-            should_pin_on_double_copy
-        );
-
         state.previous_hash = state.last_hash.clone();
         state.last_hash = Some(content_hash.to_string());
         state.last_source_app = Some(source_app.to_string());
         state.last_seen_at_ms = now_ms;
-        if should_pin_on_double_copy {
-            state.last_emphasis_at_ms = now_ms;
-            state.last_emphasis_hash = Some(content_hash.to_string());
-            state.last_emphasis_source_app = Some(source_app.to_string());
-        }
 
         ClipboardTransitionDecision {
-            should_pin_on_double_copy,
             suppress_rollback_duplicate,
         }
     }
@@ -1591,158 +1499,6 @@ impl ClipboardManager {
         drop(repo);
         self.schedule_link_preview_enrichment(&prepared_item);
         Ok(prepared_item.id.clone())
-    }
-
-    pub async fn get_sync_latest_slot(&self) -> Result<Option<SyncLatestSlot>, sqlx::Error> {
-        let repo = self.repository.lock().await;
-        repo.get_sync_latest_slot().await
-    }
-
-    pub async fn get_next_sync_source_seq_hint(
-        &self,
-        source_device_id: &str,
-    ) -> Result<i64, String> {
-        let source_device_id = source_device_id.trim();
-        if source_device_id.is_empty() {
-            return Err("source_device_id is required".to_string());
-        }
-        let repo = self.repository.lock().await;
-        repo.get_next_sync_source_seq_hint(source_device_id)
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn publish_sync_slot_from_item(
-        &self,
-        item_id: &str,
-        source_device_id: &str,
-    ) -> Result<SyncLatestSlot, String> {
-        let source_device_id = source_device_id.trim();
-        if source_device_id.is_empty() {
-            return Err("source_device_id is required".to_string());
-        }
-
-        let repo = self.repository.lock().await;
-        let item = repo
-            .find_by_id(item_id)
-            .await
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| format!("Item not found: {}", item_id))?;
-
-        if item.is_deleted {
-            return Err("Cannot publish a deleted item".to_string());
-        }
-
-        let payload_json = serde_json::to_string(&item)
-            .map_err(|e| format!("Failed to encode sync payload: {}", e))?;
-
-        repo.publish_sync_slot_local(
-            &payload_json,
-            &item.type_,
-            source_device_id,
-            &item.content_hash,
-            Some(chrono::Utc::now().timestamp_millis()),
-        )
-        .await
-        .map_err(|e| e.to_string())
-    }
-
-    pub async fn publish_sync_slot_payload(
-        &self,
-        payload_json: &str,
-        payload_type: &str,
-        source_device_id: &str,
-        content_hash: &str,
-        logical_ts_ms: Option<i64>,
-    ) -> Result<SyncLatestSlot, String> {
-        let payload_json_trimmed = payload_json.trim();
-        let payload_type = payload_type.trim();
-        let source_device_id = source_device_id.trim();
-        let content_hash = content_hash.trim();
-
-        if payload_json_trimmed.is_empty() {
-            return Err("payload_json is required".to_string());
-        }
-        if payload_type.is_empty() {
-            return Err("payload_type is required".to_string());
-        }
-        if source_device_id.is_empty() {
-            return Err("source_device_id is required".to_string());
-        }
-        if content_hash.is_empty() {
-            return Err("content_hash is required".to_string());
-        }
-
-        let repo = self.repository.lock().await;
-        repo.publish_sync_slot_local(
-            payload_json,
-            payload_type,
-            source_device_id,
-            content_hash,
-            logical_ts_ms,
-        )
-        .await
-        .map_err(|e| e.to_string())
-    }
-
-    pub async fn apply_remote_sync_slot(
-        &self,
-        incoming: SyncIncomingSlot,
-    ) -> Result<SyncApplyResult, String> {
-        let repo = self.repository.lock().await;
-        repo.apply_remote_sync_slot(&incoming)
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn list_paired_sync_devices(&self) -> Result<Vec<PairedSyncDevice>, String> {
-        let repo = self.repository.lock().await;
-        repo.list_paired_sync_devices()
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn get_paired_sync_device(
-        &self,
-        device_id: &str,
-    ) -> Result<Option<PairedSyncDevice>, String> {
-        let repo = self.repository.lock().await;
-        repo.get_paired_sync_device(device_id)
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn upsert_paired_sync_device(
-        &self,
-        device_id: &str,
-        device_name: &str,
-        pair_token: &str,
-        last_host: Option<&str>,
-        last_port: Option<u16>,
-    ) -> Result<PairedSyncDevice, String> {
-        let repo = self.repository.lock().await;
-        repo.upsert_paired_sync_device(device_id, device_name, pair_token, last_host, last_port)
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn touch_paired_sync_device(
-        &self,
-        device_id: &str,
-        last_host: Option<&str>,
-        last_port: Option<u16>,
-    ) -> Result<(), String> {
-        let repo = self.repository.lock().await;
-        repo.touch_paired_sync_device(device_id, last_host, last_port)
-            .await
-            .map_err(|e| e.to_string())
-    }
-
-    pub async fn remove_paired_sync_device(&self, device_id: &str) -> Result<(), String> {
-        let repo = self.repository.lock().await;
-        repo.remove_paired_sync_device(device_id)
-            .await
-            .map_err(|e| e.to_string())
     }
 
     fn schedule_link_preview_enrichment(&self, item: &ClipboardItem) {
@@ -2531,266 +2287,14 @@ impl ClipboardManager {
 
         Ok(targets.len())
     }
-
-    fn compute_content_hash(content: &ClipboardContent) -> String {
-        match content {
-            ClipboardContent::Text {
-                plain: ref text, ..
-            } => ClipboardItem::calculate_text_hash(text),
-            ClipboardContent::Image(data) => blake3::hash(data).to_hex().to_string(),
-            ClipboardContent::File(paths_str) => {
-                blake3::hash(paths_str.as_bytes()).to_hex().to_string()
-            }
-        }
-    }
-
-    async fn load_max_pinned(&self) -> usize {
-        self.config_repo
-            .load_general_config()
-            .await
-            .ok()
-            .flatten()
-            .map(|c| c.max_pinned_items)
-            .unwrap_or(3)
-    }
-
-    async fn pin_by_hash_with_retry(
-        &self,
-        content_hash: &str,
-        max_pinned: usize,
-        max_retries: usize,
-        retry_delay_ms: u64,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        for attempt in 0..max_retries {
-            let repo = self.repository.lock().await;
-            if let Some(item) = repo.find_by_hash(content_hash).await? {
-                if item.is_pinned {
-                    return Ok(item.id);
-                }
-
-                let default_workbench_id = repo.ensure_default_workbench().await?;
-                let pinned_items = repo
-                    .get_pinned_items_in_workbench(&default_workbench_id)
-                    .await?;
-                if pinned_items.len() >= max_pinned {
-                    if let Some(oldest) = pinned_items.first() {
-                        repo.unpin(&oldest.id).await?;
-                    }
-                }
-
-                repo.set_pinned(&item.id, true, Some(&default_workbench_id))
-                    .await?;
-                return Ok(item.id);
-            }
-            drop(repo);
-
-            if attempt + 1 < max_retries {
-                tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
-            }
-        }
-
-        Err(format!(
-            "Clipboard item not found in DB after {} retries (hash={})",
-            max_retries, content_hash
-        )
-        .into())
-    }
-
-    async fn read_clipboard_with_retry(
-        &self,
-        max_retries: usize,
-        retry_delay_ms: u64,
-    ) -> Result<ClipboardContent, Box<dyn std::error::Error + Send + Sync>> {
-        for attempt in 0..max_retries {
-            match self.platform.get_content().await {
-                Ok(content) => return Ok(content),
-                Err(err) => {
-                    if attempt + 1 >= max_retries {
-                        return Err(format!("Failed to read clipboard: {}", err).into());
-                    }
-                }
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(retry_delay_ms)).await;
-        }
-
-        Err("Failed to read clipboard".into())
-    }
-
-    #[cfg(target_os = "windows")]
-    async fn wait_shortcut_modifiers_released(timeout_ms: u64) {
-        use windows::Win32::UI::Input::KeyboardAndMouse::{
-            GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT,
-        };
-
-        fn is_pressed(vk: i32) -> bool {
-            unsafe { (GetAsyncKeyState(vk) as u16 & 0x8000) != 0 }
-        }
-
-        let started = std::time::Instant::now();
-        let timeout = std::time::Duration::from_millis(timeout_ms);
-        while started.elapsed() < timeout {
-            if !is_pressed(VK_CONTROL.0 as i32)
-                && !is_pressed(VK_SHIFT.0 as i32)
-                && !is_pressed(VK_MENU.0 as i32)
-            {
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        }
-    }
-
-    #[cfg(target_os = "windows")]
-    fn send_ctrl_c_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        use windows::Win32::UI::Input::KeyboardAndMouse::{
-            SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
-            VK_CONTROL,
-        };
-
-        const VK_C_KEY: u16 = 0x43;
-
-        fn key_input(vk: u16, key_up: bool) -> INPUT {
-            let flags = if key_up {
-                KEYEVENTF_KEYUP
-            } else {
-                Default::default()
-            };
-
-            INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VIRTUAL_KEY(vk),
-                        wScan: 0,
-                        dwFlags: flags,
-                        time: 0,
-                        dwExtraInfo: 0,
-                    },
-                },
-            }
-        }
-
-        let inputs = [
-            key_input(VK_CONTROL.0, false),
-            key_input(VK_C_KEY, false),
-            key_input(VK_C_KEY, true),
-            key_input(VK_CONTROL.0, true),
-        ];
-
-        let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
-        if sent != inputs.len() as u32 {
-            return Err(
-                format!("SendInput sent {} events, expected {}", sent, inputs.len()).into(),
-            );
-        }
-
-        Ok(())
-    }
-
-    #[cfg(target_os = "windows")]
-    async fn wait_clipboard_sequence_change(previous_seq: u32, timeout_ms: u64) -> bool {
-        use windows::Win32::System::DataExchange::GetClipboardSequenceNumber;
-
-        let started = std::time::Instant::now();
-        let timeout = std::time::Duration::from_millis(timeout_ms);
-        while started.elapsed() < timeout {
-            let current = unsafe { GetClipboardSequenceNumber() };
-            if current != 0 && current != previous_seq {
-                return true;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-        }
-
-        false
-    }
-
-    /// One-shot pipeline:
-    /// 1) trigger a copy in the foreground app,
-    /// 2) wait for clipboard change,
-    /// 3) persist and dedupe clipboard content,
-    /// 4) pin the resulting item.
-    ///
-    /// Falls back to pinning current clipboard when the synthetic copy path cannot complete.
-    pub async fn copy_and_pin_foreground_selection(
-        &self,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        #[cfg(target_os = "windows")]
-        {
-            use windows::Win32::System::DataExchange::GetClipboardSequenceNumber;
-
-            Self::wait_shortcut_modifiers_released(350).await;
-            let seq_before = unsafe { GetClipboardSequenceNumber() };
-
-            if let Err(err) = Self::send_ctrl_c_input() {
-                eprintln!("[Shortcut] copy simulation failed: {}", err);
-                return self.pin_current_clipboard().await;
-            }
-
-            let changed = Self::wait_clipboard_sequence_change(seq_before, 1500).await;
-            if !changed {
-                eprintln!("[Shortcut] clipboard sequence did not change after synthetic copy");
-                return self.pin_current_clipboard().await;
-            }
-
-            let content = self.read_clipboard_with_retry(20, 30).await?;
-            let content_hash = Self::compute_content_hash(&content);
-            let metadata = self
-                .platform
-                .get_active_window_info()
-                .unwrap_or(WindowMetadata {
-                    source_app: "Unknown".to_string(),
-                    window_title: "".to_string(),
-                    source_url: None,
-                    is_self: false,
-                });
-
-            if let Err(err) = Self::handle_clipboard_change(
-                content,
-                self.repository.clone(),
-                self.config_repo.clone(),
-                metadata,
-                self.image_dir.clone(),
-                self.ai_config.clone(),
-                self.ocr_config.clone(),
-                self.ai_semaphore.clone(),
-                self.double_copy_state.clone(),
-                self.app_handle.clone(),
-            )
-            .await
-            {
-                eprintln!("[Shortcut] failed to persist copied content: {}", err);
-            }
-
-            let max_pinned = self.load_max_pinned().await;
-            return self
-                .pin_by_hash_with_retry(&content_hash, max_pinned, 20, 75)
-                .await;
-        }
-
-        #[cfg(not(target_os = "windows"))]
-        {
-            self.pin_current_clipboard().await
-        }
-    }
-
-    /// Pin current clipboard content without triggering an extra copy action.
-    pub async fn pin_current_clipboard(
-        &self,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let content = self.read_clipboard_with_retry(10, 40).await?;
-        let content_hash = Self::compute_content_hash(&content);
-        let max_pinned = self.load_max_pinned().await;
-
-        self.pin_by_hash_with_retry(&content_hash, max_pinned, 20, 75)
-            .await
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn make_state() -> Arc<Mutex<DoubleCopyEmphasisState>> {
-        Arc::new(Mutex::new(DoubleCopyEmphasisState::default()))
+    fn make_state() -> Arc<Mutex<ClipboardTransitionState>> {
+        Arc::new(Mutex::new(ClipboardTransitionState::default()))
     }
 
     #[test]
@@ -2798,50 +2302,30 @@ mod tests {
         let state = make_state();
 
         let first = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-a", "IME", true, 900, 10_000,
+            &state, "hash-a", "IME", 10_000,
         );
-        assert!(!first.should_pin_on_double_copy);
         assert!(!first.suppress_rollback_duplicate);
 
         let second = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-b", "IME", true, 900, 10_120,
+            &state, "hash-b", "IME", 10_120,
         );
-        assert!(!second.should_pin_on_double_copy);
         assert!(!second.suppress_rollback_duplicate);
 
         let third = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-a", "IME", true, 900, 10_260,
+            &state, "hash-a", "IME", 10_260,
         );
-        assert!(!third.should_pin_on_double_copy);
         assert!(third.suppress_rollback_duplicate);
-    }
-
-    #[test]
-    fn keeps_normal_double_copy_behavior_for_same_hash() {
-        let state = make_state();
-
-        let first = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-a", "IME", true, 900, 20_000,
-        );
-        assert!(!first.should_pin_on_double_copy);
-        assert!(!first.suppress_rollback_duplicate);
-
-        let second = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-a", "IME", true, 900, 20_120,
-        );
-        assert!(second.should_pin_on_double_copy);
-        assert!(!second.suppress_rollback_duplicate);
     }
 
     #[test]
     fn does_not_suppress_late_return_to_previous_hash() {
         let state = make_state();
 
-        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-a", "IME", true, 900, 30_000);
-        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-b", "IME", true, 900, 30_120);
+        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-a", "IME", 30_000);
+        ClipboardManager::analyze_clipboard_transition_at(&state, "hash-b", "IME", 30_120);
 
         let third = ClipboardManager::analyze_clipboard_transition_at(
-            &state, "hash-a", "IME", true, 900, 31_500,
+            &state, "hash-a", "IME", 31_500,
         );
         assert!(!third.suppress_rollback_duplicate);
     }

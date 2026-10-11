@@ -11,11 +11,7 @@ import useAppStore from './store/useAppStore';
 import { useTheme } from './hooks/useTheme';
 import { prewarmCodeLanguageDetection } from './services/codeDetectionService';
 import { createUpdaterProgressHandler } from './utils/updaterProgress';
-import {
-  openWidgetWindow,
-  closeWidgetWindow,
-  showBubbleWindow,
-} from './services/windowService';
+
 import {
   QUICK_NOTE_SAVED_EVENT,
 } from './services/quickNoteService';
@@ -51,7 +47,7 @@ const LAYOUT_PRESET_STORAGE_KEY = 'qollect-layout-preset';
 const LAYOUT_PRESET_WIDTHS_STORAGE_KEY = 'qollect-layout-preset-widths';
 const LAYOUT_PRESET_FLOW = 'focus';
 const LAYOUT_PRESET_DETAIL = 'review';
-const LAYOUT_PRESET_DEFAULT = LAYOUT_PRESET_DETAIL;
+const LAYOUT_PRESET_DEFAULT = LAYOUT_PRESET_FLOW;
 const VIEW_MODE_MINI = 'mini';
 const VIEW_MODE_LEFT = 'left';
 const VIEW_MODE_RIGHT = 'right';
@@ -69,7 +65,6 @@ const LAYOUT_PRESET_LEGACY_DEFAULT_WIDTHS = {
 };
 const RELEASE_NOTES_SEEN_VERSION_KEY = 'qollect-release-notes-seen-version';
 const RELEASE_NOTES_FALLBACK_URL = 'https://qollect.zongqir.com/changelog';
-const MINIMIZE_SUSPEND_DELAY_MS = 12000;
 
 const normalizeVersion = (version) => String(version || '').trim().replace(/^v/i, '');
 
@@ -244,72 +239,7 @@ function AppThemeEffectHost() {
   return null;
 }
 
-function AppWidgetLifecycleHost() {
-  const widgetEnabled = useAppStore((s) => s.widgetEnabled);
 
-  useEffect(() => {
-    if (widgetEnabled) {
-      openWidgetWindow().catch((err) => console.warn('widget launch failed:', err));
-    } else {
-      closeWidgetWindow().catch((err) => console.warn('widget close failed:', err));
-    }
-  }, [widgetEnabled]);
-
-  return null;
-}
-
-function AppMemorySuspendHost() {
-  const lowMemoryModeEnabled = useAppStore((s) => s.lowMemoryModeEnabled);
-  const suspendForMinimize = useAppStore((s) => s.suspendForMinimize);
-  const resumeFromMinimize = useAppStore((s) => s.resumeFromMinimize);
-  const suspendTimerRef = useRef(null);
-
-  useEffect(() => {
-    const isWindowsRuntime = navigator.userAgent.toLowerCase().includes('windows');
-    if (!isWindowsRuntime) return;
-
-    const clearPendingSuspend = () => {
-      if (suspendTimerRef.current == null) return;
-      window.clearTimeout(suspendTimerRef.current);
-      suspendTimerRef.current = null;
-    };
-
-    if (!lowMemoryModeEnabled) {
-      clearPendingSuspend();
-      resumeFromMinimize().catch((error) => {
-        console.error('[MemorySuspend] resume check failed:', error);
-      });
-      return () => {
-        clearPendingSuspend();
-      };
-    }
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        clearPendingSuspend();
-        suspendTimerRef.current = window.setTimeout(() => {
-          suspendTimerRef.current = null;
-          if (document.visibilityState !== 'hidden') return;
-          suspendForMinimize();
-        }, MINIMIZE_SUSPEND_DELAY_MS);
-        return;
-      }
-
-      clearPendingSuspend();
-      resumeFromMinimize().catch((error) => {
-        console.error('[MemorySuspend] resume failed:', error);
-      });
-    };
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      clearPendingSuspend();
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, [lowMemoryModeEnabled, suspendForMinimize, resumeFromMinimize]);
-
-  return null;
-}
 
 function AppCopyFeedbackHost({ showAppFeedback }) {
   const { t } = useTranslation();
@@ -456,6 +386,7 @@ function App() {
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
   const autoLayoutSwitchEnabled = useAppStore(s => s.autoLayoutSwitchEnabled);
   const panelMode = useAppStore(s => s.panelMode);
+  const previewItem = useAppStore(s => s.previewItem);
 
   // Store actions
   const loadItems = useAppStore(s => s.loadItems);
@@ -469,6 +400,7 @@ function App() {
   const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const setPanelMode = useAppStore(s => s.setPanelMode);
+  const backFromPreview = useAppStore(s => s.backFromPreview);
   const setSelectedType = useAppStore(s => s.setSelectedType);
 
   // Tour state
@@ -501,24 +433,6 @@ function App() {
     console.log('[Perf:App] Setting up event listeners at', performance.now().toFixed(1), 'ms');
     const unlistenClipboardPromise = listen('clipboard-changed', async () => {
       loadItems();
-
-      const { quickActionBubbleEnabled } = useAppStore.getState();
-      if (quickActionBubbleEnabled) {
-        try {
-          const recent = await invoke('get_recent_items_light', { limit: 1 });
-          if (Array.isArray(recent) && recent.length > 0) {
-            const newest = recent[0];
-            if (newest && newest.type === 'text' && newest.content) {
-              const result = await invoke('analyze_quick_action', { text: newest.content });
-              if (result) {
-                await showBubbleWindow(result);
-              }
-            }
-          }
-        } catch (err) {
-          console.error('[QuickAction] failed to analyze clipboard item:', err);
-        }
-      }
     });
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
@@ -758,22 +672,22 @@ function App() {
     return clampHistoryWidth(widths[preset] ?? preferredAllWidth ?? fallback);
   });
   const leftWidthRef = useRef(leftWidth);
+  const isPreviewingItem = panelMode === 'preview' && Boolean(previewItem);
   const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
   const showStandalonePanel = !isMiniMode
     && !workbenchPanelEnabled
-    && (panelMode === 'compare' || panelMode === 'timeline');
+    && (panelMode === 'compare' || panelMode === 'timeline' || isPreviewingItem);
   const showHistoryStream = isMiniMode
     ? !showMiniPanel
-    : !showStandalonePanel && (historyStreamEnabled || !workbenchPanelEnabled);
+    : !((panelMode === 'compare' || panelMode === 'timeline') && !workbenchPanelEnabled) && (historyStreamEnabled || !workbenchPanelEnabled);
   const showPanelPane = isMiniMode
     ? showMiniPanel
     : (workbenchPanelEnabled || showStandalonePanel);
   const shouldRenderHistoryPane = !isMiniMode || showHistoryStream;
   const shouldRenderPanelPane = !isMiniMode || showPanelPane;
   const previewOverlayActive = !isMiniMode
-    && workbenchPanelEnabled
     && showHistoryStream
-    && panelMode === 'preview';
+    && isPreviewingItem;
   const workspaceRef = useRef(null);
   const prevPanelRectRef = useRef(null);
   const prevOverlayActiveRef = useRef(previewOverlayActive);
@@ -940,8 +854,11 @@ function App() {
     if (state.showFavoritesOnly) return MINI_PRIMARY_CONTENT_HISTORY;
     if (activeDesktopViewModeRef.current === VIEW_MODE_LEFT) return MINI_PRIMARY_CONTENT_HISTORY;
 
-    // Mini 模式默认回到历史流，只有处于对比或时间线时才保留面板。
+    // Mini 模式默认回到历史流，只有处于对比、时间线，或当前存在有效预览条目时才保留面板。
     if (state.panelMode === 'compare' || state.panelMode === 'timeline') {
+      return MINI_PRIMARY_CONTENT_PANEL;
+    }
+    if (state.panelMode === 'preview' && state.previewItem) {
       return MINI_PRIMARY_CONTENT_PANEL;
     }
 
@@ -1000,18 +917,17 @@ function App() {
   useEffect(() => {
     if (!isMiniMode) return;
 
-    if (panelMode === 'preview' || panelMode === 'compare' || panelMode === 'timeline') {
+    if (panelMode === 'compare' || panelMode === 'timeline' || (panelMode === 'preview' && previewItem)) {
       if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_PANEL) {
         setMiniPrimaryContent(MINI_PRIMARY_CONTENT_PANEL);
       }
       return;
     }
 
-    const nextPrimaryContent = resolveMiniPrimaryContent();
-    if (miniPrimaryContent !== nextPrimaryContent) {
-      setMiniPrimaryContent(nextPrimaryContent);
+    if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_HISTORY) {
+      setMiniPrimaryContent(MINI_PRIMARY_CONTENT_HISTORY);
     }
-  }, [isMiniMode, miniPrimaryContent, panelMode, resolveMiniPrimaryContent]);
+  }, [isMiniMode, miniPrimaryContent, panelMode, previewItem]);
 
   const performViewModeSwitch = useCallback(async (mode) => {
     const currentMiniMode = useAppStore.getState().isMiniMode;
@@ -1023,81 +939,15 @@ function App() {
       return;
     }
 
-    if (mode === VIEW_MODE_RESTORE) {
-      const restoreMode = hasDesktopRestoreTargetRef.current
-        ? (lastDesktopViewModeRef.current || VIEW_MODE_ALL)
-        : VIEW_MODE_ALL;
-      if (currentMiniMode) {
-        await setMiniMode(false);
-      }
-      if (restoreMode === VIEW_MODE_LEFT) {
-        applyLayoutPreset(LAYOUT_PRESET_FLOW);
-      } else if (restoreMode === VIEW_MODE_RIGHT) {
-        if (workbenchPanelEnabled && showHistoryStream) {
-          rememberPresetWidth(layoutPreset, leftWidthRef.current);
-        }
-        setLayoutPreset(LAYOUT_PRESET_DETAIL);
-        persistLayoutPreset(LAYOUT_PRESET_DETAIL);
-        setWorkbenchPanelBeforeMini(null);
-        setWorkbenchPanelEnabled(true);
-        setHistoryStreamEnabled(false);
-      } else {
-        applyLayoutPreset(LAYOUT_PRESET_DETAIL, { preferredWidth: lastAllSplitWidthRef.current });
-      }
-      showAppFeedback(
-        restoreMode === VIEW_MODE_LEFT
-          ? t('feedback.mode.left')
-          : restoreMode === VIEW_MODE_RIGHT
-            ? t('feedback.mode.right')
-            : t('feedback.mode.all'),
-        'info'
-      );
-      return;
+    if (currentMiniMode) {
+      await setMiniMode(false);
     }
-
-    if (mode === VIEW_MODE_LEFT) {
-      if (currentMiniMode) {
-        await setMiniMode(false);
-      }
-      applyLayoutPreset(LAYOUT_PRESET_FLOW);
-      showAppFeedback(t('feedback.mode.left'), 'info');
-      return;
-    }
-
-    if (mode === VIEW_MODE_RIGHT) {
-      if (currentMiniMode) {
-        await setMiniMode(false);
-      }
-      if (workbenchPanelEnabled && showHistoryStream) {
-        rememberPresetWidth(layoutPreset, leftWidthRef.current);
-      }
-      setLayoutPreset(LAYOUT_PRESET_DETAIL);
-      persistLayoutPreset(LAYOUT_PRESET_DETAIL);
-      setWorkbenchPanelBeforeMini(null);
-      setWorkbenchPanelEnabled(true);
-      setHistoryStreamEnabled(false);
-      showAppFeedback(t('feedback.mode.right'), 'info');
-      return;
-    }
-
-    if (mode === VIEW_MODE_ALL) {
-      if (currentMiniMode) {
-        await setMiniMode(false);
-      }
-      applyLayoutPreset(LAYOUT_PRESET_DETAIL, { preferredWidth: lastAllSplitWidthRef.current });
-      showAppFeedback(t('feedback.mode.all'), 'info');
-    }
+    applyLayoutPreset(LAYOUT_PRESET_FLOW);
+    showAppFeedback(t('feedback.mode.normal', '已恢复多功能模式'), 'info');
   }, [
     applyLayoutPreset,
-    workbenchPanelEnabled,
-    layoutPreset,
-    rememberPresetWidth,
-    setWorkbenchPanelBeforeMini,
-    setWorkbenchPanelEnabled,
-    setHistoryStreamEnabled,
     setMiniMode,
     showAppFeedback,
-    showHistoryStream,
     t,
   ]);
 
@@ -1106,16 +956,6 @@ function App() {
       .catch(() => undefined)
       .then(() => performViewModeSwitch(mode));
   }, [performViewModeSwitch]);
-
-  const handleDensityModeChange = useCallback((nextDensityMode) => {
-    showAppFeedback(
-      nextDensityMode === 'compact'
-        ? t('feedback.density.compact')
-        : t('feedback.density.cozy'),
-      'info',
-      1200,
-    );
-  }, [showAppFeedback, t]);
 
   const handleOpenQuickInput = useCallback(() => {
     setIsQuickInputOpen((prev) => !prev);
@@ -1372,8 +1212,6 @@ function App() {
   return (
     <AppLockGate>
       <AppThemeEffectHost />
-      <AppWidgetLifecycleHost />
-      <AppMemorySuspendHost />
       <AppCopyFeedbackHost showAppFeedback={showAppFeedback} />
       <div
         className={`app view-mode-${activeViewMode} ${isMiniMode ? 'mini-mode' : ''} ${!isMiniMode && !workbenchPanelEnabled ? 'panel-hidden' : ''} ${isQuickInputOpen ? 'quick-note-open' : ''}`.trim()}
@@ -1394,7 +1232,6 @@ function App() {
         isMiniMode={isMiniMode}
         currentViewMode={activeViewMode}
         onSelectViewMode={handleSelectViewMode}
-        onDensityModeChange={handleDensityModeChange}
       />
 
       <Suspense fallback={null}>
@@ -1406,7 +1243,15 @@ function App() {
         />
       </Suspense>
 
-      <div ref={workspaceRef} className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}>
+      <div
+        ref={workspaceRef}
+        className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}
+        onClick={previewOverlayActive ? (e) => {
+          if (!e.target.closest('.polymorphic-panel')) {
+            backFromPreview();
+          }
+        } : undefined}
+      >
         {shouldRenderHistoryPane && (
           <HistoryStream
             style={{

@@ -472,30 +472,6 @@ function GeneralSection({
         )}
         <label className="setting-toggle-row">
           <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.quickActionBubble')}</span>
-            <span className="toggle-desc">{t('settings.general.quickActionBubbleHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.quick_action_bubble_enabled || false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, quick_action_bubble_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ quickActionBubbleEnabled: checked });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save quick_action_bubble config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
             <span className="toggle-label">{t('settings.general.copyQollectSourceItems')}</span>
             <span className="toggle-desc">{t('settings.general.copyQollectSourceItemsHint')}</span>
           </span>
@@ -512,33 +488,6 @@ function GeneralSection({
                   await invoke('update_general_config', { config: updated });
                 } catch (error) {
                   console.error('save copy_qollect_source_items config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
-            <span className="toggle-title-inline">
-              <span className="toggle-label">{t('settings.general.enableWidget')}</span>
-              <span className="beta-badge">{t('settings.general.betaBadge')}</span>
-            </span>
-            <span className="toggle-desc">{t('settings.general.enableWidgetHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.widget_enabled || false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, widget_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ widgetEnabled: checked });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save widget_enabled config failed:', error);
                 }
               }}
             />
@@ -570,35 +519,6 @@ function GeneralSection({
         </label>
         <label className="setting-toggle-row">
           <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.lowMemoryMode')}</span>
-            <span className="toggle-desc">{t('settings.general.lowMemoryModeHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.low_memory_mode_enabled || false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, low_memory_mode_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ lowMemoryModeEnabled: checked });
-                if (!checked) {
-                  useAppStore.getState().resumeFromMinimize?.().catch((error) => {
-                    console.error('resume after disabling low memory mode failed:', error);
-                  });
-                }
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save low_memory_mode config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
             <span className="toggle-label">{t('settings.general.autoLayoutSwitch')}</span>
             <span className="toggle-desc">{t('settings.general.autoLayoutSwitchHint')}</span>
           </span>
@@ -622,11 +542,6 @@ function GeneralSection({
           </span>
         </label>
       </div>
-      {generalConfig.low_memory_mode_enabled && (
-        <small className="setting-hint">
-          <span className="setting-warning">{t('settings.general.lowMemoryModeNotice')}</span>
-        </small>
-      )}
     </div>
   );
 }

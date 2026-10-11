@@ -265,13 +265,10 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
           max_history_items: 2000,
           max_pinned_items: 50,
           workbench_panel_enabled: true,
-          low_memory_mode_enabled: false,
           auto_paste_on_double_click: false,
           copy_on_select_enabled: false,
           copy_on_select_double_click_enabled: true,
-          quick_action_bubble_enabled: true,
           copy_qollect_source_items: true,
-          widget_enabled: false,
           history_tag_shortcut_enabled: true,
           auto_cleanup_enabled: true,
           cleanup_max_items: 2000,
@@ -318,13 +315,6 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
           provider: 'SiliconFlow',
           api_key: '',
           model: 'Qwen/Qwen2.5-7B-Instruct',
-        };
-
-      case 'get_license_info':
-        return {
-          status: 'Active',
-          tier: 'Pro',
-          expires_at: null,
         };
 
       case 'plugin:process|relaunch':

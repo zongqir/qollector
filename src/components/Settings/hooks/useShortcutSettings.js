@@ -56,16 +56,8 @@ function useShortcutSettings({
     return 'Current OS';
   };
 
-  const getDefaultSuggestedShortcut = (target) => {
+  const getDefaultSuggestedShortcut = () => {
     const platform = getShortcutPlatform();
-    if (target === 'copy_pin_shortcut') {
-      if (platform === 'macos') return 'super+alt+c';
-      return 'ctrl+alt+c';
-    }
-    if (target === 'toggle_window_shortcut') {
-      if (platform === 'macos') return 'super+alt+x';
-      return 'ctrl+alt+x';
-    }
     if (platform === 'macos') return 'super+alt+x';
     return 'ctrl+alt+x';
   };
@@ -95,19 +87,9 @@ function useShortcutSettings({
 
   const validateShortcutConfigDraft = (draft) => {
     const toggleShortcut = normalizeShortcutText(draft.toggle_window_shortcut || '');
-    const copyShortcut = normalizeShortcutText(draft.copy_pin_shortcut || '');
 
     if (draft.toggle_window_shortcut_enabled && isReservedShortcut(toggleShortcut)) {
       return t('settings.shortcuts.recordReserved', { shortcut: toggleShortcut });
-    }
-    if (draft.ctrl_shift_c_shortcut_enabled && isReservedShortcut(copyShortcut)) {
-      return t('settings.shortcuts.recordReserved', { shortcut: copyShortcut });
-    }
-
-    if (draft.toggle_window_shortcut_enabled && draft.ctrl_shift_c_shortcut_enabled) {
-      if (shortcutKey(toggleShortcut) === shortcutKey(copyShortcut)) {
-        return t('settings.shortcuts.conflictError');
-      }
     }
 
     return '';
@@ -242,8 +224,6 @@ function useShortcutSettings({
     setRecordingTarget(null);
     await saveShortcutConfig({
       ...generalConfig,
-      ctrl_shift_c_shortcut_enabled: true,
-      copy_pin_shortcut: 'ctrl+shift+c',
       toggle_window_shortcut_enabled: true,
       toggle_window_shortcut: 'alt+x',
       history_tag_shortcut_enabled: true,
@@ -276,14 +256,6 @@ function useShortcutSettings({
           ...generalConfig,
           toggle_window_shortcut: shortcut,
         }, 'toggle_window_shortcut');
-        return;
-      }
-
-      if (recordingTarget === 'copy_pin_shortcut') {
-        await saveShortcutConfig({
-          ...generalConfig,
-          copy_pin_shortcut: shortcut,
-        }, 'copy_pin_shortcut');
       }
     };
 

@@ -1,9 +1,7 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::core::models::{ClipboardItem, SearchFilters, Workbench};
 #[cfg(target_os = "windows")]
-use crate::window_lifecycle::{
-    cancel_main_window_release, hide_main_window_with_release, MAIN_WINDOW_LABEL,
-};
+use crate::window_lifecycle::{hide_main_window, MAIN_WINDOW_LABEL};
 use serde::Serialize;
 use std::path::Path;
 use std::sync::Arc;
@@ -288,13 +286,12 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
             // For pinned windows, briefly hide to hand focus back to the previous app,
             // then restore without activation after paste.
             println!("[AutoPaste] main window is pinned(always-on-top), hide briefly and restore");
-            cancel_main_window_release(&app, "auto_paste_hide_restore_pinned");
             if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 let _ = main_window.hide();
                 should_restore_pinned_window = true;
             }
         } else {
-            hide_main_window_with_release(&app, "auto_paste_hide");
+            hide_main_window(&app);
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;

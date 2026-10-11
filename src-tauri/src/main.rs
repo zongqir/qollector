@@ -11,9 +11,6 @@ mod copy_on_select;
 mod core;
 mod crash_log;
 mod http_client;
-mod lan_sync;
-mod license;
-mod low_memory_mode;
 mod mcp;
 mod ocr;
 mod platform;
@@ -32,19 +29,15 @@ use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
 use commands::input_access_probe_commands::*;
-use commands::lan_sync_commands::*;
-use commands::license_commands::*;
 use commands::lock_commands::*;
 use commands::mcp_commands::*;
 use commands::native_drag_commands::*;
 use commands::ocr_commands::*;
 use commands::prompt_commands::*;
 use commands::share_commands::*;
-use commands::sync_commands::*;
 use commands::workbench_commands::*;
 use copy_on_select::{start_copy_on_select_monitor, CopyOnSelectState};
 use core::clipboard_manager::ClipboardManager;
-use low_memory_mode::{AppExitState, LowMemoryModeState};
 use parking_lot::Mutex;
 use repository::clipboard_repo::ClipboardRepository;
 use repository::config_repo::ConfigRepository;
@@ -56,8 +49,7 @@ use tauri::Manager;
 use tauri_plugin_autostart::ManagerExt;
 use tokio::sync::Mutex as TokioMutex;
 use window_lifecycle::{
-    cancel_main_window_release, ensure_main_window, hide_main_window_with_release,
-    schedule_main_window_release, MainWindowLifecycleState, MAIN_WINDOW_LABEL,
+    ensure_main_window, hide_main_window, AppExitState, MAIN_WINDOW_LABEL,
 };
 
 struct StartupMeter {
@@ -148,8 +140,6 @@ fn choose_window_position_near_cursor(
 }
 
 fn show_main_window_near_cursor(app: &tauri::AppHandle) {
-    cancel_main_window_release(app, "show_main_window_near_cursor");
-
     let window = match ensure_main_window(app) {
         Ok(window) => window,
         Err(error) => {
@@ -208,7 +198,7 @@ fn toggle_main_window_from_shortcut(app: tauri::AppHandle) {
             let is_minimized = window.is_minimized().unwrap_or(false);
 
             if is_visible && !is_minimized {
-                hide_main_window_with_release(&app, "shortcut_toggle_hide");
+                hide_main_window(&app);
                 return;
             }
         }
@@ -324,8 +314,6 @@ fn main() {
     ].join(" "));
 
     tauri::Builder::default()
-        .manage(MainWindowLifecycleState::default())
-        .manage(LowMemoryModeState::default())
         .manage(AppExitState::default())
         .manage(startup_metrics)
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -336,7 +324,6 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             let app_handle = app.clone();
             tauri::async_runtime::spawn(async move {
-                cancel_main_window_release(&app_handle, "single_instance_focus");
                 match ensure_main_window(&app_handle) {
                     Ok(window) => {
                         let _ = window.show();
@@ -413,14 +400,12 @@ fn main() {
                     ocr_config_opt,
                     mcp_config_opt,
                     general_config_opt,
-                    lan_sync_config_opt,
                 ) =
                     tokio::try_join!(
                         config_repo.load_ai_config(),
                         config_repo.load_ocr_config(),
                         config_repo.load_mcp_config(),
-                        config_repo.load_general_config(),
-                        config_repo.load_lan_sync_config()
+                        config_repo.load_general_config()
                     )
                     .expect("Failed to load startup configs");
                 init_meter.mark("load_startup_configs");
@@ -620,19 +605,6 @@ fn main() {
 
             let (startup_general_config, is_first_run_general_config) = startup_general_config;
 
-            if let Some(low_memory_mode_state) =
-                app_handle_for_shortcuts.try_state::<LowMemoryModeState>()
-            {
-                low_memory_mode_state.set_enabled(startup_general_config.low_memory_mode_enabled);
-            }
-
-            if startup_general_config.low_memory_mode_enabled {
-                schedule_main_window_release(
-                    app_handle_for_shortcuts.clone(),
-                    "startup_low_memory_mode",
-                );
-            }
-
             if is_first_run_general_config && startup_general_config.autostart_enabled {
                 match app_handle_for_shortcuts.autolaunch().is_enabled() {
                     Ok(true) => {}
@@ -670,24 +642,6 @@ fn main() {
                             match shortcut_binding_state_for_handler
                                 .action_for_shortcut_id(shortcut.id())
                             {
-                                ShortcutAction::CopyPin => {
-                                    let app_handle = app.clone();
-                                    tauri::async_runtime::spawn(async move {
-                                        if let Some(manager) =
-                                            app_handle.try_state::<Arc<ClipboardManager>>()
-                                        {
-                                            match manager.copy_and_pin_foreground_selection().await {
-                                                Ok(id) => {
-                                                    println!("[Shortcut] Pinned clipboard item: {}", id);
-                                                    let _ = app_handle.emit("clipboard-changed", ());
-                                                }
-                                                Err(e) => {
-                                                    eprintln!("[Shortcut] Failed to pin clipboard: {}", e);
-                                                }
-                                            }
-                                        }
-                                    });
-                                }
                                 ShortcutAction::ToggleWindow => {
                                     toggle_main_window_from_shortcut(app.clone());
                                 }
@@ -756,7 +710,7 @@ fn main() {
 
                     api.prevent_close();
                     let app_handle = window.app_handle().clone();
-                    hide_main_window_with_release(&app_handle, "close_button_hide");
+                    hide_main_window(&app_handle);
                 }
             }
         })

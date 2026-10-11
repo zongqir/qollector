@@ -58,19 +58,6 @@ function AboutSection({
           fontWeight: 600,
           letterSpacing: '0.02em',
         }}>Beta</div>
-        <div style={{
-          marginTop: 4,
-          padding: '10px 16px',
-          borderRadius: 8,
-          background: 'var(--bg-input)',
-          fontSize: 12,
-          lineHeight: 1.7,
-          color: 'var(--text-secondary)',
-          maxWidth: 320,
-          textAlign: 'center',
-        }}>
-          {t('settings.about.betaNotice')}
-        </div>
 
         {aboutUpdateVersion && aboutUpdateRef && !aboutUpdateStatus && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>

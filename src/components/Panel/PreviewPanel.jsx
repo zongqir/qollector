@@ -145,6 +145,28 @@ function PreviewPanel() {
           <div style={{ fontSize: '12px', maxWidth: '280px', lineHeight: 1.5, opacity: 0.8 }}>
             {t('preview.selectHint', '在左侧点击或使用方向键选中条目以查看高保真预览与详情')}
           </div>
+          <button
+            type="button"
+            className="preview-back-btn preview-back-empty-btn"
+            onClick={backFromPreview}
+            style={{
+              marginTop: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              border: '1px solid var(--surface-border-strong, #334155)',
+              background: 'var(--surface-card, #1e293b)',
+              color: 'var(--text-primary, #f8fafc)',
+            }}
+          >
+            <ArrowLeft size={13} />
+            {t('preview.backToList', '返回列表')}
+          </button>
         </div>
       </div>
     );
@@ -581,6 +603,19 @@ function PreviewPanel() {
       window.removeEventListener('keydown', handleQuickTagShortcut, true);
     };
   }, [historyTagShortcutEnabled, isEditingContent, addingTagItemId, item, startAddTag, selectedItemIds.length]);
+
+  useEffect(() => {
+    const handleGlobalEscape = (e) => {
+      if (e.key !== 'Escape') return;
+      if (lightboxSrc) return;
+      if (isEditingContent) return;
+      if (editingNoteId) return;
+      if (addingTagItemId) return;
+      backFromPreview();
+    };
+    window.addEventListener('keydown', handleGlobalEscape);
+    return () => window.removeEventListener('keydown', handleGlobalEscape);
+  }, [lightboxSrc, isEditingContent, editingNoteId, addingTagItemId, backFromPreview]);
 
   const handleOpen = useCallback(() => {
     if (openFeedback === 'open') return;

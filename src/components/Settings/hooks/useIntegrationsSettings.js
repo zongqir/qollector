@@ -62,7 +62,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    ai: true, ocr: true, mcp: true, collector: true, lanSync: true, share: true,
+    ai: true, ocr: true, mcp: true, collector: true, share: true,
   });
 
   const toggleSection = (key) => {

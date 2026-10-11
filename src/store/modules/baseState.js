@@ -18,16 +18,13 @@ export const createBaseState = ({
   historyLoadStopReason: null,
   itemsRevision: 0,
   processedItemIds: new Set(),
-  isMemorySuspended: false,
-  memorySuspendVersion: 0,
-  memoryResumeVersion: 0,
 
   // ========== 右栏面板状态机 ==========
-  // 'preview' | 'compare' | 'timeline'
-  panelMode: 'preview',
+  // 'idle' | 'preview' | 'compare' | 'timeline'
+  panelMode: 'idle',
   previewItem: null,
   previewReturnMode: 'preview',
-  previewReturnViewMode: 'all',
+  previewReturnViewMode: 'left',
   compareCandidateIds: [],
   compareItemIds: [],
 
@@ -88,14 +85,11 @@ export const createBaseState = ({
   hasPassword: false,
   workbenchPanelEnabled: true,
   historyStreamEnabled,
-  lowMemoryModeEnabled: false,
   autoPasteOnDoubleClick: false,
   copyOnSelectEnabled: false,
   copyOnSelectDoubleClickEnabled: true,
-  quickActionBubbleEnabled: false,
   copyQollectSourceItems: false,
   lastCopyWasAutoPaste: false,
-  widgetEnabled: false,
   historyTagShortcutEnabled: true,
   autoCleanupEnabled: true,
   cleanupMaxItems: 50000,

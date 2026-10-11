@@ -408,33 +408,22 @@
       "enableOCRHint": "Extract text from copied images automatically",
       "enableMCP": "MCP Service",
       "enableMCPHint": "Let Claude and other AI assistants read your clipboard",
-      "doubleCopyEmphasis": "Double-tap Copy to add to Workbench",
-      "doubleCopyEmphasisHint": "Tap copy twice quickly to auto-add that content to the workbench",
-      "doubleCopyWindowMs": "Double-tap Interval",
-      "doubleCopyWindowMsHint": "How close two copies must be to count (ms)",
       "autoPaste": "Auto-paste on double-click",
       "autoPasteHint": "When enabled, double-click copies and pastes to the previous app; if always-on-top is enabled, the window auto-restores after paste",
       "copyOnSelect": "Copy on text selection",
       "copyOnSelectHint": "Automatically copy to clipboard when releasing mouse after selecting text (Windows only)",
       "copyOnSelectDoubleClick": "Copy on double-click selection",
       "copyOnSelectDoubleClickHint": "Automatically copy when double-clicking to select a word",
-      "quickActionBubble": "Quick Action Bubble on selection",
-      "quickActionBubbleHint": "Show contextual quick action bubble when selecting timestamps, URLs, math, colors, etc.",
       "copyQollectSourceItems": "Allow copying Qollect-source items",
       "copyQollectSourceItemsHint": "Off by default. When off, copy actions skip items sourced from Qollect / Quick Input / Quick Note.",
       "autostart": "Launch at system startup",
       "autostartHint": "Automatically run Qollect when your system starts",
-      "lowMemoryMode": "Low Memory Mode",
-      "lowMemoryModeHint": "When hidden, release history, collection, workbench, and preview caches first. The window shell is released only after longer background time.",
-      "lowMemoryModeNotice": "Low memory mode is enabled. Short reopens prioritize fast restore; longer background sessions may rebuild the window.",
       "autoLayoutSwitch": "Auto layout switch",
       "autoLayoutSwitchHint": "Automatically enter mini mode and collapse/restore the workbench panel based on window width.",
       "startTour": "Guided Tour",
       "startTourHint": "Replay the feature walkthrough",
       "autoCleanup": "Auto-clean old data",
       "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and workbench items are never removed.",
-      "enableWidget": "Floating Widget",
-      "enableWidgetHint": "Show a floating drop zone on screen for quickly adding content to the workbench",
       "cleanupMaxItems": "Max items to keep",
       "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
       "cleanupMaxAgeDays": "Max days to keep",
@@ -512,18 +501,12 @@
       }
     },
     "about": {
-      "betaNotice": "This is a Beta release — all features are free. After the official launch, OCR, AI Tags, MCP Service, and App Lock will become premium features.",
       "website": "Website"
     },
     "shortcuts": {
       "globalHotkeys": "Global Hotkeys",
-      "ctrlShiftC": "Copy & add to Workbench",
-      "ctrlShiftCHint": "Copies content and adds it to your workbench at the same time. Changes apply immediately. If the shortcut conflicts with another app, the previous working shortcut is restored automatically.",
-      "emphasisCopy": "Double-tap copy to add to Workbench",
-      "emphasisCopyHint": "Hold Ctrl and press C twice quickly in the same app — the content gets added to the workbench automatically so you can find it fast.",
       "toggleWindow": "Show / Hide main panel",
       "toggleWindowKey": "Show / Hide key",
-      "ctrlShiftCKey": "Copy & Workbench key",
       "tagQuickAdd": "Quick add tag (history/preview)",
       "tagQuickAddKey": "Quick add tag key",
       "tagQuickAddHint": "When enabled, press Ctrl/Cmd + T to start adding a tag. This key is fixed and cannot be customized.",
@@ -536,7 +519,6 @@
       "recordUnsupported": "This key can't be used as a global shortcut — try a different one.",
       "platformNotice": "Note: macOS Command maps to Super. Some OS-reserved shortcuts can't be registered.",
       "recordReserved": "{{shortcut}} is reserved by the OS — try a different combination.",
-      "conflictError": "\"Copy & Workbench\" and \"Show/Hide panel\" can't use the same shortcut.",
       "occupiedHint": "Your previous shortcut is still active. Try another combination like Ctrl+Alt+X or Ctrl+Shift+V.",
       "defaultCandidate": "Default fallback for {{platform}}: {{shortcut}}",
       "occupiedHintOne": "Previous shortcuts are kept active. Suggested fallback on {{platform}}: {{shortcut}}."
@@ -1112,10 +1094,6 @@
     "folderNavigationHint": "Click folder to enter, double-click folder to open",
     "emptyDirectory": "Empty directory"
   },
-  "widget": {
-    "title": "Quick Drop",
-    "dropHint": "Drop here"
-  },
   "tray": {
     "show": "Show Window",
     "hide": "Hide Window",
@@ -1165,33 +1143,6 @@
       "gotIt": "Got it",
       "empty": "This release includes usability improvements and bug fixes."
     }
-  },
-  "license": {
-    "title": "License",
-    "tab": "License",
-    "status": "Status",
-    "free": "Free",
-    "pro": "Pro",
-    "devices": "Activated Devices",
-    "devicesCount": "{{current}} / {{max}}",
-    "enterKey": "Enter license key",
-    "keyPlaceholder": "PH-XXXX-XXXX-XXXX-XXXX",
-    "activate": "Activate",
-    "activating": "Activating...",
-    "deactivate": "Deactivate",
-    "deactivating": "Deactivating...",
-    "activateSuccess": "Activated successfully",
-    "deactivateSuccess": "Deactivated successfully",
-    "invalidKey": "Invalid license key",
-    "maxDevices": "Maximum device limit reached",
-    "expired": "License expired",
-    "revoked": "License revoked",
-    "proFeature": "This feature requires a Pro license",
-    "upgrade": "Upgrade to Pro",
-    "paidFeatures": "Pro Features",
-    "paidFeatureList": "AI Smart Tags, OCR Text Recognition, MCP Integration",
-    "maskedKey": "{{prefix}}****{{suffix}}",
-    "currentKey": "Current Key"
   },
   "tour": {
     "step1Title": "Your Workbench",
@@ -1280,5 +1231,10 @@
       "selectAllWorkbench": "Select all items in workbench (when focused)",
       "selectAllCollection": "Select all items in collection (when focused)"
     }
+  },
+  "preview": {
+    "noItemSelected": "No item selected",
+    "selectHint": "Click or use arrow keys on the left to select an item for high-fidelity preview and details",
+    "backToList": "Back to list"
   }
 }

@@ -10,11 +10,6 @@ import {
   Pin,
   Expand,
   Minimize2,
-  List,
-  SquareKanban,
-  LayoutGrid,
-  Rows2,
-  Rows3,
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -23,9 +18,6 @@ const GLASS_DEFAULT = 1.0;
 const GLASS_MIN = 0.05;
 const GLASS_MAX = 1.0;
 const GLASS_STEP = 0.03;
-const DENSITY_STORAGE_KEY = 'qollect-density-mode';
-const DENSITY_COMPACT = 'compact';
-const DENSITY_COZY = 'cozy';
 
 function applyGlassOpacity(value) {
   document.documentElement.style.setProperty('--glass-opacity', value);
@@ -43,7 +35,6 @@ function TitleBar({
   isMiniMode,
   currentViewMode,
   onSelectViewMode,
-  onDensityModeChange,
 }) {
   const { t } = useTranslation();
   const panelMode = useAppStore(s => s.panelMode);
@@ -54,10 +45,6 @@ function TitleBar({
   });
   const [showIndicator, setShowIndicator] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [densityMode, setDensityMode] = useState(() => {
-    const saved = localStorage.getItem(DENSITY_STORAGE_KEY);
-    return saved === DENSITY_COMPACT ? DENSITY_COMPACT : DENSITY_COZY;
-  });
   const hideTimerRef = useRef(null);
   const titlebarButtonsRef = useRef(null);
   const [statusRightOffset, setStatusRightOffset] = useState(18);
@@ -69,10 +56,9 @@ function TitleBar({
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('density-compact', densityMode === DENSITY_COMPACT);
-    root.classList.toggle('density-cozy', densityMode !== DENSITY_COMPACT);
-    localStorage.setItem(DENSITY_STORAGE_KEY, densityMode);
-  }, [densityMode]);
+    root.classList.add('density-compact');
+    root.classList.remove('density-cozy');
+  }, []);
 
   useEffect(() => () => {
     clearTimeout(hideTimerRef.current);
@@ -106,16 +92,6 @@ function TitleBar({
     };
   }, [isMiniMode]);
 
-  const handleToggleDensity = useCallback(() => {
-    setDensityMode((prev) => {
-      const next = prev === DENSITY_COMPACT ? DENSITY_COZY : DENSITY_COMPACT;
-      if (next !== prev) {
-        onDensityModeChange?.(next);
-      }
-      return next;
-    });
-  }, [onDensityModeChange]);
-
   useEffect(() => {
     const isEditableElement = (target) => {
       if (!(target instanceof HTMLElement)) return false;
@@ -132,32 +108,12 @@ function TitleBar({
       if (!event.shiftKey && key === 'm') {
         event.preventDefault();
         onSelectViewMode?.(isMiniMode ? 'restore' : 'mini');
-        return;
-      }
-      if (!event.shiftKey && (key === '1' || key === '2' || key === '3')) {
-        event.preventDefault();
-        if (key === '1') {
-          onSelectViewMode?.('left');
-          return;
-        }
-        if (key === '2') {
-          onSelectViewMode?.('right');
-          return;
-        }
-        onSelectViewMode?.('all');
-        return;
-      }
-      if (!event.shiftKey) return;
-      if (key !== 'd') return;
-      event.preventDefault();
-      if (key === 'd') {
-        handleToggleDensity();
       }
     };
 
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [handleToggleDensity, isMiniMode, onSelectViewMode]);
+  }, [isMiniMode, onSelectViewMode]);
 
   useEffect(() => {
     const appWindow = getCurrentWindow();
@@ -225,51 +181,18 @@ function TitleBar({
               </button>
             )}
             {!isMiniMode && (
-              <>
-                <div className="titlebar-layout-presets" role="group" aria-label={t('titlebar.layoutPresetGroup')}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectViewMode?.('mini')}
-                    className={`titlebar-layout-btn ${currentViewMode === 'mini' ? 'active' : ''}`}
-                    title={t('titlebar.layoutMiniShortcut')}
-                    aria-label={t('titlebar.layoutMiniShortcut')}
-                    data-tauri-drag-region="false"
-                  >
-                    <Minimize2 size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectViewMode?.('left')}
-                    className={`titlebar-layout-btn ${currentViewMode === 'left' ? 'active' : ''}`}
-                    title={t('titlebar.layoutFocusShortcut')}
-                    aria-label={t('titlebar.layoutFocusShortcut')}
-                    data-tauri-drag-region="false"
-                  >
-                    <List size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectViewMode?.('all')}
-                    className={`titlebar-layout-btn ${currentViewMode === 'all' ? 'active' : ''}`}
-                    title={t('titlebar.layoutAllShortcut')}
-                    aria-label={t('titlebar.layoutAllShortcut')}
-                    data-tauri-drag-region="false"
-                  >
-                    <LayoutGrid size={13} />
-                  </button>
-                  <span className="titlebar-layout-separator" aria-hidden="true" />
-                  <button
-                    type="button"
-                    onClick={handleToggleDensity}
-                    className={`titlebar-layout-btn titlebar-layout-density-btn ${densityMode === DENSITY_COMPACT ? 'active' : ''}`}
-                    title={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
-                    aria-label={densityMode === DENSITY_COMPACT ? t('titlebar.switchToCozy') : t('titlebar.switchToCompact')}
-                    data-tauri-drag-region="false"
-                  >
-                    {densityMode === DENSITY_COMPACT ? <Rows3 size={13} /> : <Rows2 size={13} />}
-                  </button>
-                </div>
-              </>
+              <div className="titlebar-layout-presets" role="group" aria-label={t('titlebar.layoutPresetGroup')}>
+                <button
+                  type="button"
+                  onClick={() => onSelectViewMode?.('mini')}
+                  className="titlebar-layout-btn"
+                  title={t('titlebar.layoutMiniShortcut')}
+                  aria-label={t('titlebar.layoutMiniShortcut')}
+                  data-tauri-drag-region="false"
+                >
+                  <Minimize2 size={13} />
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -56,10 +56,10 @@ export const createPanelActions = (set, get) => ({
       const fallbackCompareItemIds = normalizeCompareItemIds(compareCandidateIds);
       if (fallbackCompareItemIds.length < 2) {
         set({
-          panelMode: 'preview',
+          panelMode: 'idle',
           previewItem: null,
           previewReturnMode: 'preview',
-          previewReturnViewMode: 'all',
+          previewReturnViewMode: 'left',
           compareCandidateIds: [],
           compareItemIds: [],
           timelineItems: [],
@@ -98,7 +98,7 @@ export const createPanelActions = (set, get) => ({
       get().loadTimelineData('today');
     } else {
       set({
-        panelMode: 'preview',
+        panelMode: 'idle',
         previewItem: null,
         previewReturnMode: 'preview',
         previewReturnViewMode: inferPreviewReturnViewMode(get()),
@@ -144,7 +144,7 @@ export const createPanelActions = (set, get) => ({
         };
       }
       return {
-        panelMode: 'preview',
+        panelMode: 'idle',
         previewItem: null,
         previewReturnMode: 'preview',
         compareCandidateIds: [],
@@ -155,7 +155,7 @@ export const createPanelActions = (set, get) => ({
 
   switchToWorkbench: () => {
     set({
-      panelMode: 'preview',
+      panelMode: 'idle',
       previewItem: null,
       previewReturnMode: 'preview',
       previewReturnViewMode: inferPreviewReturnViewMode(get()),

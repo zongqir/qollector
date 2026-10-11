@@ -25,15 +25,12 @@ export const createLoadConfigsAction = ({
       hasPassword: Boolean(hasLock),
       isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
       workbenchPanelEnabled: generalConfig?.workbench_panel_enabled !== false,
-      lowMemoryModeEnabled: generalConfig?.low_memory_mode_enabled || false,
       autoPasteOnDoubleClick: supportsAutoPasteOnDoubleClick
         && (generalConfig?.auto_paste_on_double_click || false),
       copyOnSelectEnabled: supportsCopyOnSelect
         && Boolean(generalConfig?.copy_on_select_enabled),
       copyOnSelectDoubleClickEnabled: generalConfig?.copy_on_select_double_click_enabled !== false,
-      quickActionBubbleEnabled: Boolean(generalConfig?.quick_action_bubble_enabled),
       copyQollectSourceItems: Boolean(generalConfig?.copy_qollect_source_items),
-      widgetEnabled: generalConfig?.widget_enabled || false,
       historyTagShortcutEnabled: generalConfig?.history_tag_shortcut_enabled !== false,
       autoCleanupEnabled: generalConfig?.auto_cleanup_enabled !== false,
       cleanupMaxItems: Math.max(100, Number(generalConfig?.cleanup_max_items || 50000)),

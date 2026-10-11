@@ -13,18 +13,6 @@ pub struct GeneralConfig {
     /// 锁屏密码哈希（None 表示未设置密码）
     #[serde(default)]
     pub lock_password_hash: Option<String>,
-    /// Enable double-copy emphasis pin behavior.
-    #[serde(default = "default_double_copy_emphasis_enabled")]
-    pub double_copy_emphasis_enabled: bool,
-    /// Max interval for two consecutive copies to be treated as emphasis.
-    #[serde(default = "default_double_copy_window_ms")]
-    pub double_copy_window_ms: u64,
-    /// Enable global Ctrl+Shift+C one-shot copy and pin shortcut.
-    #[serde(default = "default_ctrl_shift_c_shortcut_enabled")]
-    pub ctrl_shift_c_shortcut_enabled: bool,
-    /// Global shortcut for one-shot copy and pin.
-    #[serde(default = "default_copy_pin_shortcut")]
-    pub copy_pin_shortcut: String,
     /// Enable global show/hide main window shortcut.
     #[serde(default = "default_toggle_window_shortcut_enabled")]
     pub toggle_window_shortcut_enabled: bool,
@@ -61,15 +49,9 @@ pub struct GeneralConfig {
     /// Enable autostart on system boot.
     #[serde(default)]
     pub autostart_enabled: bool,
-    /// Enable aggressive hidden-window webview release to reduce memory usage.
-    #[serde(default = "default_low_memory_mode_enabled")]
-    pub low_memory_mode_enabled: bool,
     /// Enable automatic layout switch by window width.
     #[serde(default = "default_auto_layout_switch_enabled")]
     pub auto_layout_switch_enabled: bool,
-    /// Enable the floating widget window.
-    #[serde(default)]
-    pub widget_enabled: bool,
     /// Accent color preset name (blue/purple/pink/red/orange/yellow/green/graphite).
     #[serde(default = "default_accent_color")]
     pub accent_color: String,
@@ -82,9 +64,6 @@ pub struct GeneralConfig {
     /// Enable copy on double click word selection on Windows.
     #[serde(default = "default_copy_on_select_double_click_enabled")]
     pub copy_on_select_double_click_enabled: bool,
-    /// Enable contextual quick action bubble on text selection.
-    #[serde(default)]
-    pub quick_action_bubble_enabled: bool,
 }
 
 fn default_copy_on_select_double_click_enabled() -> bool {
@@ -101,22 +80,6 @@ fn default_language() -> String {
 
 fn default_theme_mode() -> String {
     "system".to_string()
-}
-
-fn default_double_copy_emphasis_enabled() -> bool {
-    true
-}
-
-fn default_double_copy_window_ms() -> u64 {
-    900
-}
-
-fn default_ctrl_shift_c_shortcut_enabled() -> bool {
-    true
-}
-
-fn default_copy_pin_shortcut() -> String {
-    "ctrl+shift+c".to_string()
 }
 
 fn default_toggle_window_shortcut_enabled() -> bool {
@@ -151,10 +114,6 @@ fn default_cleanup_max_age_days() -> u32 {
     90
 }
 
-fn default_low_memory_mode_enabled() -> bool {
-    false
-}
-
 fn default_auto_layout_switch_enabled() -> bool {
     true
 }
@@ -170,10 +129,6 @@ impl Default for GeneralConfig {
             language: "zh-CN".to_string(),
             theme_mode: "system".to_string(),
             lock_password_hash: None,
-            double_copy_emphasis_enabled: true,
-            double_copy_window_ms: 900,
-            ctrl_shift_c_shortcut_enabled: true,
-            copy_pin_shortcut: default_copy_pin_shortcut(),
             toggle_window_shortcut_enabled: true,
             toggle_window_shortcut: default_toggle_window_shortcut(),
             history_tag_shortcut_enabled: default_history_tag_shortcut_enabled(),
@@ -185,14 +140,11 @@ impl Default for GeneralConfig {
             cleanup_max_age_days: 90,
             startup_favorites_view_enabled: false,
             autostart_enabled: default_autostart_enabled(),
-            low_memory_mode_enabled: default_low_memory_mode_enabled(),
             auto_layout_switch_enabled: default_auto_layout_switch_enabled(),
-            widget_enabled: false,
             accent_color: default_accent_color(),
             input_capture_enabled: false,
             copy_on_select_enabled: false,
             copy_on_select_double_click_enabled: default_copy_on_select_double_click_enabled(),
-            quick_action_bubble_enabled: false,
         }
     }
 }
@@ -209,16 +161,6 @@ impl GeneralConfig {
         // 验证主题模式
         if !["light", "dark", "system"].contains(&self.theme_mode.as_str()) {
             self.theme_mode = "system".to_string();
-        }
-        if self.double_copy_window_ms < 300 {
-            self.double_copy_window_ms = 300;
-        }
-        if self.double_copy_window_ms > 2500 {
-            self.double_copy_window_ms = 2500;
-        }
-        self.copy_pin_shortcut = self.copy_pin_shortcut.trim().to_ascii_lowercase();
-        if self.copy_pin_shortcut.is_empty() {
-            self.copy_pin_shortcut = default_copy_pin_shortcut();
         }
         self.toggle_window_shortcut = self.toggle_window_shortcut.trim().to_ascii_lowercase();
         if self.toggle_window_shortcut.is_empty() {

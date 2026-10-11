@@ -59,29 +59,12 @@ function ShortcutHelpOverlay({ isOpen, onClose }) {
   const sections = useMemo(() => {
     const globalItems = [
       { id: 'toggle-help', combo: '?', label: t('shortcutHelp.items.toggleHelp') },
-      { id: 'density', combo: `${modifiers.primary}+Shift+D`, label: t('shortcutHelp.items.toggleDensity') },
+      {
+        id: 'layout-mini',
+        combo: `${modifiers.primary}+M`,
+        label: t('shortcutHelp.items.layoutMini'),
+      },
     ];
-
-    globalItems.push({
-      id: 'layout-mini',
-      combo: `${modifiers.primary}+M`,
-      label: t('shortcutHelp.items.layoutMini'),
-    });
-    globalItems.push({
-      id: 'layout-focus',
-      combo: `${modifiers.primary}+1`,
-      label: t('shortcutHelp.items.layoutFocus'),
-    });
-    globalItems.push({
-      id: 'layout-review',
-      combo: `${modifiers.primary}+2`,
-      label: t('shortcutHelp.items.layoutReview'),
-    });
-    globalItems.push({
-      id: 'layout-all',
-      combo: `${modifiers.primary}+3`,
-      label: t('shortcutHelp.items.layoutAll'),
-    });
 
     const historyItems = [
       { id: 'focus-search', combo: '/', label: t('shortcutHelp.items.focusSearch') },
