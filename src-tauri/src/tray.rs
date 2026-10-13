@@ -80,6 +80,13 @@ fn t<'a>(key: &'a str, lang: &str) -> &'a str {
                 "Settings"
             }
         }
+        "devtools" => {
+            if is_zh {
+                "开发者工具 (DevTools)"
+            } else {
+                "Developer Tools"
+            }
+        }
         "pause" => {
             if is_zh {
                 "暂停记录"
@@ -155,6 +162,7 @@ fn build_tray_menu(
 ) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     let show_hide = MenuItemBuilder::with_id("toggle", t("toggle", lang)).build(app)?;
     let settings = MenuItemBuilder::with_id("settings", t("settings", lang)).build(app)?;
+    let devtools = MenuItemBuilder::with_id("devtools", t("devtools", lang)).build(app)?;
     let pause_text = if is_paused {
         t("resume", lang)
     } else {
@@ -167,6 +175,7 @@ fn build_tray_menu(
         .item(&show_hide)
         .separator()
         .item(&settings)
+        .item(&devtools)
         .item(&pause)
         .separator()
         .item(&quit)
@@ -231,6 +240,18 @@ pub fn setup_tray(
                         }
                         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
                         let _ = app_handle.emit("open-settings", ());
+                    });
+                }
+                "devtools" => {
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Ok(window) = ensure_main_window(&app_handle) {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                            #[cfg(feature = "devtools")]
+                            window.open_devtools();
+                        }
                     });
                 }
                 "pause" => {

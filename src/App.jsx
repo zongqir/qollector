@@ -441,6 +441,31 @@ function App() {
       setShowSettings(true);
     });
 
+    const handleWindowFocusOrVisible = () => {
+      loadItems();
+    };
+    window.addEventListener('focus', handleWindowFocusOrVisible);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadItems();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const handleDevToolsShortcut = (event) => {
+      if (
+        event.key === 'F12' ||
+        ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'I' || event.key === 'i'))
+      ) {
+        event.preventDefault();
+        invoke('toggle_devtools').catch((err) => {
+          console.warn('[DevTools] failed to toggle devtools:', err);
+        });
+      }
+    };
+    window.addEventListener('keydown', handleDevToolsShortcut);
+
     console.log('[Perf:App] Init useEffect COMPLETE at', performance.now().toFixed(1), 'ms');
 
     // Auto-start guided tour for first-time users
@@ -455,6 +480,9 @@ function App() {
       }
       if (prewarmTimer != null) clearTimeout(prewarmTimer);
       if (tourTimer) clearTimeout(tourTimer);
+      window.removeEventListener('focus', handleWindowFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('keydown', handleDevToolsShortcut);
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());

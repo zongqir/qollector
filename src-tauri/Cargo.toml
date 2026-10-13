@@ -15,7 +15,7 @@ path = "src/main.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset", "image-png", "tray-icon"] }
+tauri = { version = "2", features = ["protocol-asset", "image-png", "tray-icon", "devtools"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-updater = "2"

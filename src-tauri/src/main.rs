@@ -736,6 +736,8 @@ fn main() {
             sync_collector_items,
             get_startup_metrics,
             get_runtime_diagnostics,
+            open_devtools,
+            toggle_devtools,
             analyze_quick_action,
             open_external_url,
             has_lock_password,

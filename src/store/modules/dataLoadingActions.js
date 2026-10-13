@@ -1,4 +1,4 @@
-import { getRecentItemsLight, getMoreItems } from '../../services/clipboardService';
+import { getRecentItemsLight, getRecentItems, getMoreItems } from '../../services/clipboardService';
 import { detectAndUpdateCodeLanguage } from '../../services/codeDetectionService';
 import {
   getItemsMemoryCap,
@@ -61,8 +61,14 @@ export const createDataLoadingActions = (set, get) => ({
     try {
       const pageSize = getItemsPageSize();
       console.log('[Perf:Store] Calling getRecentItemsLight at', performance.now().toFixed(1), 'ms');
-      const result = await getRecentItemsLight(pageSize);
-      console.log('[Perf:Store] getRecentItemsLight returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
+      let result;
+      try {
+        result = await getRecentItemsLight(pageSize);
+      } catch (lightError) {
+        console.warn('[Perf:Store] getRecentItemsLight failed, falling back to getRecentItems:', lightError);
+        result = await getRecentItems(pageSize);
+      }
+      console.log('[Perf:Store] items returned', result.length, 'items at', performance.now().toFixed(1), 'ms');
       if (requestSeq !== loadItemsRequestSeq) {
         console.log('[Perf:Store] drop stale loadItems result before merge', { requestSeq, latest: loadItemsRequestSeq });
         return;
