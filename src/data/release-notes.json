@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.2",
+      "publishedAt": "2026-10-14",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-2",
+      "summary": {
+        "zh-CN": "内建开发者调试工具、历史流时间戳自愈与列表更新容灾机制，全面强化数据加载稳定性。",
+        "en-US": "Built-in developer DevTools, automatic timestamp healing for history stream, and resilient data loading fallback."
+      },
+      "highlights": {
+        "zh-CN": [
+          "内建开发者调试支持：正式版支持通过系统托盘菜单「开发者工具」及全局快捷键（F12 / Ctrl+Shift+I）一键呼出 DevTools 控制台，便于排查异常与数据状态。",
+          "历史流时间戳自动清洗归位：数据库启动时自动检测并修复历史数据中的毫秒级及未来异常时间戳，防止新记录被脏数据挤出首屏列表。",
+          "聚焦与可见性状态感知自愈：当窗口重新获得焦点或显示状态变更时，自动平滑触发剪贴板增量刷新，保障列表与底层数据实时同步。",
+          "数据加载容灾平滑降级：轻量查询接口遇到解析异常时，自动平滑 fallback 至全量接口并输出诊断日志，杜绝静默失败。"
+        ],
+        "en-US": [
+          "Built-in DevTools Debugger: Release builds now support opening DevTools via tray menu 'Developer Tools' or shortcuts (F12 / Ctrl+Shift+I) for immediate runtime diagnostics.",
+          "Automatic Timestamp Healing: Automatically normalizes legacy millisecond and abnormal future timestamps in SQLite on startup to prevent new entries from being displaced.",
+          "Focus & Visibility Sync Healing: Re-focusing or unhiding the application window now triggers an incremental data refresh to ensure UI stays in sync with local storage.",
+          "Resilient Data Loading Fallback: If lightweight query decoding encounters an issue, data loading seamlessly falls back to full item query with diagnostic logging."
+        ]
+      }
+    },
+    {
       "version": "0.5.1",
       "publishedAt": "2026-10-12",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-1",

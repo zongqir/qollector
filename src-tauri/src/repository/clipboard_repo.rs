@@ -328,6 +328,53 @@ impl ClipboardRepository {
             self.set_schema_version(9).await?;
             println!("[Schema] migrated to version 9: promoted all pinned items to favorite");
         }
+        if db_version < 10 {
+            self.migrate_v9_to_v10().await?;
+            self.set_schema_version(10).await?;
+            println!("[Schema] migrated to version 10: normalized abnormal timestamps");
+        }
+
+        Ok(())
+    }
+
+    /// V9 -> V10: Normalize abnormal future updated_at / created_at timestamps and millisecond timestamps
+    async fn migrate_v9_to_v10(&self) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        let _ = sqlx::query(
+            "UPDATE clipboard_items
+             SET updated_at = updated_at / 1000
+             WHERE updated_at > 100000000000",
+        )
+        .execute(&self.pool)
+        .await;
+
+        let _ = sqlx::query(
+            "UPDATE clipboard_items
+             SET created_at = created_at / 1000
+             WHERE created_at > 100000000000",
+        )
+        .execute(&self.pool)
+        .await;
+
+        let _ = sqlx::query(
+            "UPDATE clipboard_items
+             SET updated_at = ?
+             WHERE updated_at > ?",
+        )
+        .bind(now)
+        .bind(now + 300)
+        .execute(&self.pool)
+        .await;
+
+        let _ = sqlx::query(
+            "UPDATE clipboard_items
+             SET created_at = ?
+             WHERE created_at > ?",
+        )
+        .bind(now)
+        .bind(now + 300)
+        .execute(&self.pool)
+        .await;
 
         Ok(())
     }
