@@ -868,3 +868,64 @@
     width: calc(100% + 22px);
   }
 }
+
+/* ========== 预览空状态 ========== */
+.preview-panel--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.preview-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 32px 24px;
+  gap: 12px;
+}
+
+.preview-empty-icon {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.preview-empty-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.preview-empty-hint {
+  font-size: 12px;
+  max-width: 280px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  opacity: 0.8;
+}
+
+.preview-empty-back-btn {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--surface-border-strong);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  transition: all var(--motion-fast) var(--ease-standard);
+}
+
+.preview-empty-back-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--surface-border-soft);
+  color: var(--text-primary);
+}

@@ -108,6 +108,12 @@ function PreviewPanel() {
   const cancelAddTag = useAppStore(s => s.cancelAddTag);
   const addTagToItem = useAppStore(s => s.addTagToItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
+  const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
+
+  const handleEmptyBack = useCallback(() => {
+    backFromPreview();
+    setWorkbenchPanelEnabled(false);
+  }, [backFromPreview, setWorkbenchPanelEnabled]);
 
   // Prefer hydrated preview payload while still inheriting fast-changing flags from list state.
   const item = useMemo(() => {
@@ -127,42 +133,18 @@ function PreviewPanel() {
   if (!item) {
     return (
       <div className="preview-panel preview-panel--empty" ref={panelRef}>
-        <div className="preview-empty-state" style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: 'var(--text-tertiary, #94a3b8)',
-          textAlign: 'center',
-          padding: '32px',
-          gap: '12px',
-        }}>
-          <Inbox size={42} strokeWidth={1.4} opacity={0.5} />
-          <div style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-secondary, #cbd5e1)' }}>
+        <div className="preview-empty-state">
+          <Inbox size={42} strokeWidth={1.4} className="preview-empty-icon" />
+          <div className="preview-empty-title">
             {t('preview.noItemSelected', '未选择条目')}
           </div>
-          <div style={{ fontSize: '12px', maxWidth: '280px', lineHeight: 1.5, opacity: 0.8 }}>
+          <div className="preview-empty-hint">
             {t('preview.selectHint', '在左侧点击或使用方向键选中条目以查看高保真预览与详情')}
           </div>
           <button
             type="button"
-            className="preview-back-btn preview-back-empty-btn"
-            onClick={backFromPreview}
-            style={{
-              marginTop: '6px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              border: '1px solid var(--surface-border-strong, #334155)',
-              background: 'var(--surface-card, #1e293b)',
-              color: 'var(--text-primary, #f8fafc)',
-            }}
+            className="preview-empty-back-btn"
+            onClick={handleEmptyBack}
           >
             <ArrowLeft size={13} />
             {t('preview.backToList', '返回列表')}

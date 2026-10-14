@@ -699,16 +699,17 @@ function App() {
   });
   const leftWidthRef = useRef(leftWidth);
   const isPreviewingItem = panelMode === 'preview' && Boolean(previewItem);
+  const hasActivePanelContent = isPreviewingItem || panelMode === 'compare' || panelMode === 'timeline';
   const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
   const showStandalonePanel = !isMiniMode
     && !workbenchPanelEnabled
-    && (panelMode === 'compare' || panelMode === 'timeline' || isPreviewingItem);
+    && hasActivePanelContent;
   const showHistoryStream = isMiniMode
     ? !showMiniPanel
     : !((panelMode === 'compare' || panelMode === 'timeline') && !workbenchPanelEnabled) && (historyStreamEnabled || !workbenchPanelEnabled);
   const showPanelPane = isMiniMode
     ? showMiniPanel
-    : (workbenchPanelEnabled || showStandalonePanel);
+    : (hasActivePanelContent && (workbenchPanelEnabled || showStandalonePanel));
   const shouldRenderHistoryPane = !isMiniMode || showHistoryStream;
   const shouldRenderPanelPane = !isMiniMode || showPanelPane;
   const previewOverlayActive = !isMiniMode
@@ -1281,7 +1282,7 @@ function App() {
         {shouldRenderHistoryPane && (
           <HistoryStream
             style={{
-              width: isMiniMode || !workbenchPanelEnabled ? '100%' : 'var(--workspace-history-split-width, 340px)',
+              width: isMiniMode || !showPanelPane || previewOverlayActive ? '100%' : 'var(--workspace-history-split-width, 340px)',
               display: !isMiniMode && !showHistoryStream ? 'none' : undefined,
             }}
           />

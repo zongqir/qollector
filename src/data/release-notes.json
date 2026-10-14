@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.4",
+      "publishedAt": "2026-10-15",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-4",
+      "summary": {
+        "zh-CN": "交互与视觉优化：彻底消除未选中条目时的空占位大黑框，实现列表常驻全宽与按需抽屉预览的流畅闭环体验。",
+        "en-US": "UX & visual refinement: eliminated empty placeholder black box, restoring full-width stream layout with clean on-demand drawer preview."
+      },
+      "highlights": {
+        "zh-CN": [
+          "彻底消除空占位大黑框：未选中条目且无对比/时间轴任务时，右侧多态面板自动收起，历史流与收藏板自然撑满视口，视野通透无割裂。",
+          "纯净按需抽屉预览流转：选中条目即时从侧方滑出高保真预览抽屉；点击返回、ESC 或背景遮罩立即平滑收起，不再残留无效空白占位。",
+          "空状态样式规范化重构：彻底剥离内联 style 属性并迁移至 CSS 类规范，根除 CSP 安全策略拦截报错，修复返回列表操作的响应闭环。"
+        ],
+        "en-US": [
+          "Eliminated Empty Placeholder Box: Right polymorphic panel auto-collapses when no active item is selected, allowing history and collection boards to utilize 100% viewport width.",
+          "Seamless On-Demand Drawer Preview: Clicking an item smoothly slides out the rich preview drawer; dismissing via back, ESC, or mask neatly hides it with zero orphaned layout residue.",
+          "Refactored Empty State Styles: Migrated all inline styles to standardized CSS classes to eliminate CSP policy blocks and ensure consistent fallback presentation."
+        ]
+      }
+    },
+    {
       "version": "0.5.3",
       "publishedAt": "2026-10-14",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-3",
