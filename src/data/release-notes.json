@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.3",
+      "publishedAt": "2026-10-14",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-3",
+      "summary": {
+        "zh-CN": "紧急修复：拔除初始化已废弃方法调用引起的未捕获异常，彻底恢复剪贴板变动与手动添加的前端事件监听响应。",
+        "en-US": "Urgent bugfix: removed dead method call in app init that caused unhandled TypeError, fully restoring clipboard change and manual add event listeners."
+      },
+      "highlights": {
+        "zh-CN": [
+          "根除前端事件监听挂载死锁：移除重构遗留的无效 loadWorkbenches 调用，消除初始化 TypeError 阻断异常，确保 clipboard-changed 与 quick-note-saved 监听百分之百挂载生效。",
+          "剪贴板变动实时展示恢复：剪贴板复制及手动创建内容后，界面无需手动刷新，即时响应并实时渲染至历史流最顶部。",
+          "暴露应用全局状态调试接口：window.__QOLLECT_STORE__ 挂载就绪，支持通过 DevTools 直接排查组件数据流与状态变动。"
+        ],
+        "en-US": [
+          "Fixed App Init Event Listener Deadlock: Eliminated orphaned loadWorkbenches invocation that halted useEffect execution, ensuring clipboard-changed and quick-note-saved event listeners mount reliably.",
+          "Restored Real-Time Stream Rendering: Copying to system clipboard or manually adding notes now instantly updates the UI at the top of the history stream without requiring manual reloads.",
+          "Exposed Global Store Debug Anchor: App store is now bound to window.__QOLLECT_STORE__ for transparent inspection via DevTools console."
+        ]
+      }
+    },
+    {
       "version": "0.5.2",
       "publishedAt": "2026-10-14",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-2",

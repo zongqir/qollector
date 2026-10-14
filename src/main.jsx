@@ -10,6 +10,12 @@ import './i18n';
 console.log('[Perf:main] i18n loaded, importing Tauri API at', performance.now().toFixed(1), 'ms');
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
+import useAppStore from './store/useAppStore';
+
+if (typeof window !== 'undefined') {
+  window.__QOLLECT_STORE__ = useAppStore;
+}
+
 console.log('[Perf:main] All imports complete at', performance.now().toFixed(1), 'ms');
 console.log('[Perf:main] main.jsx executing at', performance.now().toFixed(1), 'ms');
 
