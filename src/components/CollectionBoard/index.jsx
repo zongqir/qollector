@@ -8,7 +8,6 @@ import {
   Folder,
   GripVertical,
   Image,
-  Inbox,
   LayoutGrid,
   Link,
   List,
@@ -177,10 +176,8 @@ function CollectionBoard({
   selectedDateRange,
   itemsRevision = 0,
   isMiniMode = false,
-  showPinnedOnly,
   timeTick,
   selectedItemIds = [],
-  onTogglePin,
   onToggleFavorite,
   onSetCardBackground,
   onOpenPreview,
@@ -191,7 +188,6 @@ function CollectionBoard({
   onCopyAndAutoPaste,
   onSetSelectedItemIds,
   onToggleSelectItem,
-  maxPinnedItems,
 }) {
   const { t, i18n } = useTranslation();
   const [selectedCollectionTags, setSelectedCollectionTags] = useState([]);
@@ -272,7 +268,7 @@ function CollectionBoard({
 
   useEffect(() => {
     setBackendLimit(COLLECTION_QUERY_PAGE_SIZE);
-  }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature, showPinnedOnly]);
+  }, [selectedTagSignature, normalizedSearchQuery, normalizedSelectedType, selectedDateSignature]);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,9 +322,6 @@ function CollectionBoard({
     const query = debouncedSearchQuery.trim();
     const filters = { is_favorite: true };
 
-    if (showPinnedOnly) {
-      filters.is_pinned = true;
-    }
     if (normalizedSelectedType === 'code') {
       filters.require_code_language = true;
     } else if (normalizedSelectedType !== 'all') {
@@ -350,7 +343,6 @@ function CollectionBoard({
     }
 
     const shouldQueryBackend = query.length > 0
-      || showPinnedOnly
       || normalizedSelectedType !== 'all'
       || effectiveSelectedCollectionTags.length > 0
       || hasStart
@@ -363,7 +355,6 @@ function CollectionBoard({
     };
   }, [
     debouncedSearchQuery,
-    showPinnedOnly,
     normalizedSelectedType,
     effectiveSelectedCollectionTags,
     selectedDateRange,
@@ -592,14 +583,10 @@ function CollectionBoard({
     if (selectedDateRange) {
       parts.push(t('toolbar.dateFilterActive'));
     }
-    if (showPinnedOnly) {
-      parts.push(t('search.empty.filterPinned'));
-    }
     return parts;
   }, [
     normalizedSelectedType,
     selectedDateRange,
-    showPinnedOnly,
     t,
     truncatedCollectionQuery,
   ]);
@@ -607,7 +594,6 @@ function CollectionBoard({
   const hasCollectionFilter = effectiveSelectedCollectionTags.length > 0
     || normalizedSearchQuery.length > 0
     || normalizedSelectedType !== 'all'
-    || Boolean(showPinnedOnly)
     || Boolean(selectedDateRange);
   const collectionTagPreviewLimit = getCardTagPreviewLimit('collection', {
     isMiniMode,
@@ -794,25 +780,6 @@ function CollectionBoard({
       candidate.id === targetId ? { ...candidate, ...patch } : candidate
     )));
   }, []);
-
-  const handleTogglePin = useCallback(async (item) => {
-    if (!item?.id) return;
-    const now = Math.floor(Date.now() / 1000);
-    let nextPinnedState = !item.is_pinned;
-    try {
-      const result = await onTogglePin?.(item);
-      if (typeof result === 'boolean') {
-        nextPinnedState = result;
-      }
-      patchCollectionItem(item.id, {
-        is_pinned: nextPinnedState,
-        pinned_at: nextPinnedState ? now : null,
-        updated_at: now,
-      });
-    } catch (error) {
-      console.error('[CollectionBoard] toggle pin failed:', error);
-    }
-  }, [onTogglePin, patchCollectionItem]);
 
   const handleToggleFavorite = useCallback(async (item) => {
     if (!item?.id) return;
@@ -1325,7 +1292,6 @@ function CollectionBoard({
           collection-card
           panel-card-shell
           ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
-          ${item.is_pinned ? 'pinned' : ''}
           ${activeItemId === item.id ? 'active' : ''}
           ${selectionClassName}
           ${isCollectionSortMode ? 'sort-mode' : ''}
@@ -1357,29 +1323,8 @@ function CollectionBoard({
                 <span className="collection-card-source panel-card-source" title={sourceApp}>{sourceApp}</span>
               )}
             </div>
-            {item.is_pinned && (
-              <span
-                className="collection-card-state-chip panel-card-state-chip pin"
-                title={t('item.pinned')}
-                aria-label={t('item.pinned')}
-              >
-                <Inbox size={10} />
-              </span>
-            )}
           </div>
           <div className="collection-card-actions panel-card-actions panel-card-actions--hover-reveal" ref={showColorPicker ? colorPickerRef : null}>
-            <button
-              type="button"
-              className={`panel-card-action-btn ${item.is_pinned ? 'is-active pin' : 'pin'}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                void handleTogglePin(item);
-              }}
-              title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
-              aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
-            >
-              <Inbox size={12} />
-            </button>
             <button
               type="button"
               className={`panel-card-action-btn ${item.is_favorite ? 'is-active favorite' : 'favorite'}`}

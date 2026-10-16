@@ -3,7 +3,6 @@ import { generateAITagsForItem } from '../../services/aiService';
 import {
   copyItemToClipboard,
   deleteItem as deleteItemSvc,
-  toggleItemPin,
 } from '../../services/clipboardService';
 import {
   getCardBackgroundIdFromMetadata,
@@ -15,7 +14,7 @@ import { isQollectManagedSource } from '../../utils/sourceConstants';
 import { SUPPORTS_AUTO_PASTE_ON_DOUBLE_CLICK } from './platformSupport';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemIfNeeded } from './itemHydration';
-import { buildItemDerivations, getPinnedItemIdsForWorkbench } from './itemsIndex';
+import { buildItemDerivations } from './itemsIndex';
 import { mergeUniqueById } from './historyListRuntime';
 
 const shouldSkipInternalSourceCopy = (item, allowInternalCopy, options = {}) => {
@@ -142,110 +141,8 @@ export const createItemActions = (set, get) => ({
     }
   },
 
-  togglePin: async (item) => {
-    try {
-      const { maxPinnedItems, activeWorkbenchId, workbenches } = get();
-      const defaultWorkbench = Array.isArray(workbenches) ? workbenches.find((w) => w.is_default) : null;
-      const targetWorkbenchId = activeWorkbenchId || defaultWorkbench?.id || null;
-      const nextPinnedState = await toggleItemPin(item.id, {
-        maxPinned: maxPinnedItems,
-        workbenchId: targetWorkbenchId,
-      });
-      const now = Math.floor(Date.now() / 1000);
-
-      set((state) => {
-        let items = state.items;
-        const unpinnedByLimitIds = new Set();
-        const pinnedIdsInActiveWorkbench = getPinnedItemIdsForWorkbench(
-          state.pinnedItemIdsByWorkbench,
-          targetWorkbenchId,
-          defaultWorkbench?.id,
-        ).filter((id) => id !== item.id);
-        const alreadyPinnedItems = pinnedIdsInActiveWorkbench
-          .map((id) => state.itemsById?.get(id))
-          .filter(Boolean);
-
-        if (nextPinnedState === true) {
-          const overflow = alreadyPinnedItems.length + 1 - maxPinnedItems;
-          if (overflow > 0) {
-            const oldestPinned = [...alreadyPinnedItems]
-              .sort((a, b) => {
-                const aPinnedAt = a.pinned_at || 0;
-                const bPinnedAt = b.pinned_at || 0;
-                if (aPinnedAt !== bPinnedAt) return aPinnedAt - bPinnedAt;
-                return a.created_at - b.created_at;
-              })
-              .slice(0, overflow);
-            oldestPinned.forEach((it) => unpinnedByLimitIds.add(it.id));
-          }
-        }
-
-        const maxPinOrder = alreadyPinnedItems.reduce((maxOrder, candidate) => {
-          if (unpinnedByLimitIds.has(candidate.id)) return maxOrder;
-          const value = Number(candidate.pin_order);
-          if (!Number.isFinite(value)) return maxOrder;
-          return value > maxOrder ? value : maxOrder;
-        }, 0);
-        const nextPinOrder = nextPinnedState ? maxPinOrder + 1 : null;
-
-        items = items.map((it) => {
-          if (it.id === item.id) {
-            return {
-              ...it,
-              is_pinned: nextPinnedState,
-              pinned_at: nextPinnedState ? now : null,
-              pin_order: nextPinnedState ? nextPinOrder : null,
-              workbench_id: nextPinnedState ? targetWorkbenchId : null,
-              updated_at: now,
-            };
-          }
-
-          if (unpinnedByLimitIds.has(it.id)) {
-            return {
-              ...it,
-              is_pinned: false,
-              pinned_at: null,
-              pin_order: null,
-              workbench_id: null,
-              updated_at: now,
-            };
-          }
-
-          return it;
-        });
-
-        let previewItem = state.previewItem;
-        if (previewItem?.id === item.id) {
-          previewItem = {
-            ...previewItem,
-            is_pinned: nextPinnedState,
-            pinned_at: nextPinnedState ? now : null,
-            pin_order: nextPinnedState ? nextPinOrder : null,
-            workbench_id: nextPinnedState ? targetWorkbenchId : null,
-            updated_at: now,
-          };
-        } else if (previewItem && unpinnedByLimitIds.has(previewItem.id)) {
-          previewItem = {
-            ...previewItem,
-            is_pinned: false,
-            pinned_at: null,
-            pin_order: null,
-            workbench_id: null,
-            updated_at: now,
-          };
-        }
-
-        return {
-          items,
-          ...buildItemDerivations(items),
-          previewItem,
-          itemsRevision: state.itemsRevision + 1,
-        };
-      });
-    } catch (error) {
-      console.error('toggle pin failed:', error);
-    }
-  },
+  // Deprecated: legacy stub for backwards compatibility
+  togglePin: async () => {},
 
   toggleFavorite: async (item) => {
     try {

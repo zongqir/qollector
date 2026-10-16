@@ -4,7 +4,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useTranslation } from 'react-i18next';
 import useAppStore from './store/useAppStore';
 import { INTERNAL_DRAG_MIME } from './constants/dragDrop';
-import { pinItem } from './services/clipboardService';
 import './DragDrop.css';
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']);

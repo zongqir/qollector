@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, Inbox, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Expand } from 'lucide-react';
+import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Expand } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -82,7 +82,6 @@ function CompactCard({
   searchExplain,
   supportsNativeExternalDrag,
   onStartExternalDrag,
-  onTogglePin,
   onToggleFavorite,
   onOpenItem,
   onRevealInFolder,
@@ -92,7 +91,6 @@ function CompactCard({
   onDoubleClick,
 }) {
   const { t, i18n } = useTranslation();
-  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -165,7 +163,6 @@ function CompactCard({
     itemTypeClass,
     isExpandedPreview && 'expanded-inline',
     hasCustomCardBackground && 'custom-bg',
-    item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
     isSelected && 'selected',
     isMultiSelected && 'multi-selected',
@@ -364,26 +361,15 @@ function CompactCard({
           <span className="compact-card-source panel-card-source" title={sourceApp}>
             {sourceApp}
           </span>
-          {(item.is_pinned || item.is_favorite) && (
+          {item.is_favorite && (
             <div className="compact-card-state panel-card-state">
-              {item.is_pinned && (
-                <span
-                  className="compact-card-state-chip panel-card-state-chip pin"
-                  title={t('item.pinned')}
-                  aria-label={t('item.pinned')}
-                >
-                  <Inbox size={9} />
-                </span>
-              )}
-              {item.is_favorite && (
-                <span
-                  className="compact-card-state-chip panel-card-state-chip favorite"
-                  title={t('item.favorite')}
-                  aria-label={t('item.favorite')}
-                >
-                  <Star size={9} fill="currentColor" />
-                </span>
-              )}
+              <span
+                className="compact-card-state-chip panel-card-state-chip favorite"
+                title={t('item.favorite')}
+                aria-label={t('item.favorite')}
+              >
+                <Star size={9} fill="currentColor" />
+              </span>
             </div>
           )}
         </div>
@@ -479,23 +465,6 @@ function CompactCard({
               aria-label={t('item.cardBackground.button')}
             >
               <Palette size={10} />
-            </button>
-            <button
-              type="button"
-              className={`badge-btn panel-card-action-btn badge-pin ${item.is_pinned ? 'active' : ''}`}
-              draggable={false}
-              data-longpress-ignore="true"
-              onPointerDown={stopActionPointerDown}
-              onMouseDown={stopActionPointerDown}
-              onDragStart={preventActionDrag}
-              onClick={(e) => {
-                stopActionClick(e);
-                onTogglePin?.(item);
-              }}
-              title={t('item.pin', { max: maxPinnedItems || 10 })}
-              aria-label={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
-            >
-              <Inbox size={10} />
             </button>
             <button
               type="button"

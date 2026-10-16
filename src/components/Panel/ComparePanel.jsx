@@ -6,8 +6,8 @@ import {
   Eye,
   PanelLeftClose,
   PanelLeftOpen,
-  Pin,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
@@ -134,7 +134,7 @@ function ComparePanel() {
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const setHistoryStreamEnabled = useAppStore(s => s.setHistoryStreamEnabled);
   const historyStreamEnabled = useAppStore(s => s.historyStreamEnabled);
-  const togglePin = useAppStore(s => s.togglePin);
+  const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleCopy = useAppStore(s => s.handleCopy);
   const handleCopyPlainText = useAppStore(s => s.handleCopyPlainText);
   const [diffOnlyMode, setDiffOnlyMode] = useState(false);
@@ -453,15 +453,15 @@ function ComparePanel() {
     }
   }, [stepSelectorHighlight, pickActiveSelectorOption, closeSelector]);
 
-  const handlePinItem = useCallback(async (item, sideLabel) => {
+  const handleFavoriteItem = useCallback(async (item, sideLabel) => {
     if (!item) return;
-    if (item.is_pinned) {
+    if (item.is_favorite) {
       showFeedback('success', t('panel.comparePinnedFeedback', { side: sideLabel }));
       return;
     }
-    await togglePin(item);
+    await toggleFavorite(item);
     showFeedback('success', t('panel.comparePinnedFeedback', { side: sideLabel }));
-  }, [togglePin, showFeedback, t]);
+  }, [toggleFavorite, showFeedback, t]);
 
   const handleCopyItem = useCallback(async (item, sideLabel) => {
     if (!item) return;
@@ -671,18 +671,18 @@ function ComparePanel() {
       <div className="compare-action-bar">
         <button
           className="compare-action-btn"
-          onClick={() => handlePinItem(leftItem, 'A')}
+          onClick={() => handleFavoriteItem(leftItem, 'A')}
           title={t('panel.compareActionKeepA')}
         >
-          <Pin size={14} />
+          <Star size={14} fill={leftItem?.is_favorite ? 'currentColor' : 'none'} />
           <span>{t('panel.compareActionKeepA')}</span>
         </button>
         <button
           className="compare-action-btn"
-          onClick={() => handlePinItem(rightItem, 'B')}
+          onClick={() => handleFavoriteItem(rightItem, 'B')}
           title={t('panel.compareActionKeepB')}
         >
-          <Pin size={14} />
+          <Star size={14} fill={rightItem?.is_favorite ? 'currentColor' : 'none'} />
           <span>{t('panel.compareActionKeepB')}</span>
         </button>
         <button

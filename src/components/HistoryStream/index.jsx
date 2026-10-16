@@ -23,10 +23,8 @@ import {
 } from '../../utils/collectionHints';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
-import { aiSearchItems, getUserTags, pinItem, searchItems } from '../../services/clipboardService';
+import { aiSearchItems, getUserTags, searchItems } from '../../services/clipboardService';
 import { saveQuickNote } from '../../services/quickNoteService';
-import { getPinnedItemIdsForWorkbench } from '../../store/modules/itemsIndex';
-import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -188,7 +186,6 @@ const sameFilterSnapshot = (left, right) => (
   && normalizeText(left?.selectedType || 'all') === normalizeText(right?.selectedType || 'all')
   && sameStringArray(left?.selectedTags, right?.selectedTags)
   && Boolean(left?.showFavoritesOnly) === Boolean(right?.showFavoritesOnly)
-  && Boolean(left?.showPinnedOnly) === Boolean(right?.showPinnedOnly)
   && sameDateRange(left?.selectedDateRange, right?.selectedDateRange)
   && normalizeText(left?.customDateStart) === normalizeText(right?.customDateStart)
   && normalizeText(left?.customDateEnd) === normalizeText(right?.customDateEnd)
@@ -234,7 +231,6 @@ const itemMatchesFilterSnapshot = (item, snapshot, t) => {
   }
 
   if (snapshot?.showFavoritesOnly && !item.is_favorite) return false;
-  if (snapshot?.showPinnedOnly && !item.is_pinned) return false;
 
   const selectedTags = Array.isArray(snapshot?.selectedTags) ? snapshot.selectedTags : [];
   if (selectedTags.length > 0) {
@@ -283,7 +279,6 @@ function HistoryStream({ style }) {
   const selectedType = useAppStore(s => s.selectedType);
   const selectedTags = useAppStore(s => s.selectedTags);
   const showFavoritesOnly = useAppStore(s => s.showFavoritesOnly);
-  const showPinnedOnly = useAppStore(s => s.showPinnedOnly);
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const previewItem = useAppStore(s => s.previewItem);
   const panelMode = useAppStore(s => s.panelMode);
@@ -293,14 +288,12 @@ function HistoryStream({ style }) {
   const compareCandidateIds = useAppStore(s => s.compareCandidateIds);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const aiEnabled = useAppStore(s => s.aiEnabled);
-  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const autoCleanupEnabled = useAppStore(s => s.autoCleanupEnabled);
   const cleanupMaxItems = useAppStore(s => s.cleanupMaxItems);
   const cleanupMaxAgeDays = useAppStore(s => s.cleanupMaxAgeDays);
   const startupFavoritesViewEnabled = useAppStore(s => s.startupFavoritesViewEnabled);
   const itemsRevision = useAppStore(s => s.itemsRevision);
   const itemsById = useAppStore(s => s.itemsById);
-  const pinnedItemIdsByWorkbench = useAppStore(s => s.pinnedItemIdsByWorkbench);
 
   const setSearchQuery = useAppStore(s => s.setSearchQuery);
   const setCollectionSearchQuery = useAppStore(s => s.setCollectionSearchQuery);
@@ -313,7 +306,6 @@ function HistoryStream({ style }) {
   const setSelectedType = useAppStore(s => s.setSelectedType);
   const setSelectedTags = useAppStore(s => s.setSelectedTags);
   const setShowFavoritesOnly = useAppStore(s => s.setShowFavoritesOnly);
-  const setShowPinnedOnly = useAppStore(s => s.setShowPinnedOnly);
   const setShowTagFilter = useAppStore(s => s.setShowTagFilter);
   const setTagSearchQuery = useAppStore(s => s.setTagSearchQuery);
   const showTagFilter = useAppStore(s => s.showTagFilter);
@@ -334,7 +326,6 @@ function HistoryStream({ style }) {
   const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
   const loadMore = useAppStore(s => s.loadMore);
   const loadItems = useAppStore(s => s.loadItems);
-  const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
@@ -349,7 +340,6 @@ function HistoryStream({ style }) {
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
-  const activeWorkbenchId = useAppStore(s => s.activeWorkbenchId);
   const deleteItem = useAppStore(s => s.deleteItem);
   const handleTagClick = useAppStore(s => s.handleTagClick);
   const focusedIndex = useAppStore(s => s.focusedIndex);
@@ -520,7 +510,6 @@ function HistoryStream({ style }) {
       selectedType,
       selectedTags,
       showFavoritesOnly,
-      showPinnedOnly,
       selectedDateRange,
       t,
     });
@@ -529,7 +518,6 @@ function HistoryStream({ style }) {
     selectedType,
     selectedTags,
     showFavoritesOnly,
-    showPinnedOnly,
     selectedDateRange,
     t,
     i18n.language,
@@ -666,7 +654,6 @@ function HistoryStream({ style }) {
       selectedType,
       selectedTags,
       showFavoritesOnly,
-      showPinnedOnly,
       selectedDateRange,
     };
 
@@ -679,7 +666,6 @@ function HistoryStream({ style }) {
     selectedType,
     selectedTags,
     showFavoritesOnly,
-    showPinnedOnly,
     selectedDateRange,
     clearActiveFilterView,
   ]);
@@ -694,10 +680,6 @@ function HistoryStream({ style }) {
       ? aiItems
       : (shouldUseBackendBase ? backendSearchResults : items);
     let result = baseItems;
-
-    if (showPinnedOnly) {
-      result = [...result].sort((a, b) => (b.pinned_at || 0) - (a.pinned_at || 0));
-    }
 
     filterProbeRef.current = {
       elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
@@ -715,7 +697,6 @@ function HistoryStream({ style }) {
       selectedTags: selectedTags.length,
       selectedType,
       showFavoritesOnly,
-      showPinnedOnly,
       backendSearch: shouldUseBackendBase || shouldUseAiBase,
       backendFilters: backendSearchRequest.hasStructuredFilters,
     };
@@ -726,7 +707,6 @@ function HistoryStream({ style }) {
     backendSearchResults,
     aiSearchResult,
     showAiSearchPanel,
-    showPinnedOnly,
     backendSearchRequest,
     selectedTags.length,
     selectedType,
@@ -848,10 +828,6 @@ function HistoryStream({ style }) {
           await toggleFavorite(currentItem);
           closeContextMenu();
           return;
-        case 'pin':
-          await togglePin(currentItem);
-          closeContextMenu();
-          return;
         case 'showCollectionHints':
           setCollectionHintsDismissed(false);
           closeContextMenu();
@@ -908,7 +884,6 @@ function HistoryStream({ style }) {
     handleCopyPlainText,
     handleCopyAndAutoPaste,
     toggleFavorite,
-    togglePin,
     setCollectionHintsDismissed,
     showQuickAddFeedback,
     openEditModal,
@@ -929,7 +904,6 @@ function HistoryStream({ style }) {
     if (Array.isArray(filters.tag_filter) && filters.tag_filter.length > 0) parts.push(filters.tag_filter.join(', '));
     if (Array.isArray(filters.type_tag_filter) && filters.type_tag_filter.length > 0) parts.push(filters.type_tag_filter.join(', '));
     if (filters.is_favorite) parts.push(t('search.empty.filterFavorites'));
-    if (filters.is_pinned) parts.push(t('search.empty.filterPinned'));
     return parts.join(' · ');
   }, [t]);
 
@@ -993,14 +967,12 @@ function HistoryStream({ style }) {
     selectedType,
     selectedTags,
     showFavoritesOnly,
-    showPinnedOnly,
     selectedDateRange,
     t,
     setSearchQuery,
     setSelectedType,
     setSelectedTags,
     setShowFavoritesOnly,
-    setShowPinnedOnly,
     setShowTagFilter,
     setTagSearchQuery,
     clearDateFilter,
@@ -1022,34 +994,26 @@ function HistoryStream({ style }) {
     return Boolean(addFromSearchButtonRef.current);
   }, [canAddFromSearch]);
 
-  const addSearchQueryToWorkbench = useCallback(async () => {
+  const addSearchQueryToFavorites = useCallback(async () => {
     const content = addFromSearchQuery.trim();
     if (!content || quickAddPendingRef.current) return;
 
     quickAddPendingRef.current = true;
     setQuickAddPending(true);
-    setQuickAddMode('workbench');
+    setQuickAddMode('favorite');
     clearQuickAddFeedbackTimer();
     try {
-      const pinnedCountBefore = getPinnedItemIdsForWorkbench(
-        pinnedItemIdsByWorkbench,
-        activeWorkbenchId,
-      ).length;
       const itemId = await invoke('add_clipboard_item_manual', {
         content,
         contentType: 'text',
         source: QUICK_INPUT_SOURCE,
-        autoFavorite: false,
+        autoFavorite: true,
       });
 
       if (!itemId) {
         throw new Error('new item missing id');
       }
 
-      await pinItem(itemId, {
-        maxPinned: maxPinnedItems,
-        workbenchId: activeWorkbenchId,
-      });
       await loadItems();
 
       setSearchQuery('');
@@ -1057,10 +1021,8 @@ function HistoryStream({ style }) {
 
       showQuickAddFeedback({
         type: 'success',
-        message: t('search.empty.addedToWorkbench'),
-        detail: pinnedCountBefore >= maxPinnedItems
-          ? t('error.pinLimitReached', { max: maxPinnedItems })
-          : '',
+        message: t('search.empty.addedToFavorites', { defaultValue: t('search.empty.addedToWorkbench') }),
+        detail: '',
         itemId,
         undoable: true,
       }, 5000);
@@ -1084,13 +1046,9 @@ function HistoryStream({ style }) {
     }
   }, [
     addFromSearchQuery,
-    activeWorkbenchId,
     clearQuickAddFeedbackTimer,
     focusSearchInput,
     loadItems,
-    maxPinnedItems,
-    pinItem,
-    pinnedItemIdsByWorkbench,
     setFocusedIndex,
     setQuickAddMode,
     setSearchQuery,
@@ -1267,12 +1225,10 @@ function HistoryStream({ style }) {
     canApplyBatchTag,
     canRunBatchAi,
     allSelectedAreFavorite,
-    allSelectedArePinned,
     openBatchTagEditor,
     closeBatchTagEditor,
     applyBatchTag,
     handleBatchFavoriteToggle,
-    handleBatchPinToggle,
     handleBatchAiAction,
     handleBatchTagInputKeyDown,
     handleBatchTagInputChange,
@@ -1282,8 +1238,6 @@ function HistoryStream({ style }) {
     filteredItems,
     selectedItemIds,
     aiEnabled,
-    maxPinnedItems,
-    activeWorkbenchId,
     loadItems,
     addTagToSelectedItems,
     setBackendSearchResults,
@@ -1305,7 +1259,6 @@ function HistoryStream({ style }) {
       probe.selectedTags > 0 ||
       probe.selectedType !== 'all' ||
       probe.showFavoritesOnly ||
-      probe.showPinnedOnly ||
       probe.totalItems >= 100 ||
       probe.elapsedMs >= 8;
 
@@ -1313,7 +1266,7 @@ function HistoryStream({ style }) {
 
     lastFilterProbeLogAtRef.current = now;
     console.log(`${MEMORY_PROBE_PREFIX} filter`, probe);
-  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, showPinnedOnly, selectedDateRange, items.length]);
+  }, [filteredItems, debouncedSearchQuery, selectedTags, selectedType, showFavoritesOnly, selectedDateRange, items.length]);
 
   const topFilteredItem = filteredItems[0] || null;
   const topFilteredItemSignature = topFilteredItem
@@ -1343,7 +1296,6 @@ function HistoryStream({ style }) {
       selectedTags.length > 0 ||
       selectedType !== 'all' ||
       showFavoritesOnly ||
-      showPinnedOnly ||
       !!selectedDateRange;
     if (hasSearchOrFilters) {
       return;
@@ -1361,7 +1313,6 @@ function HistoryStream({ style }) {
     selectedTags.length,
     selectedType,
     showFavoritesOnly,
-    showPinnedOnly,
     selectedDateRange,
   ]);
 
@@ -1508,7 +1459,6 @@ function HistoryStream({ style }) {
     timeTick,
     supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
     onStartExternalDrag: handleStartExternalDrag,
-    onTogglePin: togglePin,
     onToggleFavorite: toggleFavorite,
     onOpenItem: handleOpenItem,
     onRevealInFolder: handleRevealInFolder,
@@ -1524,7 +1474,6 @@ function HistoryStream({ style }) {
     copyFeedbackSource,
     timeTick,
     handleStartExternalDrag,
-    togglePin,
     toggleFavorite,
     handleOpenItem,
     handleRevealInFolder,
@@ -1557,10 +1506,6 @@ function HistoryStream({ style }) {
   const handleToggleFavoritesOnly = useCallback(() => {
     setShowFavoritesOnly(!showFavoritesOnly);
   }, [setShowFavoritesOnly, showFavoritesOnly]);
-
-  const handleTogglePinnedOnly = useCallback(() => {
-    setShowPinnedOnly(!showPinnedOnly);
-  }, [setShowPinnedOnly, showPinnedOnly]);
 
   const handleClearSelectedTags = useCallback(() => {
     setSelectedTags([]);
@@ -1604,8 +1549,6 @@ function HistoryStream({ style }) {
     onTypeChange: setSelectedType,
     showFavoritesOnly,
     onToggleFavorites: handleToggleFavoritesOnly,
-    showPinnedOnly,
-    onTogglePinned: handleTogglePinnedOnly,
     isMiniMode,
     selectedTags: showFavoritesOnly ? [] : selectedTags,
     onClearTags: handleClearSelectedTags,
@@ -1639,8 +1582,6 @@ function HistoryStream({ style }) {
     setSelectedType,
     showFavoritesOnly,
     handleToggleFavoritesOnly,
-    showPinnedOnly,
-    handleTogglePinnedOnly,
     isMiniMode,
     selectedTags,
     handleClearSelectedTags,
@@ -1692,7 +1633,7 @@ function HistoryStream({ style }) {
     copySelectedItemsMerged(filteredItems);
   }, [copySelectedItemsMerged, filteredItems]);
 
-  const handleMergeToWorkbenchNote = useCallback(async () => {
+  const handleMergeToNote = useCallback(async () => {
     const selectedIdSet = new Set(selectedItemIds);
     const selectedItems = filteredItems.filter((item) => selectedIdSet.has(item.id));
     if (selectedItems.length === 0) return;
@@ -1703,15 +1644,14 @@ function HistoryStream({ style }) {
     if (!mergedContent) return;
     try {
       await saveQuickNote(mergedContent, QUICK_INPUT_SOURCE, {
-        autoPin: true,
-        workbenchId: activeWorkbenchId,
+        autoFavorite: true,
       });
       clearSelection();
       loadItems();
     } catch (error) {
       console.error('[HistoryStream] merge to note failed:', error);
     }
-  }, [selectedItemIds, filteredItems, activeWorkbenchId, clearSelection, loadItems]);
+  }, [selectedItemIds, filteredItems, clearSelection, loadItems]);
 
   const selectedItemsForCompare = useMemo(() => {
     if (selectedItemIds.length < 2) return [];
@@ -1815,10 +1755,8 @@ function HistoryStream({ style }) {
     onToggleBatchTagEditor: handleToggleBatchTagEditor,
     onBatchFavoriteToggle: handleBatchFavoriteToggle,
     allSelectedAreFavorite,
-    onBatchPinToggle: handleBatchPinToggle,
-    allSelectedArePinned,
     onMergeCopy: handleMergeCopySelected,
-    onMergeToNote: handleMergeToWorkbenchNote,
+    onMergeToNote: handleMergeToNote,
     canCompareSelected: selectedItemsForCompare.length >= 2,
     onCompareSelected: handleCompareSelected,
     canRunBatchAi,
@@ -1849,8 +1787,6 @@ function HistoryStream({ style }) {
     handleToggleBatchTagEditor,
     handleBatchFavoriteToggle,
     allSelectedAreFavorite,
-    handleBatchPinToggle,
-    allSelectedArePinned,
     handleMergeCopySelected,
     selectedItemsForCompare.length,
     handleCompareSelected,
@@ -1891,41 +1827,12 @@ function HistoryStream({ style }) {
     setBackendSearchRefreshNonce((current) => current + 1);
   }, []);
 
-  const handleHistoryStreamDragOver = useCallback((e) => {
-    if (e.dataTransfer.types.includes(INTERNAL_DRAG_MIME.toLowerCase()) || e.dataTransfer.types.includes(INTERNAL_DRAG_MIME)) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    }
-  }, []);
-
-  const handleHistoryStreamDrop = useCallback(
-    async (e) => {
-      const rawData = e.dataTransfer.getData(INTERNAL_DRAG_MIME);
-      if (!rawData) return;
-      try {
-        e.preventDefault();
-        const { id, fromCanvas } = JSON.parse(rawData);
-        if (id) {
-          const targetItem = items.find((i) => i.id === id);
-          if (targetItem && (targetItem.is_pinned || fromCanvas)) {
-            await togglePin(targetItem);
-          }
-        }
-      } catch (err) {
-        console.error('[HistoryStream] drop unpin item failed:', err);
-      }
-    },
-    [items, togglePin]
-  );
-
   return (
     <div
       ref={historyRootRef}
       className="history-stream"
       style={style}
       onClick={handleHistoryStreamClick}
-      onDragOver={handleHistoryStreamDragOver}
-      onDrop={handleHistoryStreamDrop}
     >
       <SearchBar {...searchBarProps} />
 
@@ -2015,10 +1922,8 @@ function HistoryStream({ style }) {
             selectedDateRange={selectedDateRange}
             itemsRevision={itemsRevision}
             isMiniMode={isMiniMode}
-            showPinnedOnly={showPinnedOnly}
             timeTick={timeTick}
             selectedItemIds={selectedItemIds}
-            onTogglePin={togglePin}
             onToggleFavorite={toggleFavorite}
             onSetCardBackground={setCardBackground}
             onOpenPreview={handleOpenCollectionPreview}
@@ -2029,7 +1934,6 @@ function HistoryStream({ style }) {
             onCopyAndAutoPaste={handleCopyAndAutoPaste}
             onSetSelectedItemIds={setSelectedItemIds}
             onToggleSelectItem={toggleSelectItem}
-            maxPinnedItems={maxPinnedItems}
           />
         ) : backendSearchError && filteredItems.length === 0 ? (
           <div className="empty empty-diagnostic error" role="status" aria-live="polite">
@@ -2058,12 +1962,12 @@ function HistoryStream({ style }) {
                     ref={addFromSearchButtonRef}
                     type="button"
                     className="empty-action-btn panel-state-action-btn"
-                    onClick={addSearchQueryToWorkbench}
+                    onClick={addSearchQueryToFavorites}
                     onKeyDown={handleAddFromSearchActionKeyDown}
                     disabled={quickAddPending}
                     aria-label={t('search.empty.addFromSearch', { query: addFromSearchQuery })}
                   >
-                    {quickAddPending && quickAddMode === 'workbench'
+                    {quickAddPending && quickAddMode === 'favorite'
                       ? t('search.empty.addFromSearchPending')
                       : t('search.empty.addFromSearch', { query: addFromSearchQuery })}
                   </button>
@@ -2149,7 +2053,7 @@ function HistoryStream({ style }) {
                   onClick={handleUndoAddFromSearch}
                   disabled={quickAddUndoPending}
                 >
-                  {quickAddUndoPending ? t('app.loading') : t('workbench.undo')}
+                  {quickAddUndoPending ? t('app.loading') : (t('app.undo', { defaultValue: t('workbench.undo') }))}
                 </button>
               )}
             </div>
@@ -2161,7 +2065,6 @@ function HistoryStream({ style }) {
         state={contextMenuState}
         menuRef={contextMenuRef}
         t={t}
-        maxPinnedItems={maxPinnedItems}
         enableQuickPaste={autoPasteOnDoubleClick}
         collectionHintsDismissed={collectionHintsDismissed}
         onAction={handleContextMenuAction}

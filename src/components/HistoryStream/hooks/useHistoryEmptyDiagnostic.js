@@ -7,14 +7,12 @@ export default function useHistoryEmptyDiagnostic({
   selectedType,
   selectedTags,
   showFavoritesOnly,
-  showPinnedOnly,
   selectedDateRange,
   t,
   setSearchQuery,
   setSelectedType,
   setSelectedTags,
   setShowFavoritesOnly,
-  setShowPinnedOnly,
   setShowTagFilter,
   setTagSearchQuery,
   clearDateFilter,
@@ -24,7 +22,6 @@ export default function useHistoryEmptyDiagnostic({
     selectedTags.length > 0
     || selectedType !== 'all'
     || showFavoritesOnly
-    || showPinnedOnly
     || selectedDateRange,
   );
 
@@ -38,9 +35,6 @@ export default function useHistoryEmptyDiagnostic({
     }
     if (showFavoritesOnly) {
       descriptions.push(t('search.empty.filterFavorites'));
-    }
-    if (showPinnedOnly) {
-      descriptions.push(t('search.empty.filterPinned'));
     }
     if (selectedDateRange) {
       const datePresetLabelMap = {
@@ -60,7 +54,6 @@ export default function useHistoryEmptyDiagnostic({
     selectedType,
     selectedTags.length,
     showFavoritesOnly,
-    showPinnedOnly,
     selectedDateRange,
     t,
   ]);
@@ -70,7 +63,6 @@ export default function useHistoryEmptyDiagnostic({
     setSelectedType('all');
     setSelectedTags([]);
     setShowFavoritesOnly(false);
-    setShowPinnedOnly(false);
     setShowTagFilter(false);
     setTagSearchQuery('');
     clearDateFilter();
@@ -80,7 +72,6 @@ export default function useHistoryEmptyDiagnostic({
     setSelectedType,
     setSelectedTags,
     setShowFavoritesOnly,
-    setShowPinnedOnly,
     setShowTagFilter,
     setTagSearchQuery,
     clearDateFilter,

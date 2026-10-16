@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, X, Star, Inbox, Settings, Type, Image, File, Link, Braces, Layers, Sparkles } from 'lucide-react';
+import { Clock3, X, Star, Settings, Type, Image, File, Link, Braces, Layers, Sparkles } from 'lucide-react';
 import { parseSystemTag } from '../utils/tagHelpers';
 import useEscapeDismiss from './hooks/useEscapeDismiss';
 import useClickOutsideDismiss from './hooks/useClickOutsideDismiss';
@@ -20,7 +20,6 @@ function SearchBar({
   recentSearches = [], onApplyRecentSearch, onClearRecentSearches, onRemoveRecentSearch,
   selectedType, onTypeChange,
   showFavoritesOnly, onToggleFavorites,
-  showPinnedOnly, onTogglePinned,
   isMiniMode,
   selectedTags, onClearTags,
   showTagFilter, onToggleTagFilter,
@@ -120,7 +119,6 @@ function SearchBar({
   const hasSelectedTags = selectedTags.length > 0;
   const hasSelectedType = selectedType !== 'all';
   const hasFavoritesOnly = Boolean(showFavoritesOnly);
-  const hasPinnedOnly = Boolean(showPinnedOnly);
   const normalizedFilterError = typeof filterError === 'string' ? filterError.trim() : '';
   const normalizedSearchQuery = useMemo(
     () => (typeof searchQuery === 'string' ? searchQuery.trim() : ''),
@@ -158,13 +156,9 @@ function SearchBar({
     if (hasFavoritesOnly) {
       parts.push(t('search.empty.filterFavorites'));
     }
-    if (hasPinnedOnly) {
-      parts.push(t('search.empty.filterPinned'));
-    }
     return parts;
   }, [
     hasFavoritesOnly,
-    hasPinnedOnly,
     hasSelectedTags,
     hasSelectedType,
     selectedType,
@@ -180,17 +174,14 @@ function SearchBar({
     if (hasSelectedType) onTypeChange?.('all');
     if (hasSelectedTags) onClearTags?.();
     if (hasFavoritesOnly) onToggleFavorites?.();
-    if (hasPinnedOnly) onTogglePinned?.();
   }, [
     hasFavoritesOnly,
-    hasPinnedOnly,
     normalizedSearchQuery,
     hasSelectedTags,
     hasSelectedType,
     onSearchChange,
     onClearTags,
     onToggleFavorites,
-    onTogglePinned,
     onTypeChange,
   ]);
   const tagDropdownId = 'search-tag-filter-dropdown';
@@ -480,18 +471,6 @@ function SearchBar({
         >
           <Star size={15} fill={showFavoritesOnly ? 'currentColor' : 'none'} />
         </button>
-
-        {isMiniMode && (
-          <button
-            onClick={onTogglePinned}
-            className={`header-icon-btn pin-filter-btn ${showPinnedOnly ? 'active pin-active' : ''}`}
-            title={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
-            aria-label={showPinnedOnly ? t('toolbar.showAll') : t('toolbar.showPinned')}
-            aria-pressed={showPinnedOnly}
-          >
-            <Inbox size={15} fill={showPinnedOnly ? 'currentColor' : 'none'} />
-          </button>
-        )}
 
       {allTags.length > 0 && (
           <TagFilterControl

@@ -59,7 +59,6 @@ function PreviewPanel() {
   const previewItem = useAppStore(s => s.previewItem);
   const switchToWorkbench = useAppStore(s => s.switchToWorkbench);
   const backFromPreview = useAppStore(s => s.backFromPreview);
-  const togglePin = useAppStore(s => s.togglePin);
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const generateAITags = useAppStore(s => s.generateAITags);
   const handleOCR = useAppStore(s => s.handleOCR);
@@ -77,7 +76,6 @@ function PreviewPanel() {
   const ocrProcessing = useAppStore(s => s.ocrProcessing);
   const ocrEnabled = useAppStore(s => s.ocrEnabled);
   const isProUser = useAppStore(s => s.isProUser);
-  const maxPinnedItems = useAppStore(s => s.maxPinnedItems);
   const itemsRevision = useAppStore(s => s.itemsRevision);
   const openShareModal = useAppStore(s => s.openShareModal);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);

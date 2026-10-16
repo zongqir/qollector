@@ -8,7 +8,6 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
-  Inbox,
   Pencil,
   Star,
   Trash2,
@@ -59,7 +58,6 @@ function HistoryContextMenu({
   state,
   menuRef,
   t,
-  maxPinnedItems,
   enableQuickPaste,
   collectionHintsDismissed = false,
   onAction,
@@ -131,12 +129,6 @@ function HistoryContextMenu({
         icon: Star,
         secondary: isCollectionScope,
       },
-      {
-        key: 'pin',
-        label: item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems }),
-        icon: Inbox,
-        secondary: isCollectionScope,
-      },
     ];
 
     const deleteEntry = {
@@ -180,7 +172,7 @@ function HistoryContextMenu({
       { type: 'separator' },
       deleteEntry,
     ]);
-  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, maxPinnedItems, collectionHintsDismissed]);
+  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, collectionHintsDismissed]);
 
   const position = useMemo(() => {
     if (!item || typeof window === 'undefined') {

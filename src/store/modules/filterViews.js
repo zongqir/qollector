@@ -29,7 +29,6 @@ export const normalizeFilterPayload = (payload = {}) => {
       ? Array.from(new Set(payload.selectedTags.filter((tag) => typeof tag === 'string' && tag.trim())))
       : [],
     showFavoritesOnly: Boolean(payload.showFavoritesOnly),
-    showPinnedOnly: Boolean(payload.showPinnedOnly),
     selectedDateRange: normalizeDateRange(payload.selectedDateRange),
     customDateStart: typeof payload.customDateStart === 'string' ? payload.customDateStart : '',
     customDateEnd: typeof payload.customDateEnd === 'string' ? payload.customDateEnd : '',
@@ -41,7 +40,6 @@ export const buildFilterPayloadFromState = (state) => normalizeFilterPayload({
   selectedType: state.selectedType,
   selectedTags: state.selectedTags,
   showFavoritesOnly: state.showFavoritesOnly,
-  showPinnedOnly: state.showPinnedOnly,
   selectedDateRange: state.selectedDateRange,
   customDateStart: state.customDateStart,
   customDateEnd: state.customDateEnd,
@@ -52,7 +50,6 @@ export const buildWorkbenchFilterPayloadFromState = (state) => normalizeFilterPa
   selectedType: state.workbenchSelectedType,
   selectedTags: state.workbenchSelectedTags,
   showFavoritesOnly: state.workbenchShowFavoritesOnly,
-  showPinnedOnly: false,
   selectedDateRange: state.workbenchSelectedDateRange,
   customDateStart: state.workbenchCustomDateStart,
   customDateEnd: state.workbenchCustomDateEnd,

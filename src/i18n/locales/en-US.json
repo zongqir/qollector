@@ -10,7 +10,8 @@
     "title": "Qollect",
     "slogan": "Effortless mark. Instant recall.",
     "loading": "Loading...",
-    "noItems": "No clipboard history"
+    "noItems": "No clipboard history",
+    "undo": "Undo"
   },
   "titlebar": {
     "pin": "Pin Window",
@@ -117,11 +118,12 @@
       "tryOtherKeywords": "Try different keywords or reduce conditions",
       "filteredAfterSearch": "Search matched, but filters removed all results",
       "filteredNoMatch": "Current filters returned no results",
-      "addFromSearch": "Add \"{{query}}\" to Workbench",
+      "addFromSearch": "Add \"{{query}}\" to Favorites",
       "addFromSearchPending": "Adding...",
-      "addToHistoryFromSearch": "Temporarily Save to History",
+      "addToHistoryFromSearch": "Save to History",
       "addToHistoryFromSearchPending": "Saving...",
-      "addedToWorkbench": "Added to Workbench",
+      "addedToWorkbench": "Added to Favorites",
+      "addedToFavorites": "Added to Favorites",
       "addedToHistory": "Saved to History",
       "undoAddSuccess": "Undid the latest add",
       "undoAddFailed": "Undo failed: {{error}}",
@@ -136,7 +138,6 @@
       "filterType": "Type: {{type}}",
       "filterTags": "Tags: {{count}}",
       "filterFavorites": "Favorites only",
-      "filterPinned": "Workbench only",
       "filterDate": "Date: {{range}}"
     }
   },
@@ -423,7 +424,7 @@
       "startTour": "Guided Tour",
       "startTourHint": "Replay the feature walkthrough",
       "autoCleanup": "Auto-clean old data",
-      "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorites and workbench items are never removed.",
+      "autoCleanupHint": "Items exceeding the count or age limit are deleted automatically. Favorited items are never removed.",
       "cleanupMaxItems": "Max items to keep",
       "cleanupMaxItemsHint": "Oldest records are cleaned up when this limit is exceeded",
       "cleanupMaxAgeDays": "Max days to keep",
@@ -975,11 +976,11 @@
     "compareActionCopyA": "Copy A",
     "compareActionCopyB": "Copy B",
     "compareActionCopyBoth": "Copy merged",
-    "comparePinnedFeedback": "{{side}} pinned to workbench",
+    "comparePinnedFeedback": "{{side}} added to favorites",
     "compareCopiedFeedback": "{{side}} copied",
     "compareMergedCopiedFeedback": "Merged A + B content copied",
-    "compareNeedFullMode": "Exit mini mode and open the workbench to view compare details.",
-    "comparePanelAutoOpened": "Workbench opened automatically for compare details."
+    "compareNeedFullMode": "Exit mini mode and open the side panel to view compare details.",
+    "comparePanelAutoOpened": "Side panel opened automatically for compare details."
   },
   "filePreview": {
     "loading": "Loading preview...",
@@ -1048,14 +1049,14 @@
     }
   },
   "tour": {
-    "step1Title": "Your Workbench",
-    "step1Desc": "Add important content here for quick access. Supports drag & drop, notes, and merge export.",
+    "step1Title": "Details & Preview Panel",
+    "step1Desc": "Click any card to inspect full text, images, and metadata, or select multiple items to compare diffs.",
     "step2Title": "Switch to Full View First",
     "step2Desc": "You're in mini mode — many features are hidden. We strongly recommend clicking this button to switch to full view and explore everything!",
-    "stepShowPanelTitle": "Open Workbench",
-    "stepShowPanelDesc": "The Workbench is currently hidden. Click \"Next\" to open it and explore the collection and organization features.",
-    "step3Title": "Hide Workbench",
-    "step3Desc": "Don't need the workbench? Click here to close it and focus on browsing history.",
+    "stepShowPanelTitle": "Open Side Panel",
+    "stepShowPanelDesc": "The side panel is currently hidden. Click \"Next\" to open it and explore preview and comparison features.",
+    "step3Title": "Collapse Side Panel",
+    "step3Desc": "Don't need the side panel? Click here to close it and focus on browsing history and favorites.",
     "step4Title": "Adjust Window Opacity",
     "step4Desc": "Scroll the mouse wheel on the title bar to adjust window transparency in real time.",
     "step5Title": "Pin Window",

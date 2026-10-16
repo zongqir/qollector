@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { X, Check, Plus, Pin, PinOff, Tag } from 'lucide-react';
 import useAppStore from './store/useAppStore';
-import { pinItem } from './services/clipboardService';
 import { QUICK_INPUT_SOURCE } from './utils/sourceConstants';
 import { getImageThumbnail } from './utils/imageHelpers';
 import './EditModal.css';

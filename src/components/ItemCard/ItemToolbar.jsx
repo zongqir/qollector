@@ -1,15 +1,15 @@
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GripVertical, Inbox, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2, Lock } from 'lucide-react';
+import { GripVertical, Star, Sparkles, Search, StickyNote, ChevronDown, ChevronUp, ExternalLink, FolderOpen, Share2, Lock } from 'lucide-react';
 
 import useAppStore from '../../store/useAppStore';
 
 function ItemToolbar({
-  item, onDragStart, onTogglePin, onToggleFavorite,
+  item, onDragStart, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onStartEditNote, onToggleExpand, isExpanded,
-  maxPinnedItems, onOpenItem, onRevealInFolder,
+  onOpenItem, onRevealInFolder,
   onShare, isProUser,
 }) {
   const { t } = useTranslation();
@@ -41,15 +41,6 @@ function ItemToolbar({
 
   return (
     <div className="item-toolbar">
-      <button
-        onClick={(e) => { e.stopPropagation(); onTogglePin(item, e); }}
-        className={`toolbar-btn pin-btn ${item.is_pinned ? 'active' : ''}`}
-        title={item.is_pinned ? t('item.unpin') : t('item.pin', { max: maxPinnedItems || 10 })}
-      >
-        <Inbox size={14} className="toolbar-btn-icon" />
-        <span>{item.is_pinned ? t('item.pinned') : t('item.pin', { max: maxPinnedItems || 10 })}</span>
-      </button>
-      <div className="toolbar-divider"></div>
       <button
         onClick={(e) => { e.stopPropagation(); onToggleFavorite(item, e); }}
         className={`toolbar-btn favorite-btn ${item.is_favorite ? 'active' : ''}`}

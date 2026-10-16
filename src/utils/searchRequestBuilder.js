@@ -69,7 +69,6 @@ export const buildSearchRequest = ({
   selectedType = 'all',
   selectedTags = [],
   showFavoritesOnly = false,
-  showPinnedOnly = false,
   selectedDateRange = null,
   baseFilters = {},
   triggerMode = SEARCH_REQUEST_TRIGGER_MODE.ANY_STRUCTURED_FILTER,
@@ -95,9 +94,6 @@ export const buildSearchRequest = ({
 
   if (showFavoritesOnly) {
     markAdditionalFilter('is_favorite', true);
-  }
-  if (showPinnedOnly) {
-    markAdditionalFilter('is_pinned', true);
   }
 
   const {

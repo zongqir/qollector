@@ -20,7 +20,6 @@ function HistoryVirtualRow({
   onCardDoubleClick,
   onCardContextMenu,
   onStartExternalDrag,
-  onTogglePin,
   onToggleFavorite,
   onOpenItem,
   onRevealInFolder,
@@ -69,7 +68,6 @@ function HistoryVirtualRow({
         searchExplain={searchExplain}
         supportsNativeExternalDrag={supportsNativeExternalDrag}
         onStartExternalDrag={onStartExternalDrag}
-        onTogglePin={onTogglePin}
         onToggleFavorite={onToggleFavorite}
         onOpenItem={onOpenItem}
         onRevealInFolder={onRevealInFolder}

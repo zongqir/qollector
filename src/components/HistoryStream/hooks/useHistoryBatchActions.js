@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { runPromptAssistantTask } from '../../../features/ai-assistant/services/promptAssistantService';
 import { getActionExecutionPreset } from '../../../features/ai-assistant/constants/actionProfiles';
 import { resolveOutputLanguageFromUi } from '../../../features/ai-assistant/utils/language';
-import { getUserTags, toggleItemPin } from '../../../services/clipboardService';
+import { getUserTags } from '../../../services/clipboardService';
 
 export default function useHistoryBatchActions({
   itemsById,
@@ -11,8 +11,6 @@ export default function useHistoryBatchActions({
   filteredItems,
   selectedItemIds,
   aiEnabled,
-  maxPinnedItems,
-  activeWorkbenchId,
   loadItems,
   addTagToSelectedItems,
   setBackendSearchResults,
@@ -128,8 +126,6 @@ export default function useHistoryBatchActions({
   const canRunBatchAi = aiEnabled && allSelectedAreText && batchAiSourceText.trim().length > 0;
   const allSelectedAreFavorite = selectedItemsForBatchActions.length > 0
     && selectedItemsForBatchActions.every(item => item.is_favorite);
-  const allSelectedArePinned = selectedItemsForBatchActions.length > 0
-    && selectedItemsForBatchActions.every(item => item.is_pinned);
 
   const closeBatchTagEditor = useCallback(() => {
     if (batchTagPending) return;
@@ -246,30 +242,6 @@ export default function useHistoryBatchActions({
       setBatchFlagPending(false);
     }
   }, [allSelectedAreFavorite, batchFlagPending, selectedItemsForBatchActions, loadItems, t]);
-
-  const handleBatchPinToggle = useCallback(async () => {
-    if (batchFlagPending || selectedItemsForBatchActions.length === 0) return;
-    const targetPinnedState = !allSelectedArePinned;
-    const targets = selectedItemsForBatchActions.filter(item => Boolean(item.is_pinned) !== targetPinnedState);
-    if (targets.length === 0) return;
-
-    setBatchFlagPending(true);
-    try {
-      const maxPinned = targetPinnedState ? maxPinnedItems : 999;
-      for (const item of targets) {
-        await toggleItemPin(item.id, { maxPinned, workbenchId: activeWorkbenchId });
-      }
-      await loadItems();
-    } catch (error) {
-      const message = typeof error === 'string' ? error : (error?.message || String(error));
-      setBatchAiFeedback({
-        type: 'error',
-        text: t('multiSelect.batchActionFailed', { error: message }),
-      });
-    } finally {
-      setBatchFlagPending(false);
-    }
-  }, [activeWorkbenchId, allSelectedArePinned, batchFlagPending, selectedItemsForBatchActions, maxPinnedItems, loadItems, t]);
 
   const handleBatchAiAction = useCallback(async (taskType) => {
     if ((taskType !== 'summarize' && taskType !== 'rewrite') || !canRunBatchAi || batchAiRunningTask) {
@@ -435,12 +407,10 @@ export default function useHistoryBatchActions({
     canApplyBatchTag,
     canRunBatchAi,
     allSelectedAreFavorite,
-    allSelectedArePinned,
     openBatchTagEditor,
     closeBatchTagEditor,
     applyBatchTag,
     handleBatchFavoriteToggle,
-    handleBatchPinToggle,
     handleBatchAiAction,
     handleBatchTagInputKeyDown,
     handleBatchTagInputChange,

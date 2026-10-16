@@ -75,7 +75,6 @@ function QuickNoteOverlay({
   onSaved,
 }) {
   const { t } = useTranslation();
-  const showFavoritesOnly = useAppStore((state) => state.showFavoritesOnly);
   const textareaRef = useRef(null);
   const colorPanelRef = useRef(null);
   const [content, setContent] = useState('');
@@ -280,7 +279,7 @@ function QuickNoteOverlay({
           <div className="quick-note-card-drag-area" data-tauri-drag-region>
             <div className="quick-note-card-heading" data-tauri-drag-region="false">
               <span className="quick-note-card-kicker">
-                {showFavoritesOnly ? t('quickInput.overlayTipCollection') : t('quickInput.overlayTipWorkbench')}
+                {t('quickInput.overlayTipCollection')}
               </span>
             </div>
             {showGlassIndicator && (

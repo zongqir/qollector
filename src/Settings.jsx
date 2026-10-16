@@ -63,11 +63,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
         keywords: [
           t('settings.general.language'),
           t('settings.general.theme'),
-          t('settings.general.maxPinnedItems'),
           t('settings.general.startupDefaultView'),
           t('settings.general.autoPaste'),
           t('settings.general.copyOnSelect'),
-          t('settings.general.autoLayoutSwitch'),
           t('settings.general.startTour'),
         ],
       },
@@ -93,7 +91,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.tabs.ocr'),
           t('settings.tabs.mcp'),
           t('settings.general.enableAI'),
-          t('settings.general.enableOCR'),
+          t('settings.ocr.autoOcr'),
           t('settings.general.enableMCP'),
           t('settings.general.inputCapture'),
           t('settings.collector.title'),
@@ -367,7 +365,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     toggleSection,
     loadIntegrationConfigs,
     handleAiEnabledChange,
-    handleOcrEnabledChange,
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,
@@ -781,7 +778,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 collapsedSections={collapsedSections}
                 toggleSection={toggleSection}
                 onToggleAiEnabled={handleAiEnabledChange}
-                onToggleOcrEnabled={handleOcrEnabledChange}
                 onToggleMcpEnabled={handleMcpEnabledChange}
                 onToggleCollectorEnabled={handleCollectorEnabledChange}
                 handleCollectorTest={handleCollectorTest}

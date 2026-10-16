@@ -17,7 +17,7 @@ function ItemCard({
   editingNoteId, editNote, onEditNoteChange,
   onStartEditNote, onSaveNote, onCancelNoteEdit,
   // toolbar actions
-  onDragStart, onTogglePin, onToggleFavorite,
+  onDragStart, onToggleFavorite,
   onGenerateAITags, generatingAI, aiEnabled,
   onHandleOCR, ocrProcessing, ocrEnabled,
   onToggleExpand, onOpenItem, onRevealInFolder,
@@ -25,7 +25,6 @@ function ItemCard({
   // content actions
   onContentClick, onContentDoubleClick,
   language,
-  maxPinnedItems,
 }) {
   const { t } = useTranslation();
   const isExpanded = expandedItemId === item.id;
@@ -35,7 +34,6 @@ function ItemCard({
   // 根据状态添加不同的 className
   const cardClasses = [
     'item-card',
-    item.is_pinned && 'pinned',
     item.is_favorite && 'favorite',
   ].filter(Boolean).join(' ');
 
@@ -50,7 +48,6 @@ function ItemCard({
       <ItemToolbar
         item={item}
         onDragStart={onDragStart}
-        onTogglePin={onTogglePin}
         onToggleFavorite={onToggleFavorite}
         onGenerateAITags={onGenerateAITags}
         generatingAI={generatingAI}
@@ -61,7 +58,6 @@ function ItemCard({
         onStartEditNote={onStartEditNote}
         onToggleExpand={onToggleExpand}
         isExpanded={isExpanded}
-        maxPinnedItems={maxPinnedItems}
         onOpenItem={onOpenItem}
         onRevealInFolder={onRevealInFolder}
         onShare={onShare}

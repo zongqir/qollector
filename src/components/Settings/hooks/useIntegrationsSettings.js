@@ -252,16 +252,6 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     }
   };
 
-  const handleOcrEnabledChange = async (enabled) => {
-    const updated = { ...ocrConfig, enabled };
-    setOcrConfig(updated);
-    try {
-      await invoke('update_ocr_config', { config: updated });
-    } catch (error) {
-      console.error('save ocr config failed:', error);
-    }
-  };
-
   const handleMcpEnabledChange = async (enabled) => {
     const updated = { ...mcpConfig, enabled };
     setMcpConfig(updated);
@@ -289,6 +279,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       const ocrProviderKey = ocrConfig.current_provider.toLowerCase();
       const ocrConfigToSave = {
         ...ocrConfig,
+        enabled: true,
         credentials: {
           ...ocrConfig.credentials,
           [ocrProviderKey]: {
@@ -517,7 +508,6 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     toggleSection,
     loadIntegrationConfigs,
     handleAiEnabledChange,
-    handleOcrEnabledChange,
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,

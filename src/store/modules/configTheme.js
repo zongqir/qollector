@@ -18,10 +18,9 @@ export const createLoadConfigsAction = ({
     const licenseStatus = licenseInfo?.status || 'Free';
     set((state) => ({
       aiEnabled: aiConfig?.enabled || false,
-      ocrEnabled: ocrConfig?.enabled || false,
+      ocrEnabled: ocrConfig?.enabled !== false,
       licenseStatus,
       isProUser: licenseStatus === 'Active',
-      maxPinnedItems: generalConfig?.max_pinned_items || 10,
       hasPassword: Boolean(hasLock),
       isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
       workbenchPanelEnabled: generalConfig?.workbench_panel_enabled !== false,
@@ -36,11 +35,10 @@ export const createLoadConfigsAction = ({
       cleanupMaxItems: Math.max(100, Number(generalConfig?.cleanup_max_items || 50000)),
       cleanupMaxAgeDays: Math.max(1, Number(generalConfig?.cleanup_max_age_days || 90)),
       startupFavoritesViewEnabled: Boolean(generalConfig?.startup_favorites_view_enabled),
-      autoLayoutSwitchEnabled: generalConfig?.auto_layout_switch_enabled !== false,
+      autoLayoutSwitchEnabled: true,
       showFavoritesOnly: (
         applyStartupView
         && !state.showFavoritesOnly
-        && !state.showPinnedOnly
         && !state.activeFilterViewId
         && Boolean(generalConfig?.startup_favorites_view_enabled)
       ) ? true : state.showFavoritesOnly,

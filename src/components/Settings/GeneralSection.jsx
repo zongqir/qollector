@@ -37,34 +37,17 @@ function GeneralSection({
   onThemeModeChange,
   getWheelNextNumber,
 }) {
-  const [maxPinnedFeedback, setMaxPinnedFeedback] = useState(null);
   const [startupViewFeedback, setStartupViewFeedback] = useState(null);
   const [clearRecentDayPending, setClearRecentDayPending] = useState(false);
-  const maxPinnedFeedbackTimerRef = useRef(null);
   const startupViewFeedbackTimerRef = useRef(null);
   const supportsAutoPasteOnDoubleClick = detectClientPlatform() === 'windows';
   const supportsCopyOnSelect = detectClientPlatform() === 'windows';
 
   useEffect(() => () => {
-    if (maxPinnedFeedbackTimerRef.current) {
-      clearTimeout(maxPinnedFeedbackTimerRef.current);
-    }
     if (startupViewFeedbackTimerRef.current) {
       clearTimeout(startupViewFeedbackTimerRef.current);
     }
   }, []);
-
-  const showMaxPinnedFeedback = (feedback, durationMs = 1800) => {
-    setMaxPinnedFeedback(feedback);
-    if (maxPinnedFeedbackTimerRef.current) {
-      clearTimeout(maxPinnedFeedbackTimerRef.current);
-    }
-    if (durationMs > 0) {
-      maxPinnedFeedbackTimerRef.current = setTimeout(() => {
-        setMaxPinnedFeedback(null);
-      }, durationMs);
-    }
-  };
 
   const showStartupViewFeedback = (feedback, durationMs = 1800) => {
     setStartupViewFeedback(feedback);
@@ -165,66 +148,6 @@ function GeneralSection({
               );
             })}
           </div>
-        </div>
-        <div className="sg-row">
-          <span>{t('settings.general.maxPinnedItems')}</span>
-          <input
-            type="number"
-            value={generalConfig.max_pinned_items}
-            onChange={async (e) => {
-              const currentValue = generalConfig.max_pinned_items ?? 10;
-              let value = parseInt(e.target.value, 10) || 10;
-              if (value < 1) value = 1;
-              if (value > 100) value = 100;
-              if (value === currentValue) return;
-              const updated = { ...generalConfig, max_pinned_items: value };
-              setGeneralConfig(updated);
-              try {
-                await invoke('update_general_config', { config: updated });
-                showMaxPinnedFeedback({
-                  type: 'success',
-                  message: t('settings.general.maxPinnedItemsApplied', { count: value }),
-                });
-              } catch (error) {
-                console.error('Failed to save max pinned items config:', error);
-                showMaxPinnedFeedback({
-                  type: 'error',
-                  message: t('settings.general.maxPinnedItemsSaveFailed'),
-                }, 2600);
-              }
-            }}
-            onWheel={async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const currentValue = generalConfig.max_pinned_items ?? 10;
-              const value = getWheelNextNumber({
-                rawValue: e.currentTarget.value,
-                fallback: currentValue,
-                min: 1,
-                max: 100,
-                deltaY: e.deltaY,
-              });
-              if (value === currentValue) return;
-              const updated = { ...generalConfig, max_pinned_items: value };
-              setGeneralConfig(updated);
-              try {
-                await invoke('update_general_config', { config: updated });
-                showMaxPinnedFeedback({
-                  type: 'success',
-                  message: t('settings.general.maxPinnedItemsApplied', { count: value }),
-                });
-              } catch (error) {
-                console.error('Failed to save max pinned items config:', error);
-                showMaxPinnedFeedback({
-                  type: 'error',
-                  message: t('settings.general.maxPinnedItemsSaveFailed'),
-                }, 2600);
-              }
-            }}
-            min="1"
-            max="100"
-            className="setting-input-small setting-input-count"
-          />
         </div>
         <div className="sg-row">
           <span>{t('settings.general.startupDefaultView')}</span>
@@ -340,27 +263,12 @@ function GeneralSection({
           </div>
         )}
       </div>
-      {maxPinnedFeedback && (
-        <small
-          className={`setting-status setting-status-emphasis ${maxPinnedFeedback.type === 'error' ? 'error' : 'success'}`}
-          role={maxPinnedFeedback.type === 'error' ? 'alert' : 'status'}
-        >
-          {maxPinnedFeedback.message}
-        </small>
-      )}
       {startupViewFeedback && (
         <small
           className={`setting-status setting-status-emphasis ${startupViewFeedback.type === 'error' ? 'error' : 'success'}`}
           role={startupViewFeedback.type === 'error' ? 'alert' : 'status'}
         >
           {startupViewFeedback.message}
-        </small>
-      )}
-      {generalConfig.max_pinned_items > 20 && (
-        <small className="setting-hint">
-          <span className="setting-warning">
-            {t('settings.general.maxPinnedItemsWarning')}
-          </span>
         </small>
       )}
 
@@ -511,30 +419,6 @@ function GeneralSection({
                   await invoke('update_general_config', { config: updated });
                 } catch (error) {
                   console.error('save autostart config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.autoLayoutSwitch')}</span>
-            <span className="toggle-desc">{t('settings.general.autoLayoutSwitchHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.auto_layout_switch_enabled !== false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, auto_layout_switch_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ autoLayoutSwitchEnabled: checked });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save auto_layout_switch config failed:', error);
                 }
               }}
             />

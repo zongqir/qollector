@@ -87,9 +87,6 @@ export const createFilterActions = (set, get) => ({
   setShowFavoritesOnly: (v) => set((state) => ({
     showFavoritesOnly: resolveBooleanUpdate(v, state.showFavoritesOnly),
   })),
-  setShowPinnedOnly: (v) => set((state) => ({
-    showPinnedOnly: resolveBooleanUpdate(v, state.showPinnedOnly),
-  })),
   setShowTagFilter: (v) => set({ showTagFilter: v }),
   setTagSearchQuery: (q) => set({ tagSearchQuery: q }),
   setSelectedDateRange: (range) => set({ selectedDateRange: range }),

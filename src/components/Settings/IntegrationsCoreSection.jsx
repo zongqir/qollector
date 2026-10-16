@@ -44,7 +44,6 @@ function IntegrationsCoreSection({
   collapsedSections,
   toggleSection,
   onToggleAiEnabled,
-  onToggleOcrEnabled,
   onToggleMcpEnabled,
   onToggleCollectorEnabled,
   handleCollectorTest,
@@ -126,20 +125,6 @@ function IntegrationsCoreSection({
                 type="checkbox"
                 checked={aiConfig.enabled}
                 onChange={(e) => onToggleAiEnabled(e.target.checked)}
-              />
-              <span className="toggle-slider" />
-            </span>
-          </label>
-          <label className="sg-row setting-toggle-row">
-            <span className="toggle-label-group">
-              <span className="toggle-label">{t('settings.general.enableOCR')}</span>
-              <span className="toggle-desc">{t('settings.general.enableOCRHint')}</span>
-            </span>
-            <span className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={ocrConfig.enabled}
-                onChange={(e) => onToggleOcrEnabled(e.target.checked)}
               />
               <span className="toggle-slider" />
             </span>
@@ -489,108 +474,108 @@ function IntegrationsCoreSection({
         )}
       </div>
 
-      {ocrConfig.enabled && (
-        <div className="settings-content">
-          <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ocr')}>
-            {collapsedSections.ocr ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-            {t('settings.tabs.ocr')}
-          </div>
-          {!collapsedSections.ocr && (
-            <>
-              <div className="setting-group">
-                <label className="sg-row setting-toggle-row">
-                  <span>{t('settings.ocr.autoOcr')}</span>
-                  <span className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={ocrConfig.auto_ocr}
-                      onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
-                    />
-                    <span className="toggle-slider" />
-                  </span>
-                </label>
-              </div>
-
-              <div className="setting-item">
-                <label>{t('settings.ocr.provider')}</label>
-                <select
-                  value={ocrConfig.current_provider}
-                  onChange={(e) => {
-                    const oldProviderKey = ocrConfig.current_provider.toLowerCase();
-                    const updatedCredentials = {
-                      ...ocrConfig.credentials,
-                      [oldProviderKey]: {
-                        api_key: currentOcrApiKey || null,
-                        api_secret: currentOcrApiSecret || null,
-                      },
-                    };
-                    const newProviderKey = e.target.value.toLowerCase();
-                    const newCreds = updatedCredentials[newProviderKey];
-
-                    setOcrConfig({
-                      ...ocrConfig,
-                      current_provider: e.target.value,
-                      credentials: updatedCredentials,
-                    });
-                    setCurrentOcrApiKey(newCreds?.api_key || '');
-                    setCurrentOcrApiSecret(newCreds?.api_secret || '');
-                  }}
-                  className="setting-select"
-                >
-                  {OCR_PROVIDERS.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {t(`settings.ocr.providers.${provider}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {ocrConfig.current_provider !== 'Native' && (
-                <div className="setting-item">
-                  <label>{t('settings.ocr.apiKey')}</label>
-                  <div className="password-input-wrapper">
-                    <input
-                      type={showOcrApiKey ? 'text' : 'password'}
-                      value={currentOcrApiKey}
-                      onChange={(e) => setCurrentOcrApiKey(e.target.value)}
-                      placeholder={t('settings.ocr.apiKeyPlaceholder')}
-                      className="setting-input"
-                    />
-                    {currentOcrApiKey && (
-                      <button
-                        type="button"
-                        onClick={() => setShowOcrApiKey(!showOcrApiKey)}
-                        className="password-toggle-btn"
-                      >
-                        {showOcrApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {ocrConfig.current_provider === 'Native' && (
-                <div className="setting-item">
-                  <div className="info-box">
-                    <span>{t('settings.ocr.nativeInfo')}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="setting-actions">
-                <button onClick={handleOcrTest} disabled={ocrTesting} className="test-btn">
-                  {ocrTesting ? t('settings.testing') : t('settings.test')}
-                </button>
-                {ocrTestResult && (
-                  <span className={`test-result ${ocrTestResult.success ? 'success' : 'error'}`}>
-                    {ocrTestResult.message}
-                  </span>
-                )}
-              </div>
-            </>
-          )}
+      <div className="settings-content">
+        <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('ocr')}>
+          {collapsedSections.ocr ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          {t('settings.tabs.ocr')}
         </div>
-      )}
+        {!collapsedSections.ocr && (
+          <>
+            <div className="setting-group">
+              <label className="sg-row setting-toggle-row">
+                <span className="toggle-label-group">
+                  <span className="toggle-label">{t('settings.ocr.autoOcr')}</span>
+                </span>
+                <span className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={ocrConfig.auto_ocr}
+                    onChange={(e) => setOcrConfig({ ...ocrConfig, auto_ocr: e.target.checked })}
+                  />
+                  <span className="toggle-slider" />
+                </span>
+              </label>
+            </div>
+
+            <div className="setting-item">
+              <label>{t('settings.ocr.provider')}</label>
+              <select
+                value={ocrConfig.current_provider}
+                onChange={(e) => {
+                  const oldProviderKey = ocrConfig.current_provider.toLowerCase();
+                  const updatedCredentials = {
+                    ...ocrConfig.credentials,
+                    [oldProviderKey]: {
+                      api_key: currentOcrApiKey || null,
+                      api_secret: currentOcrApiSecret || null,
+                    },
+                  };
+                  const newProviderKey = e.target.value.toLowerCase();
+                  const newCreds = updatedCredentials[newProviderKey];
+
+                  setOcrConfig({
+                    ...ocrConfig,
+                    current_provider: e.target.value,
+                    credentials: updatedCredentials,
+                  });
+                  setCurrentOcrApiKey(newCreds?.api_key || '');
+                  setCurrentOcrApiSecret(newCreds?.api_secret || '');
+                }}
+                className="setting-select"
+              >
+                {OCR_PROVIDERS.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {t(`settings.ocr.providers.${provider}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {ocrConfig.current_provider !== 'Native' && (
+              <div className="setting-item">
+                <label>{t('settings.ocr.apiKey')}</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={showOcrApiKey ? 'text' : 'password'}
+                    value={currentOcrApiKey}
+                    onChange={(e) => setCurrentOcrApiKey(e.target.value)}
+                    placeholder={t('settings.ocr.apiKeyPlaceholder')}
+                    className="setting-input"
+                  />
+                  {currentOcrApiKey && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOcrApiKey(!showOcrApiKey)}
+                      className="password-toggle-btn"
+                    >
+                      {showOcrApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {ocrConfig.current_provider === 'Native' && (
+              <div className="setting-item">
+                <div className="info-box">
+                  <span>{t('settings.ocr.nativeInfo')}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="setting-actions">
+              <button onClick={handleOcrTest} disabled={ocrTesting} className="test-btn">
+                {ocrTesting ? t('settings.testing') : t('settings.test')}
+              </button>
+              {ocrTestResult && (
+                <span className={`test-result ${ocrTestResult.success ? 'success' : 'error'}`}>
+                  {ocrTestResult.message}
+                </span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {mcpConfig.enabled && (
         <div className="settings-content">

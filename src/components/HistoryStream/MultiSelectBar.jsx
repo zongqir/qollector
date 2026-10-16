@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Bot, Check, Columns2, Copy, FileText, Inbox, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
+import { Bot, Check, Columns2, Copy, FileText, Star, Tag, Trash2, Wand2, X } from 'lucide-react';
 
 function MultiSelectBar({
   selectedCount,
@@ -7,8 +7,6 @@ function MultiSelectBar({
   onToggleBatchTagEditor,
   onBatchFavoriteToggle,
   allSelectedAreFavorite,
-  onBatchPinToggle,
-  allSelectedArePinned,
   onMergeCopy,
   onMergeToNote,
   canCompareSelected,
@@ -89,18 +87,6 @@ function MultiSelectBar({
         >
           <Star size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} fill={allSelectedAreFavorite ? 'currentColor' : 'none'} />
           <span>{allSelectedAreFavorite ? t('multiSelect.batchUnfavorite') : t('multiSelect.batchFavorite')}</span>
-        </button>
-        <button
-          className="multi-select-btn pin"
-          onClick={(e) => {
-            e.stopPropagation();
-            onBatchPinToggle();
-          }}
-          disabled={batchFlagPending || batchAiRunningTask != null}
-          title={allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}
-        >
-          <Inbox size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
-          <span>{allSelectedArePinned ? t('multiSelect.batchUnpin') : t('multiSelect.batchPin')}</span>
         </button>
         <button
           className="multi-select-btn copy"
