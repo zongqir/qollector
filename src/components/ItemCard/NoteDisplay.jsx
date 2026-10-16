@@ -74,8 +74,11 @@ function NoteDisplay({
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
+              e.stopPropagation();
               onSaveNote(item);
             } else if (e.key === 'Escape') {
+              e.stopPropagation();
+              e.preventDefault();
               onCancelNoteEdit();
             }
           }}
@@ -83,10 +86,26 @@ function NoteDisplay({
         <div className="note-edit-footer">
           <span className="note-edit-hint">Ctrl+Enter</span>
           <div className="note-edit-actions">
-            <button onClick={onCancelNoteEdit} className="note-btn-cancel" title={t('item.cancelNote')}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelNoteEdit();
+              }}
+              className="note-btn-cancel"
+              title={t('item.cancelNote')}
+            >
               <X size={12} />
             </button>
-            <button onClick={() => onSaveNote(item)} className="note-btn-save" title={t('item.saveNote')}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSaveNote(item);
+              }}
+              className="note-btn-save"
+              title={t('item.saveNote')}
+            >
               <Check size={12} />
             </button>
           </div>
@@ -123,7 +142,10 @@ function NoteDisplay({
             <button
               type="button"
               className="note-toggle-btn"
-              onClick={() => onStartEditNote(item)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onStartEditNote(item);
+              }}
               title={t('item.clickToEditNote')}
             >
               {t('item.editNote')}
@@ -136,7 +158,10 @@ function NoteDisplay({
     return (
       <div
         className="note-display-bar"
-        onClick={() => onStartEditNote(item)}
+        onClick={(event) => {
+          event.stopPropagation();
+          onStartEditNote(item);
+        }}
         title={t('item.clickToEditNote')}
       >
         <span className="note-text">{item.user_note}</span>

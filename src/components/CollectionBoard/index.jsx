@@ -8,9 +8,7 @@ import {
   Folder,
   GripVertical,
   Image,
-  LayoutGrid,
   Link,
-  List,
   Palette,
   Plus,
   Search,
@@ -82,9 +80,6 @@ import {
 const normalizeTag = (value) => (typeof value === 'string' ? value.trim() : '');
 
 const getUserTags = (item) => getTags(item?.tags).filter(tag => !tag.startsWith('AI:'));
-const COLLECTION_VIEW_MODE_KEY = 'qollect-collection-view-mode-v1';
-const COLLECTION_VIEW_MODE_CARDS = 'cards';
-const COLLECTION_VIEW_MODE_LIST = 'list';
 const COLLECTION_QUERY_PAGE_SIZE = 200;
 const COLLECTION_SEARCH_DEBOUNCE_MS = 260;
 const OPEN_ENDED_DATE_MAX_TS = 253402300799;
@@ -122,19 +117,6 @@ const CardTypeIcon = ({ type, hasCodeLanguage }) => {
     case 'link': return <Link size={size} />;
     default: return <Type size={size} />;
   }
-};
-
-const readCollectionViewMode = () => {
-  if (typeof window === 'undefined') return COLLECTION_VIEW_MODE_CARDS;
-  try {
-    const stored = String(localStorage.getItem(COLLECTION_VIEW_MODE_KEY) || '').trim().toLowerCase();
-    if (stored === COLLECTION_VIEW_MODE_LIST || stored === COLLECTION_VIEW_MODE_CARDS) {
-      return stored;
-    }
-  } catch (error) {
-    console.warn('[CollectionBoard] read view mode failed:', error);
-  }
-  return COLLECTION_VIEW_MODE_CARDS;
 };
 
 function SortableCollectionItem({ id, disabled, className, children }) {
@@ -200,7 +182,6 @@ function CollectionBoard({
   const [tagEditorBusy, setTagEditorBusy] = useState(false);
   const [tagEditorFeedback, setTagEditorFeedback] = useState('');
   const [openColorPickerItemId, setOpenColorPickerItemId] = useState(null);
-  const [collectionViewMode, setCollectionViewMode] = useState(() => readCollectionViewMode());
   const [collectionSortMode, setCollectionSortMode] = useState(false);
   const [collectionSortAnchorItemId, setCollectionSortAnchorItemId] = useState(null);
   const [backendLimit, setBackendLimit] = useState(COLLECTION_QUERY_PAGE_SIZE);
@@ -224,10 +205,8 @@ function CollectionBoard({
   const collectionCardClickTimerRef = useRef(null);
   const collectionSortLongPressPointerRef = useRef({ pointerId: null, x: 0, y: 0 });
   const suppressNextCardClickRef = useRef(false);
-  const effectiveCollectionViewMode = isMiniMode ? COLLECTION_VIEW_MODE_CARDS : collectionViewMode;
   const isCollectionSortMode = !isMiniMode && collectionSortMode;
   const shouldUseDndLayout = !isMiniMode && isCollectionSortMode;
-  const useCollectionMasonryLayout = !isCollectionSortMode && effectiveCollectionViewMode === COLLECTION_VIEW_MODE_CARDS;
   const effectiveSelectedCollectionTags = useMemo(
     () => (isMiniMode ? [] : selectedCollectionTags),
     [isMiniMode, selectedCollectionTags],
@@ -506,15 +485,6 @@ function CollectionBoard({
   }, [collectionAvailableTags]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(COLLECTION_VIEW_MODE_KEY, collectionViewMode);
-    } catch (error) {
-      console.warn('[CollectionBoard] persist view mode failed:', error);
-    }
-  }, [collectionViewMode]);
-
-  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const syncDismissed = (event) => {
       const dismissedFromEvent = event?.detail?.dismissed;
@@ -597,7 +567,7 @@ function CollectionBoard({
     || Boolean(selectedDateRange);
   const collectionTagPreviewLimit = getCardTagPreviewLimit('collection', {
     isMiniMode,
-    isListMode: effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST,
+    isListMode: true,
   });
 
   const renderCollectionCardFooter = (item, itemTags) => {
@@ -1121,7 +1091,7 @@ function CollectionBoard({
     handleCollectionCardClick(item, event);
   }, [handleCollectionCardClick]);
 
-  const isCollectionListMode = effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST;
+  const isCollectionListMode = true;
 
   const getCardPointerProps = useCallback((item) => ({
     onPointerDown: (event) => handleCollectionCardPointerHandlers.onPointerDown(event, item),
@@ -1291,7 +1261,7 @@ function CollectionBoard({
         className={`
           collection-card
           panel-card-shell
-          ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''}
+          list-mode
           ${activeItemId === item.id ? 'active' : ''}
           ${selectionClassName}
           ${isCollectionSortMode ? 'sort-mode' : ''}
@@ -1486,30 +1456,6 @@ function CollectionBoard({
                 </div>
               )}
             </div>
-            <div className="collection-toolbar-actions collection-toolbar-actions--floating">
-              <div className="collection-view-toggle" role="group" aria-label={t('collection.viewToggle')}>
-                <button
-                  type="button"
-                  className={collectionViewMode === COLLECTION_VIEW_MODE_CARDS ? 'active' : ''}
-                  onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_CARDS)}
-                  title={t('collection.viewCards')}
-                  aria-label={t('collection.viewCards')}
-                  aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_CARDS}
-                >
-                  <LayoutGrid size={13} />
-                </button>
-                <button
-                  type="button"
-                  className={collectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'active' : ''}
-                  onClick={() => setCollectionViewMode(COLLECTION_VIEW_MODE_LIST)}
-                  title={t('collection.viewList')}
-                  aria-label={t('collection.viewList')}
-                  aria-pressed={collectionViewMode === COLLECTION_VIEW_MODE_LIST}
-                >
-                  <List size={13} />
-                </button>
-              </div>
-            </div>
           </div>
         {isCollectionSortMode && (
           <div className="collection-sort-banner" role="status" aria-live="polite">
@@ -1616,7 +1562,7 @@ function CollectionBoard({
       ) : (
         <div
           ref={collectionGridRef}
-          className={`collection-grid ${effectiveCollectionViewMode === COLLECTION_VIEW_MODE_LIST ? 'list-mode' : ''} ${useCollectionMasonryLayout ? 'masonry-mode' : ''}`}
+          className="collection-grid list-mode"
           onScroll={handleCollectionGridScroll}
         >
           {shouldUseDndLayout ? (

@@ -688,33 +688,43 @@
 }
 
 .preview-note-section {
-  padding: 7px 12px;
-  min-height: 38px;
+  padding: 6px 12px;
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.preview-panel.note-focus-mode .preview-note-section {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 12px 14px;
+.preview-note-section:not(.has-note):not(.is-editing) {
+  align-items: flex-end;
+}
+
+.preview-note-section.has-note,
+.preview-note-section.is-editing {
   align-items: stretch;
 }
 
-.preview-note-section.is-focus-mode .note-display-bar--preview,
-.preview-note-section.is-focus-mode .note-edit-bar {
-  flex: 1 1 auto;
+.preview-note-section .note-display-bar--preview {
+  width: 100%;
+  margin: 0;
 }
 
-.preview-note-section.is-focus-mode .note-display-content--preview {
-  min-height: 0;
+.preview-note-section .note-edit-bar {
+  margin: 0;
+  width: 100%;
+  border-top: none;
 }
 
-.preview-note-section.is-focus-mode .note-edit-bar {
-  margin: -12px -14px -12px;
-  width: calc(100% + 28px);
+.preview-note-section .note-edit-input {
+  min-height: 52px;
+  max-height: 120px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.preview-note-section.is-focus-mode .note-edit-input {
-  min-height: clamp(180px, 42vh, 420px);
+.preview-note-section .note-edit-footer {
+  padding: 4px 0 0;
 }
 
 .preview-meta {
@@ -857,15 +867,6 @@
   .preview-image-inline-hint {
     font-size: 10px;
     text-align: center;
-  }
-
-  .preview-panel.note-focus-mode .preview-note-section {
-    padding: 10px 11px;
-  }
-
-  .preview-note-section.is-focus-mode .note-edit-bar {
-    margin: -10px -11px -10px;
-    width: calc(100% + 22px);
   }
 }
 

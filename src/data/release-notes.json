@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.6",
+      "publishedAt": "2026-10-16",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-6",
+      "summary": {
+        "zh-CN": "收藏流极简纯净与预览交互增强：收藏夹全尺寸统合为紧凑列表形态并移除冗余卡片网格，卡片操作栏极致瘦身，彻底修复备注编辑导致的误退出与空白缺陷。",
+        "en-US": "Pure collection list stream & enhanced preview UX: Standardized collection board into a unified compact list across all modes, streamlined card action toolbar, and eliminated preview dismissal & blank gaps during note editing."
+      },
+      "highlights": {
+        "zh-CN": [
+          "收藏夹体验全面极简化：无论在 Mini 模式还是普通窗口模式下，收藏区彻底废除分散且冗余的卡片网格/瀑布流模式，固定采用单列紧凑列表，移除顶部多余的视图切换按钮，信息呈现与浏览体验更加专注高质。",
+          "历史流卡片操作极致瘦身：单击卡片已具备直达全量预览抽屉能力，移除了卡片右上角重复冗余的放大展开图标，视觉负担进一步减负。",
+          "预览抽屉编辑备注防退出与空白消除：彻底解决预览界面添加/编辑备注时遮罩穿透误判导致抽屉意外退出的交互缺陷；重构备注编辑容器布局，条目内容始终自适应居于常驻可视区，彻底杜绝空白遮挡。"
+        ],
+        "en-US": [
+          "Standardized Pure Collection List Stream: Completely phased out the redundant multi-column card grid/masonry mode across both Mini and normal views, standardizing on a clean single-column list and removing unnecessary view toggle buttons.",
+          "Streamlined Compact Card Actions: With single-click already opening full rich preview, eliminated the redundant expand/preview badge icon on card headers to minimize visual clutter.",
+          "Fixed Note Edit Dismissal & Blank Overlap in Preview: Prevented unexpected preview drawer dismissal caused by mask click-through during note editing; refactored the note editor layout to keep content fully visible without awkward blank viewports."
+        ]
+      }
+    },
+    {
       "version": "0.5.5",
       "publishedAt": "2026-10-16",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-5",

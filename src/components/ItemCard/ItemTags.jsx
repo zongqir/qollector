@@ -194,8 +194,12 @@ function ItemTags({
     </div>
   ) : (
     <button
+      type="button"
       className="add-tag-btn"
-      onClick={(e) => onStartAddTag(item, e)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onStartAddTag(item, e);
+      }}
       title={t('item.addTag')}
     >
       +

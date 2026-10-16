@@ -37,11 +37,6 @@ function PreviewPanel() {
   const [isToolbarCompact, setIsToolbarCompact] = useState(false);
   const [showSecondaryTools, setShowSecondaryTools] = useState(false);
   const [panelMetrics, setPanelMetrics] = useState({ width: 0, height: 0 });
-  const [previewNoteState, setPreviewNoteState] = useState({
-    isExpanded: false,
-    canExpand: false,
-    hasExpandedOverflow: false,
-  });
   const [openFeedback, setOpenFeedback] = useState(null); // 'open' | 'reveal'
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [previewToast, setPreviewToast] = useState('');
@@ -665,8 +660,15 @@ function PreviewPanel() {
           onChange={(e) => setEditContent(e.target.value)}
           wrap="soft"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.ctrlKey) handleSaveContent();
-            if (e.key === 'Escape') setIsEditingContent(false);
+            if (e.key === 'Enter' && e.ctrlKey) {
+              e.stopPropagation();
+              handleSaveContent();
+            }
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              e.preventDefault();
+              setIsEditingContent(false);
+            }
           }}
           autoFocus
         />
@@ -748,26 +750,9 @@ function PreviewPanel() {
   };
 
   const isNoteEditing = editingNoteId === item.id;
-  const shouldUseNoteFocusLayout = (
-    previewNoteState.hasExpandedOverflow
-    && (
-      isToolbarCompact
-      || (panelMetrics.height > 0 && panelMetrics.height < 680)
-    )
-  ) || (
-    isNoteEditing
-    && (
-      isToolbarCompact
-      || (panelMetrics.height > 0 && panelMetrics.height < 620)
-    )
-  );
-  const isNoteFocusMode = !showAIAssistant
-    && !isEditingContent
-    && shouldUseNoteFocusLayout
-    && (previewNoteState.isExpanded || isNoteEditing);
 
   return (
-    <div className={`preview-panel ${previewTypeClass} ${isNoteFocusMode ? 'note-focus-mode' : ''}`} ref={panelRef}>
+    <div className={`preview-panel ${previewTypeClass}`} ref={panelRef}>
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
         <div className="preview-nav-main">
@@ -819,7 +804,6 @@ function PreviewPanel() {
       </div>
 
       {/* 鏍囩鍖?*/}
-      {!isNoteFocusMode && (
         <div className="preview-tags-section">
           <ItemTags
             item={item}
@@ -837,10 +821,7 @@ function PreviewPanel() {
             singleRow
           />
         </div>
-      )}
 
-      {/* 鍐呭鍖?*/}
-      {!isNoteFocusMode && (
         <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
           {isCopied && (
             <div className="copy-success-toast">
@@ -882,11 +863,10 @@ function PreviewPanel() {
           )}
           {!showAIAssistant && renderContent()}
         </div>
-      )}
 
-      {/* 澶囨敞鍖?- 鍐呭涓嬫柟锛屼綔涓烘壒娉?*/}
+      {/* 备注区 - 内容下方，作为批注 */}
       {!showAIAssistant && !isEditingContent && (
-        <div className={`preview-note-section ${isNoteFocusMode ? 'is-focus-mode' : ''}`}>
+        <div className={`preview-note-section ${isNoteEditing ? 'is-editing' : ''} ${item.user_note ? 'has-note' : ''}`}>
           <NoteDisplay
             item={item}
             editingNoteId={editingNoteId}
@@ -896,11 +876,16 @@ function PreviewPanel() {
             onSaveNote={saveNote}
             onCancelNoteEdit={cancelNoteEdit}
             variant="preview"
-            focusMode={isNoteFocusMode}
-            onPreviewStateChange={setPreviewNoteState}
           />
           {!item.user_note && editingNoteId !== item.id && (
-            <button className="preview-add-note-btn" onClick={() => startEditNote(item)}>
+            <button
+              type="button"
+              className="preview-add-note-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                startEditNote(item);
+              }}
+            >
               <StickyNote size={12} />
               <span>{t('item.addNote')}</span>
             </button>
@@ -908,8 +893,8 @@ function PreviewPanel() {
         </div>
       )}
 
-      {/* 鍏冧俊鎭?- 搴曢儴鍙傝€?*/}
-      {!showAIAssistant && !isEditingContent && !isNoteFocusMode && (
+      {/* 元信息 - 底部参考 */}
+      {!showAIAssistant && !isEditingContent && (
         <div className="preview-meta">
           {pureColorPreview && (
             <span className="preview-meta-color">
@@ -930,19 +915,32 @@ function PreviewPanel() {
         </div>
       )}
 
-      {/* 宸ュ叿鏍?*/}
-      {!isNoteFocusMode && (
-        <div
-          ref={toolbarRef}
-          className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''} ${showSecondaryTools ? 'show-secondary' : ''}`}
-        >
+      {/* 工具栏 */}
+      <div
+        ref={toolbarRef}
+        className={`preview-toolbar ${isToolbarCompact ? 'compact' : ''} ${showSecondaryTools ? 'show-secondary' : ''}`}
+      >
           {isEditingContent ? (
             <>
               <span className="preview-toolbar-hint">{t('editModal.saveHint')}</span>
-              <button className="preview-tool-btn" onClick={() => setIsEditingContent(false)}>
+              <button
+                type="button"
+                className="preview-tool-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingContent(false);
+                }}
+              >
                 <span>{t('panel.cancelEdit')}</span>
               </button>
-              <button className="preview-tool-btn active" onClick={handleSaveContent}>
+              <button
+                type="button"
+                className="preview-tool-btn active"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveContent();
+                }}
+              >
                 <Check size={14} />
                 <span>{t('panel.saveContent')}</span>
               </button>
@@ -1075,7 +1073,14 @@ function PreviewPanel() {
                 </button>
               )}
               {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
-                <button className="preview-tool-btn secondary" onClick={handleStartEditContent}>
+                <button
+                  type="button"
+                  className="preview-tool-btn secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartEditContent();
+                  }}
+                >
                   <Edit2 size={14} />
                   <span>{t('panel.editContent')}</span>
                 </button>
@@ -1087,7 +1092,6 @@ function PreviewPanel() {
             </>
           )}
         </div>
-      )}
     </div>
   );
 }

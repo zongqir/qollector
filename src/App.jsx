@@ -1261,9 +1261,15 @@ function App() {
         ref={workspaceRef}
         className={`workspace ${previewOverlayActive ? 'preview-overlay-active' : ''}`.trim()}
         onClick={previewOverlayActive ? (e) => {
-          if (!e.target.closest('.polymorphic-panel')) {
-            backFromPreview();
+          const path = e.nativeEvent?.composedPath ? e.nativeEvent.composedPath() : [];
+          const isInsidePanel = path.some(el =>
+            el?.classList?.contains?.('polymorphic-panel') ||
+            el?.classList?.contains?.('workspace-panel-host')
+          );
+          if (isInsidePanel || e.target?.closest?.('.polymorphic-panel') || e.target?.closest?.('.workspace-panel-host')) {
+            return;
           }
+          backFromPreview();
         } : undefined}
       >
         {shouldRenderHistoryPane && (
@@ -1281,6 +1287,7 @@ function App() {
           <div
             className={`workspace-panel-host ${showPanelPane ? '' : 'is-hidden'}`.trim()}
             aria-hidden={!showPanelPane}
+            onClick={(e) => e.stopPropagation()}
           >
             <PolymorphicPanel />
           </div>

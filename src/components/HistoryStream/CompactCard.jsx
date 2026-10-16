@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Expand } from 'lucide-react';
+import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -21,7 +21,6 @@ import {
   getCardBackgroundPreset,
 } from '../../utils/cardBackgrounds';
 import useAppStore from '../../store/useAppStore';
-import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
@@ -430,23 +429,6 @@ function CompactCard({
                 <FolderOpen size={10} />
               </button>
             )}
-            <button
-              type="button"
-              className="badge-btn panel-card-action-btn badge-window"
-              draggable={false}
-              data-longpress-ignore="true"
-              onPointerDown={stopActionPointerDown}
-              onMouseDown={stopActionPointerDown}
-              onDragStart={preventActionDrag}
-              onClick={(e) => {
-                stopActionClick(e);
-                openItemPreview(setPanelMode, item);
-              }}
-              title={t('panel.preview')}
-              aria-label={t('panel.preview')}
-            >
-              <Expand size={10} />
-            </button>
             <button
               type="button"
               className={`badge-btn panel-card-action-btn badge-color ${hasCustomCardBackground ? 'tinted' : ''}`}
