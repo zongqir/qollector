@@ -42,8 +42,6 @@ export default function useHistoryRowInteractions({
   panelMode,
   previewItemId,
   focusedIndex,
-  shouldUseHoverPreview,
-  expandedPreviewItemId,
   selectionAnchorIndexRef,
   supportsNativeExternalDrag,
   setSelectedItemIds,
@@ -51,8 +49,6 @@ export default function useHistoryRowInteractions({
   setPanelMode,
   toggleSelectItem,
   clearSelection,
-  setExpandedPreviewItemId,
-  clearExpandedPreview,
   handleCopyAndAutoPaste,
   handleCopy,
   switchToWorkbench,
@@ -68,13 +64,12 @@ export default function useHistoryRowInteractions({
   }, []);
 
   const triggerHistoryDoubleClickAction = useCallback((item) => {
-    clearExpandedPreview();
     if (item.type_ === 'image' || item.type_ === 'file') {
       handleCopy(item, 'history', { bypassInternalSourceProtection: true });
       return;
     }
     handleCopyAndAutoPaste(item, 'history', { bypassInternalSourceProtection: true });
-  }, [clearExpandedPreview, handleCopy, handleCopyAndAutoPaste]);
+  }, [handleCopy, handleCopyAndAutoPaste]);
 
   const handleCardClick = useCallback((item, index, e) => {
     e.stopPropagation();
@@ -146,23 +141,6 @@ export default function useHistoryRowInteractions({
       return;
     }
 
-    if (filteredItems.length === 1) {
-      clearExpandedPreview();
-      return;
-    }
-
-    if (shouldUseHoverPreview) {
-      if (expandedPreviewItemId === item.id) {
-        clearExpandedPreview();
-        return;
-      }
-      clickTimerRef.current = setTimeout(() => {
-        setExpandedPreviewItemId(item.id);
-        clickTimerRef.current = null;
-      }, HISTORY_DOUBLE_CLICK_FALLBACK_WINDOW_MS);
-      return;
-    }
-
     clickTimerRef.current = setTimeout(() => {
       openItemPreview(setPanelMode, item);
       clickTimerRef.current = null;
@@ -177,11 +155,6 @@ export default function useHistoryRowInteractions({
     panelMode,
     previewItemId,
     toggleSelectItem,
-    clearSelection,
-    shouldUseHoverPreview,
-    expandedPreviewItemId,
-    clearExpandedPreview,
-    setExpandedPreviewItemId,
     setPanelMode,
     triggerHistoryDoubleClickAction,
   ]);
@@ -234,14 +207,10 @@ export default function useHistoryRowInteractions({
       clearSelection();
       return;
     }
-    if (shouldUseHoverPreview) {
-      clearExpandedPreview();
-      return;
-    }
     if (panelMode === 'preview') {
       switchToWorkbench();
     }
-  }, [panelMode, switchToWorkbench, selectedItemIds.length, clearSelection, shouldUseHoverPreview, clearExpandedPreview]);
+  }, [panelMode, switchToWorkbench, selectedItemIds.length, clearSelection]);
 
   return {
     handleCardClick,

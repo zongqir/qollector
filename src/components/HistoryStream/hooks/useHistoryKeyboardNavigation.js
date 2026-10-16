@@ -5,12 +5,10 @@ export default function useHistoryKeyboardNavigation({
   bulkSelectableItems = filteredItems,
   focusedIndex,
   setFocusedIndex,
-  shouldUseHoverPreview,
-  setExpandedPreviewItemId,
+  isMiniMode,
   setPanelMode,
   handleCopy,
   handleCopyAndAutoPaste,
-  clearExpandedPreview,
   selectedItemIds,
   historyTagShortcutEnabled,
   panelMode,
@@ -40,13 +38,10 @@ export default function useHistoryKeyboardNavigation({
     const nextItem = filteredItems[next];
     if (!nextItem) return;
 
-    if (shouldUseHoverPreview) {
-      setExpandedPreviewItemId(nextItem.id);
-      return;
+    if (!isMiniMode) {
+      setPanelMode('preview', nextItem);
     }
-
-    setPanelMode('preview', nextItem);
-  }, [filteredItems, focusedIndex, setFocusedIndex, shouldUseHoverPreview, setExpandedPreviewItemId, setPanelMode, virtuosoRef]);
+  }, [filteredItems, focusedIndex, setFocusedIndex, isMiniMode, setPanelMode, virtuosoRef]);
 
   const submitFocusedSelection = useCallback(() => {
     if (focusedIndex < 0 || focusedIndex >= filteredItems.length) return false;
@@ -88,18 +83,6 @@ export default function useHistoryKeyboardNavigation({
     const length = input.value?.length ?? 0;
     input.setSelectionRange?.(length, length);
   }, [searchInputId]);
-
-  useEffect(() => {
-    if (!shouldUseHoverPreview) {
-      clearExpandedPreview();
-    }
-  }, [shouldUseHoverPreview, clearExpandedPreview]);
-
-  useEffect(() => {
-    if (selectedItemIds.length > 0) {
-      clearExpandedPreview();
-    }
-  }, [selectedItemIds.length, clearExpandedPreview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -179,9 +162,6 @@ export default function useHistoryKeyboardNavigation({
       } else if (e.key === 'Escape') {
         clearSelection();
         setFocusedIndex(-1);
-        if (shouldUseHoverPreview) {
-          clearExpandedPreview();
-        }
       }
     };
 
@@ -207,8 +187,6 @@ export default function useHistoryKeyboardNavigation({
     historyGrouping,
     selectionAnchorIndexRef,
     virtuosoRef,
-    shouldUseHoverPreview,
-    clearExpandedPreview,
   ]);
 
   return {

@@ -260,8 +260,7 @@
   --surface-glow: rgba(255, 255, 255, 0.38);
   --surface-grid-line: rgba(255, 255, 255, 0.03);
   --ambient-bg:
-    radial-gradient(120% 100% at 6% 0%, rgba(0, 122, 255, 0.12), transparent 52%),
-    radial-gradient(150% 120% at 98% 0%, rgba(255, 149, 0, 0.12), transparent 46%),
+    radial-gradient(120% 100% at 6% 0%, rgba(0, 122, 255, 0.1), transparent 52%),
     linear-gradient(170deg, #f6f8fb 0%, #eef1f8 100%);
 
   /* Unified card shell tokens */
@@ -372,8 +371,7 @@
   --panel-rail-mini-border: color-mix(in srgb, var(--surface-border-soft) 82%, transparent);
   --panel-rail-mini-shadow: 0 3px 10px color-mix(in srgb, var(--shadow-sm) 28%, transparent);
   --panel-ambient-overlay:
-    radial-gradient(92% 64% at 6% -8%, color-mix(in srgb, var(--accent-color) 10%, transparent), transparent 64%),
-    radial-gradient(120% 90% at 104% -12%, color-mix(in srgb, var(--state-warning-fg) 10%, transparent), transparent 66%);
+    radial-gradient(92% 64% at 6% -8%, color-mix(in srgb, var(--accent-color) 8%, transparent), transparent 64%);
   --panel-rail-content-gap: 8px;
   --top-rail-control-height: 30px;
   --top-rail-control-radius: 8px;
@@ -1371,8 +1369,7 @@
     0 1px 0 color-mix(in srgb, var(--surface-glow) 26%, transparent);
   --panel-rail-mini-bg: color-mix(in srgb, var(--surface-strong) 95%, transparent);
   --ambient-bg:
-    radial-gradient(110% 100% at 6% 0%, rgba(10, 132, 255, 0.24), transparent 55%),
-    radial-gradient(150% 120% at 98% 0%, rgba(255, 159, 10, 0.2), transparent 45%),
+    radial-gradient(110% 100% at 6% 0%, rgba(10, 132, 255, 0.16), transparent 55%),
     linear-gradient(170deg, #10141e 0%, #171c2a 100%);
 
   /* Component-level control tokens */

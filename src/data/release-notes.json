@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.5",
+      "publishedAt": "2026-10-16",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-5",
+      "summary": {
+        "zh-CN": "体验统合与视觉净化：Mini 模式点击卡片直达完整高保真预览，彻底消除右上角背景泛黄渐变，精简全局设置认知负担。",
+        "en-US": "Unified preview & visual cleanup: Mini mode cards now open full rich preview directly, removed warm yellow background gradient tint, and streamlined settings."
+      },
+      "highlights": {
+        "zh-CN": [
+          "Mini 模式预览体验大统合：彻底废除狭窄拥挤的行内折叠预览与「小眼睛」二次跳转，点击卡片直接切入全量高保真预览抽屉，长文本、代码高亮、OCR 与大图一目了然，点返回或按 ESC 即可退回。",
+          "背景视觉氛围彻底净化：拔除面板背景网格光在右上角硬编码的暖黄警告色径向渐变，彻底解决深色及浅色模式下右上角脏黄渐进色溢出的视觉痛点，质感恢复纯净通透。",
+          "设置页精简与默认体验优化：将「窗口自适应自动切换」与「图片文字识别 (OCR)」收敛为默认常开核心能力，全面移除旧版本残留的「暂存」废弃概念，界面更加清爽专注。"
+        ],
+        "en-US": [
+          "Unified Mini Mode Preview Experience: Replaced cramped inline accordion preview and redundant 'eye' icon button with direct full-pane rich preview, supporting deep text scrolling, syntax highlighting, OCR, and instant ESC/back navigation.",
+          "Purified Ambient Background Lighting: Completely removed the hardcoded warm yellow radial gradient from the top-right corner in ambient overlay tokens, eliminating the murky yellowish tint across dark and light themes.",
+          "Streamlined Settings & Core Defaults: Standardized adaptive window switching and OCR text recognition as always-on default capabilities, while thoroughly purging legacy staging concept leftovers."
+        ]
+      }
+    },
+    {
       "version": "0.5.4",
       "publishedAt": "2026-10-15",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-4",

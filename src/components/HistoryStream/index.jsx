@@ -347,7 +347,6 @@ function HistoryStream({ style }) {
   const openEditModal = useAppStore(s => s.openEditModal);
   const startTour = useAppStore(s => s.startTour);
   const previewItemId = previewItem?.id;
-  const shouldUseHoverPreview = isMiniMode || !workbenchPanelEnabled;
   const isCollectionMode = showFavoritesOnly;
   const activeTopSearchQuery = isCollectionMode ? collectionSearchQuery : searchQuery;
   const activeTopRecentSearches = isCollectionMode ? collectionRecentSearches : historyRecentSearches;
@@ -414,11 +413,9 @@ function HistoryStream({ style }) {
   const [quickAddPending, setQuickAddPending] = useState(false);
   const [quickAddMode, setQuickAddMode] = useState(null);
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
-  const [expandedPreviewItemId, setExpandedPreviewItemId] = useState(null);
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
   const aiSearchActive = showAiSearchPanel;
-  const clearExpandedPreview = useCallback(() => setExpandedPreviewItemId(null), []);
 
   useEffect(() => {
     quickAddPendingRef.current = quickAddPending;
@@ -713,15 +710,7 @@ function HistoryStream({ style }) {
     showFavoritesOnly,
   ]);
 
-  useEffect(() => {
-    if (!shouldUseHoverPreview) {
-      clearExpandedPreview();
-      return;
-    }
-    if (!expandedPreviewItemId) return;
-    if (filteredItems.some(candidate => candidate.id === expandedPreviewItemId)) return;
-    clearExpandedPreview();
-  }, [shouldUseHoverPreview, expandedPreviewItemId, filteredItems, clearExpandedPreview]);
+
 
   const contextMenuItems = useMemo(
     () => (
@@ -1327,8 +1316,6 @@ function HistoryStream({ style }) {
     panelMode,
     previewItemId,
     focusedIndex,
-    shouldUseHoverPreview,
-    expandedPreviewItemId,
     selectionAnchorIndexRef,
     supportsNativeExternalDrag: SUPPORTS_NATIVE_EXTERNAL_DRAG,
     setSelectedItemIds,
@@ -1336,8 +1323,6 @@ function HistoryStream({ style }) {
     setPanelMode,
     toggleSelectItem,
     clearSelection,
-    setExpandedPreviewItemId,
-    clearExpandedPreview,
     handleCopyAndAutoPaste,
     handleCopy,
     switchToWorkbench,
@@ -1348,12 +1333,10 @@ function HistoryStream({ style }) {
     bulkSelectableItems: contextMenuItems,
     focusedIndex,
     setFocusedIndex,
-    shouldUseHoverPreview,
-    setExpandedPreviewItemId,
+    isMiniMode,
     setPanelMode,
     handleCopy,
     handleCopyAndAutoPaste,
-    clearExpandedPreview,
     selectedItemIds,
     historyTagShortcutEnabled,
     panelMode,
@@ -1425,7 +1408,6 @@ function HistoryStream({ style }) {
       index,
       searchExplain: buildSearchExplain(item, searchTerms, t),
       isSelected: panelMode === 'preview' && previewItem?.id === item.id,
-      isExpandedPreview: shouldUseHoverPreview && expandedPreviewItemId === item.id,
       isSelectionMode: selectedCount > 0,
       isMultiSelected: selectedItemIdSet.has(item.id),
       isFocused: focusedIndex === index,
@@ -1436,8 +1418,6 @@ function HistoryStream({ style }) {
     t,
     panelMode,
     previewItem?.id,
-    shouldUseHoverPreview,
-    expandedPreviewItemId,
     selectedCount,
     selectedItemIdSet,
     focusedIndex,
@@ -1465,8 +1445,6 @@ function HistoryStream({ style }) {
     onSetCardBackground: setCardBackground,
     onTagClick: handleTagClick,
     onToggleMultiSelect: handleToggleMultiSelect,
-    shouldUseHoverPreview,
-    onCloseInlinePreview: clearExpandedPreview,
     onCardContextMenu: handleCardContextMenu,
   }), [
     rowGap,
@@ -1480,8 +1458,6 @@ function HistoryStream({ style }) {
     setCardBackground,
     handleTagClick,
     handleToggleMultiSelect,
-    shouldUseHoverPreview,
-    clearExpandedPreview,
     handleCardContextMenu,
   ]);
 
