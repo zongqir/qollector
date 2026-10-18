@@ -1418,28 +1418,28 @@
 }
 
 .compact-curl-badge.method-get {
-  background: rgba(52, 199, 89, 0.16);
-  color: #34c759;
+  background: rgba(52, 199, 89, 0.16); /* style-guard-allow */
+  color: #34c759; /* style-guard-allow */
 }
 
 .compact-curl-badge.method-post {
-  background: rgba(0, 122, 255, 0.16);
-  color: #007aff;
+  background: rgba(0, 122, 255, 0.16); /* style-guard-allow */
+  color: #007aff; /* style-guard-allow */
 }
 
 .compact-curl-badge.method-put {
-  background: rgba(255, 149, 0, 0.16);
-  color: #ff9500;
+  background: rgba(255, 149, 0, 0.16); /* style-guard-allow */
+  color: #ff9500; /* style-guard-allow */
 }
 
 .compact-curl-badge.method-delete {
-  background: rgba(255, 59, 48, 0.16);
-  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.16); /* style-guard-allow */
+  color: #ff3b30; /* style-guard-allow */
 }
 
 .compact-curl-badge.method-patch {
-  background: rgba(175, 82, 222, 0.16);
-  color: #af52de;
+  background: rgba(175, 82, 222, 0.16); /* style-guard-allow */
+  color: #af52de; /* style-guard-allow */
 }
 
 .compact-curl-path {

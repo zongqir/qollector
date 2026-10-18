@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.10",
+      "publishedAt": "2026-10-18",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-10",
+      "summary": {
+        "zh-CN": "新增剪贴板静默 AI 智能翻译与语言守卫过滤机制，并引入 cURL 命令行智能识别与轻量请求执行器。",
+        "en-US": "Added background silent AI translation with smart code/command guards, along with cURL command detection and a mini request runner."
+      },
+      "highlights": {
+        "zh-CN": [
+          "剪贴板静默 AI 翻译：后台无缝异步翻译复制的文本内容并写入条目元数据，在历史流与收藏区卡片提供一键切换原文/译文及快速复制译文功能。",
+          "智能翻译守卫机制：自动识别并跳过代码片段、Shell 指令、URL 链接、文件路径、驼峰/下划线标识符及哈希值，精准保护技术文本，杜绝误翻与 Token 浪费。",
+          "预览面板多语言呈现：在详情预览区内原生挂载译文卡片与语言方向指示器，支持快速复制译文到剪贴板。",
+          "cURL 命令智能识别与 Mini 请求调试：剪贴板检测到 cURL 命令时自动解析出请求方法、URL、Headers 与 Body，支持在界面中快速执行请求并直观查看响应结果与耗时。",
+          "集成设置能力扩充：在设置面板的 AI 模块中新增静默自动翻译开关及自定义源语言与目标语言配置。"
+        ],
+        "en-US": [
+          "Silent AI Clipboard Translation: Seamlessly translates copied text in the background, offering quick toggle between original and translated text and instant translation copying on history and collection cards.",
+          "Smart Translation Guard: Automatically identifies and filters out code snippets, shell commands, URLs, file paths, camelCase/snake_case identifiers, and hashes, preventing erroneous translations and token waste.",
+          "Preview Panel Translation View: Displays a dedicated translation card with language pair indicators inside the preview panel for easy reading and one-click translation copying.",
+          "cURL Detection & Mini Runner: Automatically parses cURL commands into structured methods, headers, and payloads, enabling quick request execution and inline response inspection.",
+          "Enhanced AI Settings: Added configurable silent auto-translation toggles along with customizable source and target language pairs in the Integrations panel."
+        ]
+      }
+    },
+    {
       "version": "0.5.9",
       "publishedAt": "2026-10-18",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-9",
