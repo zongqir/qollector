@@ -94,7 +94,8 @@ function MultiSelectBar({
             e.stopPropagation();
             onMergeCopy();
           }}
-          title={t('multiSelect.mergeCopy')}
+          title={t('multiSelect.mergeCopyTooltip', t('multiSelect.mergeCopy'))}
+          aria-label={t('multiSelect.mergeCopyTooltip', t('multiSelect.mergeCopy'))}
         >
           <Copy size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
           <span>{t('multiSelect.mergeCopy')}</span>
@@ -107,7 +108,8 @@ function MultiSelectBar({
               onMergeToNote();
             }}
             disabled={batchFlagPending || batchAiRunningTask != null}
-            title={t('multiSelect.mergeToNote')}
+            title={t('multiSelect.mergeToNoteTooltip', t('multiSelect.mergeToNote'))}
+            aria-label={t('multiSelect.mergeToNoteTooltip', t('multiSelect.mergeToNote'))}
           >
             <FileText size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
             <span>{t('multiSelect.mergeToNote')}</span>

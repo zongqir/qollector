@@ -141,16 +141,47 @@
   font-size: 11px;
 }
 
-.preview-content-area {
+.preview-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  scroll-behavior: smooth;
+  padding-right: 2px;
+}
+
+.preview-body.ai-assistant-mode,
+.preview-body.content-editing-mode {
+  overflow: hidden;
+}
+
+.preview-content-area {
   padding: 16px;
   position: relative;
+  overflow-y: visible;
+}
+
+.preview-body:not(.note-editing-mode) .preview-content-area {
+  flex: 1 0 auto;
+}
+
+.preview-body.note-editing-mode .preview-content-area {
+  flex: 0 0 auto;
+}
+
+.preview-body.ai-assistant-mode .preview-content-area,
+.preview-body.content-editing-mode .preview-content-area {
+  flex: 1 1 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .preview-content-area.ai-assistant-mode {
   padding: 8px;
-  overflow: hidden;
 }
 
 .preview-color-card {
@@ -488,26 +519,6 @@
   min-width: 60px;
 }
 
-/* 棰勮椤靛娉ㄥ尯 */
-.preview-note-section {
-  padding: 6px 16px;
-  border-top: 1px solid var(--control-panel-border);
-  min-height: 28px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-}
-
-.preview-note-section .note-display-bar {
-  margin: 0;
-}
-
-.preview-note-section .note-edit-bar {
-  margin: -6px -16px -6px;
-  width: calc(100% + 32px);
-  border-top: none;
-}
-
 .preview-add-note-btn {
   display: flex;
   align-items: center;
@@ -693,15 +704,50 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  transition: min-height var(--motion-base) var(--ease-standard), padding var(--motion-base) var(--ease-standard);
 }
 
 .preview-note-section:not(.has-note):not(.is-editing) {
   align-items: flex-end;
 }
 
-.preview-note-section.has-note,
+.preview-note-section.has-note {
+  align-items: stretch;
+}
+
 .preview-note-section.is-editing {
   align-items: stretch;
+  min-height: calc(100% - 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  background: var(--control-panel-bg);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--shadow-sm) 80%, transparent);
+}
+
+.preview-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--control-panel-border) 80%, transparent);
+}
+
+.preview-note-header-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.preview-note-header-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  user-select: none;
 }
 
 .preview-note-section .note-display-bar--preview {
@@ -715,6 +761,13 @@
   border-top: none;
 }
 
+.preview-note-section.is-editing .note-edit-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .preview-note-section .note-edit-input {
   min-height: 52px;
   max-height: 120px;
@@ -723,8 +776,48 @@
   line-height: 1.5;
 }
 
+.preview-note-section.is-editing .note-edit-input {
+  flex: 1;
+  min-height: 180px;
+  max-height: none;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  border: 1px solid var(--control-button-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--control-panel-bg) 50%, var(--surface-card) 50%);
+  color: var(--text-primary);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.preview-note-section.is-editing .note-edit-input:focus {
+  border-color: var(--accent-color);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent);
+}
+
 .preview-note-section .note-edit-footer {
   padding: 4px 0 0;
+}
+
+.preview-note-section.is-editing .note-edit-footer {
+  padding: 8px 2px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@container preview-panel (max-width: 380px) {
+  .preview-note-header-hint {
+    display: none;
+  }
+
+  .preview-note-section.is-editing .note-edit-input {
+    min-height: 140px;
+    font-size: 12px;
+  }
 }
 
 .preview-meta {

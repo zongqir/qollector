@@ -62,18 +62,29 @@ function NoteDisplay({
     return () => observer.disconnect();
   }, [editingNoteId, item?.id, item?.user_note, variant, isExpanded]);
 
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    if (editingNoteId === item?.id && textareaRef.current) {
+      textareaRef.current.focus({ preventScroll: true });
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
+    }
+  }, [editingNoteId, item?.id]);
+
   if (editingNoteId === item.id) {
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.platform);
     return (
-      <div className="note-edit-bar" onClick={(e) => e.stopPropagation()}>
+      <div className={`note-edit-bar ${variant === 'preview' ? 'note-edit-bar--preview' : ''}`} onClick={(e) => e.stopPropagation()}>
         <textarea
+          ref={textareaRef}
           value={editNote}
           onChange={(e) => onEditNoteChange(e.target.value)}
           className="note-edit-input"
-          rows={2}
+          rows={variant === 'preview' ? 6 : 2}
           placeholder={t('edit.notePlaceholder')}
-          autoFocus
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               e.stopPropagation();
               onSaveNote(item);
             } else if (e.key === 'Escape') {
@@ -84,7 +95,7 @@ function NoteDisplay({
           }}
         />
         <div className="note-edit-footer">
-          <span className="note-edit-hint">Ctrl+Enter</span>
+          <span className="note-edit-hint">{isMac ? '⌘+Enter' : 'Ctrl+Enter'}</span>
           <div className="note-edit-actions">
             <button
               type="button"

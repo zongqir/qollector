@@ -15,7 +15,11 @@ export const createNoteActions = (set, get) => ({
       };
       await invoke('update_item', { item: updatedItem });
       await loadItems();
-      set({ editingNoteId: null, editNote: '' });
+      set((state) => ({
+        editingNoteId: null,
+        editNote: '',
+        previewItem: state.previewItem?.id === item.id ? updatedItem : state.previewItem,
+      }));
     } catch (error) {
       console.error('保存备注失败:', error);
     }

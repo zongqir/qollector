@@ -80,6 +80,11 @@ function HistoryContextMenu({
           icon: Copy,
           shortcut: `${modifierKey}+C`,
         },
+        {
+          key: 'mergeToNote',
+          label: t('multiSelect.mergeToNote'),
+          icon: FileText,
+        },
         { type: 'separator' },
         {
           key: 'clearSelection',

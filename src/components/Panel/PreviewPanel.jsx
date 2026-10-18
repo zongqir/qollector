@@ -350,25 +350,8 @@ function PreviewPanel() {
 
   useEffect(() => {
     setShowAIAssistant(false);
+    setIsEditingContent(false);
   }, [item.id]);
-
-  useEffect(() => {
-    setPreviewNoteState({
-      isExpanded: false,
-      canExpand: false,
-      hasExpandedOverflow: false,
-    });
-  }, [item.id]);
-
-  useEffect(() => {
-    if (showAIAssistant || isEditingContent) {
-      setPreviewNoteState({
-        isExpanded: false,
-        canExpand: false,
-        hasExpandedOverflow: false,
-      });
-    }
-  }, [showAIAssistant, isEditingContent]);
 
   const showPreviewToast = useCallback((message, duration = 2000) => {
     if (!message) return;
@@ -385,6 +368,8 @@ function PreviewPanel() {
 
   // 寮€濮嬬紪杈戝唴瀹?
   const handleStartEditContent = () => {
+    setShowAIAssistant(false);
+    cancelNoteEdit();
     setEditContent(item.content || '');
     setIsEditingContent(true);
   };
@@ -750,6 +735,40 @@ function PreviewPanel() {
   };
 
   const isNoteEditing = editingNoteId === item.id;
+  const previewBodyRef = useRef(null);
+  const noteSectionRef = useRef(null);
+  const wasNoteEditingRef = useRef(false);
+
+  useEffect(() => {
+    if (isNoteEditing) {
+      wasNoteEditingRef.current = true;
+      const timer = setTimeout(() => {
+        if (noteSectionRef.current && previewBodyRef.current) {
+          const targetTop = noteSectionRef.current.offsetTop;
+          previewBodyRef.current.scrollTo({
+            top: targetTop,
+            behavior: 'smooth',
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    } else if (wasNoteEditingRef.current) {
+      wasNoteEditingRef.current = false;
+      if (previewBodyRef.current) {
+        previewBodyRef.current.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }
+    }
+  }, [isNoteEditing]);
+
+  useEffect(() => {
+    wasNoteEditingRef.current = false;
+    if (previewBodyRef.current) {
+      previewBodyRef.current.scrollTop = 0;
+    }
+  }, [item?.id]);
 
   return (
     <div className={`preview-panel ${previewTypeClass}`} ref={panelRef}>
@@ -759,7 +778,12 @@ function PreviewPanel() {
           <button
             type="button"
             className="preview-back-btn"
-            onClick={backFromPreview}
+            onClick={() => {
+              if (editingNoteId) {
+                cancelNoteEdit();
+              }
+              backFromPreview();
+            }}
             title={t('common.back', '返回')}
             aria-label={t('common.back', '返回')}
           >
@@ -828,6 +852,11 @@ function PreviewPanel() {
           />
         </div>
 
+      {/* 滚动容器 */}
+      <div
+        ref={previewBodyRef}
+        className={`preview-body ${showAIAssistant ? 'ai-assistant-mode' : ''} ${isEditingContent ? 'content-editing-mode' : ''} ${isNoteEditing ? 'note-editing-mode' : ''}`}
+      >
         <div className={`preview-content-area ${isEditingContent ? 'editing' : ''} ${showAIAssistant ? 'ai-assistant-mode' : ''}`}>
           {isCopied && (
             <div className="copy-success-toast">
@@ -870,56 +899,69 @@ function PreviewPanel() {
           {!showAIAssistant && renderContent()}
         </div>
 
-      {/* 备注区 - 内容下方，作为批注 */}
-      {!showAIAssistant && !isEditingContent && (
-        <div className={`preview-note-section ${isNoteEditing ? 'is-editing' : ''} ${item.user_note ? 'has-note' : ''}`}>
-          <NoteDisplay
-            item={item}
-            editingNoteId={editingNoteId}
-            editNote={editNote}
-            onEditNoteChange={setEditNote}
-            onStartEditNote={startEditNote}
-            onSaveNote={saveNote}
-            onCancelNoteEdit={cancelNoteEdit}
-            variant="preview"
-          />
-          {!item.user_note && editingNoteId !== item.id && (
-            <button
-              type="button"
-              className="preview-add-note-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                startEditNote(item);
-              }}
-            >
-              <StickyNote size={12} />
-              <span>{t('item.addNote')}</span>
-            </button>
-          )}
-        </div>
-      )}
+        {/* 备注区 - 内容下方，作为批注 */}
+        {!showAIAssistant && !isEditingContent && (
+          <div
+            ref={noteSectionRef}
+            className={`preview-note-section ${isNoteEditing ? 'is-editing' : ''} ${item.user_note ? 'has-note' : ''}`}
+          >
+            {isNoteEditing && (
+              <div className="preview-note-header">
+                <div className="preview-note-header-title">
+                  <StickyNote size={14} />
+                  <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
+                </div>
+                <span className="preview-note-header-hint">{t('edit.noteScrollHint', '往上滚动可查看原文')}</span>
+              </div>
+            )}
+            <NoteDisplay
+              item={item}
+              editingNoteId={editingNoteId}
+              editNote={editNote}
+              onEditNoteChange={setEditNote}
+              onStartEditNote={startEditNote}
+              onSaveNote={saveNote}
+              onCancelNoteEdit={cancelNoteEdit}
+              variant="preview"
+            />
+            {!item.user_note && editingNoteId !== item.id && (
+              <button
+                type="button"
+                className="preview-add-note-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditNote(item);
+                }}
+              >
+                <StickyNote size={12} />
+                <span>{t('item.addNote')}</span>
+              </button>
+            )}
+          </div>
+        )}
 
-      {/* 元信息 - 底部参考 */}
-      {!showAIAssistant && !isEditingContent && (
-        <div className="preview-meta">
-          {pureColorPreview && (
-            <span className="preview-meta-color">
-              <span
-                className="preview-meta-color-swatch"
-                style={{ backgroundColor: pureColorPreview.previewCss }}
-              />
-              <span className="preview-meta-color-text">{pureColorPreview.hex}</span>
-            </span>
-          )}
-          {showTimestampConverted && convertedTimestampText && (
-            <span className="preview-meta-timestamp">
-              {t('item.timestampConverted')}: {convertedTimestampText}
-            </span>
-          )}
-          <span className="preview-meta-time">{formatDate(item.updated_at, i18n.language)}</span>
-          <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
-        </div>
-      )}
+        {/* 元信息 - 底部参考 */}
+        {!showAIAssistant && !isEditingContent && (
+          <div className="preview-meta">
+            {pureColorPreview && (
+              <span className="preview-meta-color">
+                <span
+                  className="preview-meta-color-swatch"
+                  style={{ backgroundColor: pureColorPreview.previewCss }}
+                />
+                <span className="preview-meta-color-text">{pureColorPreview.hex}</span>
+              </span>
+            )}
+            {showTimestampConverted && convertedTimestampText && (
+              <span className="preview-meta-timestamp">
+                {t('item.timestampConverted')}: {convertedTimestampText}
+              </span>
+            )}
+            <span className="preview-meta-time">{formatDate(item.updated_at, i18n.language)}</span>
+            <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
+          </div>
+        )}
+      </div>
 
       {/* 工具栏 */}
       <div
@@ -1026,8 +1068,14 @@ function PreviewPanel() {
                 </button>
               )}
               <button
+                type="button"
                 className={`preview-tool-btn ${showAIAssistant ? 'active' : ''}`}
-                onClick={() => setShowAIAssistant(prev => !prev)}
+                onClick={() => {
+                  if (!showAIAssistant) {
+                    setIsEditingContent(false);
+                  }
+                  setShowAIAssistant(prev => !prev);
+                }}
                 disabled={!canUseAIAssistant}
                 title={!canUseAIAssistant ? t('aiAssistant.noInput') : t('aiAssistant.open')}
               >
@@ -1091,6 +1139,23 @@ function PreviewPanel() {
                   <span>{t('panel.editContent')}</span>
                 </button>
               )}
+              <button
+                type="button"
+                className={`preview-tool-btn secondary ${isNoteEditing ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isNoteEditing) {
+                    cancelNoteEdit();
+                  } else {
+                    if (showAIAssistant) setShowAIAssistant(false);
+                    startEditNote(item);
+                  }
+                }}
+                title={item.user_note ? t('item.editNote') : t('item.addNote')}
+              >
+                <StickyNote size={14} />
+                <span>{item.user_note ? t('item.editNote') : t('item.addNote')}</span>
+              </button>
               <button className="preview-tool-btn secondary" onClick={() => openShareModal(item)}>
                 <Share2 size={14} />
                 <span>{t('share.button')}</span>

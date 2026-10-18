@@ -24,7 +24,6 @@ import {
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { aiSearchItems, getUserTags, searchItems } from '../../services/clipboardService';
-import { saveQuickNote } from '../../services/quickNoteService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -338,6 +337,7 @@ function HistoryStream({ style }) {
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
+  const mergeSelectedItemsToNote = useAppStore(s => s.mergeSelectedItemsToNote);
   const workbenchPanelEnabled = useAppStore(s => s.workbenchPanelEnabled);
   const setWorkbenchPanelEnabled = useAppStore(s => s.setWorkbenchPanelEnabled);
   const autoPasteOnDoubleClick = useAppStore(s => s.autoPasteOnDoubleClick);
@@ -758,7 +758,11 @@ function HistoryStream({ style }) {
       if (contextMenuState?.isMulti) {
         switch (actionKey) {
           case 'copyMerged':
-            await copySelectedItemsMerged(contextMenuItems);
+            await handleMergeCopySelected();
+            closeContextMenu();
+            return;
+          case 'mergeToNote':
+            await handleMergeToNote();
             closeContextMenu();
             return;
           case 'clearSelection':
@@ -1611,29 +1615,25 @@ function HistoryStream({ style }) {
     openBatchTagEditor();
   }, [showBatchTagEditor, closeBatchTagEditor, openBatchTagEditor]);
 
-  const handleMergeCopySelected = useCallback(() => {
-    copySelectedItemsMerged(filteredItems);
-  }, [copySelectedItemsMerged, filteredItems]);
+  const handleMergeCopySelected = useCallback(async () => {
+    const result = await copySelectedItemsMerged(filteredItems);
+    if (result?.ok && result.count > 0) {
+      showQuickAddFeedback({
+        type: 'success',
+        message: t('multiSelect.mergeCopyFeedback', { count: result.count }),
+      }, 2000);
+    }
+  }, [copySelectedItemsMerged, filteredItems, showQuickAddFeedback, t]);
 
   const handleMergeToNote = useCallback(async () => {
-    const selectedIdSet = new Set(selectedItemIds);
-    const selectedItems = filteredItems.filter((item) => selectedIdSet.has(item.id));
-    if (selectedItems.length === 0) return;
-    const mergedContent = selectedItems
-      .map((item) => (item.content || item.ocr_text || '').trim())
-      .filter(Boolean)
-      .join('\n\n---\n\n');
-    if (!mergedContent) return;
-    try {
-      await saveQuickNote(mergedContent, QUICK_INPUT_SOURCE, {
-        autoFavorite: true,
-      });
-      clearSelection();
-      loadItems();
-    } catch (error) {
-      console.error('[HistoryStream] merge to note failed:', error);
+    const result = await mergeSelectedItemsToNote(filteredItems);
+    if (result?.ok && result.count > 0) {
+      showQuickAddFeedback({
+        type: 'success',
+        message: t('multiSelect.mergeToNoteFeedback', { count: result.count }),
+      }, 2200);
     }
-  }, [selectedItemIds, filteredItems, clearSelection, loadItems]);
+  }, [mergeSelectedItemsToNote, filteredItems, showQuickAddFeedback, t]);
 
   const selectedItemsForCompare = useMemo(() => {
     if (selectedItemIds.length < 2) return [];

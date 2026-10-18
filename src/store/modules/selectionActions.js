@@ -1,9 +1,20 @@
 import { invoke } from '@tauri-apps/api/core';
 import { deleteItem as deleteItemSvc } from '../../services/clipboardService';
+import { saveQuickNote } from '../../services/quickNoteService';
+import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
 import { getTags, hasReservedTagPrefix } from '../../utils/tagHelpers';
 import { pushCopyFeedback } from './copyFeedback';
 import { hydrateItemsIfNeeded } from './itemHydration';
 import { buildItemDerivations } from './itemsIndex';
+
+const sortItemsByChronologicalAscending = (items) => (
+  [...items].sort((a, b) => {
+    const timeA = Number(a.created_at || a.updated_at || 0);
+    const timeB = Number(b.created_at || b.updated_at || 0);
+    if (timeA !== timeB) return timeA - timeB;
+    return String(a.id || '').localeCompare(String(b.id || ''));
+  })
+);
 
 export const createSelectionActions = (set, get) => ({
   setSelectedItemIds: (itemIds) => {
@@ -159,7 +170,7 @@ export const createSelectionActions = (set, get) => ({
 
   copySelectedItemsMerged: async (sourceItems = null) => {
     const { selectedItemIds, items } = get();
-    if (selectedItemIds.length === 0) return;
+    if (selectedItemIds.length === 0) return { ok: false, count: 0 };
     try {
       const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
       const preferredById = new Map(preferredItems.map((item) => [item.id, item]));
@@ -167,24 +178,64 @@ export const createSelectionActions = (set, get) => ({
       const selectedItems = selectedItemIds
         .map((id) => preferredById.get(id) || fallbackById.get(id))
         .filter(Boolean);
-      const hydratedSelectedItems = await hydrateItemsIfNeeded(selectedItems);
+      if (selectedItems.length === 0) return { ok: false, count: 0 };
+
+      // 时间正序（最早复制的排在最前面，最新复制的排在最后面）
+      const chronologicalItems = sortItemsByChronologicalAscending(selectedItems);
+      const hydratedSelectedItems = await hydrateItemsIfNeeded(chronologicalItems);
       const merged = hydratedSelectedItems
-        .map((item) => item.content || (item.type_ === 'image' ? item.ocr_text || '' : ''))
+        .map((item) => (item.content || (item.type_ === 'image' ? item.ocr_text || '' : '')).trim())
         .filter(Boolean)
-        .join('\n');
-      if (!merged) return;
+        .join('\n\n');
+      if (!merged) return { ok: false, count: 0 };
+
       await invoke('copy_plain_text', { text: merged });
       pushCopyFeedback(set, {
-        itemId: 'merge-success',
+        itemId: `merged-${hydratedSelectedItems.length}`,
         source: 'history',
         autoPaste: false,
-        clearAfterMs: 1000,
+        clearAfterMs: 1200,
         extraState: {
           selectedItemIds: [],
         },
       });
+      return { ok: true, count: hydratedSelectedItems.length };
     } catch (error) {
       console.error('merge copy failed:', error);
+      return { ok: false, count: 0 };
+    }
+  },
+
+  mergeSelectedItemsToNote: async (sourceItems = null) => {
+    const { selectedItemIds, items } = get();
+    if (selectedItemIds.length === 0) return { ok: false, count: 0 };
+    try {
+      const preferredItems = Array.isArray(sourceItems) && sourceItems.length > 0 ? sourceItems : items;
+      const preferredById = new Map(preferredItems.map((item) => [item.id, item]));
+      const fallbackById = get().itemsById;
+      const selectedItems = selectedItemIds
+        .map((id) => preferredById.get(id) || fallbackById.get(id))
+        .filter(Boolean);
+      if (selectedItems.length === 0) return { ok: false, count: 0 };
+
+      // 时间正序（最早复制的排在最前面，最新复制的排在最后面）
+      const chronologicalItems = sortItemsByChronologicalAscending(selectedItems);
+      const hydratedSelectedItems = await hydrateItemsIfNeeded(chronologicalItems);
+      const mergedContent = hydratedSelectedItems
+        .map((item) => (item.content || (item.type_ === 'image' ? item.ocr_text || '' : '')).trim())
+        .filter(Boolean)
+        .join('\n\n');
+      if (!mergedContent) return { ok: false, count: 0 };
+
+      await saveQuickNote(mergedContent, QUICK_INPUT_SOURCE, {
+        autoFavorite: true,
+      });
+      set({ selectedItemIds: [] });
+      await get().loadItems();
+      return { ok: true, count: hydratedSelectedItems.length };
+    } catch (error) {
+      console.error('merge to note failed:', error);
+      return { ok: false, count: 0 };
     }
   },
 });

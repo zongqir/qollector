@@ -251,6 +251,12 @@ function AppCopyFeedbackHost({ showAppFeedback }) {
   useEffect(() => {
     if (!copiedItemId) return undefined;
 
+    if (String(copiedItemId).startsWith('merged-')) {
+      const count = String(copiedItemId).replace('merged-', '');
+      showAppFeedback(t('multiSelect.mergeCopyFeedback', { count }), 'success', 1600);
+      return undefined;
+    }
+
     const channelKey = copyFeedbackSource || 'global';
     const channelLabel = t(`feedback.channel.${channelKey}`, { defaultValue: t('feedback.channel.global') });
     const actionLabel = lastCopyWasAutoPaste ? t('item.autoPasted') : t('item.copied');
