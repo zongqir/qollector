@@ -519,18 +519,18 @@ pub fn get_runtime_diagnostics() -> Result<RuntimeDiagnosticsSnapshot, String> {
 }
 
 #[tauri::command]
-pub fn open_devtools(window: tauri::WebviewWindow) {
+pub fn open_devtools(_window: tauri::WebviewWindow) {
     #[cfg(feature = "devtools")]
-    window.open_devtools();
+    _window.open_devtools();
 }
 
 #[tauri::command]
-pub fn toggle_devtools(window: tauri::WebviewWindow) {
+pub fn toggle_devtools(_window: tauri::WebviewWindow) {
     #[cfg(feature = "devtools")]
-    if window.is_devtools_open() {
-        window.close_devtools();
+    if _window.is_devtools_open() {
+        _window.close_devtools();
     } else {
-        window.open_devtools();
+        _window.open_devtools();
     }
 }
 

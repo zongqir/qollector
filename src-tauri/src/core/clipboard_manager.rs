@@ -2209,7 +2209,7 @@ impl ClipboardManager {
             return Ok(None);
         }
 
-        let Some((source_bytes, decoded)) =
+        let Some((_source_bytes, decoded)) =
             Self::read_and_decode_image_with_retry(source_path, 8, 25)
         else {
             eprintln!(

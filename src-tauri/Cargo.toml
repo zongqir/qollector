@@ -15,7 +15,7 @@ path = "src/main.rs"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset", "image-png", "tray-icon", "devtools"] }
+tauri = { version = "2", features = ["protocol-asset", "image-png", "tray-icon"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-updater = "2"
@@ -87,8 +87,9 @@ objc = "0.2"
 drag = "2.1.0"
 
 [features]
-default = ["custom-protocol"]
+default = ["custom-protocol", "devtools"]
 custom-protocol = ["tauri/custom-protocol"]
+devtools = ["tauri/devtools"]
 
 [profile.release]
 lto = "thin"

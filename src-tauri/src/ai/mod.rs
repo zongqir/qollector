@@ -290,6 +290,7 @@ impl AIConfig {
             credentials: HashMap::new(),
             enabled: legacy.enabled,
             custom_prompt: None,
+            ..Default::default()
         };
 
         // 将旧的 api_key 和 model 迁移到 credentials

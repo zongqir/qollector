@@ -211,7 +211,7 @@ impl ClipboardItem {
     }
 
     // 检测是否为URL：显式链接 + 裸域名（无协议）两段式判断
-    fn is_url(text: &str) -> bool {
+    pub fn is_url(text: &str) -> bool {
         let trimmed = text.trim();
 
         // 必须是单行文本
