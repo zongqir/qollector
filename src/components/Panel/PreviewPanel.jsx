@@ -26,6 +26,8 @@ import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
 import FilePreviewItem from './FilePreview';
 import ImageLightbox from '../ImageLightbox/ImageLightbox';
+import { isCurlCommand } from '../../utils/curlParser';
+import CurlBox from '../CurlBox/CurlBox';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -181,6 +183,10 @@ function PreviewPanel() {
     if (item.type_ !== 'text') return null;
     return detectTimestampCandidate(item.content);
   }, [item.type_, item.content]);
+  const isCurlCandidate = useMemo(() => {
+    if (item.type_ !== 'text' || !item.content) return false;
+    return isCurlCommand(item.content);
+  }, [item.type_, item.content]);
   const convertedTimestampText = useMemo(() => (
     timestampCandidate ? formatTimestampCandidate(timestampCandidate, i18n.language) : ''
   ), [timestampCandidate, i18n.language]);
@@ -188,11 +194,12 @@ function PreviewPanel() {
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
   const previewTypeClass = item.code_language ? 'type-code' : `type-${item.type_ || 'text'}`;
   const itemTypeLabel = useMemo(() => {
+    if (isCurlCandidate) return t('curl.badge', 'cURL');
     const typeKey = item.code_language
       ? 'code'
       : (['text', 'image', 'file', 'link'].includes(item.type_) ? item.type_ : 'all');
     return t(`search.typeFilter.${typeKey}`);
-  }, [item.code_language, item.type_, t]);
+  }, [isCurlCandidate, item.code_language, item.type_, t]);
   const selectPreviewContent = useCallback(() => {
     const contentEl = contentSelectableRef.current;
     const selection = window.getSelection();
@@ -895,6 +902,9 @@ function PreviewPanel() {
                 </div>
               </div>
             </div>
+          )}
+          {!showAIAssistant && !isEditingContent && isCurlCandidate && (
+            <CurlBox item={item} onFeedback={showPreviewToast} />
           )}
           {!showAIAssistant && renderContent()}
         </div>

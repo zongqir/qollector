@@ -28,6 +28,7 @@ use commands::collector_commands::*;
 use commands::drag_drop_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
+use commands::http_commands::*;
 use commands::input_access_probe_commands::*;
 use commands::lock_commands::*;
 use commands::mcp_commands::*;
@@ -740,6 +741,7 @@ fn main() {
             toggle_devtools,
             analyze_quick_action,
             open_external_url,
+            send_http_request,
             has_lock_password,
             verify_lock_password,
             set_lock_password,

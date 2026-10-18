@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette } from 'lucide-react';
+import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Terminal } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -11,6 +11,7 @@ import {
   parseUrl,
   getLinkPreviewTitle,
 } from '../../utils/formatters';
+import { isCurlCommand, parseCurl } from '../../utils/curlParser';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import { getCardTagPreviewLimit } from '../../utils/cardDensity';
@@ -58,8 +59,9 @@ const looksLikeFileLine = (line) => {
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const TypeIcon = ({ type, hasCodeLanguage }) => {
+const TypeIcon = ({ type, hasCodeLanguage, isCurl }) => {
   const size = 11;
+  if (isCurl) return <Terminal size={size} />;
   if (hasCodeLanguage) return <Code size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
@@ -106,6 +108,10 @@ function CompactCard({
   const tagPreviewLimit = getCardTagPreviewLimit('history', { isMiniMode });
   const visibleUserTags = userTags.slice(0, tagPreviewLimit);
   const hiddenUserTagsCount = Math.max(userTags.length - tagPreviewLimit, 0);
+  const isCurl = useMemo(() => {
+    if (item.type_ !== 'text' || !item.content) return false;
+    return isCurlCommand(item.content);
+  }, [item.type_, item.content]);
   const userNote = typeof item.user_note === 'string' ? item.user_note.trim() : '';
   const canDragOut = supportsNativeExternalDrag
     && (
@@ -292,6 +298,26 @@ function CompactCard({
         </Suspense>
       );
     }
+    if (isCurl) {
+      const parsed = parseCurl(item.content);
+      if (parsed) {
+        return (
+          <div className="compact-card-curl panel-card-content-curl">
+            <div className="compact-curl-header">
+              <span className={`compact-curl-badge method-${(parsed.method || 'GET').toLowerCase()}`}>
+                {parsed.method || 'GET'}
+              </span>
+              <span className="compact-curl-path" title={parsed.url}>
+                {parsed.pathname || '/'}
+              </span>
+            </div>
+            <div className="compact-curl-preview">
+              {getContentPreview(item.content)}
+            </div>
+          </div>
+        );
+      }
+    }
     return (
       <div className="compact-card-text panel-card-content-text">
         {getContentPreview(item.content)}
@@ -350,7 +376,7 @@ function CompactCard({
         )}
         <div className="compact-card-head-main panel-card-head-main">
           <span className="compact-card-type-icon panel-card-type-icon" aria-hidden="true">
-            <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} />
+            <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} isCurl={isCurl} />
           </span>
           <span className="compact-card-time panel-card-time">
             {timeLabel}

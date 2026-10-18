@@ -4,6 +4,7 @@ pub mod collector_commands;
 pub mod drag_drop_commands;
 pub mod export_commands;
 pub mod general_commands;
+pub mod http_commands;
 pub mod input_access_probe_commands;
 pub mod lock_commands;
 pub mod mcp_commands;
