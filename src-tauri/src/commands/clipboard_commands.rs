@@ -410,45 +410,57 @@ fn image_source_path(item: &ClipboardItem) -> Result<String, String> {
 
 #[cfg(target_os = "windows")]
 fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use std::time::Duration;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
         VK_CONTROL,
     };
 
     const VK_V_KEY: u16 = 0x56;
+    const SCAN_CTRL: u16 = 0x1D;
+    const SCAN_V: u16 = 0x2F;
 
-    fn key_input(vk: u16, key_up: bool) -> INPUT {
+    fn send_key_event(vk: u16, scan: u16, key_up: bool) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let flags = if key_up {
             KEYEVENTF_KEYUP
         } else {
             Default::default()
         };
 
-        INPUT {
+        let input = INPUT {
             r#type: INPUT_KEYBOARD,
             Anonymous: INPUT_0 {
                 ki: KEYBDINPUT {
                     wVk: VIRTUAL_KEY(vk),
-                    wScan: 0,
+                    wScan: scan,
                     dwFlags: flags,
                     time: 0,
                     dwExtraInfo: 0,
                 },
             },
+        };
+
+        let sent = unsafe { SendInput(&[input], std::mem::size_of::<INPUT>() as i32) };
+        if sent != 1 {
+            return Err(format!("SendInput failed for vk {}, sent {}", vk, sent).into());
         }
+        Ok(())
     }
 
-    let inputs = [
-        key_input(VK_CONTROL.0, false),
-        key_input(VK_V_KEY, false),
-        key_input(VK_V_KEY, true),
-        key_input(VK_CONTROL.0, true),
-    ];
+    // 1. Press Ctrl down
+    send_key_event(VK_CONTROL.0, SCAN_CTRL, false)?;
+    std::thread::sleep(Duration::from_millis(15));
 
-    let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
-    if sent != inputs.len() as u32 {
-        return Err(format!("SendInput sent {} events, expected {}", sent, inputs.len()).into());
-    }
+    // 2. Press V down
+    send_key_event(VK_V_KEY, SCAN_V, false)?;
+    std::thread::sleep(Duration::from_millis(15));
+
+    // 3. Release V up
+    send_key_event(VK_V_KEY, SCAN_V, true)?;
+    std::thread::sleep(Duration::from_millis(15));
+
+    // 4. Release Ctrl up
+    send_key_event(VK_CONTROL.0, SCAN_CTRL, true)?;
 
     Ok(())
 }

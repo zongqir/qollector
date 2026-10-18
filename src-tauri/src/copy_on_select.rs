@@ -137,8 +137,10 @@ mod windows_impl {
                                         tracker.last_trigger_time = now;
                                         // Spawn a lightweight task to delay-send Ctrl+C so host app settles selection
                                         std::thread::spawn(|| {
-                                            std::thread::sleep(Duration::from_millis(50));
-                                            send_ctrl_c();
+                                            std::thread::sleep(Duration::from_millis(80));
+                                            if !is_excluded_context() {
+                                                send_ctrl_c();
+                                            }
                                         });
                                     }
                                 }
@@ -179,40 +181,51 @@ mod windows_impl {
         }
     }
 
-    fn send_ctrl_c() {
-        const VK_C_KEY: u16 = 0x43;
+    fn send_key_event(vk: u16, scan: u16, key_up: bool) {
+        let flags = if key_up {
+            KEYEVENTF_KEYUP
+        } else {
+            Default::default()
+        };
 
-        fn key_input(vk: u16, key_up: bool) -> INPUT {
-            let flags = if key_up {
-                KEYEVENTF_KEYUP
-            } else {
-                Default::default()
-            };
-
-            INPUT {
-                r#type: INPUT_KEYBOARD,
-                Anonymous: INPUT_0 {
-                    ki: KEYBDINPUT {
-                        wVk: VIRTUAL_KEY(vk),
-                        wScan: 0,
-                        dwFlags: flags,
-                        time: 0,
-                        dwExtraInfo: 0,
-                    },
+        let input = INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VIRTUAL_KEY(vk),
+                    wScan: scan,
+                    dwFlags: flags,
+                    time: 0,
+                    dwExtraInfo: 0,
                 },
-            }
-        }
-
-        let inputs = [
-            key_input(VK_CONTROL.0, false),
-            key_input(VK_C_KEY, false),
-            key_input(VK_C_KEY, true),
-            key_input(VK_CONTROL.0, true),
-        ];
+            },
+        };
 
         unsafe {
-            let _ = SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+            let _ = SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
         }
+    }
+
+    fn send_ctrl_c() {
+        const VK_C_KEY: u16 = 0x43;
+        const SCAN_CTRL: u16 = 0x1D;
+        const SCAN_C: u16 = 0x2E;
+
+        // 1. Press Ctrl down
+        send_key_event(VK_CONTROL.0, SCAN_CTRL, false);
+        // Small delay to allow the active window and IME (TSF) to register the modifier state
+        std::thread::sleep(Duration::from_millis(15));
+
+        // 2. Press C down
+        send_key_event(VK_C_KEY, SCAN_C, false);
+        std::thread::sleep(Duration::from_millis(15));
+
+        // 3. Release C up
+        send_key_event(VK_C_KEY, SCAN_C, true);
+        std::thread::sleep(Duration::from_millis(15));
+
+        // 4. Release Ctrl up
+        send_key_event(VK_CONTROL.0, SCAN_CTRL, true);
     }
 
     pub fn start_monitor(state: Arc<CopyOnSelectState>) {
