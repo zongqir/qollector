@@ -235,6 +235,9 @@
   height: 100%;
   padding: 14px;
   background: var(--surface-panel);
+  container-type: inline-size;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .compare-panel-header {
@@ -737,6 +740,11 @@
 @container (max-width: 900px) {
   .compare-grid {
     grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .compare-item {
+    min-height: 220px;
   }
 }
 
@@ -749,6 +757,33 @@
   .compare-action-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.app.mini-mode .compare-panel {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.app.mini-mode .compare-grid {
+  grid-template-columns: 1fr;
+  overflow-y: auto;
+}
+
+.app.mini-mode .compare-item {
+  min-height: 180px;
+  padding: 8px;
+}
+
+.app.mini-mode .compare-action-bar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px;
+}
+
+.app.mini-mode .compare-action-btn {
+  font-size: 11px;
+  min-height: 28px;
+  padding: 0 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

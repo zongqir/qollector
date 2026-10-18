@@ -10,7 +10,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../../store/useAppStore';
 import { getFileList, getFileName, getContentPreview, parseUrl } from '../../utils/formatters';
 import { getImageThumbnail } from '../../utils/imageHelpers';
@@ -20,22 +20,31 @@ const EMPTY_COMPARE_ITEMS = [];
 const selectItemsByIds = (state, ids) => {
   if (!Array.isArray(ids) || ids.length === 0) return EMPTY_COMPARE_ITEMS;
   const indexedItems = state.itemsById;
-  if (indexedItems instanceof Map) {
-    return ids
-      .map((id) => indexedItems.get(id))
-      .filter(Boolean);
+  const sourceItemsMap = new Map();
+  if (Array.isArray(state.compareSourceItems)) {
+    state.compareSourceItems.forEach((it) => {
+      if (it?.id) sourceItemsMap.set(it.id, it);
+    });
   }
 
   const targets = new Set(ids);
   const fallbackItemsById = new Map();
-  state.items.forEach((item) => {
-    if (targets.has(item.id)) {
-      fallbackItemsById.set(item.id, item);
-    }
-  });
+  if (Array.isArray(state.items)) {
+    state.items.forEach((item) => {
+      if (targets.has(item.id)) {
+        fallbackItemsById.set(item.id, item);
+      }
+    });
+  }
 
   return ids
-    .map((id) => fallbackItemsById.get(id))
+    .map((id) => {
+      const fromIndex = indexedItems instanceof Map ? indexedItems.get(id) : null;
+      if (fromIndex) return fromIndex;
+      const fromFallback = fallbackItemsById.get(id);
+      if (fromFallback) return fromFallback;
+      return sourceItemsMap.get(id) || null;
+    })
     .filter(Boolean);
 };
 
@@ -165,12 +174,10 @@ function ComparePanel() {
   );
 
   const candidateItems = useAppStore(
-    useCallback((state) => selectItemsByIds(state, candidateIds), [candidateIds]),
-    shallow,
+    useShallow((state) => selectItemsByIds(state, candidateIds)),
   );
   const activeCompareItems = useAppStore(
-    useCallback((state) => selectItemsByIds(state, activeCompareIds), [activeCompareIds]),
-    shallow,
+    useShallow((state) => selectItemsByIds(state, activeCompareIds)),
   );
 
   const compareItems = useMemo(() => {

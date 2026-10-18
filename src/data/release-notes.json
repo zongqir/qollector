@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.9",
+      "publishedAt": "2026-10-18",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-9",
+      "summary": {
+        "zh-CN": "修复文本对比在 Mini 模式与收藏区下的调用阻断，重构对比数据源持久化与多选栏布局遮挡问题。",
+        "en-US": "Resolved text comparison blockages in Mini and Collection modes, and rebuilt source item persistence to eliminate lookup failures."
+      },
+      "highlights": {
+        "zh-CN": [
+          "Mini 模式对比全屏自适应：解禁 Mini 模式下点击对比与快捷键的拦截阻断，全屏沉浸呈现对比面板，并针对窄窗优化单列上下滚动阅读与紧凑操作栏。",
+          "收藏区多选对比无缝打通：修复多选对比候选池脱离收藏流的问题，支持在收藏区直接勾选卡片秒开差异对比。",
+          "搜索与异步条目对比数据零丢失：在状态机中引入对比源条目全局持久化，彻底消除因全局索引未收录导致对比面板找不到条目的缺陷。",
+          "对比界面层级与退出还原优化：对比模式激活时自动隐退多选浮动底栏杜绝遮挡操作，返回时精准还原进入前的单栏或双栏布局预设。"
+        ],
+        "en-US": [
+          "Mini Mode Fullscreen Comparison: Eliminated hardcoded mini-mode interception, enabling responsive full-panel comparison with single-column scrolling and compact action controls.",
+          "Collection Stream Compare Integration: Fixed candidate selection pool decoupling from collection items, allowing multi-selected favorite cards to launch side-by-side diffing seamlessly.",
+          "Zero Data Loss for Dynamic & Search Items: Introduced persistent source item caching in the store to eliminate missing item errors when comparing search results or lazy-loaded cards.",
+          "Clean Overlay Layering & Layout Restoration: Automatically dismissed floating multi-select bar during comparison to prevent action obstruction, with precise single/dual-pane layout restoration on exit."
+        ]
+      }
+    },
+    {
       "version": "0.5.8",
       "publishedAt": "2026-10-18",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-8",

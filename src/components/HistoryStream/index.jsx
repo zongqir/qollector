@@ -1638,14 +1638,17 @@ function HistoryStream({ style }) {
   const selectedItemsForCompare = useMemo(() => {
     if (selectedItemIds.length < 2) return [];
     const selectedIdSet = new Set(selectedItemIds);
-    const orderedByVisible = filteredItems.filter(item => selectedIdSet.has(item.id));
+    const visiblePool = isCollectionMode
+      ? (collectionVisibleItems.length > 0 ? collectionVisibleItems : filteredItems)
+      : filteredItems;
+    const orderedByVisible = visiblePool.filter(item => selectedIdSet.has(item.id));
     if (orderedByVisible.length >= 2) return orderedByVisible;
 
     const fallbackById = itemsById instanceof Map ? itemsById : null;
     return selectedItemIds
       .map(id => fallbackById?.get(id))
       .filter(Boolean);
-  }, [selectedItemIds, filteredItems, itemsById]);
+  }, [selectedItemIds, isCollectionMode, collectionVisibleItems, filteredItems, itemsById]);
 
   const selectedCompareCandidateIds = useMemo(
     () => selectedItemsForCompare.map(item => item.id),
@@ -1655,10 +1658,6 @@ function HistoryStream({ style }) {
   const handleCompareSelected = useCallback(() => {
     if (selectedItemsForCompare.length < 2) return;
     const targetItems = selectedItemsForCompare;
-    if (isMiniMode) {
-      showCompareFeedback('warning', t('panel.compareNeedFullMode'));
-      return;
-    }
     if (!workbenchPanelEnabled) {
       setWorkbenchPanelEnabled(true);
       showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
@@ -1666,7 +1665,6 @@ function HistoryStream({ style }) {
     setPanelMode('compare', targetItems);
   }, [
     selectedItemsForCompare,
-    isMiniMode,
     workbenchPanelEnabled,
     setWorkbenchPanelEnabled,
     showCompareFeedback,
@@ -1689,17 +1687,12 @@ function HistoryStream({ style }) {
 
   const handleQuickCompareTopVisible = useCallback((targetItems) => {
     if (!Array.isArray(targetItems) || targetItems.length < 2) return;
-    if (isMiniMode) {
-      showCompareFeedback('warning', t('panel.compareNeedFullMode'));
-      return;
-    }
     if (!workbenchPanelEnabled) {
       setWorkbenchPanelEnabled(true);
       showCompareFeedback('success', t('panel.comparePanelAutoOpened'));
     }
     setPanelMode('compare', targetItems.slice(0, 2));
   }, [
-    isMiniMode,
     workbenchPanelEnabled,
     setWorkbenchPanelEnabled,
     showCompareFeedback,
@@ -1722,14 +1715,17 @@ function HistoryStream({ style }) {
       if (isEditableElement(event.target)) return;
       if (event.key !== '2') return;
       if (selectedItemIds.length > 0) return;
-      if (filteredItems.length < 2) return;
+      const pool = isCollectionMode
+        ? (collectionVisibleItems.length > 0 ? collectionVisibleItems : filteredItems)
+        : filteredItems;
+      if (pool.length < 2) return;
       event.preventDefault();
-      handleQuickCompareTopVisible(filteredItems.slice(0, 2));
+      handleQuickCompareTopVisible(pool.slice(0, 2));
     };
 
     window.addEventListener('keydown', handleQuickCompareShortcut);
     return () => window.removeEventListener('keydown', handleQuickCompareShortcut);
-  }, [selectedItemIds.length, filteredItems, handleQuickCompareTopVisible]);
+  }, [selectedItemIds.length, isCollectionMode, collectionVisibleItems, filteredItems, handleQuickCompareTopVisible]);
 
   const multiSelectBarProps = useMemo(() => ({
     selectedCount,
@@ -2077,7 +2073,7 @@ function HistoryStream({ style }) {
         </div>
       )}
 
-      {selectedCount > 0 && (
+      {selectedCount > 0 && panelMode !== 'compare' && (
         <MultiSelectBar {...multiSelectBarProps} />
       )}
     </div>

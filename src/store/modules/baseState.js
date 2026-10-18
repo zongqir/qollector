@@ -27,6 +27,7 @@ export const createBaseState = ({
   previewReturnViewMode: 'left',
   compareCandidateIds: [],
   compareItemIds: [],
+  compareSourceItems: [],
 
   // ========== 时间旅行状态 ==========
   timelineDate: 'today', // 'today' | 'yesterday'

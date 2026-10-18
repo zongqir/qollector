@@ -33,6 +33,7 @@ export const createPanelActions = (set, get) => ({
           previewReturnViewMode: explicitReturnViewMode || inferPreviewReturnViewMode(state),
           compareCandidateIds: keepCompareContext ? state.compareCandidateIds : [],
           compareItemIds: keepCompareContext ? state.compareItemIds : [],
+          compareSourceItems: keepCompareContext ? state.compareSourceItems : [],
           timelineItems: [],
           timelineSummary: null,
         };
@@ -54,6 +55,9 @@ export const createPanelActions = (set, get) => ({
     } else if (mode === 'compare') {
       const compareCandidateIds = normalizeCompareCandidateIds(item);
       const fallbackCompareItemIds = normalizeCompareItemIds(compareCandidateIds);
+      const incomingSourceItems = Array.isArray(item)
+        ? item.filter((cand) => cand && typeof cand === 'object' && cand.id)
+        : [];
       if (fallbackCompareItemIds.length < 2) {
         set({
           panelMode: 'idle',
@@ -62,6 +66,7 @@ export const createPanelActions = (set, get) => ({
           previewReturnViewMode: 'left',
           compareCandidateIds: [],
           compareItemIds: [],
+          compareSourceItems: [],
           timelineItems: [],
           timelineSummary: null,
         });
@@ -74,6 +79,9 @@ export const createPanelActions = (set, get) => ({
           && state.compareItemIds.length >= 2
           && state.compareItemIds.every((id) => candidateSet.has(id))
         );
+        const nextSourceItems = incomingSourceItems.length > 0
+          ? incomingSourceItems
+          : state.compareSourceItems;
         return {
           panelMode: 'compare',
           previewItem: null,
@@ -81,6 +89,7 @@ export const createPanelActions = (set, get) => ({
           previewReturnViewMode: inferPreviewReturnViewMode(state),
           compareCandidateIds,
           compareItemIds: canKeepCurrentPair ? state.compareItemIds : fallbackCompareItemIds,
+          compareSourceItems: nextSourceItems,
           timelineItems: [],
           timelineSummary: null,
         };
@@ -93,6 +102,7 @@ export const createPanelActions = (set, get) => ({
         previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
+        compareSourceItems: [],
       });
       // Auto-load timeline data when entering timeline mode
       get().loadTimelineData('today');
@@ -104,6 +114,7 @@ export const createPanelActions = (set, get) => ({
         previewReturnViewMode: inferPreviewReturnViewMode(get()),
         compareCandidateIds: [],
         compareItemIds: [],
+        compareSourceItems: [],
         timelineItems: [],
         timelineSummary: null,
       });
@@ -150,6 +161,7 @@ export const createPanelActions = (set, get) => ({
         previewReturnMode: 'preview',
         compareCandidateIds: [],
         compareItemIds: [],
+        compareSourceItems: [],
       };
       if (returnViewMode === 'left') {
         updates.workbenchPanelEnabled = false;
@@ -166,13 +178,27 @@ export const createPanelActions = (set, get) => ({
   },
 
   switchToWorkbench: () => {
-    set({
-      panelMode: 'idle',
-      previewItem: null,
-      previewReturnMode: 'preview',
-      previewReturnViewMode: inferPreviewReturnViewMode(get()),
-      compareCandidateIds: [],
-      compareItemIds: [],
+    set((state) => {
+      const returnViewMode = state.previewReturnViewMode || inferPreviewReturnViewMode(state);
+      const updates = {
+        panelMode: 'idle',
+        previewItem: null,
+        previewReturnMode: 'preview',
+        compareCandidateIds: [],
+        compareItemIds: [],
+        compareSourceItems: [],
+      };
+      if (returnViewMode === 'left') {
+        updates.workbenchPanelEnabled = false;
+        updates.historyStreamEnabled = true;
+      } else if (returnViewMode === 'right') {
+        updates.workbenchPanelEnabled = true;
+        updates.historyStreamEnabled = false;
+      } else if (returnViewMode === 'all') {
+        updates.workbenchPanelEnabled = true;
+        updates.historyStreamEnabled = true;
+      }
+      return updates;
     });
   },
 });
