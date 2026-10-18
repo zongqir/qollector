@@ -340,6 +340,67 @@ impl ClipboardManager {
         })
     }
 
+    /// Checks if a text snippet is considered disposable micro noise.
+    ///
+    /// Matches:
+    /// 1. Short snippets (<= 2 chars) composed entirely of routine text (ASCII alphanumeric,
+    ///    standard punctuation, CJK basic characters/punctuation). Special symbols (e.g. ✓, →, ★, ℃, 🔥, ¥)
+    ///    are preserved.
+    /// 2. Isolated pure digits of length 3~6 (e.g. 1234, 849201, 8080) with no other semantic context.
+    pub fn is_disposable_micro_noise(text: &str) -> bool {
+        let trimmed = text.trim();
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        let chars: Vec<char> = trimmed.chars().collect();
+        let len = chars.len();
+
+        // 1. Length 1~2: Routine text / numbers / punctuation (preserves special symbols like ✓, →, ★, emoji).
+        if len <= 2 {
+            let all_routine = chars.iter().all(|&c| Self::is_routine_text_char(c));
+            if all_routine {
+                return true;
+            }
+        }
+
+        // 2. Pure digits without semantic context: 3~6 digits (e.g. verification codes, OTP, ports)
+        if len >= 3 && len <= 6 && chars.iter().all(|c| c.is_ascii_digit()) {
+            return true;
+        }
+
+        false
+    }
+
+    fn is_routine_text_char(c: char) -> bool {
+        c.is_ascii_alphanumeric()
+            || c.is_ascii_punctuation()
+            || c.is_whitespace()
+            || ('\u{4e00}'..='\u{9fff}').contains(&c) // CJK Unified Ideographs
+            || ('\u{3400}'..='\u{4dbf}').contains(&c) // CJK Extension A
+            || matches!(
+                c,
+                '，' | '。'
+                    | '、'
+                    | '；'
+                    | '：'
+                    | '？'
+                    | '！'
+                    | '“'
+                    | '”'
+                    | '‘'
+                    | '’'
+                    | '（'
+                    | '）'
+                    | '【'
+                    | '】'
+                    | '《'
+                    | '》'
+                    | '—'
+                    | '…'
+            )
+    }
+
     async fn handle_clipboard_change(
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
@@ -394,6 +455,15 @@ impl ClipboardManager {
                         newline_count
                     );
                 }
+
+                if general_config.filter_noise_digits_enabled && Self::is_disposable_micro_noise(text) {
+                    println!(
+                        "[Clipboard] Skip capture for disposable micro noise/digits: '{}'",
+                        text.trim()
+                    );
+                    return Ok(());
+                }
+
                 println!("Creating clipboard item for text: {} chars", text.len());
                 ClipboardItem::new_text(text.clone(), metadata)
             }
@@ -2326,5 +2396,57 @@ mod tests {
             &state, "hash-a", "IME", 31_500,
         );
         assert!(!third.suppress_rollback_duplicate);
+    }
+
+    #[test]
+    fn test_identifies_routine_micro_text_as_noise() {
+        // 1~2 chars of routine numbers, letters, Chinese words, and punctuation
+        assert!(ClipboardManager::is_disposable_micro_noise("1"));
+        assert!(ClipboardManager::is_disposable_micro_noise("42"));
+        assert!(ClipboardManager::is_disposable_micro_noise("a"));
+        assert!(ClipboardManager::is_disposable_micro_noise("ok"));
+        assert!(ClipboardManager::is_disposable_micro_noise("id"));
+        assert!(ClipboardManager::is_disposable_micro_noise("好"));
+        assert!(ClipboardManager::is_disposable_micro_noise("收到"));
+        assert!(ClipboardManager::is_disposable_micro_noise("，"));
+        assert!(ClipboardManager::is_disposable_micro_noise("。"));
+        assert!(ClipboardManager::is_disposable_micro_noise("  42  "));
+    }
+
+    #[test]
+    fn test_preserves_special_symbols_and_emoji() {
+        // Special symbols, math, arrows, currencies, and emojis should NEVER be filtered
+        assert!(!ClipboardManager::is_disposable_micro_noise("✓"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("→"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("★"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("℃"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("🔥"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("¥"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("￥"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("€"));
+        assert!(!ClipboardManager::is_disposable_micro_noise("π"));
+    }
+
+    #[test]
+    fn test_identifies_isolated_verification_and_port_digits_as_noise() {
+        // 3~6 pure isolated digits without context (verification codes, OTP, ports)
+        assert!(ClipboardManager::is_disposable_micro_noise("123"));
+        assert!(ClipboardManager::is_disposable_micro_noise("4829"));
+        assert!(ClipboardManager::is_disposable_micro_noise("8080"));
+        assert!(ClipboardManager::is_disposable_micro_noise("849201"));
+        assert!(ClipboardManager::is_disposable_micro_noise(" 999999 "));
+    }
+
+    #[test]
+    fn test_preserves_meaningful_longer_digits_and_contextual_text() {
+        // Critical assets and contextual strings must be preserved
+        assert!(!ClipboardManager::is_disposable_micro_noise("13800138000")); // Mobile phone
+        assert!(!ClipboardManager::is_disposable_micro_noise("123456789012")); // Express tracking
+        assert!(!ClipboardManager::is_disposable_micro_noise("12345678")); // 8 digits
+        assert!(!ClipboardManager::is_disposable_micro_noise("价格 100")); // Contextual
+        assert!(!ClipboardManager::is_disposable_micro_noise("端口 8080")); // Contextual
+        assert!(!ClipboardManager::is_disposable_micro_noise("v1.2")); // Version
+        assert!(!ClipboardManager::is_disposable_micro_noise("#8080")); // Hash / color
+        assert!(!ClipboardManager::is_disposable_micro_noise("你好世界")); // Normal text
     }
 }

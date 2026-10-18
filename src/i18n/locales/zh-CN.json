@@ -391,6 +391,8 @@
       "copyOnSelectDoubleClickHint": "双击选中单词或词语时也自动复制",
       "copyQollectSourceItems": "允许复制 Qollect 来源项",
       "copyQollectSourceItemsHint": "默认关闭。关闭时，来源为 Qollect / Quick Input / Quick Note 的内容会跳过复制动作。",
+      "filterNoiseDigits": "过滤无意义微小文本与纯数字",
+      "filterNoiseDigitsHint": "自动过滤 1~2 位常规字符（保留特殊符号）与 3~6 位纯数字验证码，避免碎片数据污染历史",
       "autostart": "开机自启动",
       "autostartHint": "系统启动时自动运行 Qollect",
       "autoLayoutSwitch": "窗口自适应自动切换",

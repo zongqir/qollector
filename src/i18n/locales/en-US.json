@@ -417,6 +417,8 @@
       "copyOnSelectDoubleClickHint": "Automatically copy when double-clicking to select a word",
       "copyQollectSourceItems": "Allow copying Qollect-source items",
       "copyQollectSourceItemsHint": "Off by default. When off, copy actions skip items sourced from Qollect / Quick Input / Quick Note.",
+      "filterNoiseDigits": "Filter micro-noise & noisy digits",
+      "filterNoiseDigitsHint": "Automatically ignore 1-2 char routine snippets (keeps special symbols) and 3-6 digit verification codes to reduce history clutter",
       "autostart": "Launch at system startup",
       "autostartHint": "Automatically run Qollect when your system starts",
       "autoLayoutSwitch": "Auto layout switch",
