@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.7",
+      "publishedAt": "2026-10-18",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-7",
+      "summary": {
+        "zh-CN": "历史流虚拟列表冷启动防塌陷与卡片白屏死锁彻底修复，优化收藏流与历史流紧凑度一致性体验。",
+        "en-US": "Completely eliminated history stream virtual list blank screen deadlock & flex collapse, and aligned compact layout density between collection and history streams."
+      },
+      "highlights": {
+        "zh-CN": [
+          "历史流虚拟列表白屏死锁根治：彻底修复在冷启动、搜索/收藏模式快速切换或 Flex 容器初始高度计算为 0 时导致 Virtuoso 陷入零条目永久白板的严重缺陷；通过预设 initialItemCount 与容器 100% 高度约束，确保卡片首帧即刻稳定直出。",
+          "虚拟滚动内部组件与视口预加载优化：静态化与记忆化 Virtuoso 核心组件配置（Scroller / Footer / increaseViewportBy），消除由于 Store 状态变动触发的内联对象重评估与滚动抖动。",
+          "收藏夹与历史流疏密紧凑度完全对齐：统一调优收藏列表在全模式下的行高、条目间隙与信息层级，使收藏列表与常规历史流具备高度一致的高密度阅读与极速操作质感。"
+        ],
+        "en-US": [
+          "Eliminated History Virtual List Blank Screen Deadlock: Resolved a critical issue where initial flex container height collapse or rapid view switching caused react-virtuoso to deadlock with zero items; enforced 100% height and initialItemCount seeding for instant, resilient first-frame card rendering.",
+          "Optimized Virtual Scroller Components & Viewport Preloading: Memoized core Virtuoso component bindings and hoisted viewport margins to prevent unnecessary object churn and scroll stutter during Store updates.",
+          "Aligned Compact Density Across Collections and History: Standardized item padding, row gap, and typographic hierarchy between collection and history lists, ensuring consistent information density and swift ergonomics."
+        ]
+      }
+    },
+    {
       "version": "0.5.6",
       "publishedAt": "2026-10-16",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-6",

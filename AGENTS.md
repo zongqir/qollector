@@ -43,13 +43,14 @@ npm run tauri build
 
 ## 发版紧急清单（URGENT）
 
-当用户提到“发版 / 版本升级 / 发布更新”时，代理必须按 `docs/release-ai-runbook.md` 执行完整流程，不得跳步。
+当用户提到“发版 / 版本升级 / 发布更新 / 出包 / 包”时，代理必须按 `docs/release-ai-runbook.md` 执行完整流程，不得跳步。
 
 ### 触发口令（推荐）
 
 1. `按 docs/release-ai-runbook.md 发版到 0.2.5`
 2. `我要发版到 0.2.5，帮我补齐中英文更新说明并发布`
 3. `开始版本升级，目标 0.2.5，按 runbook 全流程执行`
+4. **极简口令**：只要用户说“**包**”或“**出包**”，自动将 patch 小版本号 +1，提炼当前改动补齐中英文 `release-notes.json`，执行 `npm run build` 校验后通过 Git 提交并推送到 GitHub 触发 Release workflow 全流程。
 
 ### 必改文件（最少）
 

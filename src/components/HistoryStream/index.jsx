@@ -49,6 +49,7 @@ function detectClientPlatform() {
 }
 
 const SUPPORTS_NATIVE_EXTERNAL_DRAG = ['windows', 'macos'].includes(detectClientPlatform());
+const VIRTUOSO_INCREASE_VIEWPORT = { top: 200, bottom: 400 };
 const normalizeText = (value) => (typeof value === 'string' ? value : '');
 const tokenizeSearchQuery = (query) => normalizeText(query).toLowerCase().trim().split(/\s+/).filter(Boolean).slice(0, 6);
 
@@ -1400,6 +1401,11 @@ function HistoryStream({ style }) {
     );
   }, [focusSearchInput, shouldShowLoadGuard, t]);
 
+  const virtuosoComponents = useMemo(() => ({
+    Scroller: VirtuosoScroller,
+    Footer: HistoryListFooter,
+  }), [HistoryListFooter]);
+
   const buildRowViewModel = useCallback((index) => {
     const item = filteredItems[index];
     if (!item) return null;
@@ -1993,13 +1999,14 @@ function HistoryStream({ style }) {
           <Virtuoso
             ref={virtuosoRef}
             className="history-stream-virtuoso"
-            components={{ Scroller: VirtuosoScroller, Footer: HistoryListFooter }}
+            components={virtuosoComponents}
             totalCount={filteredItems.length}
+            initialItemCount={Math.min(filteredItems.length, 12)}
             computeItemKey={computeItemKey}
             itemContent={renderVirtualRow}
             endReached={handleEndReached}
             rangeChanged={handleRangeChanged}
-            increaseViewportBy={{ top: 200, bottom: 400 }}
+            increaseViewportBy={VIRTUOSO_INCREASE_VIEWPORT}
           />
         )}
         {!shouldRenderCollectionBoard && showJumpToLatest && (

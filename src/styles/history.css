@@ -336,7 +336,8 @@
 .history-stream-virtuoso {
   flex: 1;
   min-height: 0;
-  height: auto;
+  height: 100%;
+  width: 100%;
 }
 
 .history-stream-content > .workbench-inline-editor {
