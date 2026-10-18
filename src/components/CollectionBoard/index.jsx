@@ -1198,10 +1198,10 @@ function CollectionBoard({
 
     if (item.type_ === 'file') {
       const files = getFileList(item.content || '');
-      const isSingle = files.length === 1;
-      const visibleFiles = files.slice(0, isSingle ? 1 : 3);
+      const visibleCount = isMiniMode ? 1 : 2;
+      const visibleFiles = files.slice(0, visibleCount);
       return (
-        <div className={`collection-card-files panel-card-content-files ${isSingle ? 'single-file' : ''}`}>
+        <div className="collection-card-files panel-card-content-files">
           {visibleFiles.map((filePath, index) => {
             const name = getFileName(filePath);
             const isFolder = isFolderPath(filePath);
@@ -1209,10 +1209,10 @@ function CollectionBoard({
             return (
               <div key={`${filePath}-${index}`} className="collection-card-file-item panel-card-file-item">
                 {isFolder ? (
-                  <Folder size={isSingle ? 26 : 18} color="#f5c542" fill="#f5c542" className="file-icon panel-card-file-icon" />
+                  <Folder size={14} color="#f5c542" fill="#f5c542" className="file-icon panel-card-file-icon" />
                 ) : (
-                  <Suspense fallback={<FileText size={isSingle ? 26 : 18} className="file-icon panel-card-file-icon" />}>
-                    <div className="file-icon panel-card-file-icon" style={{ width: isSingle ? 26 : 18 }}>
+                  <Suspense fallback={<FileText size={14} className="file-icon panel-card-file-icon" />}>
+                    <div className="file-icon panel-card-file-icon" style={{ width: 14 }}>
                       <FileIconLazy extension={ext} />
                     </div>
                   </Suspense>
