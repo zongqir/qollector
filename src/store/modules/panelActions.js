@@ -143,13 +143,25 @@ export const createPanelActions = (set, get) => ({
           previewReturnViewMode: inferPreviewReturnViewMode(state),
         };
       }
-      return {
+      const returnViewMode = state.previewReturnViewMode || inferPreviewReturnViewMode(state);
+      const updates = {
         panelMode: 'idle',
         previewItem: null,
         previewReturnMode: 'preview',
         compareCandidateIds: [],
         compareItemIds: [],
       };
+      if (returnViewMode === 'left') {
+        updates.workbenchPanelEnabled = false;
+        updates.historyStreamEnabled = true;
+      } else if (returnViewMode === 'right') {
+        updates.workbenchPanelEnabled = true;
+        updates.historyStreamEnabled = false;
+      } else if (returnViewMode === 'all') {
+        updates.workbenchPanelEnabled = true;
+        updates.historyStreamEnabled = true;
+      }
+      return updates;
     });
   },
 

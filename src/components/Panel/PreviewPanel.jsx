@@ -756,7 +756,13 @@ function PreviewPanel() {
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       <div className="preview-nav">
         <div className="preview-nav-main">
-          <button className="preview-back-btn" onClick={backFromPreview}>
+          <button
+            type="button"
+            className="preview-back-btn"
+            onClick={backFromPreview}
+            title={t('common.back', '返回')}
+            aria-label={t('common.back', '返回')}
+          >
             <ArrowLeft size={16} />
           </button>
           <div className="preview-nav-context">

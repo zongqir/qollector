@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.8",
+      "publishedAt": "2026-10-18",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-8",
+      "summary": {
+        "zh-CN": "彻底修复预览面板返回按钮状态死锁，优化 Windows 划词复制按键时序以杜绝输入法拦截冲突。",
+        "en-US": "Completely resolved preview back button deadlock, and optimized Windows copy-on-select key event timing to prevent IME interception."
+      },
+      "highlights": {
+        "zh-CN": [
+          "预览返回列表死锁彻底根治：修复在 Mini 模式与单栏模式下点击返回按钮无法退出预览界面的严重缺陷；首帧同步响应内容关闭，即刻卸载空预览并恢复主列表挂载。",
+          "退出预览精准还原视图布局：重构预览返回调度机制，自动根据进入前的单栏（纯历史流）、双栏或右栏工作区状态无缝恢复窗口布局。",
+          "划词复制按键时序与输入法解耦：重构 Windows 原生按键发送链路，引入硬件扫描码与时序微延迟，杜绝选中文本或双击触发复制时向输入法误敲字母「c」的痛点。"
+        ],
+        "en-US": [
+          "Eliminated Preview Back Button Deadlock: Fixed a critical state-lock issue where clicking back from preview failed to return to the history stream in Mini and single-column modes; enforced synchronous unmounting of empty preview panes and immediate restoration of the card stream.",
+          "Accurate View Layout Restoration: Rebuilt the preview exit pipeline to seamlessly restore the previous layout mode (single-column stream, dual-pane, or right workbench) upon leaving preview.",
+          "Decoupled Copy-on-Select from IME Interception: Rebuilt native Windows key event dispatching with hardware scan codes and precision timing separation, eliminating stray 'c' keystroke pollution into active input methods."
+        ]
+      }
+    },
+    {
       "version": "0.5.7",
       "publishedAt": "2026-10-18",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-7",

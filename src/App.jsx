@@ -699,7 +699,7 @@ function App() {
   const leftWidthRef = useRef(leftWidth);
   const isPreviewingItem = panelMode === 'preview' && Boolean(previewItem);
   const hasActivePanelContent = isPreviewingItem || panelMode === 'compare' || panelMode === 'timeline';
-  const showMiniPanel = isMiniMode && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
+  const showMiniPanel = isMiniMode && hasActivePanelContent && miniPrimaryContent === MINI_PRIMARY_CONTENT_PANEL;
   const showStandalonePanel = !isMiniMode
     && !workbenchPanelEnabled
     && hasActivePanelContent;
@@ -941,9 +941,14 @@ function App() {
   }, [rememberPresetWidth, resolveMiniPrimaryContent, setIsMiniMode]);
 
   useEffect(() => {
-    if (!isMiniMode) return;
+    if (!isMiniMode) {
+      if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_HISTORY) {
+        setMiniPrimaryContent(MINI_PRIMARY_CONTENT_HISTORY);
+      }
+      return;
+    }
 
-    if (panelMode === 'compare' || panelMode === 'timeline' || (panelMode === 'preview' && previewItem)) {
+    if (hasActivePanelContent) {
       if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_PANEL) {
         setMiniPrimaryContent(MINI_PRIMARY_CONTENT_PANEL);
       }
@@ -953,7 +958,7 @@ function App() {
     if (miniPrimaryContent !== MINI_PRIMARY_CONTENT_HISTORY) {
       setMiniPrimaryContent(MINI_PRIMARY_CONTENT_HISTORY);
     }
-  }, [isMiniMode, miniPrimaryContent, panelMode, previewItem]);
+  }, [isMiniMode, miniPrimaryContent, hasActivePanelContent]);
 
   const performViewModeSwitch = useCallback(async (mode) => {
     const currentMiniMode = useAppStore.getState().isMiniMode;
