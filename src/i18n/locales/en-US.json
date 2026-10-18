@@ -249,6 +249,13 @@
     "copyHsl": "Copy HSL",
     "autoPasted": "Pasted to foreground app",
     "justNow": "Just now",
+    "translatedText": "Translation",
+    "translation": "Translation",
+    "original": "Original",
+    "showTranslation": "Show translation",
+    "showOriginal": "Show original",
+    "copyTranslation": "Copy translation",
+    "translationCopied": "Translation copied",
     "cardBackground": {
       "button": "Adjust card background",
       "default": "Default",
@@ -346,7 +353,25 @@
       "refreshFailed": "Failed to fetch models, using defaults",
       "refreshSuccess": "Model list updated",
       "manualInput": "Type model name manually",
-      "selectFromList": "Select from list"
+      "selectFromList": "Select from list",
+      "autoTranslate": {
+        "title": "Silent Auto-Translation",
+        "enabled": "Enable Clipboard Auto-Translation",
+        "description": "Silently translate copied text in the background and attach it to the card",
+        "direction": "Translation Direction",
+        "hint": "Code snippets, terminal commands, URLs, and identifiers are automatically skipped."
+      },
+      "languages": {
+        "auto": "Auto Detect",
+        "en": "English",
+        "zh_cn": "Chinese (Simplified)",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "fr": "French",
+        "de": "German",
+        "es": "Spanish",
+        "ru": "Russian"
+      }
     },
     "ocr": {
       "enabled": "Enable image text recognition",

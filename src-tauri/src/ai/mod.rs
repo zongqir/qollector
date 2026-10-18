@@ -194,6 +194,20 @@ pub struct AIConfig {
     pub enabled: bool,
     #[serde(default)]
     pub custom_prompt: Option<String>, // 用户自定义提示词（未来功能）
+    #[serde(default)]
+    pub auto_translate_enabled: bool,
+    #[serde(default = "default_auto_translate_source_lang")]
+    pub auto_translate_source_lang: String,
+    #[serde(default = "default_auto_translate_target_lang")]
+    pub auto_translate_target_lang: String,
+}
+
+fn default_auto_translate_source_lang() -> String {
+    "en".to_string()
+}
+
+fn default_auto_translate_target_lang() -> String {
+    "zh-CN".to_string()
 }
 
 impl AIConfig {
@@ -244,6 +258,9 @@ impl Default for AIConfig {
             credentials: HashMap::new(),
             enabled: false,
             custom_prompt: None,
+            auto_translate_enabled: false,
+            auto_translate_source_lang: default_auto_translate_source_lang(),
+            auto_translate_target_lang: default_auto_translate_target_lang(),
         }
     }
 }
@@ -764,5 +781,54 @@ impl AIService {
             println!("[Timeline AI] No choices in response");
             Ok(String::new())
         }
+    }
+
+    pub async fn translate_text(
+        &self,
+        content: &str,
+        source_lang: &str,
+        target_lang: &str,
+    ) -> Result<String, AIError> {
+        if !self.config.enabled {
+            return Err(AIError::ConfigError("AI feature is disabled".to_string()));
+        }
+        let api_key = self.config.get_current_api_key();
+        if api_key.is_empty() {
+            return Err(AIError::ConfigError("API key is empty".to_string()));
+        }
+
+        let target_display = match target_lang {
+            "zh-CN" | "zh" => "Simplified Chinese",
+            "en-US" | "en" => "English",
+            "ja" => "Japanese",
+            "ko" => "Korean",
+            "fr" => "French",
+            "de" => "German",
+            "es" => "Spanish",
+            "ru" => "Russian",
+            other => other,
+        };
+
+        let source_display = match source_lang {
+            "auto" => "the original language",
+            "en" => "English",
+            "zh-CN" | "zh" => "Chinese",
+            "ja" => "Japanese",
+            "ko" => "Korean",
+            "fr" => "French",
+            "de" => "German",
+            "es" => "Spanish",
+            "ru" => "Russian",
+            other => other,
+        };
+
+        let system_prompt = format!(
+            "You are a professional, accurate translation engine. Translate the provided text from {} into {}.\nStrict rules:\n- Output ONLY the direct translation, nothing else.\n- Do not include quotes, markdown wrappers, conversational prefixes, notes, or explanations.\n- Accurately preserve numbers, technical terms, code identifiers, formatting, and line breaks.",
+            source_display, target_display
+        );
+
+        let max_tokens = ((content.chars().count() as u32) * 2).clamp(128, 2048);
+        self.generate_structured_text(&system_prompt, content, max_tokens, 0.3)
+            .await
     }
 }

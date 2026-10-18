@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw, ArrowRight } from 'lucide-react';
+import { SUPPORTED_SOURCE_LANGUAGES, SUPPORTED_TRANSLATION_LANGUAGES } from '../../utils/translationHelpers';
 
 const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
 
@@ -44,6 +45,9 @@ function IntegrationsCoreSection({
   collapsedSections,
   toggleSection,
   onToggleAiEnabled,
+  onToggleAutoTranslateEnabled,
+  onChangeAutoTranslateSourceLang,
+  onChangeAutoTranslateTargetLang,
   onToggleMcpEnabled,
   onToggleCollectorEnabled,
   handleCollectorTest,
@@ -457,6 +461,64 @@ function IntegrationsCoreSection({
                     </>
                   )}
                 </div>
+
+                <div className="setting-subgroup-title" style={{ marginTop: '16px', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  {t('settings.ai.autoTranslate.title')}
+                </div>
+                <div className="setting-group" style={{ marginBottom: '12px' }}>
+                  <label className="sg-row setting-toggle-row">
+                    <span className="toggle-label-group">
+                      <span className="toggle-label">{t('settings.ai.autoTranslate.enabled')}</span>
+                      <span className="toggle-description" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                        {t('settings.ai.autoTranslate.description')}
+                      </span>
+                    </span>
+                    <span className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(aiConfig.auto_translate_enabled)}
+                        onChange={(e) => onToggleAutoTranslateEnabled(e.target.checked)}
+                      />
+                      <span className="toggle-slider" />
+                    </span>
+                  </label>
+                </div>
+
+                {aiConfig.auto_translate_enabled && (
+                  <div className="setting-item auto-translate-row" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label>{t('settings.ai.autoTranslate.direction')}</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <select
+                        value={aiConfig.auto_translate_source_lang || 'en'}
+                        onChange={(e) => onChangeAutoTranslateSourceLang(e.target.value)}
+                        className="setting-select"
+                        style={{ flex: 1, minWidth: '120px' }}
+                      >
+                        {SUPPORTED_SOURCE_LANGUAGES.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {t(lang.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                      <ArrowRight size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      <select
+                        value={aiConfig.auto_translate_target_lang || 'zh-CN'}
+                        onChange={(e) => onChangeAutoTranslateTargetLang(e.target.value)}
+                        className="setting-select"
+                        style={{ flex: 1, minWidth: '120px' }}
+                      >
+                        {SUPPORTED_TRANSLATION_LANGUAGES.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {t(lang.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <small className="setting-hint" style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                      {t('settings.ai.autoTranslate.hint')}
+                    </small>
+                  </div>
+                )}
 
                 <div className="setting-actions">
                   <button onClick={handleAiTest} disabled={aiTesting} className="test-btn">

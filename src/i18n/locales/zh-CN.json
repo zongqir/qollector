@@ -249,6 +249,13 @@
     "copyHsl": "复制 HSL",
     "autoPasted": "已粘贴到前台应用",
     "justNow": "刚刚",
+    "translatedText": "译文",
+    "translation": "翻译",
+    "original": "原文",
+    "showTranslation": "显示译文",
+    "showOriginal": "显示原文",
+    "copyTranslation": "复制译文",
+    "translationCopied": "已复制译文",
     "cardBackground": {
       "button": "调整卡片底色",
       "default": "默认",
@@ -320,7 +327,25 @@
       "refreshFailed": "获取模型列表失败，使用默认列表",
       "refreshSuccess": "已更新模型列表",
       "manualInput": "手动输入模型名",
-      "selectFromList": "从列表选择"
+      "selectFromList": "从列表选择",
+      "autoTranslate": {
+        "title": "剪贴板静默翻译",
+        "enabled": "启用剪贴板自动翻译",
+        "description": "复制文本后，在后台静默完成翻译并附在卡片上",
+        "direction": "翻译语言方向",
+        "hint": "系统会自动跳过纯代码、终端命令、URL 链接、标识符和变量名，只翻译自然语言内容。"
+      },
+      "languages": {
+        "auto": "自动检测",
+        "en": "英语 (English)",
+        "zh_cn": "中文 (简体)",
+        "ja": "日语 (Japanese)",
+        "ko": "韩语 (Korean)",
+        "fr": "法语 (French)",
+        "de": "德语 (German)",
+        "es": "西班牙语 (Spanish)",
+        "ru": "俄语 (Russian)"
+      }
     },
     "ocr": {
       "enabled": "启用图片文字识别",

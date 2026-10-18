@@ -805,48 +805,109 @@ impl ClipboardManager {
                             .map(|c| c.language)
                             .unwrap_or_else(|| "zh-CN".to_string());
 
-                        let service = AIService::new(ai_config);
-                        match service.generate_tags(content, &language).await {
-                            Ok((tags, code_language, title))
-                                if !tags.is_empty()
-                                    || code_language.is_some()
-                                    || title.is_some() =>
+                        let service = AIService::new(ai_config.clone());
+                        let should_translate = ai_config.auto_translate_enabled
+                            && crate::core::translation_guard::should_auto_translate(
+                                content,
+                                &ai_config.auto_translate_source_lang,
+                                &ai_config.auto_translate_target_lang,
+                            );
+
+                        let mut translated_text: Option<String> = None;
+                        if should_translate {
+                            match service
+                                .translate_text(
+                                    content,
+                                    &ai_config.auto_translate_source_lang,
+                                    &ai_config.auto_translate_target_lang,
+                                )
+                                .await
                             {
-                                let ai_tags: Vec<String> =
-                                    tags.iter().map(|t| format!("AI:{}", t)).collect();
+                                Ok(res) if !res.trim().is_empty() => {
+                                    println!("[AI] auto-translation succeeded, len={}", res.len());
+                                    translated_text = Some(res);
+                                }
+                                Ok(_) => {}
+                                Err(e) => eprintln!("[AI] auto-translation failed: {}", e),
+                            }
+                        }
 
-                                let repo_lock = repo_clone.lock().await;
-                                if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
-                                    let existing_tags: Vec<String> = item
-                                        .tags
-                                        .as_ref()
-                                        .and_then(|t| serde_json::from_str(t).ok())
-                                        .unwrap_or_default();
+                        match service.generate_tags(content, &language).await {
+                            Ok((tags, code_language, title)) => {
+                                let has_tags = !tags.is_empty();
+                                let has_code = code_language.is_some();
+                                let has_title = title.is_some();
+                                let has_trans = translated_text.is_some();
 
-                                    let mut all_tags = existing_tags;
-                                    all_tags.extend(ai_tags);
-
-                                    item.tags = Some(serde_json::to_string(&all_tags).unwrap());
-                                    if let Some(ai_language) = code_language.clone() {
-                                        item.code_language = Some(ai_language);
-                                    }
-                                    if let Some(ai_title) = title.as_deref() {
-                                        if let Some(next_metadata) = Self::merge_ai_naming_metadata(
-                                            item.metadata.as_deref(),
-                                            ai_title,
-                                        ) {
-                                            item.metadata = Some(next_metadata);
+                                if has_tags || has_code || has_title || has_trans {
+                                    let repo_lock = repo_clone.lock().await;
+                                    if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
+                                        if has_tags {
+                                            let ai_tags: Vec<String> =
+                                                tags.iter().map(|t| format!("AI:{}", t)).collect();
+                                            let existing_tags: Vec<String> = item
+                                                .tags
+                                                .as_ref()
+                                                .and_then(|t| serde_json::from_str(t).ok())
+                                                .unwrap_or_default();
+                                            let mut all_tags = existing_tags;
+                                            all_tags.extend(ai_tags);
+                                            item.tags = Some(serde_json::to_string(&all_tags).unwrap());
                                         }
+
+                                        if let Some(ai_language) = code_language.clone() {
+                                            item.code_language = Some(ai_language);
+                                        }
+
+                                        if let Some(ai_title) = title.as_deref() {
+                                            if let Some(next_metadata) = Self::merge_ai_naming_metadata(
+                                                item.metadata.as_deref(),
+                                                ai_title,
+                                            ) {
+                                                item.metadata = Some(next_metadata);
+                                            }
+                                        }
+
+                                        if let Some(trans) = translated_text.as_deref() {
+                                            if let Some(next_metadata) = Self::merge_translation_metadata(
+                                                item.metadata.as_deref(),
+                                                &ai_config.auto_translate_source_lang,
+                                                &ai_config.auto_translate_target_lang,
+                                                trans,
+                                                &ai_config.get_current_model(),
+                                            ) {
+                                                item.metadata = Some(next_metadata);
+                                            }
+                                        }
+
+                                        let _ = repo_lock.update(&item).await;
+                                        let _ = app_handle_clone.emit("clipboard-changed", ());
+                                        println!(
+                                            "[AI] tags added: {:?}, code_language: {:?}, title: {:?}, translated: {}",
+                                            tags, code_language, title, translated_text.is_some()
+                                        );
                                     }
-                                    let _ = repo_lock.update(&item).await;
-                                    println!(
-                                        "[AI] tags added: {:?}, code_language: {:?}, title: {:?}",
-                                        tags, code_language, title
-                                    );
                                 }
                             }
-                            Ok(_) => println!("[AI] empty tag result"),
-                            Err(e) => eprintln!("[AI] tag generation failed: {}", e),
+                            Err(e) => {
+                                eprintln!("[AI] tag generation failed: {}", e);
+                                if let Some(trans) = translated_text.as_deref() {
+                                    let repo_lock = repo_clone.lock().await;
+                                    if let Ok(Some(mut item)) = repo_lock.find_by_id(&item_id).await {
+                                        if let Some(next_metadata) = Self::merge_translation_metadata(
+                                            item.metadata.as_deref(),
+                                            &ai_config.auto_translate_source_lang,
+                                            &ai_config.auto_translate_target_lang,
+                                            trans,
+                                            &ai_config.get_current_model(),
+                                        ) {
+                                            item.metadata = Some(next_metadata);
+                                            let _ = repo_lock.update(&item).await;
+                                            let _ = app_handle_clone.emit("clipboard-changed", ());
+                                        }
+                                    }
+                                }
+                            }
                         }
                         println!("[AI] lock released");
                     } else {
@@ -1023,6 +1084,35 @@ impl ClipboardManager {
         );
 
         object.insert("naming".to_string(), serde_json::Value::Object(naming));
+        Some(value.to_string())
+    }
+
+    pub fn merge_translation_metadata(
+        metadata_json: Option<&str>,
+        source_lang: &str,
+        target_lang: &str,
+        translated_text: &str,
+        model: &str,
+    ) -> Option<String> {
+        let trimmed_text = translated_text.trim();
+        if trimmed_text.is_empty() {
+            return None;
+        }
+
+        let mut value = metadata_json
+            .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        let object = value.as_object_mut()?;
+        let translation = serde_json::json!({
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "text": trimmed_text,
+            "model": model,
+            "updated_at": chrono::Utc::now().timestamp(),
+        });
+
+        object.insert("translation".to_string(), translation);
         Some(value.to_string())
     }
 
@@ -1791,6 +1881,15 @@ impl ClipboardManager {
     pub async fn get_item_by_id(&self, id: &str) -> Result<Option<ClipboardItem>, sqlx::Error> {
         let repo = self.repository.lock().await;
         repo.find_by_id(id).await
+    }
+
+    /// Update an item's metadata and emit clipboard-changed
+    pub async fn update_metadata(&self, id: &str, metadata: &str) -> Result<(), sqlx::Error> {
+        let repo = self.repository.lock().await;
+        repo.update_metadata_only(id, metadata).await?;
+        drop(repo);
+        let _ = self.app_handle.emit("clipboard-changed", ());
+        Ok(())
     }
 
     /// Add a text item.

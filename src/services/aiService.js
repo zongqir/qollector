@@ -103,3 +103,10 @@ export const autoGenerateAITags = async (items, processedItemIds, setProcessedIt
     }
   }
 };
+
+export const translateClipboardItem = async (itemId, targetLang = null) => {
+  return await invoke('translate_clipboard_item', {
+    itemId,
+    targetLang,
+  });
+};

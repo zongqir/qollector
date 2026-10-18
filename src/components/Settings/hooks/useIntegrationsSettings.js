@@ -252,6 +252,39 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     }
   };
 
+  const handleAutoTranslateEnabledChange = async (auto_translate_enabled) => {
+    const updated = { ...aiConfig, auto_translate_enabled };
+    setAiConfig(updated);
+    try {
+      await invoke('update_ai_config', { config: updated });
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      console.error('save ai auto translate failed:', error);
+    }
+  };
+
+  const handleAutoTranslateSourceLangChange = async (auto_translate_source_lang) => {
+    const updated = { ...aiConfig, auto_translate_source_lang };
+    setAiConfig(updated);
+    try {
+      await invoke('update_ai_config', { config: updated });
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      console.error('save ai auto translate source lang failed:', error);
+    }
+  };
+
+  const handleAutoTranslateTargetLangChange = async (auto_translate_target_lang) => {
+    const updated = { ...aiConfig, auto_translate_target_lang };
+    setAiConfig(updated);
+    try {
+      await invoke('update_ai_config', { config: updated });
+      if (onConfigChange) onConfigChange();
+    } catch (error) {
+      console.error('save ai auto translate target lang failed:', error);
+    }
+  };
+
   const handleMcpEnabledChange = async (enabled) => {
     const updated = { ...mcpConfig, enabled };
     setMcpConfig(updated);
@@ -508,6 +541,9 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     toggleSection,
     loadIntegrationConfigs,
     handleAiEnabledChange,
+    handleAutoTranslateEnabledChange,
+    handleAutoTranslateSourceLangChange,
+    handleAutoTranslateTargetLangChange,
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { buildItemDerivations } from '../../store/modules/itemsIndex';
@@ -21,6 +21,7 @@ import {
 import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getUserTags as getUserTagsSvc } from '../../services/clipboardService';
+import { getTranslationFromMetadata } from '../../utils/translationHelpers';
 import AIAssistantPanel from '../../features/ai-assistant/components/AIAssistantPanel';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
@@ -727,16 +728,45 @@ function PreviewPanel() {
         </div>
       );
     }
+    const translation = getTranslationFromMetadata(item.metadata);
     return (
-      <div
-        ref={contentSelectableRef}
-        className="preview-text-content"
-        onDoubleClick={handleContentDoubleClick}
-        onKeyDown={handleContentKeyDown}
-        tabIndex={0}
-        title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
-      >
-        {getContentPreview(item.content)}
+      <div className="preview-text-wrapper">
+        <div
+          ref={contentSelectableRef}
+          className="preview-text-content"
+          onDoubleClick={handleContentDoubleClick}
+          onKeyDown={handleContentKeyDown}
+          tabIndex={0}
+          title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
+        >
+          {getContentPreview(item.content)}
+        </div>
+        {translation && (
+          <div className="preview-translation-card" style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--primary-color)' }}>
+                <Languages size={14} />
+                <span>{t('item.translatedText')}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>({translation.source_lang} ➔ {translation.target_lang})</span>
+              </div>
+              <button
+                type="button"
+                className="preview-trans-copy-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(translation.text);
+                  setPreviewToast(t('item.translationCopied'));
+                  setTimeout(() => setPreviewToast(''), 1500);
+                }}
+                style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+              >
+                <Copy size={11} /> {t('item.copyTranslation')}
+              </button>
+            </div>
+            <div style={{ fontSize: '13px', lineHeight: '1.6', whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
+              {translation.text}
+            </div>
+          </div>
+        )}
       </div>
     );
   };

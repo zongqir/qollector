@@ -692,6 +692,7 @@ fn main() {
             get_ai_config,
             update_ai_config,
             generate_ai_tags,
+            translate_clipboard_item,
             test_ai_connection,
             get_ai_models,
             get_default_ai_model,

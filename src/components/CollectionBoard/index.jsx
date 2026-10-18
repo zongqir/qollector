@@ -15,6 +15,8 @@ import {
   Star,
   Type,
   X,
+  Copy,
+  Languages,
 } from 'lucide-react';
 import {
   formatHistoryCardTime,
@@ -31,6 +33,7 @@ import {
   reorderCollectionFavoriteItems,
   searchItems,
 } from '../../services/clipboardService';
+import { getTranslationFromMetadata } from '../../utils/translationHelpers';
 import useAppStore from '../../store/useAppStore';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
 import {
@@ -173,6 +176,8 @@ function CollectionBoard({
 }) {
   const { t, i18n } = useTranslation();
   const [selectedCollectionTags, setSelectedCollectionTags] = useState([]);
+  const [translatedItemIds, setTranslatedItemIds] = useState(() => new Set());
+  const [copiedTranslationItemId, setCopiedTranslationItemId] = useState(null);
   const [activeItemId, setActiveItemId] = useState(null);
   const [collectionTagQuery, setCollectionTagQuery] = useState('');
   const [debouncedCollectionTagQuery, setDebouncedCollectionTagQuery] = useState('');
@@ -1237,16 +1242,31 @@ function CollectionBoard({
       );
     }
 
+    const translation = getTranslationFromMetadata(item.metadata);
+    if (translatedItemIds.has(item.id) && translation?.text) {
+      return (
+        <div className="collection-card-text panel-card-content-text collection-card-translated">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', fontSize: '10px', color: 'var(--primary-color)', fontWeight: 500 }}>
+            <Languages size={10} />
+            <span>{t('item.translatedText')} ({translation.source_lang} ➔ {translation.target_lang})</span>
+          </div>
+          {getContentPreview(translation.text)}
+        </div>
+      );
+    }
+
     return (
       <div className="collection-card-text panel-card-content-text">
         {getContentPreview(item.content || item.user_note || item.ocr_text || '')}
       </div>
     );
-  }, [isCollectionListMode]);
+  }, [isCollectionListMode, translatedItemIds, t]);
 
   const renderCollectionCard = (item, index) => {
     const itemTags = getUserTags(item);
     const sourceApp = getSourceApp(item.metadata);
+    const translation = getTranslationFromMetadata(item.metadata);
+    const isTranslated = translatedItemIds.has(item.id);
     const cardBackground = getCardBackgroundPreset(getCardBackgroundIdFromMetadata(item.metadata));
     const hasCustomCardBackground = cardBackground.id !== CARD_BACKGROUND_DEFAULT_ID;
     const showColorPicker = openColorPickerItemId === item.id;
@@ -1292,9 +1312,78 @@ function CollectionBoard({
               {sourceApp && (
                 <span className="collection-card-source panel-card-source" title={sourceApp}>{sourceApp}</span>
               )}
+              {translation && (
+                <span
+                  className={`collection-card-state-chip panel-card-state-chip translation ${isTranslated ? 'active' : ''}`}
+                  title={isTranslated ? t('item.showOriginal') : t('item.showTranslation')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTranslatedItemIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(item.id)) next.delete(item.id);
+                      else next.add(item.id);
+                      return next;
+                    });
+                  }}
+                  style={{
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '9px',
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    background: isTranslated ? 'var(--primary-color)' : 'rgba(59, 130, 246, 0.12)',
+                    color: isTranslated ? '#fff' : 'var(--primary-color)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    lineHeight: '1.2',
+                    marginLeft: '4px',
+                  }}
+                >
+                  <Languages size={9} />
+                  <span>{isTranslated ? t('item.original') : t('item.translation')}</span>
+                </span>
+              )}
             </div>
           </div>
           <div className="collection-card-actions panel-card-actions panel-card-actions--hover-reveal" ref={showColorPicker ? colorPickerRef : null}>
+            {translation && (
+              <button
+                type="button"
+                className={`panel-card-action-btn ${isTranslated ? 'is-active translate' : 'translate'}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setTranslatedItemIds((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(item.id)) next.delete(item.id);
+                    else next.add(item.id);
+                    return next;
+                  });
+                }}
+                title={isTranslated ? t('item.showOriginal') : t('item.showTranslation')}
+                aria-label={isTranslated ? t('item.showOriginal') : t('item.showTranslation')}
+              >
+                <Languages size={12} />
+              </button>
+            )}
+            {translation && (
+              <button
+                type="button"
+                className="panel-card-action-btn copy-trans"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  navigator.clipboard.writeText(translation.text);
+                  setCopiedTranslationItemId(item.id);
+                  setTimeout(() => setCopiedTranslationItemId(null), 1500);
+                }}
+                title={t('item.copyTranslation')}
+                aria-label={t('item.copyTranslation')}
+              >
+                {copiedTranslationItemId === item.id ? <Check size={12} /> : <Copy size={12} />}
+              </button>
+            )}
             <button
               type="button"
               className={`panel-card-action-btn ${item.is_favorite ? 'is-active favorite' : 'favorite'}`}

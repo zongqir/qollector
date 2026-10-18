@@ -365,6 +365,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     toggleSection,
     loadIntegrationConfigs,
     handleAiEnabledChange,
+    handleAutoTranslateEnabledChange,
+    handleAutoTranslateSourceLangChange,
+    handleAutoTranslateTargetLangChange,
     handleMcpEnabledChange,
     handleCollectorEnabledChange,
     handleCollectorTest,
@@ -778,6 +781,9 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 collapsedSections={collapsedSections}
                 toggleSection={toggleSection}
                 onToggleAiEnabled={handleAiEnabledChange}
+                onToggleAutoTranslateEnabled={handleAutoTranslateEnabledChange}
+                onChangeAutoTranslateSourceLang={handleAutoTranslateSourceLangChange}
+                onChangeAutoTranslateTargetLang={handleAutoTranslateTargetLangChange}
                 onToggleMcpEnabled={handleMcpEnabledChange}
                 onToggleCollectorEnabled={handleCollectorEnabledChange}
                 handleCollectorTest={handleCollectorTest}

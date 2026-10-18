@@ -609,3 +609,54 @@ pub async fn generate_timeline_summary(
         .await
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn translate_clipboard_item(
+    state: State<'_, AIState>,
+    manager: State<'_, Arc<ClipboardManager>>,
+    item_id: String,
+    target_lang: Option<String>,
+) -> Result<String, String> {
+    let config = state.config.lock().clone();
+    if !config.enabled || config.get_current_api_key().is_empty() {
+        return Err("AI is not configured or enabled".to_string());
+    }
+
+    let item = manager
+        .get_item_by_id(&item_id)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Item not found".to_string())?;
+
+    let content = item
+        .content
+        .as_deref()
+        .or(item.ocr_text.as_deref())
+        .ok_or_else(|| "Item has no translatable text".to_string())?;
+
+    let source = config.auto_translate_source_lang.as_str();
+    let target = target_lang
+        .as_deref()
+        .unwrap_or(config.auto_translate_target_lang.as_str());
+
+    let service = AIService::new(config.clone());
+    let translated = service
+        .translate_text(content, source, target)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Some(next_metadata) = ClipboardManager::merge_translation_metadata(
+        item.metadata.as_deref(),
+        source,
+        target,
+        &translated,
+        &config.get_current_model(),
+    ) {
+        manager
+            .update_metadata(&item_id, &next_metadata)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(translated)
+}

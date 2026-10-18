@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Terminal } from 'lucide-react';
+import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Terminal, Languages, Copy } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -21,6 +21,7 @@ import {
   getCardBackgroundIdFromMetadata,
   getCardBackgroundPreset,
 } from '../../utils/cardBackgrounds';
+import { getTranslationFromMetadata } from '../../utils/translationHelpers';
 import useAppStore from '../../store/useAppStore';
 import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
 
@@ -94,7 +95,10 @@ function CompactCard({
   const isMiniMode = useAppStore(s => s.isMiniMode);
   const setPanelMode = useAppStore(s => s.setPanelMode);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [copiedTranslation, setCopiedTranslation] = useState(false);
   const colorPickerRef = useRef(null);
+  const translation = useMemo(() => getTranslationFromMetadata(item.metadata), [item.metadata]);
   const timelineColor = getTimelineColor(item.updated_at);
   const timeLabel = formatHistoryCardTime(
     item.updated_at,
@@ -318,6 +322,17 @@ function CompactCard({
         );
       }
     }
+    if (showTranslation && translation?.text) {
+      return (
+        <div className="compact-card-text panel-card-content-text compact-card-translated">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px', fontSize: '10px', color: 'var(--primary-color)', fontWeight: 500 }}>
+            <Languages size={10} />
+            <span>{t('item.translatedText')} ({translation.source_lang} ➔ {translation.target_lang})</span>
+          </div>
+          {getContentPreview(translation.text)}
+        </div>
+      );
+    }
     return (
       <div className="compact-card-text panel-card-content-text">
         {getContentPreview(item.content)}
@@ -395,6 +410,39 @@ function CompactCard({
               </span>
             </div>
           )}
+          {translation && (
+            <div className="compact-card-state panel-card-state">
+              <span
+                className={`compact-card-state-chip panel-card-state-chip translation ${showTranslation ? 'active' : ''}`}
+                title={showTranslation ? t('item.showOriginal') : t('item.showTranslation')}
+                aria-label={t('item.showTranslation')}
+                data-longpress-ignore="true"
+                onPointerDown={stopActionPointerDown}
+                onMouseDown={stopActionPointerDown}
+                onDragStart={preventActionDrag}
+                onClick={(e) => {
+                  stopActionClick(e);
+                  setShowTranslation(prev => !prev);
+                }}
+                style={{
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  fontSize: '9px',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  background: showTranslation ? 'var(--primary-color)' : 'rgba(59, 130, 246, 0.12)',
+                  color: showTranslation ? '#fff' : 'var(--primary-color)',
+                  border: '1px solid rgba(59, 130, 246, 0.25)',
+                  lineHeight: '1.2',
+                }}
+              >
+                <Languages size={9} />
+                <span>{showTranslation ? t('item.original') : t('item.translation')}</span>
+              </span>
+            </div>
+          )}
         </div>
         <div className="compact-card-badges-wrap" ref={colorPickerRef}>
           <div className="compact-card-badges panel-card-actions panel-card-actions--hover-reveal">
@@ -453,6 +501,46 @@ function CompactCard({
                 aria-label={t('item.revealInFolder')}
               >
                 <FolderOpen size={10} />
+              </button>
+            )}
+            {translation && (
+              <button
+                type="button"
+                className={`badge-btn panel-card-action-btn badge-translate ${showTranslation ? 'active' : ''}`}
+                draggable={false}
+                data-longpress-ignore="true"
+                onPointerDown={stopActionPointerDown}
+                onMouseDown={stopActionPointerDown}
+                onDragStart={preventActionDrag}
+                onClick={(e) => {
+                  stopActionClick(e);
+                  setShowTranslation(prev => !prev);
+                }}
+                title={showTranslation ? t('item.showOriginal') : t('item.showTranslation')}
+                aria-label={showTranslation ? t('item.showOriginal') : t('item.showTranslation')}
+              >
+                <Languages size={10} />
+              </button>
+            )}
+            {translation && (
+              <button
+                type="button"
+                className="badge-btn panel-card-action-btn badge-copy-trans"
+                draggable={false}
+                data-longpress-ignore="true"
+                onPointerDown={stopActionPointerDown}
+                onMouseDown={stopActionPointerDown}
+                onDragStart={preventActionDrag}
+                onClick={(e) => {
+                  stopActionClick(e);
+                  navigator.clipboard.writeText(translation.text);
+                  setCopiedTranslation(true);
+                  setTimeout(() => setCopiedTranslation(false), 1500);
+                }}
+                title={t('item.copyTranslation')}
+                aria-label={t('item.copyTranslation')}
+              >
+                {copiedTranslation ? <Check size={10} /> : <Copy size={10} />}
               </button>
             )}
             <button
