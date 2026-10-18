@@ -4,3 +4,4 @@ pub mod models;
 pub mod prompt_assistant;
 pub mod thumbnail;
 pub mod tokenizer;
+pub mod translation_guard;
