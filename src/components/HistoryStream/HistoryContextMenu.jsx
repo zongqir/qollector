@@ -9,7 +9,6 @@ import {
   FileText,
   FolderOpen,
   Pencil,
-  Star,
   Trash2,
   X,
 } from 'lucide-react';
@@ -118,22 +117,12 @@ function HistoryContextMenu({
     ];
 
     const openEntries = [
-      { key: 'preview', label: t('panel.preview'), icon: Eye },
       { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
       canEditContent ? { key: 'editContent', label: t('item.editContent'), icon: FileText } : null,
       canOpenItem
         ? { key: 'open', label: item.type_ === 'link' ? t('item.openLink') : t('item.openFile'), icon: ExternalLink }
         : null,
       canReveal ? { key: 'reveal', label: t('item.revealInFolder'), icon: FolderOpen } : null,
-    ];
-
-    const stateEntries = [
-      {
-        key: 'favorite',
-        label: item.is_favorite ? t('item.unfavorite') : t('item.favorite'),
-        icon: Star,
-        secondary: isCollectionScope,
-      },
     ];
 
     const deleteEntry = {
@@ -147,7 +136,6 @@ function HistoryContextMenu({
 
     if (isCollectionScope) {
       const collectionEntries = [
-        ...stateEntries,
         ...(collectionHintsDismissed
           ? [{
             key: 'showCollectionHints',
@@ -162,8 +150,7 @@ function HistoryContextMenu({
         ...commonEntries,
         { type: 'separator' },
         ...openEntries,
-        { type: 'separator' },
-        ...collectionEntries,
+        ...(collectionEntries.length > 0 ? [{ type: 'separator' }, ...collectionEntries] : []),
         { type: 'separator' },
         deleteEntry,
       ]);
@@ -172,7 +159,6 @@ function HistoryContextMenu({
     return normalizeMenuEntries([
       ...commonEntries,
       { type: 'separator' },
-      ...stateEntries,
       ...openEntries,
       { type: 'separator' },
       deleteEntry,
