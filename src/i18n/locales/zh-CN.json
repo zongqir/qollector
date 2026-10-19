@@ -93,7 +93,8 @@
       "image": "图片",
       "file": "文件",
       "link": "链接",
-      "code": "代码"
+      "code": "代码",
+      "time": "时间"
     },
     "savedViews": {
       "title": "保存视图",

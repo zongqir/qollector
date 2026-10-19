@@ -17,6 +17,8 @@ import {
   X,
   Copy,
   Languages,
+  Terminal,
+  Clock3,
 } from 'lucide-react';
 import {
   formatHistoryCardTime,
@@ -25,7 +27,9 @@ import {
   getFileName,
   getLinkPreviewTitle,
   parseUrl,
+  isDateTimeCandidate,
 } from '../../utils/formatters';
+import { isCurlCommand } from '../../utils/curlParser';
 import { getImageThumbnail } from '../../utils/imageHelpers';
 import {
   getCollectionFavoriteItems,
@@ -111,9 +115,11 @@ const isFolderPath = (path) => {
   return !name.includes('.');
 };
 
-const CardTypeIcon = ({ type, hasCodeLanguage, hasTranslation }) => {
+const CardTypeIcon = ({ type, hasCodeLanguage, isCurl, isDateTime, hasTranslation }) => {
   const size = 11;
+  if (isCurl) return <Terminal size={size} />;
   if (hasCodeLanguage) return <Code size={size} />;
+  if (isDateTime && (type === 'text' || !type)) return <Clock3 size={size} />;
   if (hasTranslation && (type === 'text' || !type)) return <Languages size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
@@ -1276,6 +1282,9 @@ function CollectionBoard({
       ? (selectedItemIds.length > 1 ? 'multi-selected' : 'selected')
       : '';
 
+    const isCurl = item.type_ === 'text' && Boolean(item.content) && isCurlCommand(item.content);
+    const isDateTime = item.type_ === 'text' && Boolean(item.content) && isDateTimeCandidate(item.content);
+
     return (
       <article
         ref={(node) => setCollectionCardRef(item.id, node)}
@@ -1307,6 +1316,8 @@ function CollectionBoard({
               <CardTypeIcon
                 type={item.type_}
                 hasCodeLanguage={Boolean(item.code_language)}
+                isCurl={isCurl}
+                isDateTime={isDateTime}
                 hasTranslation={Boolean(translation)}
               />
             </span>

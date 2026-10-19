@@ -1,6 +1,6 @@
 import { memo, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Terminal, Languages, Copy } from 'lucide-react';
+import { Star, FileText, Folder, Image, Type, Link, Code, GripVertical, ExternalLink, Check, FolderOpen, Palette, Terminal, Languages, Copy, Clock3 } from 'lucide-react';
 import {
   formatDate,
   formatHistoryCardTime,
@@ -10,6 +10,7 @@ import {
   getFileList,
   parseUrl,
   getLinkPreviewTitle,
+  isDateTimeCandidate,
 } from '../../utils/formatters';
 import { isCurlCommand, parseCurl } from '../../utils/curlParser';
 import { getSourceApp, getTags } from '../../utils/tagHelpers';
@@ -60,10 +61,11 @@ const looksLikeFileLine = (line) => {
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const TypeIcon = ({ type, hasCodeLanguage, isCurl, hasTranslation }) => {
+const TypeIcon = ({ type, hasCodeLanguage, isCurl, isDateTime, hasTranslation }) => {
   const size = 11;
   if (isCurl) return <Terminal size={size} />;
   if (hasCodeLanguage) return <Code size={size} />;
+  if (isDateTime && (type === 'text' || !type)) return <Clock3 size={size} />;
   if (hasTranslation && (type === 'text' || !type)) return <Languages size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
@@ -116,6 +118,10 @@ function CompactCard({
   const isCurl = useMemo(() => {
     if (item.type_ !== 'text' || !item.content) return false;
     return isCurlCommand(item.content);
+  }, [item.type_, item.content]);
+  const isDateTime = useMemo(() => {
+    if (item.type_ !== 'text' || !item.content) return false;
+    return isDateTimeCandidate(item.content);
   }, [item.type_, item.content]);
   const userNote = typeof item.user_note === 'string' ? item.user_note.trim() : '';
   const canDragOut = supportsNativeExternalDrag
@@ -396,6 +402,7 @@ function CompactCard({
               type={item.type_}
               hasCodeLanguage={!!item.code_language}
               isCurl={isCurl}
+              isDateTime={isDateTime}
               hasTranslation={Boolean(translation)}
             />
           </span>

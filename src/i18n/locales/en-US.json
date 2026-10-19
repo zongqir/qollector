@@ -93,7 +93,8 @@
       "image": "Image",
       "file": "File",
       "link": "Link",
-      "code": "Code"
+      "code": "Code",
+      "time": "Time"
     },
     "savedViews": {
       "title": "Saved Views",

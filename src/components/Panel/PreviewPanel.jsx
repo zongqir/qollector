@@ -16,6 +16,7 @@ import {
   extractOpenableFilePaths,
   detectTimestampCandidate,
   formatTimestampCandidate,
+  isDateTimeCandidate,
   parsePureColorText,
 } from '../../utils/formatters';
 import { getImageOriginal } from '../../utils/imageHelpers';
@@ -188,6 +189,10 @@ function PreviewPanel() {
     if (item.type_ !== 'text' || !item.content) return false;
     return isCurlCommand(item.content);
   }, [item.type_, item.content]);
+  const isDateTime = useMemo(() => {
+    if (item.type_ !== 'text' || !item.content) return false;
+    return isDateTimeCandidate(item.content);
+  }, [item.type_, item.content]);
   const convertedTimestampText = useMemo(() => (
     timestampCandidate ? formatTimestampCandidate(timestampCandidate, i18n.language) : ''
   ), [timestampCandidate, i18n.language]);
@@ -196,11 +201,12 @@ function PreviewPanel() {
   const previewTypeClass = item.code_language ? 'type-code' : `type-${item.type_ || 'text'}`;
   const itemTypeLabel = useMemo(() => {
     if (isCurlCandidate) return t('curl.badge', 'cURL');
+    if (isDateTime) return t('search.typeFilter.time', '时间');
     const typeKey = item.code_language
       ? 'code'
       : (['text', 'image', 'file', 'link'].includes(item.type_) ? item.type_ : 'all');
     return t(`search.typeFilter.${typeKey}`);
-  }, [isCurlCandidate, item.code_language, item.type_, t]);
+  }, [isCurlCandidate, isDateTime, item.code_language, item.type_, t]);
   const selectPreviewContent = useCallback(() => {
     const contentEl = contentSelectableRef.current;
     const selection = window.getSelection();

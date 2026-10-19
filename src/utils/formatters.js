@@ -244,6 +244,40 @@ export const detectTimestampCandidate = (value) => {
   };
 };
 
+const ISO_OR_DATE_RE = /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+const CHINESE_DATE_RE = /^\d{4}年\d{1,2}月\d{1,2}日(?:\s*\d{1,2}(?::\d{2}|时\d{1,2}分)(?::\d{2}|秒)?)?$/;
+const TIME_ONLY_RE = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+
+export const isDateTimeCandidate = (value) => {
+  if (typeof value !== 'string') return false;
+  const candidate = trimTimestampCandidate(value);
+  if (!candidate || candidate.length > 50 || candidate.includes('\n')) {
+    return false;
+  }
+
+  if (detectTimestampCandidate(candidate)) {
+    return true;
+  }
+
+  if (ISO_OR_DATE_RE.test(candidate)) {
+    const parsed = Date.parse(candidate.replace(/\//g, '-'));
+    if (!Number.isNaN(parsed)) {
+      const year = new Date(parsed).getFullYear();
+      if (year >= 1970 && year <= 2100) return true;
+    }
+  }
+
+  if (CHINESE_DATE_RE.test(candidate)) {
+    return true;
+  }
+
+  if (TIME_ONLY_RE.test(candidate)) {
+    return true;
+  }
+
+  return false;
+};
+
 export const formatTimestampCandidate = (candidate, language) => {
   if (!candidate || typeof candidate.milliseconds !== 'number') {
     return '';
