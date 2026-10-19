@@ -2,6 +2,25 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.12",
+      "publishedAt": "2026-10-19",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-12",
+      "summary": {
+        "zh-CN": "引入时间戳与日期时间卡片时钟语义化图标，精简右键上下文菜单并移除表层冗余操作。",
+        "en-US": "Introduced semantic clock icons for timestamps and date-time items, and streamlined the context menu by removing redundant surface actions."
+      },
+      "highlights": {
+        "zh-CN": [
+          "时间戳与日期时间智能识别与时钟图标：建立精确的离散时间格式门禁（覆盖 10/13 位 Unix 时间戳、ISO 8601、年月日时分秒等标准格式），历史流、工作区与收藏区卡片类型图标智能升级为时钟（Clock3），预览面板同步识别展示为“时间”类型。",
+          "右键上下文菜单深度降噪：移除与卡片表层交互重叠的“收藏”和“预览详情”菜单项，右键菜单高度缩减 68px，降低 Mini 窄窗模式下的翻折遮挡风险，聚焦纯文本复制、多选、编辑备注/标签等核心二级特化操作。"
+        ],
+        "en-US": [
+          "Smart Timestamp & Date-Time Recognition: Added discrete datetime detection covering 10/13-digit Unix timestamps, ISO 8601, and standard date formats. Card icons in history, workbench, and collections now dynamically display a Clock3 icon, and the preview panel accurately labels them as Time.",
+          "Streamlined Right-Click Context Menu: Removed redundant Favorite and Preview items that duplicate card-surface actions, reducing menu height by 68px to prevent overflow in Mini mode and keeping focus on specialized actions like plain text copying, multi-selection, and note editing."
+        ]
+      }
+    },
+    {
       "version": "0.5.11",
       "publishedAt": "2026-10-19",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-11",
