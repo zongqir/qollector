@@ -60,10 +60,11 @@ const looksLikeFileLine = (line) => {
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const TypeIcon = ({ type, hasCodeLanguage, isCurl }) => {
+const TypeIcon = ({ type, hasCodeLanguage, isCurl, hasTranslation }) => {
   const size = 11;
   if (isCurl) return <Terminal size={size} />;
   if (hasCodeLanguage) return <Code size={size} />;
+  if (hasTranslation && (type === 'text' || !type)) return <Languages size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
     case 'file': return <FileText size={size} />;
@@ -391,7 +392,12 @@ function CompactCard({
         )}
         <div className="compact-card-head-main panel-card-head-main">
           <span className="compact-card-type-icon panel-card-type-icon" aria-hidden="true">
-            <TypeIcon type={item.type_} hasCodeLanguage={!!item.code_language} isCurl={isCurl} />
+            <TypeIcon
+              type={item.type_}
+              hasCodeLanguage={!!item.code_language}
+              isCurl={isCurl}
+              hasTranslation={Boolean(translation)}
+            />
           </span>
           <span className="compact-card-time panel-card-time">
             {timeLabel}
@@ -407,39 +413,6 @@ function CompactCard({
                 aria-label={t('item.favorite')}
               >
                 <Star size={9} fill="currentColor" />
-              </span>
-            </div>
-          )}
-          {translation && (
-            <div className="compact-card-state panel-card-state">
-              <span
-                className={`compact-card-state-chip panel-card-state-chip translation ${showTranslation ? 'active' : ''}`}
-                title={showTranslation ? t('item.showOriginal') : t('item.showTranslation')}
-                aria-label={t('item.showTranslation')}
-                data-longpress-ignore="true"
-                onPointerDown={stopActionPointerDown}
-                onMouseDown={stopActionPointerDown}
-                onDragStart={preventActionDrag}
-                onClick={(e) => {
-                  stopActionClick(e);
-                  setShowTranslation(prev => !prev);
-                }}
-                style={{
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                  fontSize: '9px',
-                  padding: '1px 5px',
-                  borderRadius: '4px',
-                  background: showTranslation ? 'var(--primary-color)' : 'rgba(59, 130, 246, 0.12)',
-                  color: showTranslation ? '#fff' : 'var(--primary-color)',
-                  border: '1px solid rgba(59, 130, 246, 0.25)',
-                  lineHeight: '1.2',
-                }}
-              >
-                <Languages size={9} />
-                <span>{showTranslation ? t('item.original') : t('item.translation')}</span>
               </span>
             </div>
           )}

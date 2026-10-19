@@ -99,6 +99,7 @@ export function parseCurl(curlText) {
   const headers = [];
   const bodyParts = [];
   let userAuth = '';
+  let cookieStr = '';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -134,6 +135,12 @@ export function parseCurl(curlText) {
       if (i + 1 < args.length) {
         userAuth = args[++i];
       }
+    } else if (arg === '-b' || arg === '--cookie') {
+      if (i + 1 < args.length) {
+        cookieStr = args[++i];
+      }
+    } else if (arg.startsWith('-b')) {
+      cookieStr = arg.slice(2);
     } else if (arg === '--url') {
       if (i + 1 < args.length) {
         url = args[++i];
@@ -228,6 +235,15 @@ export function parseCurl(curlText) {
     }
   }
 
+  // Extract Cookie if not set by -b
+  let cookie = cookieStr ? cookieStr.trim() : null;
+  if (!cookie) {
+    const cookieHeader = headers.find(h => h.name.toLowerCase() === 'cookie');
+    if (cookieHeader && cookieHeader.value) {
+      cookie = cookieHeader.value.trim();
+    }
+  }
+
   return {
     raw: curlText,
     method,
@@ -241,6 +257,7 @@ export function parseCurl(curlText) {
     formattedJsonBody,
     isJsonBody,
     bearerToken,
+    cookie,
   };
 }
 

@@ -111,9 +111,10 @@ const isFolderPath = (path) => {
   return !name.includes('.');
 };
 
-const CardTypeIcon = ({ type, hasCodeLanguage }) => {
+const CardTypeIcon = ({ type, hasCodeLanguage, hasTranslation }) => {
   const size = 11;
   if (hasCodeLanguage) return <Code size={size} />;
+  if (hasTranslation && (type === 'text' || !type)) return <Languages size={size} />;
   switch (type) {
     case 'image': return <Image size={size} />;
     case 'file': return <FileText size={size} />;
@@ -1303,7 +1304,11 @@ function CollectionBoard({
               </span>
             )}
             <span className="collection-card-type-icon panel-card-type-icon" aria-hidden="true">
-              <CardTypeIcon type={item.type_} hasCodeLanguage={Boolean(item.code_language)} />
+              <CardTypeIcon
+                type={item.type_}
+                hasCodeLanguage={Boolean(item.code_language)}
+                hasTranslation={Boolean(translation)}
+              />
             </span>
             <div className="collection-card-meta panel-card-meta">
               <span className="collection-card-time panel-card-time">
@@ -1311,38 +1316,6 @@ function CollectionBoard({
               </span>
               {sourceApp && (
                 <span className="collection-card-source panel-card-source" title={sourceApp}>{sourceApp}</span>
-              )}
-              {translation && (
-                <span
-                  className={`collection-card-state-chip panel-card-state-chip translation ${isTranslated ? 'active' : ''}`}
-                  title={isTranslated ? t('item.showOriginal') : t('item.showTranslation')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTranslatedItemIds((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(item.id)) next.delete(item.id);
-                      else next.add(item.id);
-                      return next;
-                    });
-                  }}
-                  style={{
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px',
-                    fontSize: '9px',
-                    padding: '1px 5px',
-                    borderRadius: '4px',
-                    background: isTranslated ? 'var(--primary-color)' : 'rgba(59, 130, 246, 0.12)',
-                    color: isTranslated ? '#fff' : 'var(--primary-color)',
-                    border: '1px solid rgba(59, 130, 246, 0.25)',
-                    lineHeight: '1.2',
-                    marginLeft: '4px',
-                  }}
-                >
-                  <Languages size={9} />
-                  <span>{isTranslated ? t('item.original') : t('item.translation')}</span>
-                </span>
               )}
             </div>
           </div>

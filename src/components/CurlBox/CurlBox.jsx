@@ -16,7 +16,8 @@ import {
   Terminal,
   ExternalLink,
   AlertCircle,
-  Sliders
+  Sliders,
+  Cookie
 } from 'lucide-react';
 import {
   parseCurl,
@@ -83,6 +84,12 @@ export default function CurlBox({ item, onFeedback }) {
   const handleCopyToken = () => {
     if (parsed?.bearerToken) {
       showCopyToast('copyToken', parsed.bearerToken);
+    }
+  };
+
+  const handleCopyCookie = () => {
+    if (parsed?.cookie) {
+      showCopyToast('copyCookie', parsed.cookie);
     }
   };
 
@@ -222,6 +229,18 @@ export default function CurlBox({ item, onFeedback }) {
             >
               {copiedAction === 'copyBody' ? <Check size={13} /> : <FileJson size={13} />}
               <span>{t('curl.copyBody')}</span>
+            </button>
+          )}
+
+          {parsed?.cookie && (
+            <button
+              type="button"
+              className="curl-action-btn"
+              onClick={handleCopyCookie}
+              title={t('curl.copyCookie')}
+            >
+              {copiedAction === 'copyCookie' ? <Check size={13} /> : <Cookie size={13} />}
+              <span>{t('curl.copyCookie')}</span>
             </button>
           )}
 

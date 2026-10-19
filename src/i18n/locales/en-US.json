@@ -1180,6 +1180,8 @@
     "copyBodySuccess": "Body copied",
     "copyToken": "Copy Token",
     "copyTokenSuccess": "Token copied",
+    "copyCookie": "Extract Cookie",
+    "copyCookieSuccess": "Cookie copied",
     "formatCurl": "Clean cURL",
     "formatCurlSuccess": "Clean cURL copied",
     "copyFetch": "Copy Fetch",

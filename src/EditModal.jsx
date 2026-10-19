@@ -31,6 +31,8 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
   const [noteColor, setNoteColor] = useState('default');
   const textareaRef = useRef(null);
   const noteEditorRef = useRef(null);
+  const noteFieldRef = useRef(null);
+  const modalBodyRef = useRef(null);
   const tagSuggestionsRef = useRef(null);
   const contentEditorRef = useRef(null);
   const items = useAppStore(s => s.items);
@@ -107,6 +109,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
     const timer = setTimeout(() => {
       if (initialFocus === 'note' || (item && item.type_ === 'image')) {
         noteEditorRef.current?.focus();
+        noteFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         contentEditorRef.current?.focus();
       }
@@ -309,6 +312,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
 
   const isNewMode = mode === 'new';
   const isContentEditMode = !isNewMode && initialFocus === 'content';
+  const isNoteEditMode = !isNewMode && (initialFocus === 'note' || (item && item.type_ === 'image'));
   const canEdit = isNewMode || (item && item.type_ !== 'image');
   const contentPreview = (typeof content === 'string' ? content : '').trim();
 
@@ -403,7 +407,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
   return (
     <div className="edit-modal-overlay" onClick={onCancel}>
       <div
-        className={`edit-modal ${isMiniMode ? 'is-mini' : ''}`}
+        className={`edit-modal ${isMiniMode ? 'is-mini' : ''} ${isNoteEditMode ? 'is-focus-note' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="edit-modal-header">
@@ -419,7 +423,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
           </button>
         </div>
 
-        <div className="edit-modal-body">
+        <div className="edit-modal-body" ref={modalBodyRef}>
           {/* 原文内容区域 (优先置顶展示) */}
           {canEdit ? (
             <div className="edit-modal-field edit-modal-field-content">
@@ -438,7 +442,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={7}
+                rows={isNoteEditMode ? 3 : 7}
               />
             </div>
           ) : item?.type_ === 'image' && item.image_paths ? (
@@ -455,7 +459,7 @@ function EditModal({ item, mode, initialFocus, isMiniMode, onSave, onCancel }) {
           ) : null}
 
           {/* 备注区域 (次要字段，位于内容之后) */}
-          <div className="edit-modal-field edit-modal-field-note">
+          <div className="edit-modal-field edit-modal-field-note" ref={noteFieldRef}>
             <label className="edit-modal-label">{t('editModal.note')}</label>
             <textarea
               ref={noteEditorRef}

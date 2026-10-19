@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.11",
+      "publishedAt": "2026-10-19",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-11",
+      "summary": {
+        "zh-CN": "新增 cURL Cookie 一键提取与调试器浅色模式对比度修复，优化翻译卡片视觉去噪与编辑备注视口抬升交互。",
+        "en-US": "Added one-click cURL Cookie extraction and fixed runner theme contrast, alongside translation card visual cleanup and auto-elevating edit modal inputs."
+      },
+      "highlights": {
+        "zh-CN": [
+          "cURL Cookie 一键提取与解析：支持智能解析 -b / --cookie 参数与请求头中的 Cookie，并在调试面板快捷操作栏增加一键复制 Cookie 按钮。",
+          "cURL 调试器主题对比度与设计令牌修复：彻底重构输入框与调试面板的背景与文字配色，清除深色硬编码回退，全面适配浅色与深色模式，杜绝黑底黑字问题。",
+          "翻译卡片视觉去噪与类型图标升级：移除历史流与收藏流卡片顶部突兀的独立文字药丸及空余留白，含译文条目的类型图标智能提升为多语言 Languages 图标，呈现更自然清爽。",
+          "编辑备注与标签视口自动平滑抬升：当长文本卡片打开编辑弹窗时，表单编辑区自动平滑滚动并抬升至舒适视野，彻底消除长文本下操作区域被挤出屏幕底部的困扰。"
+        ],
+        "en-US": [
+          "cURL Cookie Extraction: Parses -b / --cookie arguments and Cookie headers from cURL commands, providing a dedicated one-click Copy Cookie button in the action bar.",
+          "cURL Runner Theme Contrast Fix: Overhauled CSS variables with standardized design tokens, eliminating dark-on-dark text in light mode and ensuring crystal-clear readability.",
+          "Translation UI Polish & Semantic Icons: Removed excessive translation pill badges and redundant whitespace on cards, elevating item type icons to a Languages icon when translations are present.",
+          "Auto-Scrolling & Form Elevation in Edit Modal: Automatically scrolls and lifts the note and tag editing section into optimal view on long-content cards, preventing inputs from being pushed off-screen."
+        ]
+      }
+    },
+    {
       "version": "0.5.10",
       "publishedAt": "2026-10-18",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-10",

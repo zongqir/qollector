@@ -1180,6 +1180,8 @@
     "copyBodySuccess": "已复制请求体",
     "copyToken": "复制 Token",
     "copyTokenSuccess": "已复制 Token",
+    "copyCookie": "提取 Cookie",
+    "copyCookieSuccess": "已复制 Cookie",
     "formatCurl": "规范 cURL",
     "formatCurlSuccess": "已复制规范 cURL",
     "copyFetch": "转为 Fetch",

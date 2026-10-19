@@ -220,6 +220,16 @@
   white-space: pre-wrap;
 }
 
+/* 当焦点在备注模式时，收缩原文区高度，将备注和标签区域抬升至视野黄金区 */
+.edit-modal.is-focus-note .edit-modal-textarea-content {
+  min-height: 72px;
+  max-height: 110px;
+}
+
+.edit-modal.is-focus-note .edit-modal-textarea-note {
+  min-height: 80px;
+}
+
 /* 已有标签显示 - 紧凑 */
 .edit-modal-tags {
   display: flex;
@@ -715,7 +725,17 @@
   max-height: 180px;
 }
 
+.edit-modal.is-mini.is-focus-note .edit-modal-textarea-content {
+  min-height: 52px;
+  max-height: 76px;
+}
+
 .edit-modal.is-mini .edit-modal-textarea-note {
   min-height: 52px;
   max-height: 90px;
+}
+
+.edit-modal.is-mini.is-focus-note .edit-modal-textarea-note {
+  min-height: 60px;
+  max-height: 96px;
 }
