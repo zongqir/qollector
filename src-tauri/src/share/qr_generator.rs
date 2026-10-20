@@ -1,35 +1,13 @@
 use crate::share::ShareError;
 use base64::Engine;
 use image::{GrayImage, Luma};
-use qrcode::bits::Bits;
-use qrcode::{EcLevel, QrCode, Version};
+use qrcode::{EcLevel, QrCode};
 
-const UTF8_ECI_DESIGNATOR: u32 = 26;
-const QR_ERROR_CORRECTION_LEVEL: EcLevel = EcLevel::M;
+const QR_ERROR_CORRECTION_LEVEL: EcLevel = EcLevel::L;
 
 fn build_qr_code(content: &str) -> Result<QrCode, ShareError> {
-    let payload = content.as_bytes();
-
-    for version in 1i16..=40i16 {
-        let mut bits = Bits::new(Version::Normal(version));
-
-        if bits.push_eci_designator(UTF8_ECI_DESIGNATOR).is_err() {
-            continue;
-        }
-        if bits.push_byte_data(payload).is_err() {
-            continue;
-        }
-        if bits.push_terminator(QR_ERROR_CORRECTION_LEVEL).is_err() {
-            continue;
-        }
-
-        if let Ok(code) = QrCode::with_bits(bits, QR_ERROR_CORRECTION_LEVEL) {
-            return Ok(code);
-        }
-    }
-
-    // Fallback for unexpected encoding edge cases.
-    QrCode::new(payload).map_err(|e| ShareError::QrGeneration(e.to_string()))
+    QrCode::with_error_correction_level(content.as_bytes(), QR_ERROR_CORRECTION_LEVEL)
+        .map_err(|e| ShareError::QrGeneration(e.to_string()))
 }
 
 /// Generate a QR code as a base64-encoded PNG data URL.

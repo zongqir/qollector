@@ -55,9 +55,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   const [refreshModelsResult, setRefreshModelsResult] = useState(null);
   const [modelInputMode, setModelInputMode] = useState('select');
   const [shareConfig, setShareConfig] = useState({
-    provider: 'Litterbox',
-    s3_config: null,
-    force_upload_non_ascii_text: false,
+    relay_url: '',
+    provider: 'Relay',
   });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
@@ -172,9 +171,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     setActualMcpPort(mcpPort);
 
     const normalizedShareConfig = {
-      provider: (share.provider === 'FileIo' || share.provider === 'ZeroX0') ? 'Litterbox' : share.provider,
-      s3_config: share.s3_config || null,
-      force_upload_non_ascii_text: Boolean(share.force_upload_non_ascii_text),
+      relay_url: share.relay_url || '',
+      provider: 'Relay',
     };
     setShareConfig(normalizedShareConfig);
   };

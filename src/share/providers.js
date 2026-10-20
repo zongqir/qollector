@@ -1,44 +1,54 @@
-// Frontend-driven provider registry.
-// To add a new free provider, just add an entry here — no backend changes needed.
+/**
+ * Qollect Share Relay Client
+ * 
+ * Uploads client-side encrypted payloads to an ephemeral E2EE sharing relay.
+ */
 
+export const DEFAULT_RELAY_URL = 'https://share.zongqir.com';
+
+/**
+ * Upload an encrypted payload to the share relay.
+ * 
+ * @param {string|null} endpointUrl - Custom relay endpoint or null for default
+ * @param {Object} payload - Encrypted payload from crypto.js
+ * @returns {Promise<{ downloadUrl: string, ttlSeconds: number }>}
+ */
+export async function uploadToRelay(endpointUrl, payload) {
+  const base = (endpointUrl || DEFAULT_RELAY_URL).trim().replace(/\/+$/, '');
+  const url = `${base}/api/share`;
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ciphertext: payload.ciphertext,
+      iv: payload.iv,
+      type: payload.type || 'text',
+      filename: payload.filename || null,
+    }),
+  });
+
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    throw new Error(`Relay upload failed (${resp.status}): ${errorText.slice(0, 200)}`);
+  }
+
+  const json = await resp.json();
+  if (!json.url) {
+    throw new Error('Invalid response from relay: missing url');
+  }
+
+  return {
+    downloadUrl: `${json.url}#${payload.keyB64}`,
+    ttlSeconds: json.ttl_seconds || 600,
+  };
+}
+
+// Backward compatibility stub for existing references
 export const FREE_PROVIDERS = {
-  Litterbox: {
-    url: 'https://litterbox.catbox.moe/resources/internals/api.php',
-    fileField: 'fileToUpload',
-    extraFields: { reqtype: 'fileupload', time: '72h' },
-    ttlSeconds: 70 * 3600, // 70h (72h retention, leave margin)
-    parseResponse: (status, body) => {
-      if (status === 429) throw new Error('rate_limited');
-      const text = body.trim();
-      if (status >= 400) throw new Error(`Upload failed (${status}): ${text.slice(0, 200)}`);
-      if (text.startsWith('http')) return text;
-      throw new Error(`Unexpected: ${text.slice(0, 200)}`);
-    },
-  },
-  Tmpfiles: {
-    url: 'https://tmpfiles.org/api/v1/upload',
-    fileField: 'file',
-    extraFields: {},
-    ttlSeconds: 50 * 60, // 50 min (1h retention, leave margin)
-    parseResponse: (status, body) => {
-      if (status === 429) throw new Error('rate_limited');
-      const json = JSON.parse(body);
-      const url = json?.data?.url;
-      if (!url) throw new Error('Missing url in response');
-      return url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-    },
-  },
-  ZeroX0: {
-    url: 'https://0x0.st',
-    fileField: 'file',
-    extraFields: {},
-    ttlSeconds: 30 * 24 * 3600, // 30 days minimum
-    parseResponse: (status, body) => {
-      if (status === 429) throw new Error('rate_limited');
-      const text = body.trim();
-      if (status >= 400) throw new Error(`Upload failed (${status}): ${text.slice(0, 200)}`);
-      if (text.startsWith('http')) return text;
-      throw new Error(`Unexpected: ${text.slice(0, 200)}`);
-    },
+  Relay: {
+    ttlSeconds: 600,
   },
 };

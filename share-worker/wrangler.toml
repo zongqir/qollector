@@ -1,0 +1,10 @@
+name = "qollect-share-relay"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# 绑定 Cloudflare KV 用于临时密文暂存（10 分钟自动过期）
+# 执行 wrangler kv:namespace create SHARE_KV 后填入对应 ID
+[[kv_namespaces]]
+binding = "SHARE_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+# preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_ID"

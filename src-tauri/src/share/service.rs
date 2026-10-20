@@ -6,7 +6,7 @@ use crate::share::qr_generator::generate_qr_base64;
 use crate::share::s3_uploader::upload_to_s3;
 use crate::share::ShareError;
 
-const LOCAL_QR_TEXT_LIMIT: usize = 400;
+const LOCAL_QR_TEXT_LIMIT: usize = 450;
 
 /// Resolve a .lnk shortcut to its target path on Windows.
 /// Returns None if not a .lnk or resolution fails.
@@ -41,14 +41,8 @@ fn resolve_lnk_target(_path: &std::path::Path) -> Option<std::path::PathBuf> {
     None
 }
 
-fn should_use_local_qr_for_text(text: &str, force_upload_non_ascii_text: bool) -> bool {
-    if text.is_empty() || text.len() > LOCAL_QR_TEXT_LIMIT {
-        return false;
-    }
-    if force_upload_non_ascii_text && !text.is_ascii() {
-        return false;
-    }
-    true
+fn should_use_local_qr_for_text(text: &str) -> bool {
+    !text.is_empty() && text.len() <= LOCAL_QR_TEXT_LIMIT
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -86,7 +80,6 @@ pub fn prepare_share_data(
     content: Option<&str>,
     image_bytes: Option<Vec<u8>>,
     image_ext: Option<&str>,
-    force_upload_non_ascii_text: bool,
 ) -> Result<ShareResult, ShareError> {
     match content_type {
         "text" | "link" | "code" => {
@@ -94,7 +87,7 @@ pub fn prepare_share_data(
             if text.is_empty() {
                 return Err(ShareError::InvalidConfig("No content to share".into()));
             }
-            if should_use_local_qr_for_text(text, force_upload_non_ascii_text) {
+            if should_use_local_qr_for_text(text) {
                 let qr = generate_qr_base64(text)?;
                 return Ok(ShareResult {
                     method: ShareMethod::LocalQr,
@@ -220,12 +213,11 @@ pub async fn share_via_s3(
     image_bytes: Option<Vec<u8>>,
     image_ext: Option<&str>,
     s3_config: &crate::share::config::S3Config,
-    force_upload_non_ascii_text: bool,
 ) -> Result<ShareResult, ShareError> {
     // For short text, still do local QR
     if matches!(content_type, "text" | "link" | "code") {
         let text = content.unwrap_or("");
-        if should_use_local_qr_for_text(text, force_upload_non_ascii_text) {
+        if should_use_local_qr_for_text(text) {
             let qr = generate_qr_base64(text)?;
             return Ok(ShareResult {
                 method: ShareMethod::LocalQr,
@@ -299,17 +291,15 @@ mod tests {
     use super::should_use_local_qr_for_text;
 
     #[test]
-    fn local_qr_kept_for_ascii_when_compat_mode_enabled() {
-        assert!(should_use_local_qr_for_text("hello world", true));
+    fn local_qr_allowed_for_text_within_limit() {
+        assert!(should_use_local_qr_for_text("hello world"));
+        assert!(should_use_local_qr_for_text("短中文文本"));
     }
 
     #[test]
-    fn local_qr_disabled_for_non_ascii_when_compat_mode_enabled() {
-        assert!(!should_use_local_qr_for_text("中文文本", true));
-    }
-
-    #[test]
-    fn local_qr_still_enabled_for_non_ascii_when_compat_mode_disabled() {
-        assert!(should_use_local_qr_for_text("中文文本", false));
+    fn local_qr_rejected_when_empty_or_exceeding_limit() {
+        assert!(!should_use_local_qr_for_text(""));
+        let long_text = "a".repeat(500);
+        assert!(!should_use_local_qr_for_text(&long_text));
     }
 }

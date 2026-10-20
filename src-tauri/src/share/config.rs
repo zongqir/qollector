@@ -2,34 +2,43 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShareConfig {
+    #[serde(default)]
+    pub relay_url: Option<String>,
+    #[serde(default)]
     pub provider: ShareProvider,
+    #[serde(default)]
     pub s3_config: Option<S3Config>,
-    #[serde(default = "default_force_upload_non_ascii_text")]
+    #[serde(default)]
     pub force_upload_non_ascii_text: bool,
 }
 
 impl Default for ShareConfig {
     fn default() -> Self {
         Self {
-            provider: ShareProvider::Litterbox,
+            relay_url: None,
+            provider: ShareProvider::Relay,
             s3_config: None,
-            force_upload_non_ascii_text: default_force_upload_non_ascii_text(),
+            force_upload_non_ascii_text: false,
         }
     }
 }
 
-fn default_force_upload_non_ascii_text() -> bool {
-    false
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ShareProvider {
+    #[serde(alias = "relay")]
+    Relay,
     Litterbox,
     Tmpfiles,
     #[serde(alias = "FileIo")]
     #[serde(alias = "Catbox")]
     ZeroX0,
     S3,
+}
+
+impl Default for ShareProvider {
+    fn default() -> Self {
+        Self::Relay
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

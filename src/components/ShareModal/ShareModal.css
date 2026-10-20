@@ -197,8 +197,13 @@
   width: 100%;
 }
 
-.share-warning-icon {
+.share-warning-icon,
+.share-shield-icon {
   flex-shrink: 0;
+}
+
+.share-shield-icon {
+  color: var(--state-success-fg);
 }
 
 .share-confirm-detail {

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ShieldCheck, ExternalLink, Globe } from 'lucide-react';
+import { DEFAULT_RELAY_URL } from '../../share/providers';
 
 function IntegrationsShareSection({
   t,
@@ -12,6 +14,44 @@ function IntegrationsShareSection({
   collapsed,
   onToggle,
 }) {
+  const [copiedDoc, setCopiedDoc] = useState(false);
+
+  const handleRelayUrlChange = (value) => {
+    const updated = {
+      ...shareConfig,
+      relay_url: value.trim(),
+    };
+    setShareConfig(updated);
+    invoke('update_share_config', { config: updated }).catch(console.error);
+  };
+
+  const handleTestRelay = async () => {
+    setShareTesting(true);
+    setShareTestResult(null);
+    const targetUrl = (shareConfig.relay_url || DEFAULT_RELAY_URL).replace(/\/+$/, '');
+    try {
+      const resp = await fetch(`${targetUrl}/healthz`, { method: 'GET', mode: 'cors' });
+      if (resp.ok) {
+        setShareTestResult({
+          success: true,
+          message: t('settings.share.testSuccess'),
+        });
+      } else {
+        setShareTestResult({
+          success: false,
+          message: `${t('settings.share.testFailed')}: HTTP ${resp.status}`,
+        });
+      }
+    } catch (err) {
+      setShareTestResult({
+        success: false,
+        message: `${t('settings.share.testFailed')}: ${err.message || 'Network error'}`,
+      });
+    } finally {
+      setShareTesting(false);
+    }
+  };
+
   return (
     <div className="settings-content">
       <div className="setting-group-title section-title collapsible-title" onClick={onToggle}>
@@ -19,154 +59,57 @@ function IntegrationsShareSection({
         {t('settings.tabs.share')}
       </div>
       {!collapsed && (
-      <>
-      <label className="setting-label share-field-label">{t('settings.share.provider')}</label>
-      <select
-        className="setting-select"
-        value={shareConfig.provider}
-        onChange={(e) => {
-          const key = e.target.value;
-          const updated = { ...shareConfig, provider: key };
-          if (key === 'S3' && !shareConfig.s3_config) {
-            updated.s3_config = {
-              endpoint: '',
-              region: '',
-              bucket: '',
-              access_key: '',
-              secret_key: '',
-              custom_domain: null,
-            };
-          }
-          setShareConfig(updated);
-          invoke('update_share_config', { config: updated }).catch(console.error);
-        }}
-      >
-        {[
-          { key: 'Litterbox', label: 'litterbox' },
-          { key: 'Tmpfiles', label: 'tmpfiles' },
-          { key: 'ZeroX0', label: 'fileio' },
-          { key: 'S3', label: 's3' },
-        ].map(({ key, label }) => (
-          <option key={key} value={key}>{t(`settings.share.${label}`)}</option>
-        ))}
-      </select>
-      <small className="setting-hint-block">
-        {t(`settings.share.${
-          { Litterbox: 'litterboxDesc', Tmpfiles: 'tmpfilesDesc', ZeroX0: 'fileioDesc', S3: 's3Desc' }[shareConfig.provider]
-        }`)}
-      </small>
-      <label className="setting-label share-option-label">
-        <input
-          type="checkbox"
-          checked={Boolean(shareConfig.force_upload_non_ascii_text)}
-          onChange={(e) => {
-            const updated = {
-              ...shareConfig,
-              force_upload_non_ascii_text: e.target.checked,
-            };
-            setShareConfig(updated);
-            invoke('update_share_config', { config: updated }).catch(console.error);
-          }}
-        />
-        <span className="share-option-text">{t('settings.share.forceUploadNonAscii')}</span>
-      </label>
-      <small className="setting-hint-block">
-        {t('settings.share.forceUploadNonAsciiHint')}
-      </small>
-
-      {shareConfig.provider === 'S3' && (
-        <div className="setting-group" style={{ marginTop: '1rem' }}>
-          <div className="setting-password-group">
-            <input
-              type="text"
-              value={shareConfig.s3_config?.endpoint || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, endpoint: e.target.value },
-              })}
-              placeholder={t('settings.share.endpoint')}
-              className="setting-input"
-            />
-            <input
-              type="text"
-              value={shareConfig.s3_config?.region || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, region: e.target.value },
-              })}
-              placeholder={t('settings.share.region')}
-              className="setting-input"
-            />
-            <input
-              type="text"
-              value={shareConfig.s3_config?.bucket || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, bucket: e.target.value },
-              })}
-              placeholder={t('settings.share.bucket')}
-              className="setting-input"
-            />
-            <input
-              type="text"
-              value={shareConfig.s3_config?.access_key || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, access_key: e.target.value },
-              })}
-              placeholder={t('settings.share.accessKey')}
-              className="setting-input"
-            />
-            <input
-              type="password"
-              value={shareConfig.s3_config?.secret_key || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, secret_key: e.target.value },
-              })}
-              placeholder={t('settings.share.secretKey')}
-              className="setting-input"
-            />
-            <input
-              type="text"
-              value={shareConfig.s3_config?.custom_domain || ''}
-              onChange={(e) => setShareConfig({
-                ...shareConfig,
-                s3_config: { ...shareConfig.s3_config, custom_domain: e.target.value || null },
-              })}
-              placeholder={t('settings.share.customDomain')}
-              className="setting-input"
-            />
+        <>
+          <div className="share-info-card" style={{
+            background: 'var(--panel-item-bg, rgba(255, 255, 255, 0.03))',
+            border: '1px solid var(--border-light)',
+            borderRadius: '10px',
+            padding: '12px 14px',
+            marginBottom: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 500, fontSize: '13px' }}>
+              <ShieldCheck size={16} style={{ color: 'var(--state-success-fg)' }} />
+              <span>{t('settings.share.e2eeTitle')}</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {t('settings.share.e2eeDesc')}
+            </p>
           </div>
-          <div className="setting-btn-row">
+
+          <label className="setting-label share-field-label">
+            {t('settings.share.relayUrlLabel')}
+          </label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="text"
+              value={shareConfig.relay_url || ''}
+              onChange={(e) => handleRelayUrlChange(e.target.value)}
+              placeholder={DEFAULT_RELAY_URL}
+              className="setting-input"
+              style={{ flex: 1 }}
+            />
             <button
               className="test-btn"
-              onClick={async () => {
-                setShareTesting(true);
-                setShareTestResult(null);
-                try {
-                  await invoke('test_share_s3_connection', { config: shareConfig.s3_config });
-                  setShareTestResult({ success: true, message: t('settings.share.testSuccess') });
-                } catch (err) {
-                  setShareTestResult({ success: false, message: `${t('settings.share.testFailed')}: ${err}` });
-                } finally {
-                  setShareTesting(false);
-                }
-              }}
+              onClick={handleTestRelay}
               disabled={shareTesting}
+              style={{ whiteSpace: 'nowrap' }}
             >
               {shareTesting ? t('settings.testing') : t('settings.share.testConnection')}
             </button>
           </div>
+          <small className="setting-hint-block">
+            {t('settings.share.relayUrlHint')}
+          </small>
+
           {shareTestResult && (
-            <small className={`setting-status ${shareTestResult.success ? 'success' : 'error'}`}>
+            <small className={`setting-status ${shareTestResult.success ? 'success' : 'error'}`} style={{ display: 'block', marginTop: '6px' }}>
               {shareTestResult.message}
             </small>
           )}
-          <small className="setting-hint-block">{t('settings.share.networkHint')}</small>
-        </div>
-      )}
-      </>
+        </>
       )}
     </div>
   );

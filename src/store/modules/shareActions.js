@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
-import { FREE_PROVIDERS } from '../../share/providers';
+import { uploadToRelay } from '../../share/providers';
+import { encryptPayload } from '../../share/crypto';
 import { getShareCache, saveShareCache } from './shareCache';
 
 export const createShareActions = (set, get) => ({
@@ -11,51 +12,35 @@ export const createShareActions = (set, get) => ({
       shareError: null,
       sharePendingConfirm: false,
       sharePendingData: null,
-      sharePendingProvider: null,
       shareConfig: null,
     });
     try {
       const config = await invoke('get_share_config');
 
-      if (config.provider === 'S3') {
-        // S3: user's own storage, upload directly
-        const cached = getShareCache(item, 'S3');
-        if (cached) {
-          const qrCode = await invoke('generate_qr', { text: cached.url });
-          set({ shareResult: { method: 'CloudUpload', qr_code: qrCode, url: cached.url }, shareLoading: false });
-          return;
-        }
-        const result = await invoke('share_via_s3', { itemId: item.id });
-        if (result.url) await saveShareCache(item, 'S3', result.url, 365 * 24 * 3600);
-        set({ shareResult: result, shareLoading: false });
-        return;
-      }
-
-      // Step 1: get item data (may return LocalQr directly)
-      const itemData = await invoke('get_item_share_data', { itemId: item.id });
-      if (itemData.method === 'LocalQr') {
-        set({ shareResult: itemData, shareLoading: false });
-        return;
-      }
-
-      // NeedUpload: pause and show confirmation
-      const provider = FREE_PROVIDERS[config.provider];
-      if (!provider) throw new Error(`Unknown provider: ${config.provider}`);
-
       // Check cache first
-      const cached = getShareCache(item, config.provider);
+      const cached = getShareCache(item, 'Relay');
       if (cached) {
         const qrCode = await invoke('generate_qr', { text: cached.url });
-        set({ shareResult: { method: 'CloudUpload', qr_code: qrCode, url: cached.url }, shareLoading: false });
+        set({
+          shareResult: { method: 'CloudUpload', qr_code: qrCode, url: cached.url },
+          shareLoading: false,
+          shareConfig: config,
+        });
         return;
       }
 
-      // Show confirmation step
+      // Step 1: get item share data (returns LocalQr directly for short text)
+      const itemData = await invoke('get_item_share_data', { itemId: item.id });
+      if (itemData.method === 'LocalQr') {
+        set({ shareResult: itemData, shareLoading: false, shareConfig: config });
+        return;
+      }
+
+      // NeedUpload: show confirmation for E2EE cloud sharing
       set({
         shareLoading: false,
         sharePendingConfirm: true,
         sharePendingData: itemData,
-        sharePendingProvider: config.provider,
         shareConfig: config,
       });
     } catch (error) {
@@ -63,37 +48,36 @@ export const createShareActions = (set, get) => ({
     }
   },
 
-  confirmShareUpload: async (providerName) => {
-    const { shareModalItem: item, sharePendingData: itemData } = get();
+  confirmShareUpload: async () => {
+    const { shareModalItem: item, sharePendingData: itemData, shareConfig } = get();
     if (!item || !itemData) return;
 
-    const provider = FREE_PROVIDERS[providerName];
-    if (!provider) {
-      set({ shareError: `Unknown provider: ${providerName}`, sharePendingConfirm: false });
-      return;
-    }
-
-    set({ sharePendingConfirm: false, shareLoading: true, shareError: null, sharePendingProvider: providerName });
+    set({ sharePendingConfirm: false, shareLoading: true, shareError: null });
 
     try {
-      const resp = await invoke('upload_to_free_host', {
-        url: provider.url,
-        fileField: provider.fileField,
-        fileDataBase64: itemData.data_base64,
+      // 1. Client-side AES-256-GCM encryption
+      const encrypted = await encryptPayload({
+        text: item.type === 'image' || item.type === 'file' ? null : item.content,
+        dataBase64: itemData.data_base64,
+        type: item.type,
         filename: itemData.filename,
-        extraFields: provider.extraFields,
       });
 
-      const downloadUrl = provider.parseResponse(resp.status_code, resp.body);
+      // 2. Upload to E2EE Relay
+      const { downloadUrl, ttlSeconds } = await uploadToRelay(
+        shareConfig?.relay_url,
+        encrypted
+      );
+
+      // 3. Generate QR code for the complete URL with #KEY
       const qrCode = await invoke('generate_qr', { text: downloadUrl });
-      await saveShareCache(item, providerName, downloadUrl, provider.ttlSeconds);
+      await saveShareCache(item, 'Relay', downloadUrl, ttlSeconds);
 
       set({
         shareResult: { method: 'CloudUpload', qr_code: qrCode, url: downloadUrl },
         shareLoading: false,
       });
     } catch (error) {
-      // Upload failed: go back to confirmation so user can switch provider
       set({
         shareError: String(error),
         shareLoading: false,
@@ -102,9 +86,7 @@ export const createShareActions = (set, get) => ({
     }
   },
 
-  switchShareProvider: (providerName) => {
-    set({ sharePendingProvider: providerName, shareError: null });
-  },
+  switchShareProvider: () => {},
 
   closeShareModal: () => {
     set({
@@ -123,37 +105,17 @@ export const createShareActions = (set, get) => ({
     const { shareModalItem: item, sharePendingData } = get();
     if (!item) return;
 
-    // If we have pending data and a provider, go back to confirmation
     if (sharePendingData) {
       set({ shareResult: null, shareError: null, sharePendingConfirm: true, shareLoading: false });
       return;
     }
 
-    // Otherwise full retry
     set({ shareResult: null, shareLoading: true, shareError: null });
     try {
       const config = await invoke('get_share_config');
-
-      if (config.provider === 'S3') {
-        const result = await invoke('share_via_s3', { itemId: item.id });
-        if (result.url) await saveShareCache(item, 'S3', result.url, 365 * 24 * 3600);
-        set({ shareResult: result, shareLoading: false });
-        return;
-      }
-
       const itemData = await invoke('get_item_share_data', { itemId: item.id });
       if (itemData.method === 'LocalQr') {
-        set({ shareResult: itemData, shareLoading: false });
-        return;
-      }
-
-      const provider = FREE_PROVIDERS[config.provider];
-      if (!provider) throw new Error(`Unknown provider: ${config.provider}`);
-
-      const cached = getShareCache(item, config.provider);
-      if (cached) {
-        const qrCode = await invoke('generate_qr', { text: cached.url });
-        set({ shareResult: { method: 'CloudUpload', qr_code: qrCode, url: cached.url }, shareLoading: false });
+        set({ shareResult: itemData, shareLoading: false, shareConfig: config });
         return;
       }
 
@@ -161,7 +123,6 @@ export const createShareActions = (set, get) => ({
         shareLoading: false,
         sharePendingConfirm: true,
         sharePendingData: itemData,
-        sharePendingProvider: config.provider,
         shareConfig: config,
       });
     } catch (error) {
