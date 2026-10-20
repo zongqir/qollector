@@ -79,9 +79,31 @@ function IntegrationsShareSection({
             </p>
           </div>
 
-          <label className="setting-label share-field-label">
-            {t('settings.share.relayUrlLabel')}
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <label className="setting-label share-field-label" style={{ margin: 0 }}>
+              {t('settings.share.relayUrlLabel')}
+            </label>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                invoke('open_url', { url: 'https://files.zongqir.com/files/tool/qollector/share-worker/README.md' }).catch(console.error);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '12px',
+                color: 'var(--accent-color)',
+                textDecoration: 'none',
+                cursor: 'pointer',
+              }}
+              title={t('settings.share.viewDocTooltip')}
+            >
+              <ExternalLink size={12} />
+              <span>{t('settings.share.viewDoc')}</span>
+            </a>
+          </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="text"

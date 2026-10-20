@@ -532,7 +532,9 @@
       "e2eeTitle": "端到端加密极速分享架构",
       "e2eeDesc": "短文本（≤150汉字）直接生成纯本地离线二维码，0 流量秒读；长文本与多媒体采用 AES-256 硬件级本地加密后经由中继跨网分享，10 分钟阅后即焚，服务器无权解密。",
       "relayUrlLabel": "自定义分享中继端点 (可选)",
-      "relayUrlHint": "留空使用内置默认中继。支持配置自建 Cloudflare Worker 或 Collector 端点（如 https://share.yourdomain.com）。",
+      "relayUrlHint": "留空使用内置默认中继（https://qollect-share.zongqir.com）。支持配置自建 Cloudflare Worker 或 Collector 端点。",
+      "viewDoc": "自建部署文档",
+      "viewDocTooltip": "查看如何 3 分钟基于 Cloudflare Worker 免费自建专属中继",
       "testConnection": "测试连接",
       "testSuccess": "中继服务连接正常",
       "testFailed": "连接失败"

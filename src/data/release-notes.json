@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.13",
+      "publishedAt": "2026-10-20",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-13",
+      "summary": {
+        "zh-CN": "重构跨设备分享架构，根除扫码乱码与心智负担，上线端到端加密（E2EE）10分钟阅后即焚中继服务。",
+        "en-US": "Overhauled cross-device sharing with end-to-end encryption (E2EE) and ephemeral relays, eliminating QR scanning corruption and configuration friction."
+      },
+      "highlights": {
+        "zh-CN": [
+          "二维码底层重构与乱码根治：彻底移除干扰现代扫码器的 ECI 声明，采用标准原生 UTF-8 字节流；容错率降为 Level L，大幅稀疏化点阵，消除屏幕摩尔纹干扰，微信与主流手机相机原生秒扫直读文本。",
+          "分级分享策略与零心智负担：≤150 汉字短文本强制走纯离线原生二维码（0 流量、秒出、数据不出设备）；长文本与多媒体自动走端到端加密中继；彻底废除复杂的“Unicode 文本兼容模式”勾选框。",
+          "端到端加密（E2EE）跨网分享：淘汰不稳定的第三方匿名图床和 S3，上线基于 Cloudflare Workers 的开源临时中继架构；数据在本地通过 AES-256-GCM 硬件级加密，解密 Key 仅存在于二维码 URL Hash 中，服务器无权解密，10 分钟后物理自动销毁。",
+          "极简设置与自建指引：设置页全面精简，默认内置极速中继服务（qollect-share.zongqir.com），支持自定义端点与一键连通性测试，并内置提供一键直达的自建部署开源文档。"
+        ],
+        "en-US": [
+          "QR Code Overhaul & Corruption Fix: Removed legacy ECI headers in favor of clean native UTF-8 byte streams; switched to EcLevel::L to reduce module density and prevent screen moiré interference, allowing instant recognition on WeChat and system cameras.",
+          "Size-Based Adaptive Sharing: Short text (≤150 Chinese chars) renders as pure offline QR codes with zero network traffic; long text and media automatically trigger E2EE relay. Dropped the redundant Unicode compatibility checkbox to remove cognitive friction.",
+          "End-to-End Encrypted (E2EE) Ephemeral Relay: Retired unstable public file hosts and heavy S3 configurations in favor of a lightweight Cloudflare Worker relay. Content is encrypted locally via AES-256-GCM with keys isolated in the URL hash, physically purged in 10 minutes.",
+          "Streamlined Settings & Self-Hosting Guide: Cleaned up the settings interface with built-in default relay (qollect-share.zongqir.com), custom endpoint support, connectivity testing, and a direct link to the 3-minute self-hosting deployment guide."
+        ]
+      }
+    },
+    {
       "version": "0.5.12",
       "publishedAt": "2026-10-19",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-12",

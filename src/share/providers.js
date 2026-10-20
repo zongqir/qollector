@@ -4,7 +4,7 @@
  * Uploads client-side encrypted payloads to an ephemeral E2EE sharing relay.
  */
 
-export const DEFAULT_RELAY_URL = 'https://share.zongqir.com';
+export const DEFAULT_RELAY_URL = 'https://qollect-share.zongqir.com';
 
 /**
  * Upload an encrypted payload to the share relay.

@@ -61,10 +61,10 @@ wrangler deploy
 ### 4. 绑定自定义域名（强力推荐）
 
 > [!IMPORTANT]
-> 由于 Cloudflare 的默认域名 `*.workers.dev` 在中国大陆部分地区存在 DNS 污染或阻断，**强烈建议在 Cloudflare 控制台给该 Worker 绑定你的自定义域名**（例如 `share.yourdomain.com`）：
+> 由于 Cloudflare 的默认域名 `*.workers.dev` 在中国大陆部分地区存在 DNS 污染或阻断，**强烈建议在 Cloudflare 控制台给该 Worker 绑定你的自定义域名**（例如 `qollect-share.zongqir.com`）：
 > 1. 进入 Cloudflare Dashboard -> **Workers & Pages** -> 点击 `qollect-share-relay`；
 > 2. 进入 **Settings** -> **Domains & Routes** -> **Add Custom Domain**；
-> 3. 填入你的子域名（如 `share.example.com`）并确认解析；
+> 3. 填入你的子域名（如 `qollect-share.zongqir.com`）并确认解析；
 > 4. 国内移动 5G 即可全球 Anycast CDN 秒级直连。
 
 ---
@@ -73,5 +73,5 @@ wrangler deploy
 
 1. 打开 Qollect，进入 **设置** -> **集成与服务**；
 2. 找到 **自定义分享中继端点**；
-3. 填入你的部署地址（例如 `https://share.yourdomain.com`）；
+3. 填入你的部署地址（例如 `https://qollect-share.zongqir.com`）；
 4. 保存后，客户端所有长文本与图片跨网分享将自动通过你的专属 E2EE 中继极速流转！

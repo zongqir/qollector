@@ -558,7 +558,9 @@
       "e2eeTitle": "End-to-End Encrypted Fast Share",
       "e2eeDesc": "Short text (≤150 chars) renders directly as an offline QR code with zero network traffic. Long text and media are encrypted with local AES-256-GCM before passing through the relay, automatically purged after 10 minutes.",
       "relayUrlLabel": "Custom Share Relay Endpoint (Optional)",
-      "relayUrlHint": "Leave empty to use built-in default relay. Supports custom Cloudflare Worker or Collector endpoints (e.g. https://share.yourdomain.com).",
+      "relayUrlHint": "Leave empty to use built-in default relay (https://qollect-share.zongqir.com). Supports custom Cloudflare Worker or Collector endpoints.",
+      "viewDoc": "Deployment Guide",
+      "viewDocTooltip": "3-minute guide to deploy your own Cloudflare Worker relay",
       "testConnection": "Test Connection",
       "testSuccess": "Relay endpoint reachable",
       "testFailed": "Connection failed"
