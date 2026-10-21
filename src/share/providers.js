@@ -21,6 +21,7 @@ export async function uploadToRelay(endpointUrl, payload) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Qollect-Client': 'qollect-desktop',
     },
     body: JSON.stringify({
       ciphertext: payload.ciphertext,

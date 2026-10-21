@@ -10,12 +10,12 @@
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Qollect-Client',
 };
 
 // 10 minutes retention in seconds
 const DEFAULT_TTL_SECONDS = 600;
-const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB limit
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2MB limit
 
 export default {
   async fetch(request, env) {
@@ -55,15 +55,40 @@ export default {
 
 async function handleShareUpload(request, env) {
   try {
+    const clientHeader = request.headers.get('X-Qollect-Client');
+    if (clientHeader !== 'qollect-desktop') {
+      return new Response(JSON.stringify({ error: 'Forbidden: unauthorized client request' }), {
+        status: 403,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
     const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
     if (contentLength > MAX_PAYLOAD_BYTES) {
-      return new Response(JSON.stringify({ error: 'Payload exceeds 10MB limit' }), {
+      return new Response(JSON.stringify({ error: 'Payload exceeds 2MB limit' }), {
         status: 413,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
     }
 
-    const body = await request.json();
+    const bodyText = await request.text();
+    if (bodyText.length > MAX_PAYLOAD_BYTES) {
+      return new Response(JSON.stringify({ error: 'Payload exceeds 2MB limit' }), {
+        status: 413,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
+    let body;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (_) {
+      return new Response(JSON.stringify({ error: 'Malformed JSON payload' }), {
+        status: 400,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (!body || !body.ciphertext || !body.iv) {
       return new Response(JSON.stringify({ error: 'Invalid payload: ciphertext and iv are required' }), {
         status: 400,
