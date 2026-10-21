@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.14",
+      "publishedAt": "2026-10-21",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-14",
+      "summary": {
+        "zh-CN": "加强临时分享安全防御，对接专属客户端鉴权与防刷机制，修复 403 客户端未授权拦截问题。",
+        "en-US": "Enhanced ephemeral share security with dedicated client authentication and rate-limiting integration, resolving 403 unauthorized client errors."
+      },
+      "highlights": {
+        "zh-CN": [
+          "客户端专属安全指纹：临时分享上传请求携带专属客户端认证标识，与边缘 WAF 和 Worker 联动，阻断未授权的恶意爬虫和自动化探测脚本。",
+          "分享中继配额防护与体积熔断：加密中继负载上限收敛至 2MB，结合 Cloudflare 边缘 Rate Limiting（10 秒 5 次），彻底消除共享中继被异常高频并发刷穿配额的隐患。",
+          "修复 403 未授权拦截：修复桌面端在发起中继分享时因未携带合法客户端凭据而被云端拦截（Relay upload failed: 403）的问题。",
+          "自建部署指引云端化：设置中的自建部署文档链接全面迁移至 Cloudflare 全球边缘托管页（https://qollect-share.zongqir.com/docs），去除私有服务器依赖与地址暴露。"
+        ],
+        "en-US": [
+          "Dedicated Client Security Fingerprint: Ephemeral share upload requests now carry dedicated client authentication headers to coordinate with Cloudflare edge WAF and Worker defenses, blocking unauthorized scraping bots and probe scripts.",
+          "Relay Quota Defense & Payload Limit: Refined the encrypted relay payload ceiling to 2MB, combined with Cloudflare edge rate limiting (5 requests per 10s) to completely safeguard against quota exhaustion.",
+          "Fix 403 Unauthorized Relay Errors: Resolved the 403 Forbidden failure when uploading encrypted payloads to the share relay by establishing authenticated desktop client transmission.",
+          "Cloudflare-Hosted Deployment Docs: Migrated the self-hosting setup guide to the Cloudflare Anycast edge endpoint (https://qollect-share.zongqir.com/docs), removing reliance on private file hosts."
+        ]
+      }
+    },
+    {
       "version": "0.5.13",
       "publishedAt": "2026-10-20",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-13",

@@ -32,7 +32,7 @@ export default {
     }
 
     // Web UI / Raw API: View or inspect shared item
-    if (request.method === 'GET') {
+    if (request.method === 'GET' || request.method === 'HEAD') {
       const match = path.match(/^\/s\/([a-zA-Z0-9_-]+)$/);
       if (match) {
         const id = match[1];
@@ -41,9 +41,17 @@ export default {
       }
     }
 
+    // Documentation / Self-hosting guide
+    if ((request.method === 'GET' || request.method === 'HEAD') && (path === '/docs' || path === '/docs/' || path === '/guide')) {
+      return new Response(request.method === 'HEAD' ? null : renderDocsHtml(), {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
     // Health check
-    if (path === '/healthz' || path === '/') {
-      return new Response(JSON.stringify({ status: 'ok', service: 'qollect-share-relay' }), {
+    if ((request.method === 'GET' || request.method === 'HEAD') && (path === '/healthz' || path === '/')) {
+      return new Response(request.method === 'HEAD' ? null : JSON.stringify({ status: 'ok', service: 'qollect-share-relay', docs: `${url.origin}/docs` }), {
         status: 200,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
@@ -562,3 +570,238 @@ function renderDecryptionHtml(id, data) {
 </body>
 </html>`;
 }
+
+function renderDocsHtml() {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Qollect 端到端加密分享中继 · 自建部署指引</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --muted: #8b949e;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --code-bg: #0a0d13;
+      --accent: #a78bfa;
+      --tag-bg: rgba(56, 189, 248, 0.12);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 2rem 1.25rem 4rem;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.25rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #0d1117;
+    }
+    .github-link {
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s ease;
+    }
+    .github-link:hover { color: var(--text); }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+    }
+    p.lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--tag-bg);
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 0.5rem;
+    }
+    ul, ol {
+      padding-left: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+    li strong {
+      color: var(--text);
+    }
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.88rem;
+      overflow-x: auto;
+      position: relative;
+      color: #e2e8f0;
+      line-height: 1.5;
+    }
+    .callout {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 3px solid var(--primary);
+      padding: 0.85rem 1rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+    .footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+      margin-top: 1rem;
+    }
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="/" class="brand">
+        <div class="brand-icon">Q</div>
+        <span>Qollect Share</span>
+      </a>
+      <a href="https://github.com/zongqir/qollector" target="_blank" rel="noopener" class="github-link">
+        GitHub 源码 ↗
+      </a>
+    </header>
+
+    <div>
+      <span class="badge">E2EE Ephemeral Relay</span>
+      <h1>端到端加密分享中继自建指南</h1>
+      <p class="lead">3 分钟利用免费的 Cloudflare Workers + KV 搭建属于你的 10 分钟阅后即焚剪贴板中继端点。</p>
+    </div>
+
+    <div class="card">
+      <h2>🛡️ 核心隐私与安全机制</h2>
+      <ul>
+        <li>
+          <strong>零知识加密（Zero-Knowledge）</strong>：发送端（Qollect 桌面端）在本地通过 Web Crypto 原生 AES-256-GCM 算法加密；解密密钥仅保存在分享链接 URL 的 <code>#Hash</code> 锚点中，根据 HTTP 规范该密钥永远不会发送到云端。
+        </li>
+        <li>
+          <strong>物理层 10 分钟自动销毁</strong>：写入 Cloudflare KV 时显式绑定 <code>expirationTtl: 600</code>，到期由全球 Anycast 边缘存储物理清退，服务端零留存。
+        </li>
+        <li>
+          <strong>零外部依赖与现代化 UI</strong>：纯原生单文件实现，内置全套自适应手机微信扫码与现代系统相机的解密展示页与复制保障。
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>🚀 3 分钟一键部署指南</h2>
+      
+      <h3>1. 安装 Wrangler CLI 并登录</h3>
+      <div class="code-block">npm install -g wrangler<br>wrangler login</div>
+
+      <h3>2. 创建 Cloudflare KV 存储空间</h3>
+      <div class="code-block">cd share-worker<br>wrangler kv namespace create SHARE_KV</div>
+      <p style="font-size:0.9rem; color:var(--muted);">将命令输出的 <code>id</code> 填入 <code>share-worker/wrangler.toml</code> 的 <code>kv_namespaces[0].id</code> 中。</p>
+
+      <h3>3. 发布部署上线</h3>
+      <div class="code-block">wrangler deploy</div>
+      <p style="font-size:0.9rem; color:var(--muted);">部署完成后终端将输出访问域名：<code>https://qollect-share-relay.&lt;your-subdomain&gt;.workers.dev</code>。</p>
+
+      <h3>4. 绑定自定义域名（强烈推荐）</h3>
+      <div class="callout">
+        <strong>💡 提示</strong>：由于 <code>*.workers.dev</code> 域名在国内部分网络环境可能存在访问波动，建议在 Cloudflare 控制台给 Worker 绑定自定义域名（如 <code>qollect-share.yourdomain.com</code>），享受全球 Anycast CDN 秒级直连。
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ 在 Qollect 客户端中接入</h2>
+      <ol>
+        <li>打开 Qollect 客户端，进入 <strong>设置</strong> → <strong>集成与服务</strong>；</li>
+        <li>定位至 <strong>自定义分享中继端点</strong> 输入框；</li>
+        <li>填入你的专属中继域名（如 <code>https://qollect-share.yourdomain.com</code>）；</li>
+        <li>点击保存后，客户端所有长文本与图片跨设备扫码分享将自动使用你的自建私有服务！</li>
+      </ol>
+    </div>
+
+    <div class="footer">
+      Powered by Cloudflare Workers · <a href="https://github.com/zongqir/qollector" target="_blank" rel="noopener">Qollect 开源项目</a>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+

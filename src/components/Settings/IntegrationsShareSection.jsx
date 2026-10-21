@@ -87,7 +87,7 @@ function IntegrationsShareSection({
               href="#"
               onClick={(e) => {
                 e.preventDefault();
-                invoke('open_url', { url: 'https://files.zongqir.com/files/tool/qollector/share-worker/README.md' }).catch(console.error);
+                invoke('open_url', { url: 'https://qollect-share.zongqir.com/docs' }).catch(console.error);
               }}
               style={{
                 display: 'inline-flex',
