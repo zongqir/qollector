@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.15",
+      "publishedAt": "2026-10-23",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-15",
+      "summary": {
+        "zh-CN": "优化去重与缩进保护，下线自然语言 AI 搜索回归极速本地检索，并收敛 AI 标题信息密度准入门槛。",
+        "en-US": "Refined hash deduplication with indentation preservation, retired natural language AI search in favor of instant local FTS, and established an information-density threshold for AI titles."
+      },
+      "highlights": {
+        "zh-CN": [
+          "代码缩进保护与去重净化：哈希去重时保留代码和制表符缩进，避免代码格式被破坏；当重复命中更纯净的文本时，自动原地清洗数据库脏空格并刷新全文索引。",
+          "下线自然语言 AI 搜索：移除高延迟且繁琐的自然语言搜索面板与重排分支，检索体验全面回归毫秒级纯本地 SQLite FTS5 引擎，减少冗余开销。",
+          "AI 标题信息密度准入门槛：短文本（中文少于10字、英文少于25字符）及单行琐碎代码坚决不打标题，杜绝空洞标题噪音；多行复杂代码、结构化定义与完整备忘保持清晰提炼。"
+        ],
+        "en-US": [
+          "Code Indentation & Cleaner Deduplication: Code and tab indentation are preserved during hash normalization to avoid format loss, and cleaner text automatically replaces dirty whitespace upon duplicate detection.",
+          "Retired Natural Language AI Search: Removed the slow planning/reranking natural language search panel, restoring full focus on instant local SQLite FTS5 querying.",
+          "Information Density Gate for AI Titles: Trivial single-line code and short snippets (<10 CJK chars, <25 Western chars) no longer generate noisy placeholder titles, while structural code and memos retain high-value summaries."
+        ]
+      }
+    },
+    {
       "version": "0.5.14",
       "publishedAt": "2026-10-21",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-14",

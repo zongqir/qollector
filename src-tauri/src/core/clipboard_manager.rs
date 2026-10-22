@@ -433,6 +433,86 @@ impl ClipboardManager {
         false
     }
 
+    /// Evaluates whether an AI-generated title should be accepted and saved to item metadata.
+    ///
+    /// Implements information density admission:
+    /// - URLs and local file paths are rejected (canonical representations already exist).
+    /// - Pure numbers, hashes, verification digits, or punctuation are rejected.
+    /// - Code: Only multi-line snippets (>= 3 lines) or structural definitions (fn, def, class, SELECT, etc.)
+    ///   qualify for an explanatory title; trivial single/double-line statements are rejected.
+    /// - Natural language: Requires >= 10 CJK characters for Chinese/mixed, or >= 25 characters for Western text.
+    pub fn should_apply_ai_title(content: &str) -> bool {
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        // 1. URLs or file paths already have canonical previews/filenames
+        if trimmed.starts_with("http://")
+            || trimmed.starts_with("https://")
+            || trimmed.starts_with("file://")
+            || trimmed.starts_with('/')
+            || (trimmed.len() > 3
+                && trimmed.as_bytes()[1] == b':'
+                && (trimmed.as_bytes()[2] == b'\\' || trimmed.as_bytes()[2] == b'/'))
+        {
+            return false;
+        }
+
+        // 2. Pure digits, OTP, hashes, punctuation
+        let has_letters = trimmed.chars().any(char::is_alphabetic);
+        if !has_letters {
+            return false;
+        }
+
+        // 3. Code inspection
+        let non_empty_lines: Vec<&str> = trimmed
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .collect();
+
+        let line_count = non_empty_lines.len();
+        let is_code_like = Self::looks_like_code_fast(trimmed)
+            || trimmed.contains(";\n")
+            || trimmed.contains("{\n");
+
+        if is_code_like {
+            // Multi-line code (>= 3 non-empty lines) carries structural semantics worth explaining
+            if line_count >= 3 {
+                return true;
+            }
+            // Definition statements worth explaining even if brief
+            let first_line = non_empty_lines.first().copied().unwrap_or("");
+            let is_structural_def = first_line.starts_with("def ")
+                || first_line.starts_with("fn ")
+                || first_line.starts_with("function ")
+                || first_line.starts_with("pub fn ")
+                || first_line.starts_with("async fn ")
+                || first_line.starts_with("class ")
+                || first_line.to_ascii_uppercase().starts_with("SELECT ");
+            if is_structural_def {
+                return true;
+            }
+
+            // Trivial single/double line snippets without function definitions are rejected
+            return false;
+        }
+
+        // 4. Natural language threshold
+        let cjk_count = trimmed
+            .chars()
+            .filter(|c| ('\u{4e00}'..='\u{9fff}').contains(c) || ('\u{3400}'..='\u{4dbf}').contains(c))
+            .count();
+        if cjk_count > 0 {
+            // Chinese content with >= 10 CJK characters represents a meaningful clause/memo
+            return cjk_count >= 10;
+        }
+
+        // Non-CJK Western text requires at least 25 characters to represent a meaningful clause
+        trimmed.chars().count() >= 25
+    }
+
     async fn handle_clipboard_change(
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
@@ -915,11 +995,19 @@ impl ClipboardManager {
                                         }
 
                                         if let Some(ai_title) = title.as_deref() {
-                                            if let Some(next_metadata) = Self::merge_ai_naming_metadata(
-                                                item.metadata.as_deref(),
-                                                ai_title,
-                                            ) {
-                                                item.metadata = Some(next_metadata);
+                                            if Self::should_apply_ai_title(content) {
+                                                if let Some(next_metadata) = Self::merge_ai_naming_metadata(
+                                                    item.metadata.as_deref(),
+                                                    ai_title,
+                                                ) {
+                                                    item.metadata = Some(next_metadata);
+                                                }
+                                            } else {
+                                                println!(
+                                                    "[AI] Skipped title '{}' for low information density (len={})",
+                                                    ai_title,
+                                                    content.len()
+                                                );
                                             }
                                         }
 
@@ -2633,5 +2721,36 @@ mod tests {
 
         // More dirty text should NOT replace clean text
         assert!(!ClipboardManager::is_cleaner_text_variant("hello", "  hello  "));
+    }
+
+    #[test]
+    fn test_should_apply_ai_title() {
+        // 1. Natural Chinese memos: >= 10 CJK chars allowed, < 10 chars rejected
+        assert!(ClipboardManager::should_apply_ai_title("明天下午三点和张三开会确认合同"));
+        assert!(ClipboardManager::should_apply_ai_title("这是一个非常重要的系统架构备忘录"));
+        assert!(!ClipboardManager::should_apply_ai_title("好的收到"));
+        assert!(!ClipboardManager::should_apply_ai_title("你好世界"));
+
+        // 2. Code snippets: Multi-line (>= 3 lines) or structural defs allowed
+        let multi_line_code = "let a = 1;\nlet b = 2;\nprintln!(\"{}\", a + b);";
+        assert!(ClipboardManager::should_apply_ai_title(multi_line_code));
+
+        let func_def = "def calculate_tax(amount): return amount * 0.2";
+        assert!(ClipboardManager::should_apply_ai_title(func_def));
+
+        let sql_query = "SELECT u.id, u.name FROM users u WHERE u.active = 1";
+        assert!(ClipboardManager::should_apply_ai_title(sql_query));
+
+        // Trivial single-line code statements: rejected to prevent noisy titles
+        assert!(!ClipboardManager::should_apply_ai_title("const [x, setX] = useState(0);"));
+        assert!(!ClipboardManager::should_apply_ai_title("import React from 'react';"));
+        assert!(!ClipboardManager::should_apply_ai_title("console.log(data);"));
+
+        // 3. URLs and file paths: rejected (have canonical metadata)
+        assert!(!ClipboardManager::should_apply_ai_title("https://github.com/zongqir/qollector"));
+        assert!(!ClipboardManager::should_apply_ai_title("/usr/local/bin/python3"));
+
+        // 4. Pure numbers or non-letter noise: rejected
+        assert!(!ClipboardManager::should_apply_ai_title("123456789012345678901234567890"));
     }
 }

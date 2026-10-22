@@ -1,6 +1,6 @@
 {
   "name": "qollect",
-  "version": "0.5.14",
+  "version": "0.5.15",
   "description": "Qollect - cross-platform clipboard manager",
   "main": "index.js",
   "scripts": {
