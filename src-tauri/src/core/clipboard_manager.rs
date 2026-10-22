@@ -401,6 +401,38 @@ impl ClipboardManager {
             )
     }
 
+    /// Determines if `new_text` is a cleaner, more canonical variant of `old_text`.
+    /// Used when a duplicate hash is detected, so that cleaner text (e.g. without accidental
+    /// leading/trailing whitespace) replaces an older, dirtier entry in the database.
+    pub fn is_cleaner_text_variant(old_text: &str, new_text: &str) -> bool {
+        if old_text == new_text {
+            return false;
+        }
+
+        let old_trimmed = old_text.trim();
+        let new_trimmed = new_text.trim();
+        if old_trimmed != new_trimmed {
+            return false;
+        }
+
+        let old_has_outer_ws = old_text.starts_with(char::is_whitespace)
+            || old_text.ends_with(char::is_whitespace);
+        let new_has_outer_ws = new_text.starts_with(char::is_whitespace)
+            || new_text.ends_with(char::is_whitespace);
+
+        // Scenario 1: New text completely stripped outer whitespaces while old had them.
+        if old_has_outer_ws && !new_has_outer_ws {
+            return true;
+        }
+
+        // Scenario 2: Both had outer whitespaces, but new text has strictly fewer extraneous whitespaces.
+        if old_has_outer_ws && new_has_outer_ws && new_text.len() < old_text.len() {
+            return true;
+        }
+
+        false
+    }
+
     async fn handle_clipboard_change(
         content: ClipboardContent,
         repo: Arc<TokioMutex<ClipboardRepository>>,
@@ -604,7 +636,30 @@ impl ClipboardManager {
                 return Ok(());
             }
             println!("Duplicate detected, moving to top: {}", existing.id);
-            repo_lock.touch(&existing.id).await?;
+
+            let mut content_cleaned = false;
+            if let ClipboardContent::Text { text, .. } = &content {
+                if let Some(old_content) = &existing.content {
+                    if Self::is_cleaner_text_variant(old_content, text) {
+                        if let Err(e) = repo_lock
+                            .update_duplicate_text_content(&existing.id, text)
+                            .await
+                        {
+                            eprintln!("Failed to sanitize duplicate text content: {}", e);
+                        } else {
+                            println!(
+                                "[Clipboard] Sanitized duplicate item {} with cleaner text",
+                                existing.id
+                            );
+                            content_cleaned = true;
+                        }
+                    }
+                }
+            }
+
+            if !content_cleaned {
+                repo_lock.touch(&existing.id).await?;
+            }
             item_id = existing.id;
 
             // Keep raw formats aligned with the latest clipboard payload for this hash.
@@ -1651,7 +1706,17 @@ impl ClipboardManager {
         let repo = self.repository.lock().await;
 
         if let Some(existing) = repo.find_by_hash(&prepared_item.content_hash).await? {
-            let _ = repo.touch(&existing.id).await;
+            let mut content_cleaned = false;
+            if let (Some(new_text), Some(old_text)) = (&prepared_item.content, &existing.content) {
+                if Self::is_cleaner_text_variant(old_text, new_text) {
+                    if repo.update_duplicate_text_content(&existing.id, new_text).await.is_ok() {
+                        content_cleaned = true;
+                    }
+                }
+            }
+            if !content_cleaned {
+                let _ = repo.touch(&existing.id).await;
+            }
             return Ok(existing.id);
         }
 
@@ -2547,5 +2612,26 @@ mod tests {
         assert!(!ClipboardManager::is_disposable_micro_noise("v1.2")); // Version
         assert!(!ClipboardManager::is_disposable_micro_noise("#8080")); // Hash / color
         assert!(!ClipboardManager::is_disposable_micro_noise("你好世界")); // Normal text
+    }
+
+    #[test]
+    fn test_is_cleaner_text_variant() {
+        // Dirty text with accidental outer spaces should be upgraded to clean text
+        assert!(ClipboardManager::is_cleaner_text_variant("  hello  ", "hello"));
+        assert!(ClipboardManager::is_cleaner_text_variant("\nhello\n", "hello"));
+        assert!(ClipboardManager::is_cleaner_text_variant("  hello", "hello"));
+        assert!(ClipboardManager::is_cleaner_text_variant("hello  ", "hello"));
+        assert!(ClipboardManager::is_cleaner_text_variant("   hello   ", " hello "));
+
+        // Identical text is not a cleaner variant
+        assert!(!ClipboardManager::is_cleaner_text_variant("hello", "hello"));
+        assert!(!ClipboardManager::is_cleaner_text_variant("  hello  ", "  hello  "));
+
+        // Different core text is NOT a cleaner variant
+        assert!(!ClipboardManager::is_cleaner_text_variant("hello", "world"));
+        assert!(!ClipboardManager::is_cleaner_text_variant("  hello  ", "world"));
+
+        // More dirty text should NOT replace clean text
+        assert!(!ClipboardManager::is_cleaner_text_variant("hello", "  hello  "));
     }
 }

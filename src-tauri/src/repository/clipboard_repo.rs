@@ -1372,6 +1372,33 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    pub async fn update_duplicate_text_content(
+        &self,
+        item_id: &str,
+        clean_content: &str,
+    ) -> Result<(), sqlx::Error> {
+        let now = chrono::Utc::now().timestamp();
+        sqlx::query(
+            r#"
+            UPDATE clipboard_items SET
+                content = ?, original_content = ?, content_updated = 1, updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(clean_content)
+        .bind(clean_content)
+        .bind(now)
+        .bind(item_id)
+        .execute(&self.pool)
+        .await?;
+
+        if let Ok(Some(item)) = self.find_by_id(item_id).await {
+            self.update_fts(&item).await;
+        }
+
+        Ok(())
+    }
+
     pub async fn delete(&self, id: &str) -> Result<(), sqlx::Error> {
         let existing_tags: Option<String> =
             sqlx::query_scalar("SELECT tags FROM clipboard_items WHERE id = ? AND is_deleted = 0")

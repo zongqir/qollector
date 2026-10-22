@@ -316,13 +316,75 @@ impl ClipboardItem {
             return without_zero_width;
         }
 
-        let trimmed_lines = without_zero_width
-            .lines()
+        let preserve_leading_indent = Self::should_preserve_leading_indent(&without_zero_width);
+
+        let lines: Vec<&str> = without_zero_width.lines().collect();
+        // Strip leading and trailing empty/whitespace-only lines
+        let first_non_empty = lines.iter().position(|l| !l.trim().is_empty()).unwrap_or(0);
+        let last_non_empty = lines
+            .iter()
+            .rposition(|l| !l.trim().is_empty())
+            .unwrap_or(lines.len().saturating_sub(1));
+
+        let relevant_lines = &lines[first_non_empty..=last_non_empty];
+        let trimmed_lines = relevant_lines
+            .iter()
             .map(|line| line.trim_end_matches(char::is_whitespace))
             .collect::<Vec<_>>()
             .join("\n");
 
-        trimmed_lines.trim().to_string()
+        if preserve_leading_indent {
+            trimmed_lines.trim_end().to_string()
+        } else {
+            trimmed_lines.trim().to_string()
+        }
+    }
+
+    fn should_preserve_leading_indent(content: &str) -> bool {
+        let first_non_empty_line = content
+            .lines()
+            .find(|line| !line.trim().is_empty())
+            .unwrap_or(content);
+
+        if first_non_empty_line.starts_with('\t') {
+            return true;
+        }
+
+        if first_non_empty_line.starts_with("  ") {
+            let trimmed = first_non_empty_line.trim();
+            if Self::looks_like_code_indent(trimmed) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn looks_like_code_indent(trimmed: &str) -> bool {
+        if trimmed.is_empty() {
+            return false;
+        }
+
+        let code_starters = [
+            "return ", "return;", "let ", "const ", "var ", "fn ", "def ", "func ", "pub ",
+            "private ", "protected ", "class ", "interface ", "type ", "struct ", "enum ",
+            "import ", "export ", "from ", "if ", "else ", "for ", "while ", "switch ",
+            "case ", "match ", "async ", "await ", "yield ", "throw ", "try ", "catch ",
+            "finally ", "break;", "continue;", "//", "/*", "#",
+        ];
+
+        if code_starters.iter().any(|prefix| trimmed.starts_with(prefix)) {
+            return true;
+        }
+
+        trimmed.ends_with(';')
+            || trimmed.ends_with('{')
+            || trimmed.ends_with('}')
+            || trimmed.ends_with(':')
+            || trimmed.contains(" = ")
+            || trimmed.contains(" => ")
+            || trimmed.contains(" -> ")
+            || trimmed.contains("()")
     }
 
     fn is_ignored_text_hash_char(ch: char) -> bool {
@@ -522,6 +584,23 @@ mod tests {
         assert_ne!(
             ClipboardItem::calculate_text_hash("\n\n\n"),
             ClipboardItem::calculate_text_hash("\n\n\n\n")
+        );
+    }
+
+    #[test]
+    fn text_hash_preserves_code_indentation() {
+        let indented_single = "    return true;";
+        let flat_single = "return true;";
+        assert_ne!(
+            ClipboardItem::calculate_text_hash(indented_single),
+            ClipboardItem::calculate_text_hash(flat_single)
+        );
+
+        let tabbed = "\tdef calculate():\n\t\tpass";
+        let untabbed = "def calculate():\n\tpass";
+        assert_ne!(
+            ClipboardItem::calculate_text_hash(tabbed),
+            ClipboardItem::calculate_text_hash(untabbed)
         );
     }
 }
