@@ -697,7 +697,6 @@ fn main() {
             get_ai_models,
             get_default_ai_model,
             fetch_remote_models,
-            ai_search_items,
             init_ocr_service,
             get_ocr_config,
             update_ocr_config,

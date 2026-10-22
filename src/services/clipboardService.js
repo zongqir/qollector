@@ -84,10 +84,6 @@ export const searchItems = async (query, limit = 200, filters = undefined) => {
   return invoke('search_items', { query, limit, filters });
 };
 
-export const aiSearchItems = async (question, limit = 12) => {
-  return invoke('ai_search_items', { question, limit });
-};
-
 export const getUserTags = async (query = '', limit = 80, options = {}) => {
   const normalizedQuery = typeof query === 'string' && query.trim() ? query.trim() : null;
   const onlyFavorite = options?.onlyFavorite === true;

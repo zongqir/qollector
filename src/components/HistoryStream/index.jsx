@@ -23,7 +23,7 @@ import {
 } from '../../utils/collectionHints';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
-import { aiSearchItems, getUserTags, searchItems } from '../../services/clipboardService';
+import { getUserTags, searchItems } from '../../services/clipboardService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -400,11 +400,6 @@ function HistoryStream({ style }) {
   const [backendSearchError, setBackendSearchError] = useState('');
   const [backendSearchRefreshNonce, setBackendSearchRefreshNonce] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
-  const [showAiSearchPanel, setShowAiSearchPanel] = useState(false);
-  const [aiSearchQuestion, setAiSearchQuestion] = useState('');
-  const [aiSearchLoading, setAiSearchLoading] = useState(false);
-  const [aiSearchResult, setAiSearchResult] = useState(null);
-  const [aiSearchError, setAiSearchError] = useState('');
   const [backendUserTags, setBackendUserTags] = useState([]);
   const [debouncedTagSearchQuery, setDebouncedTagSearchQuery] = useState('');
   const [timeTick, setTimeTick] = useState(() => Date.now());
@@ -416,7 +411,6 @@ function HistoryStream({ style }) {
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
   const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
-  const aiSearchActive = showAiSearchPanel;
 
   useEffect(() => {
     quickAddPendingRef.current = quickAddPending;
@@ -671,19 +665,15 @@ function HistoryStream({ style }) {
   const filteredItems = useMemo(() => {
     const startedAt = performance.now();
     const normalizedQuery = backendSearchRequest.query.toLowerCase();
-    const aiItems = Array.isArray(aiSearchResult?.items) ? aiSearchResult.items : null;
-    const shouldUseAiBase = showAiSearchPanel && aiItems;
     const shouldUseBackendBase = Array.isArray(backendSearchResults);
-    const baseItems = shouldUseAiBase
-      ? aiItems
-      : (shouldUseBackendBase ? backendSearchResults : items);
+    const baseItems = shouldUseBackendBase ? backendSearchResults : items;
     let result = baseItems;
 
     filterProbeRef.current = {
       elapsedMs: Number((performance.now() - startedAt).toFixed(2)),
       totalItems: baseItems.length,
       resultItems: result.length,
-      scannedItems: (shouldUseBackendBase || shouldUseAiBase) ? 0 : baseItems.length,
+      scannedItems: shouldUseBackendBase ? 0 : baseItems.length,
       scannedChars: shouldUseBackendBase
         ? 0
         : baseItems.reduce(
@@ -695,7 +685,7 @@ function HistoryStream({ style }) {
       selectedTags: selectedTags.length,
       selectedType,
       showFavoritesOnly,
-      backendSearch: shouldUseBackendBase || shouldUseAiBase,
+      backendSearch: shouldUseBackendBase,
       backendFilters: backendSearchRequest.hasStructuredFilters,
     };
 
@@ -703,8 +693,6 @@ function HistoryStream({ style }) {
   }, [
     items,
     backendSearchResults,
-    aiSearchResult,
-    showAiSearchPanel,
     backendSearchRequest,
     selectedTags.length,
     selectedType,
@@ -889,53 +877,6 @@ function HistoryStream({ style }) {
   ]);
 
   const searchTerms = useMemo(() => tokenizeSearchQuery(debouncedSearchQuery), [debouncedSearchQuery]);
-  const formatAiSearchFilters = useCallback((filters) => {
-    if (!filters || typeof filters !== 'object') return '';
-    const parts = [];
-    if (filters.require_code_language) parts.push(t('search.typeFilter.code'));
-    if (filters.type_filter) parts.push(t(`search.typeFilter.${filters.type_filter}`, { defaultValue: filters.type_filter }));
-    if (Array.isArray(filters.source_filter) && filters.source_filter.length > 0) parts.push(filters.source_filter.join(', '));
-    if (Array.isArray(filters.tag_filter) && filters.tag_filter.length > 0) parts.push(filters.tag_filter.join(', '));
-    if (Array.isArray(filters.type_tag_filter) && filters.type_tag_filter.length > 0) parts.push(filters.type_tag_filter.join(', '));
-    if (filters.is_favorite) parts.push(t('search.empty.filterFavorites'));
-    return parts.join(' · ');
-  }, [t]);
-
-  const handleOpenAiSearch = useCallback(() => {
-    const nextOpen = !showAiSearchPanel;
-    setShowAiSearchPanel(nextOpen);
-    setAiSearchError('');
-    if (!nextOpen) {
-      setAiSearchResult(null);
-    }
-    if (nextOpen) {
-      window.requestAnimationFrame(() => {
-        document.getElementById('ai-search-input')?.focus?.();
-      });
-    }
-  }, [showAiSearchPanel]);
-
-  const handleRunAiSearch = useCallback(async () => {
-    const question = aiSearchQuestion.trim();
-    if (!question || aiSearchLoading) return;
-    setAiSearchLoading(true);
-    setAiSearchError('');
-    setAiSearchResult(null);
-    try {
-      const result = await aiSearchItems(question, 12);
-      setAiSearchResult(result);
-    } catch (error) {
-      setAiSearchError(String(error?.message || error || t('search.queryFailed')));
-    } finally {
-      setAiSearchLoading(false);
-    }
-  }, [aiSearchLoading, aiSearchQuestion, t]);
-
-  const handleAiSearchKeyDown = useCallback((event) => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    handleRunAiSearch();
-  }, [handleRunAiSearch]);
 
   const dayBoundaries = useMemo(() => buildDayBoundaries(timeTick), [timeTick]);
   const historyGrouping = useMemo(() => {
@@ -1546,8 +1487,6 @@ function HistoryStream({ style }) {
     onTagSearchChange: setTagSearchQuery,
     onToggleTag: toggleTagFilter,
     onOpenSettings: handleOpenSettingsPanel,
-    onOpenAiSearch: handleOpenAiSearch,
-    aiSearchActive,
     onSearchKeyDown: handleSearchInputKeyDown,
     resultCount: filteredItems.length,
     filterBusy: isSearching,
@@ -1579,8 +1518,6 @@ function HistoryStream({ style }) {
     setTagSearchQuery,
     toggleTagFilter,
     handleOpenSettingsPanel,
-    handleOpenAiSearch,
-    aiSearchActive,
     handleSearchInputKeyDown,
     filteredItems.length,
     isSearching,
@@ -1605,7 +1542,7 @@ function HistoryStream({ style }) {
       })
       : t('history.autoCleanupNoticeDisabled')
   ), [isCalmPresetActive, cleanupMaxAgeDays, autoCleanupItemsLabel, t]);
-  const shouldRenderCollectionBoard = isCollectionMode && !(showAiSearchPanel && Array.isArray(aiSearchResult?.items));
+  const shouldRenderCollectionBoard = isCollectionMode;
 
   const handleToggleBatchTagEditor = useCallback(() => {
     if (showBatchTagEditor) {
@@ -1813,74 +1750,6 @@ function HistoryStream({ style }) {
       onClick={handleHistoryStreamClick}
     >
       <SearchBar {...searchBarProps} />
-
-      {showAiSearchPanel && (
-        <div className="ai-search-panel" role="region" aria-label={t('search.ai.title')}>
-          <div className="ai-search-panel-header">
-            <div className="ai-search-panel-title">
-              <span>{t('search.ai.title')}</span>
-            </div>
-            <div className="ai-search-panel-hint">{t('search.ai.scope')}</div>
-          </div>
-          <div className="ai-search-panel-form">
-            <input
-              id="ai-search-input"
-              className="ai-search-panel-input"
-              type="text"
-              value={aiSearchQuestion}
-              onChange={(event) => setAiSearchQuestion(event.target.value)}
-              onKeyDown={handleAiSearchKeyDown}
-              placeholder={t('search.ai.placeholder')}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-            />
-            <button
-              type="button"
-              className="ai-search-panel-submit"
-              onClick={handleRunAiSearch}
-              disabled={aiSearchLoading || !aiSearchQuestion.trim()}
-            >
-              {aiSearchLoading ? t('search.searching') : t('search.ai.submit')}
-            </button>
-          </div>
-          <div className="ai-search-panel-meta">
-            <span className="ai-search-panel-badge">
-              {aiSearchLoading ? t('search.ai.searching') : t('search.ai.ranking')}
-            </span>
-            {aiSearchResult?.fallback_used && aiSearchResult.fallback_used !== 'none' && (
-              <span className="ai-search-panel-badge">
-                {aiSearchResult.fallback_used === 'planner_failed' && t('search.ai.fallbackPlanner')}
-                {aiSearchResult.fallback_used === 'rerank_failed' && t('search.ai.fallbackRerank')}
-                {aiSearchResult.fallback_used === 'search_only' && t('search.ai.searchOnly')}
-              </span>
-            )}
-          </div>
-          {aiSearchError && (
-            <div className="ai-search-panel-status error">{aiSearchError}</div>
-          )}
-          {aiSearchResult && (
-            <>
-              <div className="ai-search-panel-summary">
-                <strong>{t('search.ai.summary')}：</strong>
-                {aiSearchResult.summary || t('search.ai.noResults')}
-              </div>
-              <div className="ai-search-panel-debug">
-                <div>{t('search.ai.interpreted', { query: aiSearchResult.interpreted_query || aiSearchQuestion })}</div>
-                {formatAiSearchFilters(aiSearchResult.interpreted_filters) && (
-                  <div>{t('search.ai.filters', { filters: formatAiSearchFilters(aiSearchResult.interpreted_filters) })}</div>
-                )}
-              </div>
-              <div className="ai-search-panel-empty">
-                {Array.isArray(aiSearchResult.items) && aiSearchResult.items.length > 0
-                  ? t('toolbar.resultCount', { count: aiSearchResult.items.length })
-                  : t('search.ai.noResults')}
-              </div>
-            </>
-          )}
-        </div>
-      )}
 
       <div className="history-stream-content">
         {loading ? (
