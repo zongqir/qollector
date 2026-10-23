@@ -528,6 +528,7 @@ fn main() {
                 let copy_on_select_state = Arc::new(CopyOnSelectState::new(
                     general_config.copy_on_select_enabled,
                     general_config.copy_on_select_double_click_enabled,
+                    general_config.copy_on_select_smart_replace_enabled,
                 ));
                 app.manage(copy_on_select_state.clone());
                 app.manage(drag_out_backend);

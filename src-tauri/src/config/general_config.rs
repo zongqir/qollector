@@ -64,9 +64,16 @@ pub struct GeneralConfig {
     /// Enable copy on double click word selection on Windows.
     #[serde(default = "default_copy_on_select_double_click_enabled")]
     pub copy_on_select_double_click_enabled: bool,
+    /// Enable smart in-place replace protection on Windows.
+    #[serde(default = "default_copy_on_select_smart_replace_enabled")]
+    pub copy_on_select_smart_replace_enabled: bool,
     /// Filter out meaningless micro text (<= 2 routine chars) and noisy isolated verification digits (3-6 digits).
     #[serde(default = "default_filter_noise_digits_enabled")]
     pub filter_noise_digits_enabled: bool,
+}
+
+fn default_copy_on_select_smart_replace_enabled() -> bool {
+    true
 }
 
 fn default_filter_noise_digits_enabled() -> bool {
@@ -152,6 +159,7 @@ impl Default for GeneralConfig {
             input_capture_enabled: false,
             copy_on_select_enabled: false,
             copy_on_select_double_click_enabled: default_copy_on_select_double_click_enabled(),
+            copy_on_select_smart_replace_enabled: default_copy_on_select_smart_replace_enabled(),
             filter_noise_digits_enabled: default_filter_noise_digits_enabled(),
         }
     }

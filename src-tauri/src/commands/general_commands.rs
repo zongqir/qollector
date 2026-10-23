@@ -62,6 +62,7 @@ pub async fn update_general_config(
         copy_on_select_state.update(
             config.copy_on_select_enabled,
             config.copy_on_select_double_click_enabled,
+            config.copy_on_select_smart_replace_enabled,
         );
     }
 

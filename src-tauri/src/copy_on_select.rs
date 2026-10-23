@@ -4,19 +4,22 @@ use std::sync::Arc;
 pub struct CopyOnSelectState {
     enabled: AtomicBool,
     double_click_enabled: AtomicBool,
+    smart_replace_enabled: AtomicBool,
 }
 
 impl CopyOnSelectState {
-    pub fn new(enabled: bool, double_click_enabled: bool) -> Self {
+    pub fn new(enabled: bool, double_click_enabled: bool, smart_replace_enabled: bool) -> Self {
         Self {
             enabled: AtomicBool::new(enabled),
             double_click_enabled: AtomicBool::new(double_click_enabled),
+            smart_replace_enabled: AtomicBool::new(smart_replace_enabled),
         }
     }
 
-    pub fn update(&self, enabled: bool, double_click_enabled: bool) {
+    pub fn update(&self, enabled: bool, double_click_enabled: bool, smart_replace_enabled: bool) {
         self.enabled.store(enabled, Ordering::Relaxed);
         self.double_click_enabled.store(double_click_enabled, Ordering::Relaxed);
+        self.smart_replace_enabled.store(smart_replace_enabled, Ordering::Relaxed);
     }
 
     pub fn is_enabled(&self) -> bool {
@@ -25,6 +28,10 @@ impl CopyOnSelectState {
 
     pub fn is_double_click_enabled(&self) -> bool {
         self.double_click_enabled.load(Ordering::Relaxed)
+    }
+
+    pub fn is_smart_replace_enabled(&self) -> bool {
+        self.smart_replace_enabled.load(Ordering::Relaxed)
     }
 }
 
