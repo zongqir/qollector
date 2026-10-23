@@ -268,6 +268,7 @@ if (typeof window !== 'undefined' && !window.__TAURI_INTERNALS__) {
           auto_paste_on_double_click: false,
           copy_on_select_enabled: false,
           copy_on_select_double_click_enabled: true,
+          copy_on_select_smart_replace_enabled: true,
           copy_qollect_source_items: true,
           history_tag_shortcut_enabled: true,
           auto_cleanup_enabled: true,

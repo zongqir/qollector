@@ -29,6 +29,7 @@ export const createLoadConfigsAction = ({
       copyOnSelectEnabled: supportsCopyOnSelect
         && Boolean(generalConfig?.copy_on_select_enabled),
       copyOnSelectDoubleClickEnabled: generalConfig?.copy_on_select_double_click_enabled !== false,
+      copyOnSelectSmartReplaceEnabled: generalConfig?.copy_on_select_smart_replace_enabled !== false,
       copyQollectSourceItems: Boolean(generalConfig?.copy_qollect_source_items),
       filterNoiseDigitsEnabled: generalConfig?.filter_noise_digits_enabled !== false,
       historyTagShortcutEnabled: generalConfig?.history_tag_shortcut_enabled !== false,

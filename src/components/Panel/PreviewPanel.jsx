@@ -379,9 +379,6 @@ function PreviewPanel() {
     }
   }, [isToolbarCompact]);
 
-  useEffect(() => {
-    setShowTimestampConverted(false);
-  }, [item.id]);
 
   useEffect(() => {
     setShowAIAssistant(false);

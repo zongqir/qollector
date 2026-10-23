@@ -353,30 +353,56 @@ function GeneralSection({
           </span>
         </label>
         {supportsCopyOnSelect && generalConfig.copy_on_select_enabled && (
-          <label className="setting-toggle-row" style={{ paddingLeft: 24, borderLeft: '2px solid var(--accent-color, #3b82f6)' }}>
-            <span className="toggle-label-group">
-              <span className="toggle-label">{t('settings.general.copyOnSelectDoubleClick')}</span>
-              <span className="toggle-desc">{t('settings.general.copyOnSelectDoubleClickHint')}</span>
-            </span>
-            <span className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={generalConfig.copy_on_select_double_click_enabled !== false}
-                onChange={async (e) => {
-                  const checked = e.target.checked;
-                  const updated = { ...generalConfig, copy_on_select_double_click_enabled: checked };
-                  setGeneralConfig(updated);
-                  useAppStore.setState({ copyOnSelectDoubleClickEnabled: checked });
-                  try {
-                    await invoke('update_general_config', { config: updated });
-                  } catch (error) {
-                    console.error('save copy_on_select_double_click config failed:', error);
-                  }
-                }}
-              />
-              <span className="toggle-slider" />
-            </span>
-          </label>
+          <>
+            <label className="setting-toggle-row" style={{ paddingLeft: 24, borderLeft: '2px solid var(--accent-color, #3b82f6)' }}>
+              <span className="toggle-label-group">
+                <span className="toggle-label">{t('settings.general.copyOnSelectDoubleClick')}</span>
+                <span className="toggle-desc">{t('settings.general.copyOnSelectDoubleClickHint')}</span>
+              </span>
+              <span className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={generalConfig.copy_on_select_double_click_enabled !== false}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    const updated = { ...generalConfig, copy_on_select_double_click_enabled: checked };
+                    setGeneralConfig(updated);
+                    useAppStore.setState({ copyOnSelectDoubleClickEnabled: checked });
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('save copy_on_select_double_click config failed:', error);
+                    }
+                  }}
+                />
+                <span className="toggle-slider" />
+              </span>
+            </label>
+            <label className="setting-toggle-row" style={{ paddingLeft: 24, borderLeft: '2px solid var(--accent-color, #3b82f6)' }}>
+              <span className="toggle-label-group">
+                <span className="toggle-label">{t('settings.general.copyOnSelectSmartReplace')}</span>
+                <span className="toggle-desc">{t('settings.general.copyOnSelectSmartReplaceHint')}</span>
+              </span>
+              <span className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={generalConfig.copy_on_select_smart_replace_enabled !== false}
+                  onChange={async (e) => {
+                    const checked = e.target.checked;
+                    const updated = { ...generalConfig, copy_on_select_smart_replace_enabled: checked };
+                    setGeneralConfig(updated);
+                    useAppStore.setState({ copyOnSelectSmartReplaceEnabled: checked });
+                    try {
+                      await invoke('update_general_config', { config: updated });
+                    } catch (error) {
+                      console.error('save copy_on_select_smart_replace config failed:', error);
+                    }
+                  }}
+                />
+                <span className="toggle-slider" />
+              </span>
+            </label>
+          </>
         )}
         <label className="setting-toggle-row">
           <span className="toggle-label-group">

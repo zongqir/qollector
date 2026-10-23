@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.17",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-17",
+      "summary": {
+        "zh-CN": "新增选中即复制原地粘贴智能替换保护，解决高亮覆盖时冲刷原剪贴板的根本痛点，并修复抽屉组件状态残留异常。",
+        "en-US": "Introduced smart in-place replace protection for copy-on-select to prevent clipboard overwrite loss, and fixed residual state error in preview drawer."
+      },
+      "highlights": {
+        "zh-CN": [
+          "原地粘贴智能替换保护：利用底层键盘与鼠标双低级钩子（WH_KEYBOARD_LL / WH_MOUSE_LL）协同，在划选文字后若直接按 Ctrl+V 覆盖粘贴，毫秒级还原此前剪贴板资产并完成无缝替换，彻底告别原剪贴板被冲刷的焦虑。",
+          "意图场景自适应识别：单次点击移动光标、按键打字或切换应用窗口时，系统自动安全解除武装，确保正常信息摘抄与跨应用搬运 100% 顺畅生效。",
+          "通用设置与快捷开关：在设置 > 通用中新增【原地粘贴智能替换保护】开关，支持用户按需自定义启用状态并全局持久化。",
+          "抽屉组件稳定性修复：彻底移除 PreviewPanel 中历史重构遗留的未定义状态重置副作用，消除卡片切换时的运行时 ReferenceError 崩溃。"
+        ],
+        "en-US": [
+          "Smart In-Place Replace Protection: Employs synchronized low-level hooks (WH_KEYBOARD_LL / WH_MOUSE_LL) to preserve previous clipboard content; pressing Ctrl+V immediately after selection automatically restores original assets for seamless overwrite, eliminating unexpected clipboard loss.",
+          "Context-Aware Intent Detection: Automatically disarms replace mode upon cursor deselection click, keyboard typing, or window switching to guarantee frictionless cross-app copying.",
+          "General Settings Integration: Added a dedicated toggle for 'Smart in-place replace protection' under Settings > General with instant persistence.",
+          "Preview Drawer Stability Fix: Removed obsolete state reset effect in PreviewPanel, resolving runtime ReferenceError on item selection."
+        ]
+      }
+    },
+    {
       "version": "0.5.16",
       "publishedAt": "2026-10-23",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-16",

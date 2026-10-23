@@ -416,6 +416,8 @@
       "copyOnSelectHint": "划选文字松开鼠标后自动复制到剪贴板（仅 Windows）",
       "copyOnSelectDoubleClick": "双击选词自动复制",
       "copyOnSelectDoubleClickHint": "双击选中单词或词语时也自动复制",
+      "copyOnSelectSmartReplace": "原地粘贴智能替换保护",
+      "copyOnSelectSmartReplaceHint": "选中文本后若直接按 Ctrl+V 粘贴，自动还原划选前的内容进行覆盖替换，防止原剪贴板被冲刷",
       "copyQollectSourceItems": "允许复制 Qollect 来源项",
       "copyQollectSourceItemsHint": "默认关闭。关闭时，来源为 Qollect / Quick Input / Quick Note 的内容会跳过复制动作。",
       "filterNoiseDigits": "过滤无意义微小文本与纯数字",

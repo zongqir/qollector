@@ -87,6 +87,7 @@ export const createBaseState = ({
   autoPasteOnDoubleClick: false,
   copyOnSelectEnabled: false,
   copyOnSelectDoubleClickEnabled: true,
+  copyOnSelectSmartReplaceEnabled: true,
   copyQollectSourceItems: false,
   filterNoiseDigitsEnabled: true,
   lastCopyWasAutoPaste: false,
