@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.5.16",
+      "publishedAt": "2026-10-23",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-16",
+      "summary": {
+        "zh-CN": "重构抽屉为高拓展性文本转换注册表架构，新增 Unicode 还原、终端清洗、路径转义等 8 大高频防报错动作与双模态明文预览。",
+        "en-US": "Refactored preview drawer into an extensible transform registry architecture, introducing 8 deterministic sanitization actions including Unicode decode, terminal prompt cleanup, path conversion, and inline decoded preview."
+      },
+      "highlights": {
+        "zh-CN": [
+          "插件化转换注册表架构：解耦 UI 渲染与转换规则，所有特征识别与文本清洗均以确定性纯函数规则声明，后续可零侵入无限拓展新模式。",
+          "高频防报错清洗规则：新增终端提示符（$、#、>）剥离、Windows 路径反斜杠转 POSIX 正斜杠、Token/密文隐形断行脱水、URL 百分号解码、Git 40位短 Hash 提取与环境变量 export 剥离。",
+          "JSON 压缩与时间戳整合：补齐多行 JSON 压缩为单行（专供 CLI 与环境变量），时间戳在抽屉底部常态清晰可见，一键复制格式化日期。",
+          "所见即所得双模态内联预览：针对 Unicode 转义（\\uXXXX）和 URL 乱码，支持在抽屉内一键切换【原始文本】与【解码明文】，双击直出明文。"
+        ],
+        "en-US": [
+          "Extensible Transform Registry: Decoupled UI components from text transformation rules, enabling declarative pure-function rule matching and zero-touch extensibility for future formats.",
+          "Deterministic Error-Prevention Actions: Introduced terminal prompt stripping ($, #, >), Windows backslash to POSIX slash conversion, token whitespace/break sanitization, URL percent-decode, 7-char Git short SHA extraction, and export prefix stripping.",
+          "JSON Compact & Timestamp Integration: Added multi-line JSON compaction to single-line for CLI/env usage, and embedded permanent formatted timestamp display in the preview metadata bar.",
+          "WYSIWYG Dual-Mode Inline Preview: Support instant toggling between [Raw] and [Decoded] views for Unicode escape sequences (\\uXXXX) and URL percent-encoding, with double-click copying the decoded text directly."
+        ]
+      }
+    },
+    {
       "version": "0.5.15",
       "publishedAt": "2026-10-23",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-15",
