@@ -718,11 +718,11 @@ impl ClipboardManager {
             println!("Duplicate detected, moving to top: {}", existing.id);
 
             let mut content_cleaned = false;
-            if let ClipboardContent::Text { text, .. } = &content {
+            if let ClipboardContent::Text { plain, .. } = &content {
                 if let Some(old_content) = &existing.content {
-                    if Self::is_cleaner_text_variant(old_content, text) {
+                    if Self::is_cleaner_text_variant(old_content, plain) {
                         if let Err(e) = repo_lock
-                            .update_duplicate_text_content(&existing.id, text)
+                            .update_duplicate_text_content(&existing.id, plain)
                             .await
                         {
                             eprintln!("Failed to sanitize duplicate text content: {}", e);
