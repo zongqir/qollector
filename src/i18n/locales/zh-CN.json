@@ -1197,5 +1197,29 @@
     "time": "耗时",
     "size": "大小",
     "error": "请求出错"
+  },
+  "transforms": {
+    "unicodeDecode": "解码 Unicode",
+    "unicodeDecodeTitle": "将 \\uXXXX 转义序列还原为可读明文",
+    "terminalClean": "清洗命令",
+    "terminalCleanTitle": "剥离终端提示符（$、#、>），输出可执行命令",
+    "pathPosix": "转 POSIX 斜杠",
+    "pathPosixTitle": "将 Windows 路径反斜杠转为正斜杠",
+    "tokenSanitize": "净化密文",
+    "tokenSanitizeTitle": "剔除 Token / 密文中的隐形空白与意外断行",
+    "urlDecode": "解码 URL",
+    "urlDecodeTitle": "解码 URL 百分号编码为可读文本",
+    "jsonPretty": "格式化 JSON",
+    "jsonPrettyTitle": "美化展开 JSON 缩进排版",
+    "jsonCompact": "压缩单行 JSON",
+    "jsonCompactTitle": "压缩 JSON 为纯单行，供命令行或环境变量使用",
+    "envStripExport": "转纯 .env",
+    "envStripExportTitle": "剥离 export 前缀转为纯配置键值对",
+    "gitShortHash": "复制短 Hash",
+    "gitShortHashTitle": "提取 7 位 Git 短 Commit Hash",
+    "timestampConvert": "转本地时间",
+    "timestampConvertTitle": "将 Unix 时间戳转为本地格式化日期",
+    "viewRaw": "原始文本",
+    "viewTransformed": "解码明文"
   }
 }

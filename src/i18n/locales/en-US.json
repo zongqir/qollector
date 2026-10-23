@@ -1197,5 +1197,29 @@
     "time": "Time",
     "size": "Size",
     "error": "Request Error"
+  },
+  "transforms": {
+    "unicodeDecode": "Decode Unicode",
+    "unicodeDecodeTitle": "Decode \\uXXXX escape sequences to readable text",
+    "terminalClean": "Clean Command",
+    "terminalCleanTitle": "Strip terminal prompts ($, #, >) into runnable commands",
+    "pathPosix": "To POSIX Path",
+    "pathPosixTitle": "Convert Windows backslashes to forward slashes",
+    "tokenSanitize": "Sanitize Secret",
+    "tokenSanitizeTitle": "Strip whitespace and line breaks from token or secret",
+    "urlDecode": "Decode URL",
+    "urlDecodeTitle": "Decode percent-encoded URL to readable text",
+    "jsonPretty": "Format JSON",
+    "jsonPrettyTitle": "Format JSON with indentation",
+    "jsonCompact": "Compact JSON",
+    "jsonCompactTitle": "Compact JSON into a single line for CLI or env vars",
+    "envStripExport": "Strip Export",
+    "envStripExportTitle": "Strip export prefixes into plain .env key-value pairs",
+    "gitShortHash": "Copy Short SHA",
+    "gitShortHashTitle": "Extract 7-character short Git commit hash",
+    "timestampConvert": "Convert Time",
+    "timestampConvertTitle": "Convert Unix timestamp to local formatted date",
+    "viewRaw": "Raw",
+    "viewTransformed": "Transformed"
   }
 }

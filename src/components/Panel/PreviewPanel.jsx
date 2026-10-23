@@ -30,6 +30,7 @@ import FilePreviewItem from './FilePreview';
 import ImageLightbox from '../ImageLightbox/ImageLightbox';
 import { isCurlCommand } from '../../utils/curlParser';
 import CurlBox from '../CurlBox/CurlBox';
+import { resolveMatchingTransforms } from '../../utils/transforms/index.js';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -45,7 +46,7 @@ function PreviewPanel() {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [previewToast, setPreviewToast] = useState('');
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
-  const [showTimestampConverted, setShowTimestampConverted] = useState(false);
+  const [showDecodedView, setShowDecodedView] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [debouncedTagSuggestionQuery, setDebouncedTagSuggestionQuery] = useState('');
   const [backendUserTags, setBackendUserTags] = useState([]);
@@ -169,7 +170,6 @@ function PreviewPanel() {
   const shouldShowOpenButton = item.type_ === 'link' || item.type_ === 'file' || textOpenablePaths.length > 0 || textOpenableUrls.length > 0;
   const shouldShowRevealButton = item.type_ === 'file' || (item.type_ === 'image' && !!item.image_paths) || textOpenablePaths.length > 0;
   const shouldShowSaveImageButton = item.type_ === 'image' && !!item.image_paths;
-  const isJson = item.code_language && item.code_language.toLowerCase() === 'json' && item.content;
   const assistantSourceText = useMemo(() => {
     if (item.type_ === 'image') {
       return item.ocr_text || item.content || '';
@@ -196,7 +196,28 @@ function PreviewPanel() {
   const convertedTimestampText = useMemo(() => (
     timestampCandidate ? formatTimestampCandidate(timestampCandidate, i18n.language) : ''
   ), [timestampCandidate, i18n.language]);
-  const shouldShowTimestampConvertButton = Boolean(timestampCandidate && convertedTimestampText);
+
+  const activeTransforms = useMemo(() => {
+    if (!item?.content || (item.type_ !== 'text' && item.type_ !== 'code' && !item.code_language)) {
+      return [];
+    }
+    return resolveMatchingTransforms(item.content, { language: i18n.language });
+  }, [item?.content, item?.type_, item?.code_language, i18n.language]);
+
+  const previewableRule = useMemo(() => {
+    return activeTransforms.find((r) => r.previewable) || null;
+  }, [activeTransforms]);
+
+  const contentToDisplay = useMemo(() => {
+    if (showDecodedView && previewableRule) {
+      return previewableRule.apply(item.content, { language: i18n.language });
+    }
+    return item.content || '';
+  }, [showDecodedView, previewableRule, item.content, i18n.language]);
+
+  useEffect(() => {
+    setShowDecodedView(false);
+  }, [item?.id]);
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
   const previewTypeClass = item.code_language ? 'type-code' : `type-${item.type_ || 'text'}`;
   const itemTypeLabel = useMemo(() => {
@@ -406,8 +427,8 @@ function PreviewPanel() {
       await handleOpenItem(item);
     } else {
       // copy content only (not the whole item)
-      if (item.content) {
-        await handleCopyPlainText(item.content, 'preview');
+      if (contentToDisplay) {
+        await handleCopyPlainText(contentToDisplay, 'preview');
       } else if (item.type_ === 'image') {
         // for image, copy the image itself
         const copied = await handleCopy(item, 'preview');
@@ -625,15 +646,6 @@ function PreviewPanel() {
     }
   }, [handleRevealInFolder, item, textOpenablePaths, openFeedback]);
 
-  const handleFormatJsonCopy = useCallback(() => {
-    try {
-      const formatted = JSON.stringify(JSON.parse(item.content), null, 2);
-      handleCopyPlainText(formatted, 'preview');
-    } catch {
-      handleCopyPlainText(item.content, 'preview');
-    }
-  }, [item.content, handleCopyPlainText]);
-
   const setToolbarCopiedFeedback = useCallback((actionKey) => {
     setCopiedToolbarAction(actionKey);
     if (toolbarCopyTimerRef.current) {
@@ -675,17 +687,44 @@ function PreviewPanel() {
     }
 
     if (item.code_language && item.content) {
+      const PreviewableIcon = previewableRule?.icon;
       return (
-        <div
-          ref={contentSelectableRef}
-          className="preview-code-content"
-          onKeyDown={handleContentKeyDown}
-          tabIndex={0}
-          title={t('item.doubleClickToCopy')}
-        >
-          <Suspense fallback={<div className="preview-text-content">{item.content}</div>}>
-            <CodeBlock code={item.content} language={item.code_language} maxLines={200} />
-          </Suspense>
+        <div className="preview-text-wrapper">
+          {previewableRule && (
+            <div className="preview-transform-toggle-bar">
+              <span className="preview-transform-toggle-hint">
+                <PreviewableIcon size={13} />
+                <span>{t(previewableRule.titleKey)}</span>
+              </span>
+              <div className="preview-transform-pill-group">
+                <button
+                  type="button"
+                  className={`preview-transform-pill ${!showDecodedView ? 'active' : ''}`}
+                  onClick={() => setShowDecodedView(false)}
+                >
+                  {t('transforms.viewRaw')}
+                </button>
+                <button
+                  type="button"
+                  className={`preview-transform-pill ${showDecodedView ? 'active' : ''}`}
+                  onClick={() => setShowDecodedView(true)}
+                >
+                  {t('transforms.viewTransformed')}
+                </button>
+              </div>
+            </div>
+          )}
+          <div
+            ref={contentSelectableRef}
+            className="preview-code-content"
+            onKeyDown={handleContentKeyDown}
+            tabIndex={0}
+            title={t('item.doubleClickToCopy')}
+          >
+            <Suspense fallback={<div className="preview-text-content">{contentToDisplay}</div>}>
+              <CodeBlock code={contentToDisplay} language={item.code_language} maxLines={200} />
+            </Suspense>
+          </div>
         </div>
       );
     }
@@ -735,8 +774,33 @@ function PreviewPanel() {
       );
     }
     const translation = getTranslationFromMetadata(item.metadata);
+    const PreviewableIcon = previewableRule?.icon;
     return (
       <div className="preview-text-wrapper">
+        {previewableRule && (
+          <div className="preview-transform-toggle-bar">
+            <span className="preview-transform-toggle-hint">
+              <PreviewableIcon size={13} />
+              <span>{t(previewableRule.titleKey)}</span>
+            </span>
+            <div className="preview-transform-pill-group">
+              <button
+                type="button"
+                className={`preview-transform-pill ${!showDecodedView ? 'active' : ''}`}
+                onClick={() => setShowDecodedView(false)}
+              >
+                {t('transforms.viewRaw')}
+              </button>
+              <button
+                type="button"
+                className={`preview-transform-pill ${showDecodedView ? 'active' : ''}`}
+                onClick={() => setShowDecodedView(true)}
+              >
+                {t('transforms.viewTransformed')}
+              </button>
+            </div>
+          </div>
+        )}
         <div
           ref={contentSelectableRef}
           className="preview-text-content"
@@ -745,7 +809,7 @@ function PreviewPanel() {
           tabIndex={0}
           title={item.type_ === 'file' ? t('item.doubleClickToOpen') : t('item.doubleClickToCopy')}
         >
-          {getContentPreview(item.content)}
+          {getContentPreview(contentToDisplay)}
         </div>
         {translation && (
           <div className="preview-translation-card" style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
@@ -998,7 +1062,7 @@ function PreviewPanel() {
                 <span className="preview-meta-color-text">{pureColorPreview.hex}</span>
               </span>
             )}
-            {showTimestampConverted && convertedTimestampText && (
+            {convertedTimestampText && (
               <span className="preview-meta-timestamp">
                 {t('item.timestampConverted')}: {convertedTimestampText}
               </span>
@@ -1050,15 +1114,23 @@ function PreviewPanel() {
                   <span>{copiedToolbarAction === 'plain-text' ? t('item.copied') : t('item.copyPlainText')}</span>
                 </button>
               )}
-              {isJson && (
-                <button
-                  className={`preview-tool-btn secondary ${copiedToolbarAction === 'json' ? 'copied' : ''}`}
-                  onClick={() => runToolbarCopyAction('json', handleFormatJsonCopy)}
-                >
-                  {copiedToolbarAction === 'json' ? <Check size={14} /> : <Braces size={14} />}
-                  <span>{copiedToolbarAction === 'json' ? t('item.copied') : t('item.formatJsonCopy')}</span>
-                </button>
-              )}
+              {/* 动态转换规则快捷动作 */}
+              {activeTransforms.map((rule) => {
+                const IconComponent = rule.icon;
+                const isCopied = copiedToolbarAction === rule.id;
+                return (
+                  <button
+                    key={rule.id}
+                    type="button"
+                    className={`preview-tool-btn secondary ${isCopied ? 'copied' : ''}`}
+                    onClick={() => runToolbarCopyAction(rule.id, () => handleCopyPlainText(rule.apply(item.content, { language: i18n.language }), 'preview'))}
+                    title={t(rule.titleKey)}
+                  >
+                    {isCopied ? <Check size={14} /> : <IconComponent size={14} />}
+                    <span>{isCopied ? t('item.copied') : t(rule.labelKey)}</span>
+                  </button>
+                );
+              })}
               {pureColorPreview && (
                 <button
                   className={`preview-tool-btn secondary color-format ${copiedToolbarAction === 'hex' ? 'copied' : ''}`}
@@ -1090,16 +1162,6 @@ function PreviewPanel() {
                   {copiedToolbarAction === 'hsl' ? <Check size={14} /> : <Palette size={14} />}
                   <span>{t('item.copyHsl')}</span>
                   <span className="compact-label">HSL</span>
-                </button>
-              )}
-              {shouldShowTimestampConvertButton && (
-                <button
-                  className={`preview-tool-btn secondary ${showTimestampConverted ? 'active' : ''}`}
-                  onClick={() => setShowTimestampConverted((prev) => !prev)}
-                  title={t('item.convertTimestamp')}
-                >
-                  <Clock3 size={14} />
-                  <span>{t('item.convertTimestamp')}</span>
                 </button>
               )}
               {shouldShowAIButton && (
