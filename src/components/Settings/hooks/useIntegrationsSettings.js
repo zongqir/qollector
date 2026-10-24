@@ -60,8 +60,25 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   });
   const [shareTestResult, setShareTestResult] = useState(null);
   const [shareTesting, setShareTesting] = useState(false);
+  const [emailRelayConfig, setEmailRelayConfig] = useState({
+    enabled: false,
+    smtp_host: '',
+    smtp_port: 25,
+    encryption: 'none',
+    allow_insecure_certs: true,
+    username: '',
+    password: '',
+    from_address: '',
+    from_name: 'Qollect',
+    default_recipients: [],
+    send_to_self_by_default: true,
+    subject_prefix: '[Qollect] ',
+  });
+  const [emailRelayTesting, setEmailRelayTesting] = useState(false);
+  const [emailRelayTestResult, setEmailRelayTestResult] = useState(null);
+  const [showEmailPassword, setShowEmailPassword] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({
-    ai: true, ocr: true, mcp: true, collector: true, share: true,
+    ai: true, ocr: true, mcp: true, collector: true, share: true, emailRelay: true,
   });
 
   const toggleSection = (key) => {
@@ -136,7 +153,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   }, [ocrConfig.current_provider, ocrConfig.credentials]);
 
   const loadIntegrationConfigs = async () => {
-    const [ai, ocr, mcp, collector, collectorStatus, mcpPort, share] = await Promise.all([
+    const [ai, ocr, mcp, collector, collectorStatus, mcpPort, share, emailRelay] = await Promise.all([
       invoke('get_ai_config'),
       invoke('get_ocr_config'),
       invoke('get_mcp_config'),
@@ -150,7 +167,12 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       invoke('get_share_config').catch(() => ({
         provider: 'Litterbox',
       })),
+      invoke('get_email_relay_config').catch(() => null),
     ]);
+
+    if (emailRelay) {
+      setEmailRelayConfig(emailRelay);
+    }
 
     setAiConfig(ai);
     if (ai.current_provider?.Custom) {
@@ -485,6 +507,45 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     }
   };
 
+  const handleEmailRelayEnabledChange = async (enabled) => {
+    const updated = { ...emailRelayConfig, enabled };
+    setEmailRelayConfig(updated);
+    try {
+      await invoke('update_email_relay_config', { config: updated });
+      useAppStore.getState().setEmailRelayConfig(updated);
+      onConfigChange?.();
+    } catch (err) {
+      console.error('Failed to update email relay config', err);
+    }
+  };
+
+  const handleUpdateEmailRelayConfig = async (newConfig) => {
+    setEmailRelayConfig(newConfig);
+    try {
+      await invoke('update_email_relay_config', { config: newConfig });
+      useAppStore.getState().setEmailRelayConfig(newConfig);
+      onConfigChange?.();
+    } catch (err) {
+      console.error('Failed to update email relay config', err);
+    }
+  };
+
+  const handleEmailRelayTest = async () => {
+    setEmailRelayTesting(true);
+    setEmailRelayTestResult(null);
+    try {
+      const res = await invoke('test_email_relay_connection', {
+        config: emailRelayConfig,
+        testRecipient: emailRelayConfig.from_address || null,
+      });
+      setEmailRelayTestResult({ success: true, message: res });
+    } catch (err) {
+      setEmailRelayTestResult({ success: false, message: String(err) });
+    } finally {
+      setEmailRelayTesting(false);
+    }
+  };
+
   return {
     aiConfig,
     setAiConfig,
@@ -552,6 +613,14 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     handleRefreshModels,
     handleAiTest,
     handleOcrTest,
+    emailRelayConfig,
+    setEmailRelayConfig: handleUpdateEmailRelayConfig,
+    emailRelayTesting,
+    emailRelayTestResult,
+    showEmailPassword,
+    setShowEmailPassword,
+    handleEmailRelayEnabledChange,
+    handleEmailRelayTest,
   };
 }
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages, Mail
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { buildItemDerivations } from '../../store/modules/itemsIndex';
@@ -32,6 +32,7 @@ import { isCurlCommand } from '../../utils/curlParser';
 import CurlBox from '../CurlBox/CurlBox';
 import { resolveMatchingTransforms } from '../../utils/transforms/index.js';
 import { TextChunkSplitter } from './TextChunkSplitter';
+import { sendClipboardItemViaEmail } from '../../services/emailRelayService';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -81,6 +82,9 @@ function PreviewPanel() {
   const openShareModal = useAppStore(s => s.openShareModal);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
+  const emailRelayConfig = useAppStore(s => s.emailRelayConfig);
+  const emailRelayEnabled = useAppStore(s => s.emailRelayEnabled);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const previewItemId = previewItem?.id ?? null;
   const livePreviewItem = useAppStore(useCallback(
     (state) => {
@@ -445,6 +449,28 @@ function PreviewPanel() {
       setShowDeleteConfirm(true);
       showPreviewToast(t('item.confirmDelete'));
       setTimeout(() => setShowDeleteConfirm(false), 3000);
+    }
+  };
+
+  const handleQuickSendEmail = async (e) => {
+    e?.stopPropagation();
+    if (!item || isSendingEmail) return;
+    if (!emailRelayConfig?.from_address) {
+      showPreviewToast(t('item.emailNotConfigured'));
+      return;
+    }
+    setIsSendingEmail(true);
+    try {
+      const recipients = await sendClipboardItemViaEmail({
+        itemId: item.id,
+        recipients: [],
+      });
+      showPreviewToast(t('item.sentToEmailToast', { email: recipients || emailRelayConfig.from_address }));
+    } catch (err) {
+      console.error('Send clipboard item via email failed:', err);
+      showPreviewToast(t('item.sendEmailFailed', { error: String(err) }));
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -937,6 +963,18 @@ function PreviewPanel() {
               <Maximize2 size={16} />
             </button>
           )}
+          {emailRelayEnabled && emailRelayConfig?.from_address && (
+            <button
+              type="button"
+              className={`preview-action-btn email-send-btn ${isSendingEmail ? 'loading' : ''}`}
+              onClick={handleQuickSendEmail}
+              disabled={isSendingEmail}
+              title={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
+              aria-label={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
+            >
+              <Mail size={16} />
+            </button>
+          )}
           <span className="preview-nav-action-divider" aria-hidden="true" />
           <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
@@ -1240,6 +1278,18 @@ function PreviewPanel() {
                 >
                   <Download size={14} />
                   <span>{t('item.saveAs')}</span>
+                </button>
+              )}
+              {emailRelayEnabled && emailRelayConfig?.from_address && (
+                <button
+                  type="button"
+                  className={`preview-tool-btn secondary email-tool-btn ${isSendingEmail ? 'loading' : ''}`}
+                  onClick={handleQuickSendEmail}
+                  disabled={isSendingEmail}
+                  title={t('item.sendToEmailHint', { email: emailRelayConfig.from_address })}
+                >
+                  <Mail size={14} />
+                  <span>{isSendingEmail ? t('item.sendingEmail') : t('item.sendToEmailBtn')}</span>
                 </button>
               )}
               {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (

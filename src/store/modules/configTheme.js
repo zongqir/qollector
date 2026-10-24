@@ -7,18 +7,21 @@ export const createLoadConfigsAction = ({
 }) => async (options = {}) => {
   const applyStartupView = options?.applyStartupView === true;
   try {
-    const [aiConfig, ocrConfig, generalConfig, hasLock, licenseInfo] = await Promise.all([
+    const [aiConfig, ocrConfig, generalConfig, hasLock, licenseInfo, emailRelayConfig] = await Promise.all([
       invoke('get_ai_config'),
       invoke('get_ocr_config'),
       invoke('get_general_config'),
       invoke('has_lock_password'),
       invoke('get_license_info'),
+      invoke('get_email_relay_config').catch(() => null),
     ]);
 
     const licenseStatus = licenseInfo?.status || 'Free';
     set((state) => ({
       aiEnabled: aiConfig?.enabled || false,
       ocrEnabled: ocrConfig?.enabled !== false,
+      emailRelayConfig: emailRelayConfig || null,
+      emailRelayEnabled: Boolean(emailRelayConfig?.enabled),
       licenseStatus,
       isProUser: licenseStatus === 'Active',
       hasPassword: Boolean(hasLock),

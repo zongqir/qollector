@@ -1141,9 +1141,9 @@
   padding: 1px 6px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-success, #10b981);
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--color-success);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-light);
   border-radius: 999px;
   flex-shrink: 0;
 }
@@ -1184,11 +1184,11 @@
 
 .preview-chunk-item.ready {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 1px var(--accent-color-transparent, rgba(59, 130, 246, 0.15));
+  box-shadow: 0 0 0 1px var(--accent-color-transparent);
 }
 
 .preview-chunk-item.copied {
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: var(--color-success);
 }
 
 .preview-chunk-item-top {
@@ -1236,7 +1236,7 @@
 
 .preview-chunk-btn.primary {
   background: var(--accent-color);
-  color: #fff;
+  color: white;
   border-color: var(--accent-color);
 }
 
@@ -1255,9 +1255,9 @@
 }
 
 .preview-chunk-btn.copied {
-  background: var(--color-success, #10b981);
-  color: #fff;
-  border-color: var(--color-success, #10b981);
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
 }
 
 .preview-chunk-snippet {

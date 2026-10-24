@@ -272,7 +272,14 @@
     "chunkLines": "行 {{start}}~{{end}}",
     "chunkChars": "{{count}} 字符",
     "copyThisChunk": "复制本卷",
-    "chunkCopiedToast": "已复制第 {{index}}/{{total}} 卷（{{chars}} 字符，≤4096 安全）"
+    "chunkCopiedToast": "已复制第 {{index}}/{{total}} 卷（{{chars}} 字符，≤4096 安全）",
+    "sendToEmailTitle": "发到我企业邮箱 ({{email}})",
+    "sendToEmailBtn": "发到我邮箱",
+    "sendToEmailHint": "一键将当前资产发至 {{email}}，外网通过 Webmail 即可查收",
+    "sendingEmail": "投递中...",
+    "sentToEmailToast": "已成功投递至 {{email}}，登录 Webmail 即可查收",
+    "sendEmailFailed": "邮件投递失败: {{error}}",
+    "emailNotConfigured": "未配置发件人企业邮箱，请先前往功能模块设置"
   },
   "edit": {
     "content": "内容:",
@@ -490,6 +497,23 @@
       "syncSuccess": "本次成功 {{uploaded}} 条，失败 {{failed}} 条，待上传 {{pending}} 条",
       "syncFailureReason": "{{message}}（{{count}} 条）",
       "syncFailed": "同步失败：{{error}}"
+    },
+    "emailRelay": {
+      "title": "内部邮件中继 (内网/外网资产中转)",
+      "desc": "利用企业内部邮件服务器或专用中继，一键将图片/资产发至个人内部邮箱，外网登录 Webmail 即可查收提取",
+      "configTitle": "内部邮件中继参数",
+      "smtpHost": "SMTP 服务器地址 (内网域名或IP)",
+      "smtpPort": "端口",
+      "encryption": "加密方式",
+      "encNone": "无加密 (内网端口25常用)",
+      "fromAddress": "你的企业发件邮箱",
+      "username": "账号 (可选)",
+      "usernamePlaceholder": "内网工号或企业邮箱",
+      "password": "密码 / 授权码 (可选)",
+      "passwordPlaceholder": "如内网免密可留空",
+      "sendToSelfDefault": "默认发给自己 (一键发到自己邮箱)",
+      "sendToSelfDesc": "开启后点击邮件发送将默认直接投递至发件人自己，免输入收件人",
+      "testBtn": "测试发送到当前邮箱"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",

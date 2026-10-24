@@ -52,6 +52,14 @@ function IntegrationsCoreSection({
   onToggleCollectorEnabled,
   handleCollectorTest,
   handleCollectorSync,
+  emailRelayConfig,
+  setEmailRelayConfig,
+  emailRelayTesting,
+  emailRelayTestResult,
+  showEmailPassword,
+  setShowEmailPassword,
+  onToggleEmailRelayEnabled,
+  handleEmailRelayTest,
   getAiProviderValue,
   handleAiProviderChange,
   customName,
@@ -291,6 +299,126 @@ function IntegrationsCoreSection({
                   </button>
                   {collectorTestResult && <span className={`test-result ${collectorTestResult.success ? 'success' : 'error'}`}>{collectorTestResult.message}</span>}
                   {collectorSyncResult && <span className={`test-result ${collectorSyncResult.success ? 'success' : 'error'}`}>{collectorSyncResult.message}</span>}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <label className="sg-row setting-toggle-row">
+          <span className="toggle-label-group">
+            <span className="toggle-label">{t('settings.emailRelay.title')}</span>
+            <span className="toggle-desc">{t('settings.emailRelay.desc')}</span>
+          </span>
+          <span className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={emailRelayConfig?.enabled || false}
+              onChange={(e) => onToggleEmailRelayEnabled(e.target.checked)}
+            />
+            <span className="toggle-slider" />
+          </span>
+        </label>
+        {emailRelayConfig?.enabled && (
+          <div className="settings-content">
+            <div className="setting-group-title section-title collapsible-title" onClick={() => toggleSection('emailRelay')}>
+              {collapsedSections.emailRelay ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {t('settings.emailRelay.configTitle')}
+            </div>
+            {!collapsedSections.emailRelay && (
+              <>
+                <div className="setting-item">
+                  <label>{t('settings.emailRelay.smtpHost')}</label>
+                  <input
+                    type="text"
+                    value={emailRelayConfig.smtp_host}
+                    onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, smtp_host: e.target.value })}
+                    placeholder="mail.company.com / 10.x.x.x"
+                    className="setting-input"
+                  />
+                </div>
+                <div className="setting-item-row" style={{ display: 'flex', gap: '12px' }}>
+                  <div className="setting-item" style={{ flex: 1 }}>
+                    <label>{t('settings.emailRelay.smtpPort')}</label>
+                    <input
+                      type="number"
+                      value={emailRelayConfig.smtp_port}
+                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, smtp_port: parseInt(e.target.value, 10) || 25 })}
+                      className="setting-input"
+                    />
+                  </div>
+                  <div className="setting-item" style={{ flex: 1 }}>
+                    <label>{t('settings.emailRelay.encryption')}</label>
+                    <select
+                      value={emailRelayConfig.encryption}
+                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, encryption: e.target.value })}
+                      className="setting-select"
+                    >
+                      <option value="none">{t('settings.emailRelay.encNone')}</option>
+                      <option value="starttls">STARTTLS</option>
+                      <option value="tls">SSL/TLS</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="setting-item">
+                  <label>{t('settings.emailRelay.fromAddress')}</label>
+                  <input
+                    type="email"
+                    value={emailRelayConfig.from_address}
+                    onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, from_address: e.target.value })}
+                    placeholder="myname@company.com"
+                    className="setting-input"
+                  />
+                </div>
+                <div className="setting-item-row" style={{ display: 'flex', gap: '12px' }}>
+                  <div className="setting-item" style={{ flex: 1 }}>
+                    <label>{t('settings.emailRelay.username')}</label>
+                    <input
+                      type="text"
+                      value={emailRelayConfig.username}
+                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, username: e.target.value })}
+                      placeholder={t('settings.emailRelay.usernamePlaceholder')}
+                      className="setting-input"
+                    />
+                  </div>
+                  <div className="setting-item" style={{ flex: 1 }}>
+                    <label>{t('settings.emailRelay.password')}</label>
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showEmailPassword ? 'text' : 'password'}
+                        value={emailRelayConfig.password}
+                        onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, password: e.target.value })}
+                        placeholder={t('settings.emailRelay.passwordPlaceholder')}
+                        className="setting-input"
+                      />
+                      <button type="button" onClick={() => setShowEmailPassword(!showEmailPassword)} className="password-toggle-btn">
+                        {showEmailPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <label className="sg-row setting-toggle-row" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                  <span className="toggle-label-group">
+                    <span className="toggle-label">{t('settings.emailRelay.sendToSelfDefault')}</span>
+                    <span className="toggle-desc">{t('settings.emailRelay.sendToSelfDesc')}</span>
+                  </span>
+                  <span className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={emailRelayConfig.send_to_self_by_default}
+                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, send_to_self_by_default: e.target.checked })}
+                    />
+                    <span className="toggle-slider" />
+                  </span>
+                </label>
+                <div className="setting-actions">
+                  <button onClick={handleEmailRelayTest} disabled={emailRelayTesting} className="test-btn">
+                    {emailRelayTesting ? t('settings.testing') : t('settings.emailRelay.testBtn')}
+                  </button>
+                  {emailRelayTestResult && (
+                    <span className={`test-result ${emailRelayTestResult.success ? 'success' : 'error'}`}>
+                      {emailRelayTestResult.message}
+                    </span>
+                  )}
                 </div>
               </>
             )}

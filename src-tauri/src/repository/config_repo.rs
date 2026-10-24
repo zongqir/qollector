@@ -5,6 +5,7 @@ use crate::config::CollectorConfig;
 use crate::mcp::McpConfig;
 use crate::ocr::OcrConfig;
 use crate::share::ShareConfig;
+use crate::email::EmailRelayConfig;
 use serde::Serialize;
 use sqlx::SqlitePool;
 
@@ -322,6 +323,45 @@ impl ConfigRepository {
         if let Some((value,)) = row {
             let decoded_value = decode_config_value(&value, true)?;
             let config: ShareConfig = serde_json::from_str(&decoded_value)
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+            Ok(Some(config))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Save email relay config
+    pub async fn save_email_relay_config(&self, config: &EmailRelayConfig) -> Result<(), sqlx::Error> {
+        let value = encode_config_value(config, true)?;
+        let now = chrono::Utc::now().timestamp();
+
+        sqlx::query(
+            r#"
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('email_relay_config', ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = ?
+            "#,
+        )
+        .bind(&value)
+        .bind(now)
+        .bind(&value)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Load email relay config
+    pub async fn load_email_relay_config(&self) -> Result<Option<EmailRelayConfig>, sqlx::Error> {
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT value FROM app_config WHERE key = 'email_relay_config'")
+                .fetch_optional(&self.pool)
+                .await?;
+
+        if let Some((value,)) = row {
+            let decoded_value = decode_config_value(&value, true)?;
+            let config: EmailRelayConfig = serde_json::from_str(&decoded_value)
                 .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
             Ok(Some(config))
         } else {

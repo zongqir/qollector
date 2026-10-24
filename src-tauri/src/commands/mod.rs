@@ -13,3 +13,4 @@ pub mod ocr_commands;
 pub mod prompt_commands;
 pub mod share_commands;
 pub mod workbench_commands;
+pub mod email_commands;

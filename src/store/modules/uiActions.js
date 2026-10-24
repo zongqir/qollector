@@ -25,4 +25,8 @@ export const createUiActions = (set) => ({
     lastCopyWasAutoPaste: false,
   })),
   setDebouncedSearchQuery: (v) => set({ debouncedSearchQuery: v }),
+  setEmailRelayConfig: (config) => set({
+    emailRelayConfig: config,
+    emailRelayEnabled: Boolean(config?.enabled),
+  }),
 });

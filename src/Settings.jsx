@@ -378,6 +378,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     handleRefreshModels,
     handleAiTest,
     handleOcrTest,
+    emailRelayConfig,
+    setEmailRelayConfig,
+    emailRelayTesting,
+    emailRelayTestResult,
+    showEmailPassword,
+    setShowEmailPassword,
+    handleEmailRelayEnabledChange,
+    handleEmailRelayTest,
   } = useIntegrationsSettings({ t, onConfigChange });
 
   const openIntegrations = () => {
@@ -788,6 +796,14 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 onToggleCollectorEnabled={handleCollectorEnabledChange}
                 handleCollectorTest={handleCollectorTest}
                 handleCollectorSync={handleCollectorSync}
+                emailRelayConfig={emailRelayConfig}
+                setEmailRelayConfig={setEmailRelayConfig}
+                emailRelayTesting={emailRelayTesting}
+                emailRelayTestResult={emailRelayTestResult}
+                showEmailPassword={showEmailPassword}
+                setShowEmailPassword={setShowEmailPassword}
+                onToggleEmailRelayEnabled={handleEmailRelayEnabledChange}
+                handleEmailRelayTest={handleEmailRelayTest}
                 getAiProviderValue={getAiProviderValue}
                 handleAiProviderChange={handleAiProviderChange}
                 customName={customName}

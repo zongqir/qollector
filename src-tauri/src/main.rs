@@ -10,6 +10,7 @@ mod config;
 mod copy_on_select;
 mod core;
 mod crash_log;
+mod email;
 mod http_client;
 mod mcp;
 mod ocr;
@@ -26,6 +27,7 @@ use commands::ai_commands::*;
 use commands::clipboard_commands::*;
 use commands::collector_commands::*;
 use commands::drag_drop_commands::*;
+use commands::email_commands::*;
 use commands::export_commands::*;
 use commands::general_commands::*;
 use commands::http_commands::*;
@@ -539,6 +541,8 @@ fn main() {
 
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
+                let email_state = EmailState::new(config_repo.clone());
+                app.manage(email_state);
 
                 init_meter.mark("register_states");
                 startup_metrics_for_core_init.mark_core_init_complete();
@@ -761,6 +765,10 @@ fn main() {
             preview_file,
             open_file_path,
             reveal_file_path,
+            get_email_relay_config,
+            update_email_relay_config,
+            test_email_relay_connection,
+            send_clipboard_item_via_email,
             crash_log::get_crash_log,
             crash_log::clear_crash_log,
         ])

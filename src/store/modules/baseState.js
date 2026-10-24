@@ -129,5 +129,9 @@ export const createBaseState = ({
   sharePendingData: null,
   sharePendingProvider: null,
   shareConfig: null,
+
+  // ========== 邮件中继 ==========
+  emailRelayConfig: null,
+  emailRelayEnabled: false,
   });
 };

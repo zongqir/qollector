@@ -272,7 +272,14 @@
     "chunkLines": "Lines {{start}}~{{end}}",
     "chunkChars": "{{count}} chars",
     "copyThisChunk": "Copy part",
-    "chunkCopiedToast": "Copied part {{index}}/{{total}} ({{chars}} chars, ≤4096 safe)"
+    "chunkCopiedToast": "Copied part {{index}}/{{total}} ({{chars}} chars, ≤4096 safe)",
+    "sendToEmailTitle": "Send to my work email ({{email}})",
+    "sendToEmailBtn": "Send to My Email",
+    "sendToEmailHint": "Send this asset to {{email}}, retrieve via Webmail externally",
+    "sendingEmail": "Sending...",
+    "sentToEmailToast": "Sent to {{email}} successfully! Check Webmail.",
+    "sendEmailFailed": "Email send failed: {{error}}",
+    "emailNotConfigured": "Sender work email not configured. Please check feature modules in settings."
   },
   "feedback": {
     "channel": {
@@ -516,6 +523,23 @@
       "syncSuccess": "Uploaded {{uploaded}}, failed {{failed}}, pending {{pending}}",
       "syncFailureReason": "{{message}} ({{count}} items)",
       "syncFailed": "Sync failed: {{error}}"
+    },
+    "emailRelay": {
+      "title": "Internal Email Relay (Work/Home Transfer)",
+      "desc": "Use internal company mail server to send clipboard assets to your internal mailbox, accessible via Webmail anywhere",
+      "configTitle": "Internal Email Relay Configuration",
+      "smtpHost": "SMTP Host (Domain or Internal IP)",
+      "smtpPort": "Port",
+      "encryption": "Encryption",
+      "encNone": "None (Port 25 plaintext)",
+      "fromAddress": "Your Corporate Email",
+      "username": "Username (Optional)",
+      "usernamePlaceholder": "Internal ID or Corporate Email",
+      "password": "Password / Auth Code (Optional)",
+      "passwordPlaceholder": "Leave blank if internal whitelist",
+      "sendToSelfDefault": "Default to sending to myself",
+      "sendToSelfDesc": "When enabled, clicking send will directly deliver to your own mailbox without recipient prompt",
+      "testBtn": "Test Send to Current Email"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
