@@ -96,6 +96,7 @@ function SearchBar({
   const typeFilterOptions = typeOptions.map(({ key, icon }) => ({ key, icon }));
   const parsedTagOptions = useMemo(() => (
     filteredTagsList
+      .filter((tag) => typeof tag === 'string' && !tag.startsWith('AI:'))
       .map((tag) => {
         const parsed = parseSystemTag(tag, {
           sourcePrefix: t('tag.source'),
@@ -106,12 +107,11 @@ function SearchBar({
           tag,
           kind: parsed.kind,
           displayTag: parsed.displayText,
-          isAITag: parsed.kind === 'ai',
           isSourceTag: parsed.kind === 'source',
-          isUserTag: parsed.kind !== 'ai' && parsed.kind !== 'source',
+          isUserTag: parsed.kind !== 'source',
         };
       })
-      .filter((option) => option.kind !== 'type')
+      .filter((option) => option.kind !== 'type' && option.kind !== 'ai')
   ), [filteredTagsList, t]);
   const visibleTagOptions = parsedTagOptions.slice(0, 20);
   const hasSelectedTags = selectedTags.length > 0;

@@ -350,3 +350,219 @@
 .tag-remove:hover {
   opacity: 0.8;
 }
+
+/* ==========================================================================
+   QuickTagPopover
+   ========================================================================== */
+.quick-tag-popover {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px var(--shadow-overlay), 0 2px 8px var(--shadow-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  user-select: none;
+  animation: quickTagFadeIn var(--motion-fast) var(--ease-standard);
+  box-sizing: border-box;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+@keyframes quickTagFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quick-tag-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.quick-tag-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quick-tag-icon {
+  color: var(--accent-color);
+}
+
+.quick-tag-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+
+.quick-tag-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.quick-tag-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.quick-tag-input-row:focus-within {
+  border-color: var(--accent-color);
+}
+
+.quick-tag-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.quick-tag-input::placeholder {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.quick-tag-add-btn {
+  background: var(--accent-color);
+  border: none;
+  color: var(--text-on-accent);
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.quick-tag-add-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quick-tag-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quick-tag-section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quick-tag-section-title.ai-title {
+  color: var(--state-ai-fg);
+}
+
+.quick-tag-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.quick-tag-empty-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.quick-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease-standard);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.quick-tag-chip.active {
+  background: var(--accent-light);
+  border-color: var(--accent-medium);
+  color: var(--accent-color);
+}
+
+.quick-tag-chip-remove {
+  background: transparent;
+  border: none;
+  color: currentColor;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.quick-tag-chip-remove:hover {
+  opacity: 1;
+}
+
+.quick-tag-chip.ai-candidate {
+  background: color-mix(in srgb, var(--state-ai-bg) 88%, transparent);
+  border: 1px dashed var(--state-ai-border);
+  color: var(--state-ai-fg);
+}
+
+.quick-tag-chip.ai-candidate:hover {
+  background: color-mix(in srgb, var(--state-ai-bg) 100%, transparent);
+  border-color: color-mix(in srgb, var(--state-ai-border) 100%, transparent);
+  color: var(--text-primary);
+}
+
+.quick-tag-chip.suggestion {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.quick-tag-chip.suggestion:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-btn);
+}
+
+.ai-plus-icon {
+  opacity: 0.7;
+}
+

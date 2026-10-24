@@ -11,6 +11,7 @@ import {
   Mail,
   Pencil,
   Share2,
+  Tag,
   Trash2,
   X,
 } from 'lucide-react';
@@ -120,7 +121,8 @@ function HistoryContextMenu({
     ];
 
     const openEntries = [
-      { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
+      { key: 'tag', label: t('item.tagManagement'), icon: Tag, shortcut: 'T' },
+      { key: 'editNote', label: t('item.editNote'), icon: Pencil },
       canEditContent ? { key: 'editContent', label: t('item.editContent'), icon: FileText } : null,
       emailRelayEnabled ? { key: 'sendToEmail', label: t('item.sendToEmailBtn'), icon: Mail } : null,
       { key: 'share', label: t('share.title'), icon: Share2 },

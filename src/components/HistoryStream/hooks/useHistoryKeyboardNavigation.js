@@ -23,6 +23,7 @@ export default function useHistoryKeyboardNavigation({
   virtuosoRef,
   searchInputId = 'history-search-input',
   onSearchArrowDownNoResults,
+  onQuickTag,
 }) {
   const moveFocusedSelection = useCallback((dir) => {
     const total = filteredItems.length;
@@ -150,6 +151,17 @@ export default function useHistoryKeyboardNavigation({
         }
         openBatchTagEditor();
         return;
+      }
+
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 't') {
+        const focusedItem = focusedIndex >= 0 && focusedIndex < filteredItems.length
+          ? filteredItems[focusedIndex]
+          : null;
+        if (focusedItem && onQuickTag) {
+          e.preventDefault();
+          onQuickTag(focusedItem);
+          return;
+        }
       }
 
       if (selectedItemIds.length === 0 && focusedIndex < 0) return;

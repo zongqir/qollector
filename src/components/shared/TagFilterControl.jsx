@@ -81,8 +81,7 @@ function TagFilterControl({
               renderOption={({ option, isSelected, isActive }) => (
                 <div className={`tag-dropdown-item ${isSelected ? 'selected' : ''} ${isActive ? 'keyboard-active' : ''}`}>
                   <span className="tag-check">{isSelected ? <Check size={14} /> : ''}</span>
-                  <span className={`tag-text ${option.isAITag ? 'ai-tag-text' : ''} ${option.isUserTag ? 'user-tag-text' : ''} ${option.isSourceTag ? 'source-tag-text' : ''}`}>
-                    {option.isAITag && <span className="ai-badge">AI</span>}
+                  <span className={`tag-text ${option.isUserTag ? 'user-tag-text' : ''} ${option.isSourceTag ? 'source-tag-text' : ''}`}>
                     {option.isUserTag && <span className="user-badge">M</span>}
                     {option.isSourceTag && <span className="source-badge">S</span>}
                     {option.displayTag}

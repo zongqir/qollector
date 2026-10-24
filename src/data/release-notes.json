@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.7",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-7",
+      "summary": {
+        "zh-CN": "重构标签管理交互体系：右键菜单解耦独立标签项与快捷键 T 直达、推出就地轻量打标浮层与 AI 标签一键转正机制，并彻底净化搜索栏筛选器。",
+        "en-US": "Overhauled the tagging experience: decoupled tags from notes in the context menu with shortcut key 'T', introduced an inline QuickTagPopover with AI tag promotion, and cleansed the search bar tag filter."
+      },
+      "highlights": {
+        "zh-CN": [
+          "右键菜单解耦与键盘 T 直达：将原「编辑备注和标签」拆分为独立的「标签 (T)」与「编辑备注」，在历史流与收藏区列表高亮卡片时直接按键盘单键 T 就地呼出打标面板，交互链路缩短 80%。",
+          "轻量就地打标浮层 (QuickTagPopover)：彻底替换全屏重型编辑弹窗，提供当前标签胶囊展示（一键移除）、单行输入即时回车保存（乐观更新零延迟）以及常用标签芯片快捷点选。",
+          "AI 标签转正推荐机制：后台大模型生成的 AI 关键词不再污染用户个人标签体系，而是以候选虚线徽标呈现在打标面板中，用户点击即可一键「转正」为人工正式标签。",
+          "搜索栏标签筛选彻底净化：搜索框旁标签筛选器严格剔除所有 AI 标签与干扰项，确保筛选列表 100% 仅由人类显式确认的分类与系统来源构成，大幅提升筛选信噪比。",
+          "窄屏与 Mini 模式完美自适应：打标浮层在窗口宽度 ≤420px 或 Mini 模式下自动降级为贴底紧凑面板，杜绝小窗溢出或滚动条跳动缺陷。"
+        ],
+        "en-US": [
+          "Context Menu Decoupling & 'T' Shortcut: Split 'Edit Note & Tags' into standalone 'Tags (T)' and 'Edit Note' items; pressing 'T' on focused cards opens the tag popover immediately with zero mouse friction.",
+          "Inline QuickTagPopover: Replaced bulky full-screen modal with a lightweight popover featuring removable tag chips, instant Enter-to-save with optimistic zero-latency feedback, and frequent tag chips.",
+          "AI Tag Suggestion & Promotion: AI-extracted keywords no longer contaminate personal tag pools; instead, they appear as dashed suggestion chips that users can promote to official tags with a single click.",
+          "Purified Search Bar Filter: Completely excluded raw AI tags from the search dropdown filter, ensuring that only human-verified tags and source apps populate the list for high signal-to-noise filtering.",
+          "Adaptive Mini Mode Support: The tag popover automatically docks as a bottom sheet in Mini mode or viewports ≤420px, preventing layout clipping or horizontal scrollbar glitches."
+        ]
+      }
+    },
+    {
       "version": "0.6.6",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-6",

@@ -8,6 +8,7 @@ import SearchBar from '../SearchBar';
 import CollectionBoard from '../CollectionBoard';
 import HistoryVirtualRow from './HistoryVirtualRow';
 import HistoryContextMenu from './HistoryContextMenu';
+import QuickTagPopover from '../shared/QuickTagPopover';
 import MultiSelectBar from './MultiSelectBar';
 import useHistoryEmptyDiagnostic from './hooks/useHistoryEmptyDiagnostic';
 import useHistoryBatchActions from './hooks/useHistoryBatchActions';
@@ -337,7 +338,9 @@ function HistoryStream({ style }) {
   const setSelectedItemIds = useAppStore(s => s.setSelectedItemIds);
   const clearSelection = useAppStore(s => s.clearSelection);
   const addTagToItem = useAppStore(s => s.addTagToItem);
+  const removeTagFromItem = useAppStore(s => s.removeTagFromItem);
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
+  const [quickTagPopoverState, setQuickTagPopoverState] = useState(null);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
   const copySelectedItemsMerged = useAppStore(s => s.copySelectedItemsMerged);
   const mergeSelectedItemsToNote = useAppStore(s => s.mergeSelectedItemsToNote);
@@ -728,6 +731,11 @@ function HistoryStream({ style }) {
     setFocusedIndex,
   });
 
+  const handleOpenQuickTag = useCallback((targetItem, anchorPosition = null) => {
+    if (!targetItem?.id) return;
+    setQuickTagPopoverState({ item: targetItem, anchorPosition });
+  }, []);
+
   const handleCardContextMenu = useCallback((item, index, event, scope = 'history') => {
     openContextMenu(item, index, event, scope);
   }, [openContextMenu]);
@@ -815,6 +823,10 @@ function HistoryStream({ style }) {
           return;
         case 'showCollectionHints':
           setCollectionHintsDismissed(false);
+          closeContextMenu();
+          return;
+        case 'tag':
+          handleOpenQuickTag(currentItem, { x: contextMenuState.x, y: contextMenuState.y });
           closeContextMenu();
           return;
         case 'editNote':
@@ -1323,6 +1335,7 @@ function HistoryStream({ style }) {
     historyGrouping,
     virtuosoRef,
     onSearchArrowDownNoResults: focusAddFromSearchButton,
+    onQuickTag: handleOpenQuickTag,
   });
 
   const rowGap = isMiniMode ? 2 : 4;
@@ -1945,6 +1958,18 @@ function HistoryStream({ style }) {
         collectionHintsDismissed={collectionHintsDismissed}
         onAction={handleContextMenuAction}
       />
+
+      {quickTagPopoverState && (
+        <QuickTagPopover
+          item={quickTagPopoverState.item}
+          anchorPosition={quickTagPopoverState.anchorPosition}
+          availableUserTags={allTags}
+          isMiniMode={isMiniMode}
+          onClose={() => setQuickTagPopoverState(null)}
+          onAddTag={addTagToItem}
+          onRemoveTag={removeTagFromItem}
+        />
+      )}
 
       {shouldShowBottomHelper && (
         <div className={`history-stream-helper-text ${isCalmPresetActive ? 'history-stream-helper-text-action' : ''} ${showFavoritesOnly && !isCalmPresetActive ? 'history-stream-helper-text--collection-only' : ''}`.trim()}>
