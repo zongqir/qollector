@@ -192,6 +192,14 @@ impl EmailService {
             _ => "文本 / 代码资产",
         };
 
+        let source_app = item.metadata.as_ref().and_then(|meta_str| {
+            serde_json::from_str::<serde_json::Value>(meta_str)
+                .ok()?
+                .get("source_app")?
+                .as_str()
+                .map(|s| s.to_string())
+        });
+
         let mut plain_body = String::new();
         if let Some(ref note) = body_note {
             if !note.trim().is_empty() {
@@ -203,7 +211,7 @@ impl EmailService {
         plain_body.push_str("【Qollect 收集箱内容分享】\r\n");
         plain_body.push_str(&format!("资产类型: {}\r\n", type_desc));
         plain_body.push_str(&format!("分享时间: {}\r\n", share_time));
-        if let Some(ref app) = item.source_app {
+        if let Some(ref app) = source_app {
             if !app.trim().is_empty() {
                 plain_body.push_str(&format!("来源应用: {}\r\n", app.trim()));
             }
@@ -360,7 +368,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
             html_escape(&share_time)
         ));
 
-        if let Some(ref app) = item.source_app {
+        if let Some(ref app) = source_app {
             if !app.trim().is_empty() {
                 html_body.push_str(&format!(
                     r#"

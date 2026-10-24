@@ -1324,3 +1324,23 @@
   }
 }
 
+.preview-tool-btn.email-tool-btn.loading,
+.preview-action-btn.email-send-btn.loading {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.preview-toolbar .spin-icon,
+.preview-actions-group .spin-icon {
+  animation: preview-spin var(--motion-spin) var(--ease-linear) infinite;
+}
+
+@keyframes preview-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

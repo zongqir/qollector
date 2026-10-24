@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.6",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-6",
+      "summary": {
+        "zh-CN": "支持邮件内嵌图片直接渲染预览（RFC 2387 CID），优化邮件卡片与排版设计，并修复预览面板点击发邮件时工具栏布局跳动折叠缺陷。",
+        "en-US": "Added RFC 2387 CID inline image rendering for immediate email viewing with enhanced HTML template, and fixed preview toolbar layout shift on sending email."
+      },
+      "highlights": {
+        "zh-CN": [
+          "邮件图片内嵌直显 (CID)：遵循 RFC 2387 MIME 规范，将图片资产通过 cid:qollect_img_asset 直接内嵌至邮件正文中排版展示，开信即可直接查阅高清图片，同时完整保留原始附件便于一键另存。",
+          "精致自适应邮件模版：全新构建响应式 HTML 邮件卡片，集成来源应用、资产类型、条目备注、标签以及 OCR 文本识别高亮块，兼备纯文本 fallback 兼容。",
+          "预览工具栏布局防跳变：修复点击「发到邮箱」时按钮文案膨胀触发 ResizeObserver 导致底部工具栏意外折叠隐藏的视觉跳动缺陷，按钮状态平滑切换为旋转加载微动效。"
+        ],
+        "en-US": [
+          "RFC 2387 CID Inline Image Embedding: Embedded image assets directly into the HTML email body using standard Content-ID references, enabling immediate visual viewing upon opening while maintaining full attachment downloadability.",
+          "Responsive HTML Email Template: Built a modern card-based email template displaying source app, asset type, item notes, tags, and OCR text recognition blocks alongside plain text fallbacks.",
+          "Preview Toolbar Layout Stabilization: Prevented toolbar collapse and button jumping caused by label resizing during email dispatch, seamlessly swapping icons to an animated spinner while keeping toolbar dimensions stable."
+        ]
+      }
+    },
+    {
       "version": "0.6.5",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-5",

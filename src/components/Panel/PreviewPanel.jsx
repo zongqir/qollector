@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages, Mail
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages, Mail, RefreshCw
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { buildItemDerivations } from '../../store/modules/itemsIndex';
@@ -989,7 +989,7 @@ function PreviewPanel() {
               title={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
               aria-label={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
             >
-              <Mail size={16} />
+              {isSendingEmail ? <RefreshCw size={16} className="spin-icon" /> : <Mail size={16} />}
             </button>
           )}
           <span className="preview-nav-action-divider" aria-hidden="true" />
@@ -1305,8 +1305,8 @@ function PreviewPanel() {
                   disabled={isSendingEmail}
                   title={t('item.sendToEmailHint', { email: emailRelayConfig.from_address })}
                 >
-                  <Mail size={14} />
-                  <span>{isSendingEmail ? t('item.sendingEmail') : t('item.sendToEmailBtn')}</span>
+                  {isSendingEmail ? <RefreshCw size={14} className="spin-icon" /> : <Mail size={14} />}
+                  <span>{t('item.sendToEmailBtn')}</span>
                 </button>
               )}
               {item.type_ !== 'image' && item.type_ !== 'file' && !item.code_language && (
