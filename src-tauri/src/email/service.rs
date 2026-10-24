@@ -13,38 +13,24 @@ impl EmailService {
     fn build_transport(config: &EmailRelayConfig) -> Result<AsyncSmtpTransport<Tokio1Executor>, String> {
         let builder = match config.encryption.to_lowercase().as_str() {
             "tls" => {
-                if config.allow_insecure_certs {
-                    AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
-                        .map_err(|e| format!("SMTP relay init error: {}", e))?
-                        .port(config.smtp_port)
-                        .tls(Tls::Dangerous(
-                            TlsParameters::builder(config.smtp_host.clone())
-                                .dangerous_accept_invalid_certs(true)
-                                .build()
-                                .map_err(|e| format!("TLS build error: {}", e))?,
-                        ))
-                } else {
-                    AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
-                        .map_err(|e| format!("SMTP relay init error: {}", e))?
-                        .port(config.smtp_port)
-                }
+                let tls_params = TlsParameters::builder(config.smtp_host.clone())
+                    .dangerous_accept_invalid_certs(config.allow_insecure_certs)
+                    .build()
+                    .map_err(|e| format!("TLS build error: {}", e))?;
+                AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
+                    .map_err(|e| format!("SMTP relay init error: {}", e))?
+                    .port(config.smtp_port)
+                    .tls(Tls::Required(tls_params))
             }
             "starttls" => {
-                if config.allow_insecure_certs {
-                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.smtp_host)
-                        .map_err(|e| format!("SMTP starttls init error: {}", e))?
-                        .port(config.smtp_port)
-                        .tls(Tls::Dangerous(
-                            TlsParameters::builder(config.smtp_host.clone())
-                                .dangerous_accept_invalid_certs(true)
-                                .build()
-                                .map_err(|e| format!("TLS build error: {}", e))?,
-                        ))
-                } else {
-                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.smtp_host)
-                        .map_err(|e| format!("SMTP starttls init error: {}", e))?
-                        .port(config.smtp_port)
-                }
+                let tls_params = TlsParameters::builder(config.smtp_host.clone())
+                    .dangerous_accept_invalid_certs(config.allow_insecure_certs)
+                    .build()
+                    .map_err(|e| format!("TLS build error: {}", e))?;
+                AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.smtp_host)
+                    .map_err(|e| format!("SMTP starttls init error: {}", e))?
+                    .port(config.smtp_port)
+                    .tls(Tls::Required(tls_params))
             }
             _ => {
                 // 明文连接 (内网默认端口 25)
@@ -143,11 +129,13 @@ impl EmailService {
 
         let timestamp_str = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
 
+        let text_content = item.content.as_deref().unwrap_or("");
+
         let default_subject = match item.type_.as_str() {
             "image" => format!("{}图片资产分享_{}", config.subject_prefix, timestamp_str),
             "file" => format!("{}文件资产分享_{}", config.subject_prefix, timestamp_str),
             _ => {
-                let snippet = item.content.chars().take(20).collect::<String>().replace(['\r', '\n'], " ");
+                let snippet = text_content.chars().take(20).collect::<String>().replace(['\r', '\n'], " ");
                 format!("{}剪贴板文本_{}: {}", config.subject_prefix, timestamp_str, snippet)
             }
         };
@@ -179,7 +167,11 @@ impl EmailService {
         ));
 
         // 提取附件
-        let (attachment_bytes, attachment_filename, content_type) = if item.type_ == "image" {
+        let (attachment_bytes, attachment_filename, content_type): (
+            Option<Vec<u8>>,
+            Option<String>,
+            Option<String>,
+        ) = if item.type_ == "image" {
             if let Some(ref paths_str) = item.image_paths {
                 let paths: serde_json::Value =
                     serde_json::from_str(paths_str).map_err(|e| e.to_string())?;
@@ -206,16 +198,16 @@ impl EmailService {
             } else {
                 (None, None, None)
             }
-        } else if item.type_ == "text" && item.content.len() > 1000 {
+        } else if item.type_ == "text" && text_content.len() > 1000 {
             let filename = format!("qollect_text_{}.txt", timestamp_str);
-            (Some(item.content.as_bytes().to_vec()), Some(filename), Some("text/plain; charset=utf-8".to_string()))
+            (Some(text_content.as_bytes().to_vec()), Some(filename), Some("text/plain; charset=utf-8".to_string()))
         } else {
             (None, None, None)
         };
 
-        if item.type_ == "text" && item.content.len() <= 1000 {
+        if item.type_ == "text" && text_content.len() <= 1000 && !text_content.is_empty() {
             body_content.push_str("\r\n\r\n正文内容:\r\n");
-            body_content.push_str(&item.content);
+            body_content.push_str(text_content);
         }
 
         let email = if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
