@@ -348,11 +348,13 @@ function useIntegrationsSettings({ t, onConfigChange }) {
         invoke('update_mcp_config', { config: mcpConfig }),
         invoke('update_collector_config', { config: collectorConfig }),
         invoke('update_share_config', { config: shareConfig }),
+        invoke('update_email_relay_config', { config: emailRelayConfig }),
       ]);
 
       setAiConfig(aiConfigToSave);
-    setOcrConfig(ocrConfigToSave);
+      setOcrConfig(ocrConfigToSave);
       setCollectorConfig(collectorConfig);
+      useAppStore.getState().setEmailRelayConfig(emailRelayConfig);
       return { success: true };
     } catch (error) {
       console.error('save integrations config failed:', error);
@@ -524,7 +526,6 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     try {
       await invoke('update_email_relay_config', { config: newConfig });
       useAppStore.getState().setEmailRelayConfig(newConfig);
-      onConfigChange?.();
     } catch (err) {
       console.error('Failed to update email relay config', err);
     }

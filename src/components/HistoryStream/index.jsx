@@ -331,6 +331,7 @@ function HistoryStream({ style }) {
   const toggleFavorite = useAppStore(s => s.toggleFavorite);
   const handleOpenItem = useAppStore(s => s.handleOpenItem);
   const handleRevealInFolder = useAppStore(s => s.handleRevealInFolder);
+  const openShareModal = useAppStore(s => s.openShareModal);
   const setCardBackground = useAppStore(s => s.setCardBackground);
   const toggleSelectItem = useAppStore(s => s.toggleSelectItem);
   const setSelectedItemIds = useAppStore(s => s.setSelectedItemIds);
@@ -834,6 +835,10 @@ function HistoryStream({ style }) {
           return;
         case 'reveal':
           await handleRevealInFolder(currentItem);
+          closeContextMenu();
+          return;
+        case 'share':
+          openShareModal(currentItem);
           closeContextMenu();
           return;
         case 'sendToEmail': {

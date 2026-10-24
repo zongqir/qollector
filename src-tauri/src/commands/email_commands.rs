@@ -41,7 +41,6 @@ pub async fn update_email_relay_config(
     config: EmailRelayConfig,
     state: State<'_, EmailState>,
 ) -> Result<(), String> {
-    config.validate()?;
     state
         .config_repo
         .save_email_relay_config(&config)

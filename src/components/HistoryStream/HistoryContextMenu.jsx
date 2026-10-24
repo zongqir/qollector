@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Mail,
   Pencil,
+  Share2,
   Trash2,
   X,
 } from 'lucide-react';
@@ -122,6 +123,7 @@ function HistoryContextMenu({
       { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
       canEditContent ? { key: 'editContent', label: t('item.editContent'), icon: FileText } : null,
       emailRelayEnabled ? { key: 'sendToEmail', label: t('item.sendToEmailBtn'), icon: Mail } : null,
+      { key: 'share', label: t('share.title'), icon: Share2 },
       canOpenItem
         ? { key: 'open', label: item.type_ === 'link' ? t('item.openLink') : t('item.openFile'), icon: ExternalLink }
         : null,

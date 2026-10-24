@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.4",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-4",
+      "summary": {
+        "zh-CN": "修复邮件中继配置持久化与保存门禁缺陷，上线全资产（文本/图片/文件）收集箱邮件分享与卡片右键分享联动。",
+        "en-US": "Fixed email relay persistence and validation gates, introducing universal collection asset sharing (text/image/file) via email and card context menu share actions."
+      },
+      "highlights": {
+        "zh-CN": [
+          "邮件中继配置持久化修复：彻底解决集成设置中邮件中继漏掉保存的严重缺陷，并放宽后端保存门禁，杜绝开关打开时因字段未填满被拒收而导致入口完全隐匿的现象。",
+          "全资产（文字/图片/文件）邮件分发：打通纯文本（正文/长文txt附件）、图片（原图附件+OCR正文）及本地文件（小文件自动打包附件）全类型邮件派发链路，不再局限于单一资产类型。",
+          "收集箱标准化邮件模版：规范化统一默认邮件主题（`[Qollect] 收集箱文字分享 | 文本摘要`、`[Qollect] 收集箱分享 | 图片资产_时间戳`）与结构化正文模版，自动呈现资产类型、条目备注与标签。",
+          "卡片右键快捷分享对齐：在历史流与收藏区卡片自定义右键菜单中正式新增「分享」入口，与「发到邮箱」对齐，提升多端分享触达效率。"
+        ],
+        "en-US": [
+          "Email Relay Persistence Fix: Resolved the critical bug where email relay settings were omitted during integration save, and eliminated restrictive backend validation gates on draft save to prevent UI menu disappearance.",
+          "Universal Multi-Asset Email Dispatch: Enabled seamless email sharing for plain text (in-body / .txt attachment for >1000 chars), images (lossless attachments + OCR text), and local files (automatic <=20MB attachment packaging).",
+          "Standardized Collection Email Template: Established clear default subject lines (`[Qollect] Collection Text Share | Snippet`, `[Qollect] Collection Share | Image Asset_Timestamp`) and structured body formats containing asset metadata, tags, and user notes.",
+          "Card Context Menu Share Alignment: Added direct \"Share\" action to the card context menu across history stream and collections, aligning with \"Send to Email\" for frictionless multi-channel sharing."
+        ]
+      }
+    },
+    {
       "version": "0.6.3",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-3",

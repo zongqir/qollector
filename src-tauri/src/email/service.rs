@@ -146,11 +146,16 @@ impl EmailService {
         let text_content = item.content.as_deref().unwrap_or("");
 
         let default_subject = match item.type_.as_str() {
-            "image" => format!("{}图片资产分享_{}", config.subject_prefix, timestamp_str),
-            "file" => format!("{}文件资产分享_{}", config.subject_prefix, timestamp_str),
+            "image" => format!("{}收集箱分享 | 图片资产_{}", config.subject_prefix, timestamp_str),
+            "file" => format!("{}收集箱分享 | 文件资产_{}", config.subject_prefix, timestamp_str),
             _ => {
-                let snippet = text_content.chars().take(20).collect::<String>().replace(['\r', '\n'], " ");
-                format!("{}剪贴板文本_{}: {}", config.subject_prefix, timestamp_str, snippet)
+                let snippet = text_content.chars().take(25).collect::<String>().replace(['\r', '\n'], " ");
+                let trimmed = snippet.trim();
+                if trimmed.is_empty() {
+                    format!("{}收集箱文字分享_{}", config.subject_prefix, timestamp_str)
+                } else {
+                    format!("{}收集箱文字分享 | {}", config.subject_prefix, trimmed)
+                }
             }
         };
 
@@ -170,15 +175,37 @@ impl EmailService {
             email_builder = email_builder.to(to_header);
         }
 
-        let mut body_content = body_note.unwrap_or_default();
-        if !body_content.is_empty() {
-            body_content.push_str("\r\n\r\n---\r\n");
+        let mut body_content = String::new();
+        if let Some(ref note) = body_note {
+            if !note.trim().is_empty() {
+                body_content.push_str("【分享附言】\r\n");
+                body_content.push_str(note.trim());
+                body_content.push_str("\r\n\r\n----------------------------------------\r\n");
+            }
         }
+
+        body_content.push_str("【Qollect 收集箱内容分享】\r\n");
+        let type_desc = match item.type_.as_str() {
+            "image" => "图片资产 (原图已作为附件提供)",
+            "file" => "本地文件资产",
+            _ => "文本 / 代码资产",
+        };
+        body_content.push_str(&format!("资产类型: {}\r\n", type_desc));
         body_content.push_str(&format!(
-            "来源: Qollect 剪贴板\r\n类型: {}\r\n发送时间: {}",
-            item.type_,
+            "分享时间: {}\r\n",
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
         ));
+        if let Some(ref note) = item.user_note {
+            if !note.trim().is_empty() {
+                body_content.push_str(&format!("条目备注: {}\r\n", note.trim()));
+            }
+        }
+        if let Some(ref tags) = item.tags {
+            if !tags.trim().is_empty() && tags != "[]" {
+                body_content.push_str(&format!("关联标签: {}\r\n", tags.trim()));
+            }
+        }
+        body_content.push_str("----------------------------------------\r\n");
 
         // 提取附件
         let (attachment_bytes, attachment_filename, content_type): (
@@ -212,16 +239,60 @@ impl EmailService {
             } else {
                 (None, None, None)
             }
-        } else if item.type_ == "text" && text_content.len() > 1000 {
+        } else if item.type_ == "file" {
+            let paths: Vec<&str> = text_content.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
+            if paths.len() == 1 {
+                let file_path = Path::new(paths[0]);
+                if let Ok(metadata) = tokio::fs::metadata(file_path).await {
+                    if metadata.is_file() && metadata.len() <= 20 * 1024 * 1024 {
+                        if let Ok(bytes) = tokio::fs::read(file_path).await {
+                            let filename = file_path.file_name()
+                                .and_then(|n| n.to_str())
+                                .unwrap_or("attachment")
+                                .to_string();
+                            (Some(bytes), Some(filename), Some("application/octet-stream".to_string()))
+                        } else {
+                            (None, None, None)
+                        }
+                    } else {
+                        (None, None, None)
+                    }
+                } else {
+                    (None, None, None)
+                }
+            } else {
+                (None, None, None)
+            }
+        } else if item.type_ != "image" && text_content.len() > 1000 {
             let filename = format!("qollect_text_{}.txt", timestamp_str);
             (Some(text_content.as_bytes().to_vec()), Some(filename), Some("text/plain; charset=utf-8".to_string()))
         } else {
             (None, None, None)
         };
 
-        if item.type_ == "text" && text_content.len() <= 1000 && !text_content.is_empty() {
-            body_content.push_str("\r\n\r\n正文内容:\r\n");
+        if item.type_ == "image" {
+            if let Some(ref ocr) = item.ocr_text {
+                if !ocr.trim().is_empty() {
+                    body_content.push_str("\r\n【图片识别文本 (OCR)】\r\n");
+                    body_content.push_str(ocr.trim());
+                    body_content.push_str("\r\n");
+                }
+            }
+        } else if item.type_ == "file" && !text_content.is_empty() {
+            body_content.push_str("\r\n【包含文件列表】\r\n");
             body_content.push_str(text_content);
+            body_content.push_str("\r\n");
+        } else if item.type_ != "image" && item.type_ != "file" {
+            if text_content.len() <= 1000 && !text_content.is_empty() {
+                body_content.push_str("\r\n【正文内容】\r\n");
+                body_content.push_str(text_content);
+                body_content.push_str("\r\n");
+            } else if text_content.len() > 1000 {
+                body_content.push_str("\r\n【正文摘要 (完整长文本已打包为附件 .txt)】\r\n");
+                let snippet: String = text_content.chars().take(400).collect();
+                body_content.push_str(&snippet);
+                body_content.push_str("\r\n...\r\n");
+            }
         }
 
         let email = if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
