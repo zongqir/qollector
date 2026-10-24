@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.2",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-2",
+      "summary": {
+        "zh-CN": "修复预览抽屉中大文本被列表 4000 字符轻量缓存覆盖截断的关键缺陷，彻底保障长脚本与大文档全量预览、分卷派发及无损复制。",
+        "en-US": "Fixed a critical issue where preview drawer full-text was overridden by the 4000-character list query cache, ensuring lossless preview, chunk dispatch, and full copy for large scripts and documents."
+      },
+      "highlights": {
+        "zh-CN": [
+          "预览抽屉全量注水优先级修复：彻底修复 PreviewPanel 中预览项缓存覆盖逆序的缺陷，确保异步全量注水（Hydration）拉取到的 100% 完整原文优先于历史流 4000 字符轻量缓存。",
+          "大文本分卷派发不再提前截断：解决超长文本（如万字代码、排障文档）在分卷派发时因轻量缓存被提前截断至 4000 字符以内的缺陷，保证所有分卷覆盖全量文档。",
+          "消除分卷临界异常导致的双卡片假象：修复由于原内容被截断至 4000 字符而导致刚好产生 2 卷且内容不全的体验盲区，全量复制与跨端重组链路完全闭环。"
+        ],
+        "en-US": [
+          "Preview Drawer Full-Text Hydration Priority: Fixed an inverted cache-merging bug in PreviewPanel, guaranteeing that fully-hydrated content retrieved from database takes strict precedence over the 4000-character light list cache.",
+          "Prevent Premature Truncation in Chunk Dispatch: Ensured large scripts and documents (tens of thousands of characters) are split across the entire content rather than being clipped at 4000 characters.",
+          "Eliminate Truncation-Induced Dual-Chunk Confusion: Resolved the edge-case where truncated 4000-character payloads produced incomplete 2-chunk sequences, restoring robust full-text streaming and reassembly."
+        ]
+      }
+    },
+    {
       "version": "0.6.1",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-1",
