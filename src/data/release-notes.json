@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.0",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-0",
+      "summary": {
+        "zh-CN": "全新发布企业受限网络协作生产力套装：支持长文本智能语义分卷突破跳板机 4096 字符限制，新增企业内部邮件中继一键发给自己，通过 Webmail 轻松跨越网闸提取图片资产。",
+        "en-US": "Major release introducing enterprise restricted-network productivity suite: smart text chunk splitting to conquer 4096-char bastion limits, and internal email relay for effortless self-delivery and Webmail asset retrieval."
+      },
+      "highlights": {
+        "zh-CN": [
+          "长文本智能语义安全分卷器：针对跳板机、深信服 aDesk VDI、堡垒机单次 4096 字符截断痛点，基于代码结构与自然断行算法以 3500 字符安全阈值智能分卷，100% 保证无损可逆重组。",
+          "就绪顺延连续复制交互（Ready Next Flow）：复制前一分卷后自动激活并推荐下一卷，带行号范围与字符统计，支持盲操连续过关，小窗与 Mini 模式排版自适应。",
+          "企业内部邮件中继（Internal Email Relay）：在【设置 > 功能模块】中提供独立可选的邮件中继通道，支持内网端口 25 明文、内网 IP 免密白名单、自签证书 TLS 与工号认证，密码强制采用 AES-GCM 密文存储。",
+          "一键发给我自己（Send to Self 闭环）：收发件人均锚定为自身企业邮箱，本域路由零外发阻断与 DLP 违规风险；在图片预览面板与操作栏提供一键发送入口，外网电脑登录企业 Webmail 即可秒级提取原图附件。",
+          "零违规样式门禁防护：全局强化 CSS 令牌治理，通过自动化 strict style guard 门禁断言，确保全平台视觉一致性与毛玻璃层级稳定性。"
+        ],
+        "en-US": [
+          "Smart Text Chunk Splitter: Overcomes the strict 4096-character clipboard limit of bastion hosts and VDI environments with a 3500-char safe threshold, natural line-break heuristics, and 100% deterministic reassembly.",
+          "Ready Next Continuous Copy Flow: Automatically activates and highlights the subsequent chunk upon copying, complete with line ranges and character metrics, fully responsive in standard and Mini modes.",
+          "Internal Enterprise Email Relay: Placed under Settings > Feature Modules as an optional toggle; supports internal port 25, IP whitelist relay, self-signed TLS, and credential authentication with AES-GCM encrypted persistence.",
+          "One-Click Send-to-Self Workflow: Routes exclusively within corporate domain to eliminate DLP security triggers; provides one-click picture delivery from preview drawer for effortless retrieval via external Webmail.",
+          "Strict Style Guard Enforcement: Standardized design token compliance across all components with zero style guard violations, maintaining visual fidelity and responsive robustness."
+        ]
+      }
+    },
+    {
       "version": "0.5.17",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-5-17",

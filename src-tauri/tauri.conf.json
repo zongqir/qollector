@@ -1,6 +1,6 @@
 {
   "productName": "Qollect",
-  "version": "0.5.17",
+  "version": "0.6.0",
   "identifier": "com.qollect.clipboard",
   "build": {
     "beforeDevCommand": "npm run dev:ensure",
