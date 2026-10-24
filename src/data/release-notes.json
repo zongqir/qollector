@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.1",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-1",
+      "summary": {
+        "zh-CN": "新增跨端分卷一键流式派发与自动凑整重组协议，消除远程桌面反弹回声与丢包盲区，并将分卷器纳管为可选功能模块。",
+        "en-US": "Added sequential chunk streaming and auto-reassembly protocol across remote desktops, eliminated clipboard echo reflection loops and drop timeouts, and integrated feature module toggle."
+      },
+      "highlights": {
+        "zh-CN": [
+          "跨端分卷流式派发（Sequential Chunk Dispatch）：支持外网/宿主机一键以 800ms 安全节流节奏将大文本各分卷顺序推入剪贴板，内网/对端 Qollector 自动监听并根据 QC1 协议在内存完成无损拼装入库。",
+          "阻断 RDP 双向剪贴板回声风暴：对端拼装完成后直接落库 SQLite 与历史流顶部，不再反向覆写操作系统剪贴板，彻底消除远程桌面（RDP/VDI）双向同步导致的万字大文本镜像反弹与重复记录。",
+          "12 秒看门狗丢包超时告警：接收端引入异步会话看门狗，若网络抖动或丢包导致 12 秒内未集齐全部卷片，自动清理残卷并弹出错误 Toast 告知缺失情况，杜绝静默挂起与数据蒸发。",
+          "功能模块灵活启闭：在【设置 > 功能模块】中正式将【长文本安全分卷器】纳管为独立可选开关，默认关闭，满足极简轻量与复杂跳板机场景的双向需求。",
+          "右键菜单邮件中继直达：在历史流卡片右键菜单直接接入【发送到邮箱】通道，优化图片资产与文本跨网投递路径。"
+        ],
+        "en-US": [
+          "Sequential Chunk Dispatch Protocol: Enables one-click throttled (800ms) streaming of multi-part chunks via clipboard; remote Qollector automatically detects and reassembles chunks seamlessly via QC1 header protocol.",
+          "Anti-Echo Reflection Protection: Reassembled full text is committed directly to SQLite and history stream without writing back to the OS clipboard, completely eliminating RDP/VDI bidirectional reflection loops.",
+          "12-Second Chunk Timeout Watchdog: Asynchronous watchdog alerts user via error Toast if parts are dropped or network stalls, preventing silent memory hangs and packet loss blackholes.",
+          "Feature Module Modular Toggle: Text Chunk Splitter is now a dedicated toggle in Settings > Feature Modules (disabled by default), tailoring to both minimalist and complex bastion scenarios.",
+          "Context Menu Email Relay: Integrated 'Send to Email' directly into the card context menu, streamlining picture and text asset delivery across network boundaries."
+        ]
+      }
+    },
+    {
       "version": "0.6.0",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-0",

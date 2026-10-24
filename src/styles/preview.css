@@ -1165,7 +1165,7 @@
   font-weight: 500;
   border-radius: var(--radius-sm, 4px);
   background: var(--accent-color);
-  color: #fff;
+  color: var(--text-on-accent);
   border: 1px solid var(--accent-color);
   cursor: pointer;
   transition: all var(--motion-fast) var(--ease-standard);
@@ -1182,7 +1182,7 @@
 }
 
 .preview-chunk-spinning {
-  animation: previewChunkSpin 0.9s linear infinite;
+  animation: previewChunkSpin var(--motion-spin) var(--ease-linear) infinite;
 }
 
 @keyframes previewChunkSpin {
