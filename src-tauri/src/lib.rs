@@ -5,6 +5,7 @@ pub mod config;
 pub mod copy_on_select;
 pub mod core;
 pub mod crash_log;
+pub mod email;
 pub mod http_client;
 pub mod mcp;
 pub mod ocr;
