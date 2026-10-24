@@ -1081,3 +1081,211 @@
   border-color: var(--surface-border-soft);
   color: var(--text-primary);
 }
+
+/* ========== 长文本安全分卷器 (突破跳板机/VDI限制) ========== */
+.preview-chunk-splitter-card {
+  margin-bottom: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+
+.preview-chunk-splitter-card:hover {
+  border-color: var(--border-color);
+}
+
+.preview-chunk-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+
+.preview-chunk-toggle-header:hover {
+  background: var(--surface-hover);
+}
+
+.preview-chunk-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.preview-chunk-icon {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.preview-chunk-title-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-chunk-safe-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-success, #10b981);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.preview-chunk-action-group {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.preview-chunk-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-chunk-list {
+  border-top: 1px solid var(--border-light);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.preview-chunk-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all var(--motion-fast) var(--ease-standard);
+}
+
+.preview-chunk-item.ready {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 1px var(--accent-color-transparent, rgba(59, 130, 246, 0.15));
+}
+
+.preview-chunk-item.copied {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.preview-chunk-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-chunk-item-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preview-chunk-pill-index {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--surface-hover);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.preview-chunk-pill-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+}
+
+.preview-chunk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--control-button-border);
+  cursor: pointer;
+  transition: all var(--motion-fast) var(--ease-standard);
+}
+
+.preview-chunk-btn.primary {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+
+.preview-chunk-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+.preview-chunk-btn.secondary {
+  background: var(--control-button-bg);
+  color: var(--control-button-fg);
+}
+
+.preview-chunk-btn.secondary:hover {
+  background: var(--control-button-hover-bg);
+  color: var(--control-button-hover-fg);
+}
+
+.preview-chunk-btn.copied {
+  background: var(--color-success, #10b981);
+  color: #fff;
+  border-color: var(--color-success, #10b981);
+}
+
+.preview-chunk-snippet {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-chunk-snippet code {
+  font-family: var(--font-mono, monospace);
+}
+
+@container preview-panel (max-width: 420px) {
+  .preview-chunk-item-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .preview-chunk-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

@@ -265,7 +265,14 @@
       "sky": "Sky",
       "rose": "Rose",
       "violet": "Violet"
-    }
+    },
+    "chunkSplitBanner": "Text safely chunked ({{count}} parts · {{totalChars}} chars)",
+    "chunkToggleTitle": "Toggle VDI/Bastion safe chunk list",
+    "chunkPart": "Part {{index}} / {{total}}",
+    "chunkLines": "Lines {{start}}~{{end}}",
+    "chunkChars": "{{count}} chars",
+    "copyThisChunk": "Copy part",
+    "chunkCopiedToast": "Copied part {{index}}/{{total}} ({{chars}} chars, ≤4096 safe)"
   },
   "feedback": {
     "channel": {

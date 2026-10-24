@@ -265,7 +265,14 @@
       "sky": "天青",
       "rose": "蔷薇",
       "violet": "柔紫"
-    }
+    },
+    "chunkSplitBanner": "长文本已安全分卷（共 {{count}} 卷 · {{totalChars}} 字）",
+    "chunkToggleTitle": "展开/收起深信服/跳板机安全分卷列表",
+    "chunkPart": "第 {{index}} / {{total}} 卷",
+    "chunkLines": "行 {{start}}~{{end}}",
+    "chunkChars": "{{count}} 字符",
+    "copyThisChunk": "复制本卷",
+    "chunkCopiedToast": "已复制第 {{index}}/{{total}} 卷（{{chars}} 字符，≤4096 安全）"
   },
   "edit": {
     "content": "内容:",

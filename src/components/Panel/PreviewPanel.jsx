@@ -31,6 +31,7 @@ import ImageLightbox from '../ImageLightbox/ImageLightbox';
 import { isCurlCommand } from '../../utils/curlParser';
 import CurlBox from '../CurlBox/CurlBox';
 import { resolveMatchingTransforms } from '../../utils/transforms/index.js';
+import { TextChunkSplitter } from './TextChunkSplitter';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -687,6 +688,11 @@ function PreviewPanel() {
       const PreviewableIcon = previewableRule?.icon;
       return (
         <div className="preview-text-wrapper">
+          <TextChunkSplitter
+            text={contentToDisplay}
+            onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
+            showToast={showPreviewToast}
+          />
           {previewableRule && (
             <div className="preview-transform-toggle-bar">
               <span className="preview-transform-toggle-hint">
@@ -774,6 +780,11 @@ function PreviewPanel() {
     const PreviewableIcon = previewableRule?.icon;
     return (
       <div className="preview-text-wrapper">
+        <TextChunkSplitter
+          text={contentToDisplay}
+          onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
+          showToast={showPreviewToast}
+        />
         {previewableRule && (
           <div className="preview-transform-toggle-bar">
             <span className="preview-transform-toggle-hint">
