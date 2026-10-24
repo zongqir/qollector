@@ -67,6 +67,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.autoPaste'),
           t('settings.general.copyOnSelect'),
           t('settings.general.startTour'),
+          t('settings.general.textChunkSplitter'),
         ],
       },
       {

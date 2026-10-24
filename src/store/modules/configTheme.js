@@ -41,6 +41,7 @@ export const createLoadConfigsAction = ({
       cleanupMaxAgeDays: Math.max(1, Number(generalConfig?.cleanup_max_age_days || 90)),
       startupFavoritesViewEnabled: Boolean(generalConfig?.startup_favorites_view_enabled),
       autoLayoutSwitchEnabled: true,
+      textChunkSplitterEnabled: Boolean(generalConfig?.text_chunk_splitter_enabled),
       showFavoritesOnly: (
         applyStartupView
         && !state.showFavoritesOnly

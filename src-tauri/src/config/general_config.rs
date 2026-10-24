@@ -70,6 +70,9 @@ pub struct GeneralConfig {
     /// Filter out meaningless micro text (<= 2 routine chars) and noisy isolated verification digits (3-6 digits).
     #[serde(default = "default_filter_noise_digits_enabled")]
     pub filter_noise_digits_enabled: bool,
+    /// Enable text chunk splitter for bastion/VDI environments with clipboard limits.
+    #[serde(default)]
+    pub text_chunk_splitter_enabled: bool,
 }
 
 fn default_copy_on_select_smart_replace_enabled() -> bool {
@@ -161,6 +164,7 @@ impl Default for GeneralConfig {
             copy_on_select_double_click_enabled: default_copy_on_select_double_click_enabled(),
             copy_on_select_smart_replace_enabled: default_copy_on_select_smart_replace_enabled(),
             filter_noise_digits_enabled: default_filter_noise_digits_enabled(),
+            text_chunk_splitter_enabled: false,
         }
     }
 }

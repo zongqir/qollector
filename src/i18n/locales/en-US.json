@@ -464,6 +464,8 @@
       "filterNoiseDigitsHint": "Automatically ignore 1-2 char routine snippets (keeps special symbols) and 3-6 digit verification codes to reduce history clutter",
       "autostart": "Launch at system startup",
       "autostartHint": "Automatically run Qollect when your system starts",
+      "textChunkSplitter": "Text Chunk Splitter",
+      "textChunkSplitterHint": "Provides natural line-split chunk copying in the preview panel to bypass bastion/VDI single-transfer limits (e.g. 4096 characters). Keep disabled for normal environments.",
       "autoLayoutSwitch": "Auto layout switch",
       "autoLayoutSwitchHint": "Automatically enter mini mode and collapse/restore the workbench panel based on window width.",
       "startTour": "Guided Tour",

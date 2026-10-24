@@ -97,6 +97,7 @@ export const createBaseState = ({
   cleanupMaxAgeDays: 90,
   startupFavoritesViewEnabled: false,
   autoLayoutSwitchEnabled: true,
+  textChunkSplitterEnabled: false,
 
   // ========== 悬浮预览 ==========
   hoverPreviewItem: null,

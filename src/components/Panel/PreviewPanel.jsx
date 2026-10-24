@@ -83,6 +83,7 @@ function PreviewPanel() {
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const selectedItemIds = useAppStore(s => s.selectedItemIds);
   const emailRelayConfig = useAppStore(s => s.emailRelayConfig);
+  const textChunkSplitterEnabled = useAppStore(s => s.textChunkSplitterEnabled);
   const emailRelayEnabled = useAppStore(s => s.emailRelayEnabled);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const previewItemId = previewItem?.id ?? null;
@@ -714,11 +715,13 @@ function PreviewPanel() {
       const PreviewableIcon = previewableRule?.icon;
       return (
         <div className="preview-text-wrapper">
-          <TextChunkSplitter
-            text={contentToDisplay}
-            onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
-            showToast={showPreviewToast}
-          />
+          {textChunkSplitterEnabled && (
+            <TextChunkSplitter
+              text={contentToDisplay}
+              onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
+              showToast={showPreviewToast}
+            />
+          )}
           {previewableRule && (
             <div className="preview-transform-toggle-bar">
               <span className="preview-transform-toggle-hint">
@@ -806,11 +809,13 @@ function PreviewPanel() {
     const PreviewableIcon = previewableRule?.icon;
     return (
       <div className="preview-text-wrapper">
-        <TextChunkSplitter
-          text={contentToDisplay}
-          onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
-          showToast={showPreviewToast}
-        />
+        {textChunkSplitterEnabled && (
+          <TextChunkSplitter
+            text={contentToDisplay}
+            onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
+            showToast={showPreviewToast}
+          />
+        )}
         {previewableRule && (
           <div className="preview-transform-toggle-bar">
             <span className="preview-transform-toggle-hint">

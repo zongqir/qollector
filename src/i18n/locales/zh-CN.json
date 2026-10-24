@@ -438,6 +438,8 @@
       "filterNoiseDigitsHint": "自动过滤 1~2 位常规字符（保留特殊符号）与 3~6 位纯数字验证码，避免碎片数据污染历史",
       "autostart": "开机自启动",
       "autostartHint": "系统启动时自动运行 Qollect",
+      "textChunkSplitter": "长文本分卷助手",
+      "textChunkSplitterHint": "针对跳板机/堡垒机剪贴板单次 4096 字符截断限制，在预览面板提供自然断行分卷复制。普通网络环境无需开启。",
       "autoLayoutSwitch": "窗口自适应自动切换",
       "autoLayoutSwitchHint": "根据窗口宽度自动切换 mini 模式，并自动收起/恢复工作区面板",
       "startTour": "快速引导",
