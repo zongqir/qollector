@@ -67,7 +67,6 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.general.autoPaste'),
           t('settings.general.copyOnSelect'),
           t('settings.general.startTour'),
-          t('settings.general.textChunkSplitter'),
         ],
       },
       {
@@ -95,6 +94,7 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
           t('settings.ocr.autoOcr'),
           t('settings.general.enableMCP'),
           t('settings.general.inputCapture'),
+          t('settings.general.textChunkSplitter'),
           t('settings.collector.title'),
           t('settings.collector.endpoint'),
           t('settings.ai.provider'),

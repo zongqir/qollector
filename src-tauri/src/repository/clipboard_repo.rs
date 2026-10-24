@@ -1420,6 +1420,50 @@ impl ClipboardRepository {
         Ok(())
     }
 
+    /// Automatically clean up truncated fragment item in recent history if an assembled/full text supersedes it.
+    pub async fn cleanup_truncated_prefix(
+        &self,
+        assembled_text: &str,
+        window_seconds: i64,
+    ) -> Result<Option<String>, sqlx::Error> {
+        let min_created_at = chrono::Utc::now().timestamp() - window_seconds;
+        let candidates = sqlx::query_as::<_, ClipboardItem>(
+            r#"
+            SELECT * FROM clipboard_items 
+            WHERE is_deleted = 0 
+              AND is_pinned = 0 
+              AND is_favorite = 0 
+              AND type = 'text'
+              AND created_at >= ?
+            ORDER BY created_at DESC, updated_at DESC 
+            LIMIT 3
+            "#,
+        )
+        .bind(min_created_at)
+        .fetch_all(&self.pool)
+        .await?;
+
+        for candidate in candidates {
+            if let Some(content) = &candidate.content {
+                if content.len() >= 1000
+                    && content.len() < assembled_text.len()
+                    && assembled_text.starts_with(content)
+                {
+                    println!(
+                        "[ChunkProtocol] Found matching truncated fragment item '{}' (len: {}), cleaning up in favor of assembled text (len: {})",
+                        candidate.id,
+                        content.len(),
+                        assembled_text.len()
+                    );
+                    self.delete(&candidate.id).await?;
+                    return Ok(Some(candidate.id));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     pub async fn update_ocr_text(&self, id: &str, ocr_text: &str) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"

@@ -475,30 +475,6 @@ function GeneralSection({
             <span className="toggle-slider" />
           </span>
         </label>
-        <label className="setting-toggle-row">
-          <span className="toggle-label-group">
-            <span className="toggle-label">{t('settings.general.textChunkSplitter')}</span>
-            <span className="toggle-desc">{t('settings.general.textChunkSplitterHint')}</span>
-          </span>
-          <span className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={generalConfig.text_chunk_splitter_enabled || false}
-              onChange={async (e) => {
-                const checked = e.target.checked;
-                const updated = { ...generalConfig, text_chunk_splitter_enabled: checked };
-                setGeneralConfig(updated);
-                useAppStore.setState({ textChunkSplitterEnabled: checked });
-                try {
-                  await invoke('update_general_config', { config: updated });
-                } catch (error) {
-                  console.error('save text_chunk_splitter config failed:', error);
-                }
-              }}
-            />
-            <span className="toggle-slider" />
-          </span>
-        </label>
       </div>
     </div>
   );

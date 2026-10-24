@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Eye, EyeOff, ChevronDown, ChevronRight, RefreshCw, ArrowRight } from 'lucide-react';
+import useAppStore from '../../store/useAppStore';
 import { SUPPORTED_SOURCE_LANGUAGES, SUPPORTED_TRANSLATION_LANGUAGES } from '../../utils/translationHelpers';
 
 const AI_PROVIDERS = ['SiliconFlow', 'Volcano', 'Alibaba', 'OpenAI', 'Gemini', 'Custom'];
@@ -234,6 +235,34 @@ function IntegrationsCoreSection({
               </div>
             </>
           )}
+          <label className="sg-row setting-toggle-row">
+            <span className="toggle-label-group">
+              <span className="toggle-label">{t('settings.general.textChunkSplitter')}</span>
+              <span className="toggle-desc">{t('settings.general.textChunkSplitterHint')}</span>
+            </span>
+            <span className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={generalConfig.text_chunk_splitter_enabled || false}
+                onChange={async (event) => {
+                  const checked = event.target.checked;
+                  const updated = {
+                    ...generalConfig,
+                    text_chunk_splitter_enabled: checked,
+                  };
+                  setGeneralConfig(updated);
+                  useAppStore.setState({ textChunkSplitterEnabled: checked });
+                  try {
+                    await invoke('update_general_config', { config: updated });
+                  } catch (error) {
+                    console.error('Failed to save text chunk splitter config:', error);
+                    setGeneralConfig(generalConfig);
+                  }
+                }}
+              />
+              <span className="toggle-slider" />
+            </span>
+          </label>
         </div>
         <label className="sg-row setting-toggle-row">
           <span className="toggle-label-group">

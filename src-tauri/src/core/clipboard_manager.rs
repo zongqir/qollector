@@ -953,6 +953,15 @@ impl ClipboardManager {
                 }
             }
         } else {
+            // Check if this new text supersedes an immediately preceding truncated fragment from remote desktop sync
+            if let ClipboardContent::Text { plain, .. } = &content {
+                if plain.len() >= 1000 {
+                    if let Err(e) = repo_lock.cleanup_truncated_prefix(plain, 120).await {
+                        eprintln!("[ChunkProtocol] Failed to clean up truncated prefix: {}", e);
+                    }
+                }
+            }
+
             println!("Inserting new clipboard item: {}", item.id);
             repo_lock.insert(&item).await?;
             inserted_new_item = true;
