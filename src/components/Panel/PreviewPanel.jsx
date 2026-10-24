@@ -124,13 +124,25 @@ function PreviewPanel() {
     if (!previewItemId) return null;
     const latest = livePreviewItem;
     if (!latest) return previewItem;
+
+    const hasHydratedContent = Boolean(
+      previewItem && !previewItem.content_truncated && previewItem.content != null
+    );
+    const hasHydratedOcr = Boolean(
+      previewItem && !previewItem.ocr_truncated && previewItem.ocr_text != null
+    );
+
     return {
       ...latest,
-      content: latest.content,
-      original_content: latest.original_content ?? previewItem.original_content,
-      ocr_text: latest.ocr_text ?? previewItem.ocr_text,
-      content_truncated: Boolean(latest.content_truncated ?? previewItem.content_truncated),
-      ocr_truncated: Boolean(latest.ocr_truncated ?? previewItem.ocr_truncated),
+      content: hasHydratedContent ? previewItem.content : (latest.content ?? previewItem?.content),
+      original_content: previewItem?.original_content ?? latest.original_content,
+      ocr_text: hasHydratedOcr ? previewItem.ocr_text : (latest.ocr_text ?? previewItem?.ocr_text),
+      content_truncated: hasHydratedContent
+        ? false
+        : Boolean(previewItem?.content_truncated ?? latest.content_truncated),
+      ocr_truncated: hasHydratedOcr
+        ? false
+        : Boolean(previewItem?.ocr_truncated ?? latest.ocr_truncated),
     };
   }, [livePreviewItem, previewItem, previewItemId]);
 
