@@ -47,6 +47,13 @@ pub struct ChunkCompletePayload {
     pub char_count: usize,
 }
 
+#[derive(Clone, serde::Serialize)]
+pub struct ChunkTimeoutPayload {
+    pub session_id: String,
+    pub received: usize,
+    pub total: usize,
+}
+
 struct ChunkSession {
     total: usize,
     chunks: std::collections::HashMap<usize, String>,
@@ -621,6 +628,7 @@ impl ClipboardManager {
                     let mut buffer = chunk_buffer.lock();
                     buffer.retain(|_, s| s.last_updated.elapsed() < std::time::Duration::from_secs(60));
 
+                    let is_new_session = !buffer.contains_key(&session_id);
                     let session = buffer.entry(session_id.clone()).or_insert_with(|| ChunkSession {
                         total,
                         chunks: std::collections::HashMap::new(),
@@ -629,6 +637,34 @@ impl ClipboardManager {
                     session.chunks.insert(index, payload);
                     session.last_updated = std::time::Instant::now();
                     let received_count = session.chunks.len();
+
+                    if is_new_session {
+                        // Watchdog: alert user if session does not finish within 12 seconds
+                        let buffer_clone = chunk_buffer.clone();
+                        let session_id_clone = session_id.clone();
+                        let app_handle_clone = app_handle.clone();
+                        tokio::spawn(async move {
+                            tokio::time::sleep(std::time::Duration::from_secs(12)).await;
+                            let mut buf = buffer_clone.lock();
+                            if let Some(stale) = buf.remove(&session_id_clone) {
+                                let received = stale.chunks.len();
+                                if received < stale.total {
+                                    println!(
+                                        "[ChunkProtocol] Session '{}' timed out (received {}/{} chunks)",
+                                        session_id_clone, received, stale.total
+                                    );
+                                    let _ = app_handle_clone.emit(
+                                        "clipboard-chunk-timeout",
+                                        ChunkTimeoutPayload {
+                                            session_id: session_id_clone,
+                                            received,
+                                            total: stale.total,
+                                        },
+                                    );
+                                }
+                            }
+                        });
+                    }
 
                     let _ = app_handle.emit(
                         "clipboard-chunk-progress",
@@ -665,16 +701,8 @@ impl ClipboardManager {
                                     char_count: assembled.len(),
                                 },
                             );
-                            let platform_clone = platform.clone();
-                            let assembled_clone = assembled.clone();
-                            tokio::spawn(async move {
-                                let _ = platform_clone
-                                    .set_content(ClipboardContent::Text {
-                                        plain: assembled_clone,
-                                        raw_formats: None,
-                                    })
-                                    .await;
-                            });
+                            // Intentionally do NOT set system clipboard here to prevent
+                            // remote desktop bidirectional clipboard sync from bouncing back to the host!
                             ClipboardContent::Text {
                                 plain: assembled,
                                 raw_formats: raw_formats.clone(),

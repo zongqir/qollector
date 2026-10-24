@@ -446,6 +446,10 @@ function App() {
       showAppFeedback(t('item.chunkReassembledSuccess', { total, chars: char_count }), 'success', 2800);
       loadItems();
     });
+    const unlistenChunkTimeoutPromise = listen('clipboard-chunk-timeout', (event) => {
+      const { received, total } = event.payload || {};
+      showAppFeedback(t('item.chunkTimeoutWarning', { received, total }), 'error', 3600);
+    });
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
     });
@@ -498,6 +502,7 @@ function App() {
       unlistenClipboardPromise.then(unlisten => unlisten());
       unlistenChunkProgressPromise.then(unlisten => unlisten());
       unlistenChunkCompletePromise.then(unlisten => unlisten());
+      unlistenChunkTimeoutPromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
     };
