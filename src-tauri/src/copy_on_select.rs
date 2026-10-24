@@ -77,7 +77,7 @@ mod windows_impl {
 
     struct ReplaceTracker {
         armed: bool,
-        target_hwnd: HWND,
+        target_hwnd: isize,
         preserved_text: Option<String>,
         trigger_time: Instant,
     }
@@ -85,7 +85,7 @@ mod windows_impl {
     static REPLACE_TRACKER: LazyLock<Mutex<ReplaceTracker>> = LazyLock::new(|| {
         Mutex::new(ReplaceTracker {
             armed: false,
-            target_hwnd: HWND::default(),
+            target_hwnd: 0,
             preserved_text: None,
             trigger_time: Instant::now(),
         })
@@ -188,7 +188,7 @@ mod windows_impl {
                                                                 if new_t != old_text && !new_t.trim().is_empty() {
                                                                     let mut r_tracker = REPLACE_TRACKER.lock();
                                                                     r_tracker.armed = true;
-                                                                    r_tracker.target_hwnd = target_hwnd;
+                                                                    r_tracker.target_hwnd = target_hwnd.0 as isize;
                                                                     r_tracker.preserved_text = Some(old_text);
                                                                     r_tracker.trigger_time = Instant::now();
                                                                 }
@@ -320,7 +320,7 @@ mod windows_impl {
                                     let now = Instant::now();
                                     let cur_hwnd = GetForegroundWindow();
                                     if now.duration_since(r_tracker.trigger_time).as_secs() <= 5
-                                        && cur_hwnd == r_tracker.target_hwnd
+                                        && cur_hwnd.0 as isize == r_tracker.target_hwnd
                                     {
                                         if let Some(ref text_to_restore) = r_tracker.preserved_text {
                                             if let Ok(mut cb) = arboard::Clipboard::new() {
