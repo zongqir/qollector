@@ -17,7 +17,7 @@ jobs:
   warm-cache:
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -58,7 +58,18 @@ jobs:
         run: |
           cargo build --manifest-path tools/check-updater-signature/Cargo.toml
 
-      - name: Prebuild Rust dependencies and application
+      - name: Prebuild Rust dependencies with Tauri CLI
         shell: bash
         run: |
-          cargo build --release --manifest-path src-tauri/Cargo.toml
+          npx tauri build --no-bundle
+
+      - name: Commit updated Cargo.lock if changed
+        shell: bash
+        run: |
+          if [ -n "$(git status --porcelain src-tauri/Cargo.lock)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add src-tauri/Cargo.lock
+            git commit -m "chore(deps): sync locked dependencies in Cargo.lock [skip ci]"
+            git push origin dev-fav
+          fi

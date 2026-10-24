@@ -246,14 +246,22 @@ jobs:
             --content-type "application/json" \
             --remote
 
-          # Upload all release assets
+          # Upload all release assets (versioned + latest alias)
           for file in r2-upload/releases/${VERSION}/*; do
             [ -f "$file" ] || continue
             filename=$(basename "$file")
-            echo "Uploading: $filename"
+            echo "Uploading versioned: $filename"
             wrangler r2 object put "${BUCKET}/releases/${VERSION}/${filename}" \
               --file "$file" \
               --remote
+
+            # Upload fixed latest alias (e.g. Qollect_0.6.3_x64-setup.exe -> Qollect_x64-setup.exe)
+            latest_filename=$(echo "$filename" | sed -E 's/_[0-9]+\.[0-9]+\.[0-9]+//')
+            echo "Uploading latest alias: releases/latest/${latest_filename}"
+            wrangler r2 object put "${BUCKET}/releases/latest/${latest_filename}" \
+              --file "$file" \
+              --cache-control "no-cache, must-revalidate" \
+              --remote
           done
 
-          echo "R2 upload complete: https://dl.zongqir.com/latest.json"
+          echo "R2 upload complete: https://dl.zongqir.com/latest.json and https://dl.zongqir.com/releases/latest/Qollect_x64-setup.exe"
