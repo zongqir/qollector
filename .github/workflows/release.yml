@@ -67,7 +67,11 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri -> target
+          workspaces: |
+            src-tauri -> target
+            tools/check-updater-signature -> target
+          shared-key: "qollect-windows-build"
+          save-if: ${{ github.ref == 'refs/heads/dev-fav' }}
 
       - name: Verify updater pubkey matches signing key
         shell: bash

@@ -93,7 +93,7 @@ custom-protocol = ["tauri/custom-protocol"]
 devtools = ["tauri/devtools"]
 
 [profile.release]
-lto = "thin"
+lto = false
 codegen-units = 16
 panic = "abort"
 strip = "symbols"

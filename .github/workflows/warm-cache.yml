@@ -1,0 +1,64 @@
+name: Warm Rust Cache
+
+on:
+  push:
+    branches:
+      - dev-fav
+    paths:
+      - 'src-tauri/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/warm-cache.yml'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+jobs:
+  warm-cache:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Disable Windows Defender
+        shell: powershell
+        run: |
+          Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionPath (Get-Location).Path -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionPath "$env:USERPROFILE\.cargo" -ErrorAction SilentlyContinue
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies & build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+            tools/check-updater-signature -> target
+          shared-key: "qollect-windows-build"
+          save-if: true
+
+      - name: Prebuild updater signature verifier
+        shell: bash
+        run: |
+          cargo build --manifest-path tools/check-updater-signature/Cargo.toml
+
+      - name: Prebuild Rust dependencies and application
+        shell: bash
+        run: |
+          cargo build --release --manifest-path src-tauri/Cargo.toml
