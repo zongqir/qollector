@@ -7,6 +7,14 @@ use lettre::transport::smtp::client::{Tls, TlsParameters};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use std::path::Path;
 
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
+
 pub struct EmailService;
 
 impl EmailService {
@@ -175,37 +183,42 @@ impl EmailService {
             email_builder = email_builder.to(to_header);
         }
 
-        let mut body_content = String::new();
-        if let Some(ref note) = body_note {
-            if !note.trim().is_empty() {
-                body_content.push_str("【分享附言】\r\n");
-                body_content.push_str(note.trim());
-                body_content.push_str("\r\n\r\n----------------------------------------\r\n");
-            }
-        }
+        let share_time = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let timestamp_str = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
 
-        body_content.push_str("【Qollect 收集箱内容分享】\r\n");
         let type_desc = match item.type_.as_str() {
-            "image" => "图片资产 (原图已作为附件提供)",
+            "image" => "图片资产 (已内嵌展示并作为附件提供)",
             "file" => "本地文件资产",
             _ => "文本 / 代码资产",
         };
-        body_content.push_str(&format!("资产类型: {}\r\n", type_desc));
-        body_content.push_str(&format!(
-            "分享时间: {}\r\n",
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-        ));
+
+        let mut plain_body = String::new();
+        if let Some(ref note) = body_note {
+            if !note.trim().is_empty() {
+                plain_body.push_str("【分享附言】\r\n");
+                plain_body.push_str(note.trim());
+                plain_body.push_str("\r\n\r\n----------------------------------------\r\n");
+            }
+        }
+        plain_body.push_str("【Qollect 收集箱内容分享】\r\n");
+        plain_body.push_str(&format!("资产类型: {}\r\n", type_desc));
+        plain_body.push_str(&format!("分享时间: {}\r\n", share_time));
+        if let Some(ref app) = item.source_app {
+            if !app.trim().is_empty() {
+                plain_body.push_str(&format!("来源应用: {}\r\n", app.trim()));
+            }
+        }
         if let Some(ref note) = item.user_note {
             if !note.trim().is_empty() {
-                body_content.push_str(&format!("条目备注: {}\r\n", note.trim()));
+                plain_body.push_str(&format!("条目备注: {}\r\n", note.trim()));
             }
         }
         if let Some(ref tags) = item.tags {
             if !tags.trim().is_empty() && tags != "[]" {
-                body_content.push_str(&format!("关联标签: {}\r\n", tags.trim()));
+                plain_body.push_str(&format!("关联标签: {}\r\n", tags.trim()));
             }
         }
-        body_content.push_str("----------------------------------------\r\n");
+        plain_body.push_str("----------------------------------------\r\n");
 
         // 提取附件
         let (attachment_bytes, attachment_filename, content_type): (
@@ -271,40 +284,205 @@ impl EmailService {
         };
 
         if item.type_ == "image" {
+            plain_body.push_str("[图片内容已内嵌并作为附件提供]\r\n");
             if let Some(ref ocr) = item.ocr_text {
                 if !ocr.trim().is_empty() {
-                    body_content.push_str("\r\n【图片识别文本 (OCR)】\r\n");
-                    body_content.push_str(ocr.trim());
-                    body_content.push_str("\r\n");
+                    plain_body.push_str("\r\n【图片识别文本 (OCR)】\r\n");
+                    plain_body.push_str(ocr.trim());
+                    plain_body.push_str("\r\n");
                 }
             }
         } else if item.type_ == "file" && !text_content.is_empty() {
-            body_content.push_str("\r\n【包含文件列表】\r\n");
-            body_content.push_str(text_content);
-            body_content.push_str("\r\n");
+            plain_body.push_str("\r\n【包含文件列表】\r\n");
+            plain_body.push_str(text_content);
+            plain_body.push_str("\r\n");
         } else if item.type_ != "image" && item.type_ != "file" {
             if text_content.len() <= 1000 && !text_content.is_empty() {
-                body_content.push_str("\r\n【正文内容】\r\n");
-                body_content.push_str(text_content);
-                body_content.push_str("\r\n");
+                plain_body.push_str("\r\n【正文内容】\r\n");
+                plain_body.push_str(text_content);
+                plain_body.push_str("\r\n");
             } else if text_content.len() > 1000 {
-                body_content.push_str("\r\n【正文摘要 (完整长文本已打包为附件 .txt)】\r\n");
+                plain_body.push_str("\r\n【正文摘要 (完整长文本已打包为附件 .txt)】\r\n");
                 let snippet: String = text_content.chars().take(400).collect();
-                body_content.push_str(&snippet);
-                body_content.push_str("\r\n...\r\n");
+                plain_body.push_str(&snippet);
+                plain_body.push_str("\r\n...\r\n");
             }
         }
 
-        let email = if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
+        // 构建美观 HTML 正文
+        let mut html_body = String::from(r#"<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+.card { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; }
+.header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; padding: 18px 24px; }
+.header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.header p { margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; }
+.note-box { margin: 16px 24px 0 24px; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #1e40af; line-height: 1.5; }
+.meta { padding: 14px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 13px; line-height: 1.6; color: #475569; margin-top: 14px; }
+.meta-row { display: flex; margin-bottom: 4px; }
+.meta-label { font-weight: 600; width: 75px; color: #334155; flex-shrink: 0; }
+.content { padding: 20px 24px; }
+.img-container { text-align: center; margin: 8px 0; }
+.img-container img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.ocr-box { margin-top: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 14px 18px; }
+.ocr-title { font-size: 13px; font-weight: 600; color: #2563eb; margin-bottom: 8px; }
+.ocr-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #1e293b; }
+.text-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.footer { padding: 12px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="card">
+<div class="header">
+  <h2>Qollect 收集箱分享</h2>
+  <p>来自桌面端 Qollect 剪贴板管理器的安全分享</p>
+</div>
+"#);
+
+        if let Some(ref note) = body_note {
+            if !note.trim().is_empty() {
+                html_body.push_str(&format!(
+                    r#"<div class="note-box"><strong>附言：</strong>{}</div>
+"#,
+                    html_escape(note.trim())
+                ));
+            }
+        }
+
+        html_body.push_str("<div class=\"meta\">\r\n");
+        html_body.push_str(&format!(
+            r#"  <div class="meta-row"><span class="meta-label">资产类型:</span><span>{}</span></div>
+  <div class="meta-row"><span class="meta-label">分享时间:</span><span>{}</span></div>"#,
+            html_escape(type_desc),
+            html_escape(&share_time)
+        ));
+
+        if let Some(ref app) = item.source_app {
+            if !app.trim().is_empty() {
+                html_body.push_str(&format!(
+                    r#"
+  <div class="meta-row"><span class="meta-label">来源应用:</span><span>{}</span></div>"#,
+                    html_escape(app.trim())
+                ));
+            }
+        }
+
+        if let Some(ref note) = item.user_note {
+            if !note.trim().is_empty() {
+                html_body.push_str(&format!(
+                    r#"
+  <div class="meta-row"><span class="meta-label">条目备注:</span><span>{}</span></div>"#,
+                    html_escape(note.trim())
+                ));
+            }
+        }
+
+        if let Some(ref tags) = item.tags {
+            if !tags.trim().is_empty() && tags != "[]" {
+                html_body.push_str(&format!(
+                    r#"
+  <div class="meta-row"><span class="meta-label">关联标签:</span><span>{}</span></div>"#,
+                    html_escape(tags.trim())
+                ));
+            }
+        }
+
+        html_body.push_str("\r\n</div>\r\n<div class=\"content\">\r\n");
+
+        if item.type_ == "image" {
+            html_body.push_str(r#"  <div class="img-container">
+    <img src="cid:qollect_img_asset" alt="Qollect 剪贴板图片" />
+  </div>
+"#);
+            if let Some(ref ocr) = item.ocr_text {
+                if !ocr.trim().is_empty() {
+                    html_body.push_str(&format!(
+                        r#"  <div class="ocr-box">
+    <div class="ocr-title">图片识别文本 (OCR)</div>
+    <pre class="ocr-content">{}</pre>
+  </div>
+"#,
+                        html_escape(ocr.trim())
+                    ));
+                }
+            }
+        } else if item.type_ == "file" && !text_content.is_empty() {
+            html_body.push_str(&format!(
+                r#"  <div class="ocr-box">
+    <div class="ocr-title">包含文件列表</div>
+    <pre class="ocr-content">{}</pre>
+  </div>
+"#,
+                html_escape(text_content)
+            ));
+        } else if item.type_ != "image" && item.type_ != "file" {
+            if text_content.len() <= 1000 && !text_content.is_empty() {
+                html_body.push_str(&format!(
+                    r#"  <pre class="text-content">{}</pre>
+"#,
+                    html_escape(text_content)
+                ));
+            } else if text_content.len() > 1000 {
+                let snippet: String = text_content.chars().take(400).collect();
+                html_body.push_str(&format!(
+                    r#"  <div class="ocr-box">
+    <div class="ocr-title">正文摘要 (完整长文本已打包为附件 .txt)</div>
+    <pre class="ocr-content">{}
+...
+</pre>
+  </div>
+"#,
+                    html_escape(&snippet)
+                ));
+            }
+        }
+
+        html_body.push_str(r#"</div>
+<div class="footer">
+  由 Qollect 剪贴板提供支持
+</div>
+</div>
+</body>
+</html>"#);
+
+        let email = if item.type_ == "image" {
+            if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
+                let ct = ContentType::parse(&mime_str)
+                    .unwrap_or_else(|_| ContentType::parse("image/png").unwrap());
+                let inline_attachment = Attachment::new_inline_with_name("qollect_img_asset".to_string(), filename)
+                    .body(bytes, ct);
+                let related = MultiPart::related()
+                    .singlepart(SinglePart::html(html_body))
+                    .singlepart(inline_attachment);
+                let multipart = MultiPart::alternative()
+                    .singlepart(SinglePart::plain(plain_body))
+                    .multipart(related);
+                email_builder.multipart(multipart).map_err(|e| format!("构建邮件失败: {}", e))?
+            } else {
+                let multipart = MultiPart::alternative()
+                    .singlepart(SinglePart::plain(plain_body))
+                    .singlepart(SinglePart::html(html_body));
+                email_builder.multipart(multipart).map_err(|e| format!("构建邮件失败: {}", e))?
+            }
+        } else if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
             let ct = ContentType::parse(&mime_str)
                 .unwrap_or_else(|_| ContentType::parse("application/octet-stream").unwrap());
             let attachment = Attachment::new(filename).body(bytes, ct);
+            let alternative = MultiPart::alternative()
+                .singlepart(SinglePart::plain(plain_body))
+                .singlepart(SinglePart::html(html_body));
             let multipart = MultiPart::mixed()
-                .singlepart(SinglePart::plain(body_content))
+                .multipart(alternative)
                 .singlepart(attachment);
             email_builder.multipart(multipart).map_err(|e| format!("构建多部分邮件失败: {}", e))?
         } else {
-            email_builder.singlepart(SinglePart::plain(body_content)).map_err(|e| format!("构建邮件失败: {}", e))?
+            let multipart = MultiPart::alternative()
+                .singlepart(SinglePart::plain(plain_body))
+                .singlepart(SinglePart::html(html_body));
+            email_builder.multipart(multipart).map_err(|e| format!("构建邮件失败: {}", e))?
         };
 
         transport
