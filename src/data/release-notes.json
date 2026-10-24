@@ -2,6 +2,25 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.5",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-5",
+      "summary": {
+        "zh-CN": "修复集成设置保存及邮件中继切换时 useAppStore 未导入导致的运行时 ReferenceError 崩溃，确保邮件功能完整可达。",
+        "en-US": "Fixed runtime ReferenceError crash caused by unimported useAppStore when saving integration settings or toggling email relay, ensuring email dispatch availability."
+      },
+      "highlights": {
+        "zh-CN": [
+          "解决集成设置保存运行时崩溃：补齐 `useIntegrationsSettings` 中漏掉导入的 `useAppStore`，彻底消除点击「保存」或切换邮件中继开关时的 `ReferenceError: useAppStore is not defined` 阻断异常。",
+          "状态同步与邮件入口恢复：修复因保存抛错导致全局状态未更新的连锁反应，使邮件中继开启后能正确在卡片右键、预览抽屉及分享弹层中实时显现邮件发送入口。"
+        ],
+        "en-US": [
+          "Integration Settings Save Crash Fix: Added the missing `useAppStore` import in `useIntegrationsSettings`, eliminating the blocking `ReferenceError: useAppStore is not defined` when saving settings or toggling email relay.",
+          "State Synchronization & UI Availability: Restored proper state synchronization to prevent failed saves from hiding email dispatch triggers in card context menus, preview drawer, and share modal."
+        ]
+      }
+    },
+    {
       "version": "0.6.4",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-4",

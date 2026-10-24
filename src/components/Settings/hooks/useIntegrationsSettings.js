@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import useAppStore from '../../../store/useAppStore';
 
 const normalizeOcrProvider = (provider) => (provider === 'Local' ? 'Native' : provider);
 
