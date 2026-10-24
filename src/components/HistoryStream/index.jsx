@@ -24,6 +24,7 @@ import {
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { getUserTags, searchItems } from '../../services/clipboardService';
+import { sendClipboardItemViaEmail } from '../../services/emailRelayService';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -288,6 +289,7 @@ function HistoryStream({ style }) {
   const compareCandidateIds = useAppStore(s => s.compareCandidateIds);
   const historyTagShortcutEnabled = useAppStore(s => s.historyTagShortcutEnabled);
   const aiEnabled = useAppStore(s => s.aiEnabled);
+  const emailRelayEnabled = useAppStore(s => s.emailRelayEnabled);
   const autoCleanupEnabled = useAppStore(s => s.autoCleanupEnabled);
   const cleanupMaxItems = useAppStore(s => s.cleanupMaxItems);
   const cleanupMaxAgeDays = useAppStore(s => s.cleanupMaxAgeDays);
@@ -834,6 +836,26 @@ function HistoryStream({ style }) {
           await handleRevealInFolder(currentItem);
           closeContextMenu();
           return;
+        case 'sendToEmail': {
+          closeContextMenu();
+          try {
+            const recipients = await sendClipboardItemViaEmail({
+              itemId: currentItem.id,
+              recipients: [],
+            });
+            showQuickAddFeedback({
+              type: 'success',
+              message: t('item.sentToEmailToast', { email: recipients || '' }),
+            }, 2500);
+          } catch (err) {
+            console.error('[HistoryContextMenu] sendToEmail failed:', err);
+            showQuickAddFeedback({
+              type: 'error',
+              message: t('item.sendEmailFailed', { error: String(err) }),
+            }, 3000);
+          }
+          return;
+        }
         case 'delete':
           if (!armDeleteConfirm('delete')) {
             showQuickAddFeedback({
@@ -1914,6 +1936,7 @@ function HistoryStream({ style }) {
         menuRef={contextMenuRef}
         t={t}
         enableQuickPaste={autoPasteOnDoubleClick}
+        emailRelayEnabled={emailRelayEnabled}
         collectionHintsDismissed={collectionHintsDismissed}
         onAction={handleContextMenuAction}
       />

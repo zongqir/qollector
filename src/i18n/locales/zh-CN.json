@@ -273,13 +273,13 @@
     "chunkChars": "{{count}} 字符",
     "copyThisChunk": "复制本卷",
     "chunkCopiedToast": "已复制第 {{index}}/{{total}} 卷（{{chars}} 字符，≤4096 安全）",
-    "sendToEmailTitle": "发到我企业邮箱 ({{email}})",
-    "sendToEmailBtn": "发到我邮箱",
-    "sendToEmailHint": "一键将当前资产发至 {{email}}，外网通过 Webmail 即可查收",
-    "sendingEmail": "投递中...",
-    "sentToEmailToast": "已成功投递至 {{email}}，登录 Webmail 即可查收",
-    "sendEmailFailed": "邮件投递失败: {{error}}",
-    "emailNotConfigured": "未配置发件人企业邮箱，请先前往功能模块设置"
+    "sendToEmailTitle": "发到邮箱 ({{email}})",
+    "sendToEmailBtn": "发到邮箱",
+    "sendToEmailHint": "一键将当前内容发送至 {{email}}",
+    "sendingEmail": "发送中...",
+    "sentToEmailToast": "已成功发送至 {{email}}",
+    "sendEmailFailed": "发送失败: {{error}}",
+    "emailNotConfigured": "未配置发件邮箱，请先前往设置开启"
   },
   "edit": {
     "content": "内容:",
@@ -499,21 +499,21 @@
       "syncFailed": "同步失败：{{error}}"
     },
     "emailRelay": {
-      "title": "内部邮件中继 (内网/外网资产中转)",
-      "desc": "利用企业内部邮件服务器或专用中继，一键将图片/资产发至个人内部邮箱，外网登录 Webmail 即可查收提取",
-      "configTitle": "内部邮件中继参数",
-      "smtpHost": "SMTP 服务器地址 (内网域名或IP)",
+      "title": "邮件投递与备份 (Email)",
+      "desc": "配置个人或企业 SMTP 邮箱，一键将剪贴板历史、代码或图片投递至你的邮箱，方便跨端流转留存",
+      "configTitle": "SMTP 邮件参数配置",
+      "smtpHost": "SMTP 服务器地址",
       "smtpPort": "端口",
       "encryption": "加密方式",
       "encNone": "无加密 (内网端口25常用)",
-      "fromAddress": "你的企业发件邮箱",
-      "username": "账号 (可选)",
-      "usernamePlaceholder": "内网工号或企业邮箱",
-      "password": "密码 / 授权码 (可选)",
-      "passwordPlaceholder": "如内网免密可留空",
-      "sendToSelfDefault": "默认发给自己 (一键发到自己邮箱)",
-      "sendToSelfDesc": "开启后点击邮件发送将默认直接投递至发件人自己，免输入收件人",
-      "testBtn": "测试发送到当前邮箱"
+      "fromAddress": "发件邮箱地址 (如 yourname@qq.com)",
+      "username": "登录账号 (可选)",
+      "usernamePlaceholder": "通常同发件邮箱，留空则自动使用发件邮箱",
+      "password": "密码 / 客户端授权码",
+      "passwordPlaceholder": "如 QQ/163 邮箱请填16位客户端授权码",
+      "sendToSelfDefault": "默认发给自己",
+      "sendToSelfDesc": "开启后一键直接投递至发件邮箱，免输收件人",
+      "testBtn": "测试发送到发件邮箱"
     },
     "mcp": {
       "enabled": "启用 MCP 服务",
@@ -1054,7 +1054,9 @@
     "privacyWarning": "端到端加密跨网分享",
     "privacyDetail": "当前内容较长或为多媒体文件，将在本机通过 AES-256-GCM 硬件级加密后通过临时中继流转。10 分钟后物理销毁，解密密钥仅保存在生成的二维码中，服务器无权查看明文。",
     "uploadTo": "上传至",
-    "confirmUpload": "加密并生成分享码"
+    "confirmUpload": "加密并生成分享码",
+    "orSendViaEmail": "或者直接发送到邮箱",
+    "sendToMyEmail": "一键发到 {{email}}"
   },
   "update": {
     "available": "发现新版本 {{version}}",

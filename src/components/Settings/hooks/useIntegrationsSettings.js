@@ -63,8 +63,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   const [emailRelayConfig, setEmailRelayConfig] = useState({
     enabled: false,
     smtp_host: '',
-    smtp_port: 25,
-    encryption: 'none',
+    smtp_port: 465,
+    encryption: 'tls',
     allow_insecure_certs: true,
     username: '',
     password: '',

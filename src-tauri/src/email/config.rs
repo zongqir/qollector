@@ -29,11 +29,11 @@ pub struct EmailRelayConfig {
 }
 
 fn default_smtp_port() -> u16 {
-    25
+    465
 }
 
 fn default_encryption() -> String {
-    "none".to_string()
+    "tls".to_string()
 }
 
 fn default_from_name() -> String {
@@ -53,8 +53,8 @@ impl Default for EmailRelayConfig {
         Self {
             enabled: false,
             smtp_host: String::new(),
-            smtp_port: 25,
-            encryption: "none".to_string(),
+            smtp_port: 465,
+            encryption: "tls".to_string(),
             allow_insecure_certs: true,
             username: String::new(),
             password: String::new(),

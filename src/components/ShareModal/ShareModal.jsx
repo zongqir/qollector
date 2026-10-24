@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Share2, Copy, Check, RefreshCw, X, ShieldCheck, Upload } from 'lucide-react';
+import { Share2, Copy, Check, RefreshCw, X, ShieldCheck, Upload, Mail } from 'lucide-react';
 import { useState } from 'react';
+import useAppStore from '../../store/useAppStore';
+import { sendClipboardItemViaEmail } from '../../services/emailRelayService';
 import './ShareModal.css';
 
 function ShareModal({
@@ -10,6 +12,30 @@ function ShareModal({
 }) {
   const { t } = useTranslation();
   const [linkCopied, setLinkCopied] = useState(false);
+  const emailRelayEnabled = useAppStore((s) => s.emailRelayEnabled);
+  const emailRelayConfig = useAppStore((s) => s.emailRelayConfig);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSentResult, setEmailSentResult] = useState(null);
+
+  const handleSendViaEmail = async () => {
+    if (!item?.id || isSendingEmail) return;
+    setIsSendingEmail(true);
+    setEmailSentResult(null);
+    try {
+      const res = await sendClipboardItemViaEmail({ itemId: item.id });
+      setEmailSentResult({
+        success: true,
+        message: t('item.sentToEmailToast', { email: res || emailRelayConfig?.from_address || '' }),
+      });
+    } catch (err) {
+      setEmailSentResult({
+        success: false,
+        message: t('item.sendEmailFailed', { error: String(err) }),
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const handleCopyLink = async () => {
     if (!shareResult?.url) return;
@@ -102,6 +128,28 @@ function ShareModal({
                   {linkCopied ? <Check size={14} /> : <Copy size={14} />}
                   {linkCopied ? t('share.copied') : t('share.copyLink')}
                 </button>
+              )}
+            </div>
+          )}
+
+          {emailRelayEnabled && emailRelayConfig?.from_address && !shareLoading && (
+            <div className="share-email-section">
+              <div className="share-email-divider">
+                <span>{t('share.orSendViaEmail')}</span>
+              </div>
+              <button
+                type="button"
+                className={`share-email-btn ${isSendingEmail ? 'loading' : ''}`}
+                onClick={handleSendViaEmail}
+                disabled={isSendingEmail}
+              >
+                <Mail size={14} />
+                <span>{isSendingEmail ? t('item.sendingEmail') : t('share.sendToMyEmail', { email: emailRelayConfig.from_address })}</span>
+              </button>
+              {emailSentResult && (
+                <div className={`share-email-result ${emailSentResult.success ? 'success' : 'error'}`}>
+                  {emailSentResult.message}
+                </div>
               )}
             </div>
           )}

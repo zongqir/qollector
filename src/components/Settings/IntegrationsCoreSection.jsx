@@ -341,8 +341,9 @@ function IntegrationsCoreSection({
                     <label>{t('settings.emailRelay.smtpPort')}</label>
                     <input
                       type="number"
-                      value={emailRelayConfig.smtp_port}
-                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, smtp_port: parseInt(e.target.value, 10) || 25 })}
+                      value={emailRelayConfig.smtp_port || ''}
+                      placeholder={emailRelayConfig.encryption === 'tls' ? '465 (默认)' : emailRelayConfig.encryption === 'starttls' ? '587 (默认)' : '25 (默认)'}
+                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, smtp_port: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 })}
                       className="setting-input"
                     />
                   </div>
@@ -350,7 +351,15 @@ function IntegrationsCoreSection({
                     <label>{t('settings.emailRelay.encryption')}</label>
                     <select
                       value={emailRelayConfig.encryption}
-                      onChange={(e) => setEmailRelayConfig({ ...emailRelayConfig, encryption: e.target.value })}
+                      onChange={(e) => {
+                        const newEnc = e.target.value;
+                        const defaultPort = newEnc === 'tls' ? 465 : newEnc === 'starttls' ? 587 : 25;
+                        setEmailRelayConfig({
+                          ...emailRelayConfig,
+                          encryption: newEnc,
+                          smtp_port: defaultPort,
+                        });
+                      }}
                       className="setting-select"
                     >
                       <option value="none">{t('settings.emailRelay.encNone')}</option>

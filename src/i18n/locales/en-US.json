@@ -273,13 +273,13 @@
     "chunkChars": "{{count}} chars",
     "copyThisChunk": "Copy part",
     "chunkCopiedToast": "Copied part {{index}}/{{total}} ({{chars}} chars, ≤4096 safe)",
-    "sendToEmailTitle": "Send to my work email ({{email}})",
-    "sendToEmailBtn": "Send to My Email",
-    "sendToEmailHint": "Send this asset to {{email}}, retrieve via Webmail externally",
+    "sendToEmailTitle": "Send to email ({{email}})",
+    "sendToEmailBtn": "Send to Email",
+    "sendToEmailHint": "Send current item directly to {{email}}",
     "sendingEmail": "Sending...",
-    "sentToEmailToast": "Sent to {{email}} successfully! Check Webmail.",
+    "sentToEmailToast": "Sent to {{email}} successfully!",
     "sendEmailFailed": "Email send failed: {{error}}",
-    "emailNotConfigured": "Sender work email not configured. Please check feature modules in settings."
+    "emailNotConfigured": "Sender email not configured. Please enable it in Settings."
   },
   "feedback": {
     "channel": {
@@ -525,21 +525,21 @@
       "syncFailed": "Sync failed: {{error}}"
     },
     "emailRelay": {
-      "title": "Internal Email Relay (Work/Home Transfer)",
-      "desc": "Use internal company mail server to send clipboard assets to your internal mailbox, accessible via Webmail anywhere",
-      "configTitle": "Internal Email Relay Configuration",
-      "smtpHost": "SMTP Host (Domain or Internal IP)",
+      "title": "Email Backup & Dispatch",
+      "desc": "Configure personal or corporate SMTP email to back up or forward clipboard history, code, or images directly to your inbox.",
+      "configTitle": "SMTP Server Settings",
+      "smtpHost": "SMTP Server Host",
       "smtpPort": "Port",
       "encryption": "Encryption",
       "encNone": "None (Port 25 plaintext)",
-      "fromAddress": "Your Corporate Email",
+      "fromAddress": "Sender Email (e.g., yourname@qq.com)",
       "username": "Username (Optional)",
-      "usernamePlaceholder": "Internal ID or Corporate Email",
-      "password": "Password / Auth Code (Optional)",
-      "passwordPlaceholder": "Leave blank if internal whitelist",
-      "sendToSelfDefault": "Default to sending to myself",
-      "sendToSelfDesc": "When enabled, clicking send will directly deliver to your own mailbox without recipient prompt",
-      "testBtn": "Test Send to Current Email"
+      "usernamePlaceholder": "Defaults to sender email if left blank",
+      "password": "Password / App Authorization Code",
+      "passwordPlaceholder": "16-digit App Authorization Code for QQ/163/Gmail",
+      "sendToSelfDefault": "Send to myself by default",
+      "sendToSelfDesc": "Directly deliver to sender email without asking for recipients",
+      "testBtn": "Test Send to Sender Email"
     },
     "mcp": {
       "enabled": "Enable MCP Service",
@@ -1080,7 +1080,9 @@
     "privacyWarning": "End-to-End Encrypted Relay Share",
     "privacyDetail": "Content exceeds direct QR capacity or is media. It will be encrypted locally with AES-256-GCM and relayed ephemerally. Purged in 10 minutes; keys exist only in the QR code hash.",
     "uploadTo": "Upload to",
-    "confirmUpload": "Encrypt & Generate QR"
+    "confirmUpload": "Encrypt & Generate QR",
+    "orSendViaEmail": "Or send directly via email",
+    "sendToMyEmail": "Send to {{email}}"
   },
   "update": {
     "available": "New version {{version}} available",

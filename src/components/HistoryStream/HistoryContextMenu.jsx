@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  Mail,
   Pencil,
   Trash2,
   X,
@@ -58,6 +59,7 @@ function HistoryContextMenu({
   menuRef,
   t,
   enableQuickPaste,
+  emailRelayEnabled = false,
   collectionHintsDismissed = false,
   onAction,
 }) {
@@ -119,6 +121,7 @@ function HistoryContextMenu({
     const openEntries = [
       { key: 'editNote', label: t('item.editNoteAndTags'), icon: Pencil },
       canEditContent ? { key: 'editContent', label: t('item.editContent'), icon: FileText } : null,
+      emailRelayEnabled ? { key: 'sendToEmail', label: t('item.sendToEmailBtn'), icon: Mail } : null,
       canOpenItem
         ? { key: 'open', label: item.type_ === 'link' ? t('item.openLink') : t('item.openFile'), icon: ExternalLink }
         : null,

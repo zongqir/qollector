@@ -56,10 +56,11 @@ export const createShareActions = (set, get) => ({
 
     try {
       // 1. Client-side AES-256-GCM encryption
+      const itemType = item.type_ || item.type || 'text';
       const encrypted = await encryptPayload({
-        text: item.type === 'image' || item.type === 'file' ? null : item.content,
+        text: itemType === 'image' || itemType === 'file' ? null : item.content,
         dataBase64: itemData.data_base64,
-        type: item.type,
+        type: itemType,
         filename: itemData.filename,
       });
 

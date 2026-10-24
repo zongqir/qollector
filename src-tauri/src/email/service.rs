@@ -11,6 +11,16 @@ pub struct EmailService;
 
 impl EmailService {
     fn build_transport(config: &EmailRelayConfig) -> Result<AsyncSmtpTransport<Tokio1Executor>, String> {
+        let effective_port = if config.smtp_port > 0 {
+            config.smtp_port
+        } else {
+            match config.encryption.to_lowercase().as_str() {
+                "tls" => 465,
+                "starttls" => 587,
+                _ => 25,
+            }
+        };
+
         let builder = match config.encryption.to_lowercase().as_str() {
             "tls" => {
                 let tls_params = TlsParameters::builder(config.smtp_host.clone())
@@ -19,8 +29,8 @@ impl EmailService {
                     .map_err(|e| format!("TLS build error: {}", e))?;
                 AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
                     .map_err(|e| format!("SMTP relay init error: {}", e))?
-                    .port(config.smtp_port)
-                    .tls(Tls::Required(tls_params))
+                    .port(effective_port)
+                    .tls(Tls::Wrapper(tls_params))
             }
             "starttls" => {
                 let tls_params = TlsParameters::builder(config.smtp_host.clone())
@@ -29,22 +39,26 @@ impl EmailService {
                     .map_err(|e| format!("TLS build error: {}", e))?;
                 AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.smtp_host)
                     .map_err(|e| format!("SMTP starttls init error: {}", e))?
-                    .port(config.smtp_port)
+                    .port(effective_port)
                     .tls(Tls::Required(tls_params))
             }
             _ => {
                 // 明文连接 (内网默认端口 25)
                 AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&config.smtp_host)
-                    .port(config.smtp_port)
+                    .port(effective_port)
             }
         };
 
-        let transport = if !config.username.trim().is_empty() && !config.password.trim().is_empty() {
+        let clean_password = config.password.trim().replace(' ', "");
+        let clean_username = if !config.username.trim().is_empty() {
+            config.username.trim().to_string()
+        } else {
+            config.from_address.trim().to_string()
+        };
+
+        let transport = if !clean_username.is_empty() && !clean_password.is_empty() {
             builder
-                .credentials(Credentials::new(
-                    config.username.trim().to_string(),
-                    config.password.trim().to_string(),
-                ))
+                .credentials(Credentials::new(clean_username, clean_password))
                 .build()
         } else {
             builder.build()
