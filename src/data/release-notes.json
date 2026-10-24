@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.3",
+      "publishedAt": "2026-10-24",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-3",
+      "summary": {
+        "zh-CN": "重构 GitHub Actions 发布构建管线，建立基准依赖热缓存与优化链接性能，并包含大文本预览注水优先级修复。",
+        "en-US": "Refactored GitHub Actions release pipeline with warm base dependency caching and optimized linking, including full-text preview hydration priority fix."
+      },
+      "highlights": {
+        "zh-CN": [
+          "CI 构建管线深度提速：建立 dev-fav 默认分支专属的 Rust 依赖热缓存预热机制，解除 Tag 跨分支隔离障碍，关闭全模块 ThinLTO 链接重负，大幅压缩发版等待时间。",
+          "发布权限与孤儿缓存治理：修复 GitHub Actions 仓库级工作流写权限配置，全面清理历史无用 Tag 缓存，杜绝发版临界报错与存储配额挤压。",
+          "预览抽屉全量注水优先级保障：保证异步全量注水（Hydration）拉取到的 100% 完整原文优先于历史流 4000 字符轻量缓存，消除长文本截断隐患与分卷派发异常。"
+        ],
+        "en-US": [
+          "CI Build Pipeline Acceleration: Implemented a dedicated Rust dependency warm-cache workflow on the dev-fav branch, eliminating Tag cross-ref isolation bottlenecks and turning off ThinLTO link overhead to drastically reduce release time.",
+          "Release Permission and Orphan Cache Cleanup: Fixed repository-level GitHub Actions workflow write permissions and purged legacy orphan Tag caches to prevent release-stage 403 errors and cache quota exhaustion.",
+          "Preview Drawer Full-Text Hydration Assurance: Guaranteed that 100% full content retrieved via asynchronous hydration takes strict precedence over the 4000-character light cache, eliminating text truncation and chunk dispatch anomalies."
+        ]
+      }
+    },
+    {
       "version": "0.6.2",
       "publishedAt": "2026-10-24",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-2",
