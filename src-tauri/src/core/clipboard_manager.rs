@@ -34,6 +34,62 @@ struct ClipboardTransitionDecision {
     suppress_rollback_duplicate: bool,
 }
 
+#[derive(Clone, serde::Serialize)]
+pub struct ChunkProgressPayload {
+    pub session_id: String,
+    pub index: usize,
+    pub total: usize,
+}
+
+#[derive(Clone, serde::Serialize)]
+pub struct ChunkCompletePayload {
+    pub total: usize,
+    pub char_count: usize,
+}
+
+struct ChunkSession {
+    total: usize,
+    chunks: std::collections::HashMap<usize, String>,
+    last_updated: std::time::Instant,
+}
+
+fn parse_qollect_chunk_frame(text: &str) -> Option<(String, usize, usize, String)> {
+    let trimmed = text.trim();
+    if !trimmed.starts_with("---QOLLECT-CHUNK:v1:") || !trimmed.ends_with("---QOLLECT-CHUNK-END---") {
+        return None;
+    }
+    let first_line_end = trimmed.find('\n')?;
+    let header = trimmed[..first_line_end].trim();
+    let end_marker_start = trimmed.rfind("---QOLLECT-CHUNK-END---")?;
+
+    let header_prefix = "---QOLLECT-CHUNK:v1:";
+    let header_suffix = "---";
+    if !header.starts_with(header_prefix) || !header.ends_with(header_suffix) {
+        return None;
+    }
+    let meta_str = &header[header_prefix.len()..header.len() - header_suffix.len()];
+    let parts: Vec<&str> = meta_str.split(':').collect();
+    if parts.len() != 3 {
+        return None;
+    }
+    let session_id = parts[0].to_string();
+    let index: usize = parts[1].parse().ok()?;
+    let total: usize = parts[2].parse().ok()?;
+    if index < 1 || index > total || total < 2 {
+        return None;
+    }
+
+    let raw_payload = &trimmed[first_line_end + 1..end_marker_start];
+    let raw_payload = raw_payload
+        .strip_prefix("\r\n")
+        .unwrap_or_else(|| raw_payload.strip_prefix('\n').unwrap_or(raw_payload));
+    let payload = raw_payload
+        .strip_suffix("\r\n")
+        .unwrap_or_else(|| raw_payload.strip_suffix('\n').unwrap_or(raw_payload));
+
+    Some((session_id, index, total, payload.to_string()))
+}
+
 pub struct ClipboardManager {
     platform: Arc<dyn PlatformClipboard>,
     repository: Arc<TokioMutex<ClipboardRepository>>,
@@ -46,6 +102,7 @@ pub struct ClipboardManager {
     app_handle: AppHandle,
     pub paused: Arc<AtomicBool>,
     last_cleanup_at: Arc<AtomicI64>,
+    chunk_buffer: Arc<Mutex<std::collections::HashMap<String, ChunkSession>>>,
 }
 
 impl ClipboardManager {
@@ -73,6 +130,7 @@ impl ClipboardManager {
             app_handle,
             paused: Arc::new(AtomicBool::new(false)),
             last_cleanup_at: Arc::new(AtomicI64::new(0)),
+            chunk_buffer: Arc::new(Mutex::new(std::collections::HashMap::new())),
         }
     }
 
@@ -172,6 +230,8 @@ impl ClipboardManager {
         let app_handle = self.app_handle.clone();
         let paused = self.paused.clone();
         let last_cleanup_at = self.last_cleanup_at.clone();
+        let chunk_buffer = self.chunk_buffer.clone();
+        let platform = self.platform.clone();
 
         let callback: ClipboardCallback = Box::new(move |content, metadata| {
             let repo = repo.clone();
@@ -184,6 +244,8 @@ impl ClipboardManager {
             let app_handle = app_handle.clone();
             let paused = paused.clone();
             let last_cleanup_at = last_cleanup_at.clone();
+            let chunk_buffer = chunk_buffer.clone();
+            let platform = platform.clone();
 
             Box::pin(async move {
                 if paused.load(Ordering::Relaxed) {
@@ -200,6 +262,8 @@ impl ClipboardManager {
                     ai_semaphore,
                     transition_state,
                     app_handle,
+                    chunk_buffer,
+                    platform,
                 )
                 .await
                 {
@@ -524,6 +588,8 @@ impl ClipboardManager {
         ai_semaphore: Arc<Semaphore>,
         transition_state: Arc<Mutex<ClipboardTransitionState>>,
         app_handle: AppHandle,
+        chunk_buffer: Arc<Mutex<std::collections::HashMap<String, ChunkSession>>>,
+        platform: Arc<dyn PlatformClipboard>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 
@@ -544,6 +610,90 @@ impl ClipboardManager {
             );
             return Ok(());
         }
+
+        let effective_content = match &content {
+            ClipboardContent::Text { plain: text, raw_formats } => {
+                if let Some((session_id, index, total, payload)) = parse_qollect_chunk_frame(text) {
+                    println!(
+                        "[ChunkProtocol] Received chunk {}/{} for session '{}' ({} chars)",
+                        index, total, session_id, payload.len()
+                    );
+                    let mut buffer = chunk_buffer.lock();
+                    buffer.retain(|_, s| s.last_updated.elapsed() < std::time::Duration::from_secs(60));
+
+                    let session = buffer.entry(session_id.clone()).or_insert_with(|| ChunkSession {
+                        total,
+                        chunks: std::collections::HashMap::new(),
+                        last_updated: std::time::Instant::now(),
+                    });
+                    session.chunks.insert(index, payload);
+                    session.last_updated = std::time::Instant::now();
+                    let received_count = session.chunks.len();
+
+                    let _ = app_handle.emit(
+                        "clipboard-chunk-progress",
+                        ChunkProgressPayload {
+                            session_id: session_id.clone(),
+                            index,
+                            total,
+                        },
+                    );
+
+                    if received_count == total {
+                        let mut assembled = String::new();
+                        let mut all_present = true;
+                        for i in 1..=total {
+                            if let Some(part) = session.chunks.get(&i) {
+                                assembled.push_str(part);
+                            } else {
+                                all_present = false;
+                                break;
+                            }
+                        }
+                        buffer.remove(&session_id);
+
+                        if all_present {
+                            println!(
+                                "[ChunkProtocol] Successfully reassembled session '{}' into {} chars",
+                                session_id,
+                                assembled.len()
+                            );
+                            let _ = app_handle.emit(
+                                "clipboard-chunk-complete",
+                                ChunkCompletePayload {
+                                    total,
+                                    char_count: assembled.len(),
+                                },
+                            );
+                            let platform_clone = platform.clone();
+                            let assembled_clone = assembled.clone();
+                            tokio::spawn(async move {
+                                let _ = platform_clone
+                                    .set_content(ClipboardContent::Text {
+                                        plain: assembled_clone,
+                                        raw_formats: None,
+                                    })
+                                    .await;
+                            });
+                            ClipboardContent::Text {
+                                plain: assembled,
+                                raw_formats: raw_formats.clone(),
+                            }
+                        } else {
+                            return Ok(());
+                        }
+                    } else {
+                        // Still waiting for remaining chunks, do not record intermediate fragment
+                        return Ok(());
+                    }
+                } else {
+                    content.clone()
+                }
+            }
+            _ => content.clone(),
+        };
+
+        let content = effective_content;
 
         let mut item = match &content {
             ClipboardContent::Text { plain: text, .. } => {

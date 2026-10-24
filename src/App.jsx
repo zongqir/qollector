@@ -437,6 +437,15 @@ function App() {
     const unlistenClipboardPromise = listen('clipboard-changed', async () => {
       loadItems();
     });
+    const unlistenChunkProgressPromise = listen('clipboard-chunk-progress', (event) => {
+      const { index, total } = event.payload || {};
+      showAppFeedback(t('item.chunkReceivedProgress', { index, total }), 'info', 1600);
+    });
+    const unlistenChunkCompletePromise = listen('clipboard-chunk-complete', (event) => {
+      const { total, char_count } = event.payload || {};
+      showAppFeedback(t('item.chunkReassembledSuccess', { total, chars: char_count }), 'success', 2800);
+      loadItems();
+    });
     const unlistenQuickInputPromise = listen(QUICK_NOTE_SAVED_EVENT, () => {
       loadItems();
     });
@@ -487,6 +496,8 @@ function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('keydown', handleDevToolsShortcut);
       unlistenClipboardPromise.then(unlisten => unlisten());
+      unlistenChunkProgressPromise.then(unlisten => unlisten());
+      unlistenChunkCompletePromise.then(unlisten => unlisten());
       unlistenQuickInputPromise.then(unlisten => unlisten());
       unlistenOpenSettingsPromise.then(unlisten => unlisten());
     };

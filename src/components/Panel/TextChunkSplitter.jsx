@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Layers, ChevronDown, ChevronUp, Copy, Check, ShieldCheck } from 'lucide-react';
+import { Layers, ChevronDown, ChevronUp, Copy, Check, ShieldCheck, Send, Loader2 } from 'lucide-react';
 import { splitTextIntoChunks, DEFAULT_CHUNK_THRESHOLD } from '../../utils/textSplitter.js';
 
 export function TextChunkSplitter({ text, onCopyChunk, showToast }) {
@@ -8,6 +8,8 @@ export function TextChunkSplitter({ text, onCopyChunk, showToast }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [activeChunkIndex, setActiveChunkIndex] = useState(1);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [dispatchStep, setDispatchStep] = useState(0);
 
   const chunks = useMemo(() => {
     return splitTextIntoChunks(text, DEFAULT_CHUNK_THRESHOLD);
@@ -35,6 +37,38 @@ export function TextChunkSplitter({ text, onCopyChunk, showToast }) {
     }, 2000);
   };
 
+  const handleSequentialDispatch = async (e) => {
+    e?.stopPropagation();
+    if (isDispatching) return;
+    setIsDispatching(true);
+    setDispatchStep(1);
+
+    const sessionId = Math.random().toString(36).slice(2, 10);
+    const total = chunks.length;
+
+    if (showToast) {
+      showToast(t('item.chunkDispatchStart', { total }));
+    }
+
+    for (let i = 0; i < total; i++) {
+      const chunk = chunks[i];
+      setDispatchStep(chunk.index);
+      const frame = `---QOLLECT-CHUNK:v1:${sessionId}:${chunk.index}:${total}---\n${chunk.content}\n---QOLLECT-CHUNK-END---`;
+      if (onCopyChunk) {
+        await onCopyChunk(frame);
+      }
+      if (i < total - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+    }
+
+    setIsDispatching(false);
+    setDispatchStep(0);
+    if (showToast) {
+      showToast(t('item.chunkDispatchDone', { total }));
+    }
+  };
+
   return (
     <div className="preview-chunk-splitter-card">
       <div 
@@ -55,6 +89,25 @@ export function TextChunkSplitter({ text, onCopyChunk, showToast }) {
           </span>
         </div>
         <div className="preview-chunk-action-group">
+          <button
+            type="button"
+            className={`preview-chunk-dispatch-btn ${isDispatching ? 'dispatching' : ''}`}
+            onClick={handleSequentialDispatch}
+            disabled={isDispatching}
+            title={t('item.chunkDispatchTooltip')}
+          >
+            {isDispatching ? (
+              <>
+                <Loader2 size={12} className="preview-chunk-spinning" />
+                <span>{t('item.chunkDispatching', { current: dispatchStep, total: chunks.length })}</span>
+              </>
+            ) : (
+              <>
+                <Send size={12} />
+                <span>{t('item.chunkDispatchBtn', { count: chunks.length })}</span>
+              </>
+            )}
+          </button>
           <span className="preview-chunk-toggle-btn">
             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
