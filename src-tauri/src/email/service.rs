@@ -318,7 +318,7 @@ impl EmailService {
         }
 
         // 构建美观 HTML 正文
-        let mut html_body = String::from(r#"<!DOCTYPE html>
+        let mut html_body = String::from(r##"<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -333,12 +333,36 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 .meta-row { display: flex; margin-bottom: 4px; }
 .meta-label { font-weight: 600; width: 75px; color: #334155; flex-shrink: 0; }
 .content { padding: 20px 24px; }
+.content-block { margin-bottom: 16px; }
+.content-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.content-title { font-size: 13px; font-weight: 600; color: #334155; }
+.qollect-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.qollect-copy-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
 .img-container { text-align: center; margin: 8px 0; }
 .img-container img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-.ocr-box { margin-top: 18px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 14px 18px; }
+.ocr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 14px 18px; }
 .ocr-title { font-size: 13px; font-weight: 600; color: #2563eb; margin-bottom: 8px; }
-.ocr-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #1e293b; }
-.text-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.ocr-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #1e293b; user-select: all; -webkit-user-select: all; }
+.text-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; user-select: all; -webkit-user-select: all; }
 .footer { padding: 12px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
 </style>
 </head>
@@ -348,7 +372,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
   <h2>Qollect 收集箱分享</h2>
   <p>来自桌面端 Qollect 剪贴板管理器的安全分享</p>
 </div>
-"#);
+"##);
 
         if let Some(ref note) = body_note {
             if !note.trim().is_empty() {
@@ -401,60 +425,203 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
         html_body.push_str("\r\n</div>\r\n<div class=\"content\">\r\n");
 
         if item.type_ == "image" {
-            html_body.push_str(r#"  <div class="img-container">
-    <img src="cid:qollect_img_asset" alt="Qollect 剪贴板图片" />
+            html_body.push_str(r##"  <div class="content-block">
+    <div class="content-toolbar">
+      <span class="content-title">图片资产</span>
+      <button type="button" class="qollect-copy-btn" onclick="qollectCopyImage(this)" title="一键复制图片">
+        🖼️ 一键复制图片
+      </button>
+    </div>
+    <div class="img-container">
+      <img id="qollect-img-asset" src="cid:qollect_img_asset" alt="Qollect 剪贴板图片" />
+    </div>
   </div>
-"#);
+"##);
             if let Some(ref ocr) = item.ocr_text {
                 if !ocr.trim().is_empty() {
                     html_body.push_str(&format!(
-                        r#"  <div class="ocr-box">
-    <div class="ocr-title">图片识别文本 (OCR)</div>
-    <pre class="ocr-content">{}</pre>
+                        r##"  <div class="content-block" style="margin-top: 18px;">
+    <div class="content-toolbar">
+      <span class="content-title">图片识别文本 (OCR)</span>
+      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制识别出的文本">
+        📋 复制识别文本
+      </button>
+    </div>
+    <div class="ocr-box">
+      <pre class="ocr-content copy-target">{}</pre>
+    </div>
   </div>
-"#,
+"##,
                         html_escape(ocr.trim())
                     ));
                 }
             }
         } else if item.type_ == "file" && !text_content.is_empty() {
             html_body.push_str(&format!(
-                r#"  <div class="ocr-box">
-    <div class="ocr-title">包含文件列表</div>
-    <pre class="ocr-content">{}</pre>
+                r##"  <div class="content-block">
+    <div class="content-toolbar">
+      <span class="content-title">包含文件列表</span>
+      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制文件路径列表">
+        📋 复制文件路径
+      </button>
+    </div>
+    <div class="ocr-box">
+      <pre class="ocr-content copy-target">{}</pre>
+    </div>
   </div>
-"#,
+"##,
                 html_escape(text_content)
             ));
         } else if item.type_ != "image" && item.type_ != "file" {
             if text_content.len() <= 1000 && !text_content.is_empty() {
                 html_body.push_str(&format!(
-                    r#"  <pre class="text-content">{}</pre>
-"#,
+                    r##"  <div class="content-block">
+    <div class="content-toolbar">
+      <span class="content-title">正文内容</span>
+      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="一键复制正文内容">
+        📋 一键复制内容
+      </button>
+    </div>
+    <pre class="text-content copy-target">{}</pre>
+  </div>
+"##,
                     html_escape(text_content)
                 ));
             } else if text_content.len() > 1000 {
                 let snippet: String = text_content.chars().take(400).collect();
                 html_body.push_str(&format!(
-                    r#"  <div class="ocr-box">
-    <div class="ocr-title">正文摘要 (完整长文本已打包为附件 .txt)</div>
-    <pre class="ocr-content">{}
+                    r##"  <div class="content-block">
+    <div class="content-toolbar">
+      <span class="content-title">正文摘要 (完整长文本已打包为附件 .txt)</span>
+      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="一键复制全部完整内容">
+        📋 一键复制完整内容
+      </button>
+    </div>
+    <div class="ocr-box">
+      <pre class="ocr-content copy-target" data-raw="{}">{}
 ...
 </pre>
+    </div>
   </div>
-"#,
+"##,
+                    html_escape(text_content),
                     html_escape(&snippet)
                 ));
             }
         }
 
-        html_body.push_str(r#"</div>
+        html_body.push_str(r##"</div>
 <div class="footer">
   由 Qollect 剪贴板提供支持
 </div>
 </div>
+<script>
+function qollectCopyText(btn) {
+  try {
+    var block = btn.closest ? btn.closest('.content-block') : btn.parentNode.parentNode;
+    var target = block ? block.querySelector('.copy-target') : null;
+    var text = target ? (target.getAttribute('data-raw') || target.innerText || target.textContent) : '';
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        qollectShowFeedback(btn, '已复制 ✓', true);
+      }).catch(function() {
+        qollectExecCommandCopy(text, btn);
+      });
+    } else {
+      qollectExecCommandCopy(text, btn);
+    }
+  } catch(e) {
+    qollectShowFeedback(btn, '请划选复制', false);
+  }
+}
+
+function qollectExecCommandCopy(text, btn) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok) {
+      qollectShowFeedback(btn, '已复制 ✓', true);
+    } else {
+      qollectShowFeedback(btn, '请划选复制', false);
+    }
+  } catch(e) {
+    qollectShowFeedback(btn, '请划选复制', false);
+  }
+}
+
+function qollectCopyImage(btn) {
+  try {
+    var img = document.getElementById('qollect-img-asset');
+    if (!img) return;
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      qollectSelectImg(img, btn);
+      return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width || 600;
+    canvas.height = img.naturalHeight || img.height || 400;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(function(blob) {
+      if (!blob) {
+        qollectSelectImg(img, btn);
+        return;
+      }
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function() {
+        qollectShowFeedback(btn, '图片已复制 ✓', true);
+      }).catch(function() {
+        qollectSelectImg(img, btn);
+      });
+    }, 'image/png');
+  } catch(e) {
+    var imgNode = document.getElementById('qollect-img-asset');
+    if (imgNode) qollectSelectImg(imgNode, btn);
+  }
+}
+
+function qollectSelectImg(img, btn) {
+  try {
+    var range = document.createRange();
+    range.selectNode(img);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    qollectShowFeedback(btn, '已选中国片，按 Ctrl+C 复制', true);
+  } catch(e) {
+    qollectShowFeedback(btn, '请右键图片复制', false);
+  }
+}
+
+function qollectShowFeedback(btn, msg, success) {
+  if (!btn) return;
+  var oldHtml = btn.getAttribute('data-original-html');
+  if (!oldHtml) {
+    oldHtml = btn.innerHTML;
+    btn.setAttribute('data-original-html', oldHtml);
+  }
+  btn.textContent = msg;
+  btn.style.background = success ? '#ecfdf5' : '#fef2f2';
+  btn.style.borderColor = success ? '#a7f3d0' : '#fecaca';
+  btn.style.color = success ? '#059669' : '#dc2626';
+  setTimeout(function() {
+    btn.innerHTML = oldHtml;
+    btn.style.background = '#eff6ff';
+    btn.style.borderColor = '#bfdbfe';
+    btn.style.color = '#2563eb';
+  }, 2200);
+}
+</script>
 </body>
-</html>"#);
+</html>"##);
 
         let email = if item.type_ == "image" {
             if let (Some(bytes), Some(filename), Some(mime_str)) = (attachment_bytes, attachment_filename, content_type) {
