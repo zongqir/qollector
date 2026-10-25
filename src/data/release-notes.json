@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.12",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-12",
+      "summary": {
+        "zh-CN": "重构 AI 检索回溯意图词与 FTS5 倒排索引虚表，优化邮件模板无脚本环境一击全选与完整正文呈现，并支持 SiliconFlow/DeepSeek OCR 自定义模型配置。",
+        "en-US": "Overhauled AI retrospective retrieval with intent query indexing in FTS5, reinforced email template zero-JS click-to-select copy UX, and added custom model configuration for SiliconFlow/DeepSeek OCR."
+      },
+      "highlights": {
+        "zh-CN": [
+          "AI 检索回溯意图词与 FTS5 索引重构：将机械的 AI 打标彻底转向面向未来的情境回溯提词（动作情境摘要 + 预测检索意图词），并将窗口标题与预测词无缝织入 SQLite FTS5 倒排索引，实现基于意图的模糊召回，同时配备敏感凭据与垃圾文本启发式拦截门禁。",
+          "邮件分享模板无脚本全选与正文保真：针对邮件客户端安全沙箱强制禁用 JS 的铁律，全面升级为纯 CSS 一击全选体验（单击框内立即全选整段，Ctrl+C 秒复制），移除 400 字符残缺截断，保障无脚本环境下正文完整呈现与秒级复制可用。",
+          "SiliconFlow / DeepSeek OCR 自定义模型名支持：在核心设置集成中开放 SiliconFlow 与 DeepSeek 的自定义 OCR 模型配置，允许用户自主指定最新视觉模型识别端点。"
+        ],
+        "en-US": [
+          "Intent-driven AI Retrieval & FTS5 Indexing: Replaced mechanical AI tagging with retrospective action summaries and predictive search queries, indexing both window titles and intent queries into SQLite FTS5 for seamless fuzzy recall while blocking sensitive credentials with smart heuristic guards.",
+          "Email Share Template Zero-JS Click-to-Select & Full Text Fidelity: Solved script-disabled webmail client limitations with pure CSS click-to-select containers, eliminated the 400-char truncation, and added clear visual copy badges for zero-friction copying across all desktop and mobile mail apps.",
+          "Custom OCR Model Names for SiliconFlow & DeepSeek: Enabled user-defined OCR model configuration in Settings for SiliconFlow and DeepSeek integrations, allowing flexible routing to modern multimodal and vision endpoints."
+        ]
+      }
+    },
+    {
       "version": "0.6.11",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-11",
