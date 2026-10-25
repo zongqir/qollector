@@ -794,7 +794,7 @@ function IntegrationsCoreSection({
                   type="text"
                   value={currentOcrModel}
                   onChange={(e) => setCurrentOcrModel(e.target.value)}
-                  placeholder={ocrConfig.current_provider === 'SiliconFlow' ? 'Qwen/Qwen2.5-VL-72B-Instruct' : 'deepseek-chat'}
+                  placeholder={ocrConfig.current_provider === 'SiliconFlow' ? 'Qwen/Qwen3-VL-32B-Instruct' : 'deepseek-chat'}
                   className="setting-input"
                 />
                 <small className="setting-hint">

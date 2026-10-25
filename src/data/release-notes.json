@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.14",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-14",
+      "summary": {
+        "zh-CN": "解除 AI 与云端视觉大模型 OCR 的 30 秒短超时限制，引入 120 秒长任务独立客户端与大图尺寸预处理下采样，并升级硅基流动默认视觉模型配置。",
+        "en-US": "Lifted the 30-second hard timeout for AI and multimodal OCR with a dedicated 120-second client, introduced smart pre-upload image downsampling to prevent VLM queue bloat, and updated default SiliconFlow model settings."
+      },
+      "highlights": {
+        "zh-CN": [
+          "解除多模态 OCR 与 AI 推理 30 秒硬超时：Rust 后端为 AI 与云端 OCR 任务独立配置长任务 HTTP 客户端（超时放宽至 120 秒），根治调用 32B/72B 等大参数视觉模型或遇到云端排队时客户端在 30 秒主动掐断连接并报错的问题。",
+          "视觉大模型图像预处理与智能下采样：在图片 Base64 编码上传前新增智能预处理流水线，对长边超过 2048px 的超大截图进行等比缩放并转换为标准 JPEG，大幅降低传输体积与云端 ViT 视觉切片开销，减少排队等待时间并自带格式降级保障。",
+          "超时诊断错误信息友好化：区分网络断连与服务端推理超时，请求超限时向用户呈现明确的超时提示，避免误导为网络故障。",
+          "硅基流动（SiliconFlow）默认模型升级：将底层默认模型与设置项占位符同步更新为最新在线的 Qwen/Qwen3-VL-32B-Instruct。"
+        ],
+        "en-US": [
+          "120s Dedicated Client for Multimodal OCR & AI: Decoupled AI analysis and OCR operations from the global 30-second HTTP client, introducing a dedicated 120-second long-running client to completely prevent premature connection resets during heavy 32B/72B VLM inference or cloud GPU queuing.",
+          "Smart Image Preprocessing & Downsampling for VLMs: Added an automatic pre-upload processing pipeline that downsamples high-resolution screenshots (>2048px) and encodes them as standard JPEG, significantly slashing Base64 payload size and server-side ViT token overhead with safe fallbacks.",
+          "Enhanced Timeout Error Diagnostics: Differentiated transport-level connection failures from server-side inference timeouts, providing clear human-readable timeout feedback when requests exceed limits.",
+          "SiliconFlow Default Model Modernization: Updated the default model and settings placeholder to the currently available Qwen/Qwen3-VL-32B-Instruct."
+        ]
+      }
+    },
+    {
       "version": "0.6.13",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-13",

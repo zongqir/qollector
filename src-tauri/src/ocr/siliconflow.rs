@@ -70,10 +70,10 @@ struct ResponseMessage {
 
 impl SiliconFlowOcr {
     pub fn new(api_key: String, base_url: Option<String>, model: Option<String>) -> Self {
-        let client = crate::http_client::client().clone();
+        let client = crate::http_client::long_running_client().clone();
         let selected_model = model
             .filter(|m| !m.trim().is_empty())
-            .unwrap_or_else(|| "Qwen/Qwen2.5-VL-72B-Instruct".to_string());
+            .unwrap_or_else(|| "Qwen/Qwen3-VL-32B-Instruct".to_string());
 
         Self {
             api_key,
@@ -92,11 +92,11 @@ impl SiliconFlowOcr {
 
     async fn read_image_to_base64(&self, image_path: &str) -> Result<String, OcrError> {
         let image_data = tokio::fs::read(image_path).await?;
-        Ok(general_purpose::STANDARD.encode(&image_data))
+        Ok(super::preprocess_image_for_vlm(&image_data))
     }
 
     fn bytes_to_base64(&self, image_data: &[u8]) -> String {
-        general_purpose::STANDARD.encode(image_data)
+        super::preprocess_image_for_vlm(image_data)
     }
 
     async fn call_api(&self, image_base64: String) -> Result<OcrResult, OcrError> {
@@ -133,7 +133,14 @@ impl SiliconFlowOcr {
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
-            .await?;
+            .await
+            .map_err(|e| {
+                if e.is_timeout() {
+                    OcrError::ApiError(format!("硅基流动 OCR 识别超时（已等待 120 秒），云端排队或处理过慢: {}", e))
+                } else {
+                    OcrError::RequestError(e)
+                }
+            })?;
 
         let status = response.status();
         println!("API 响应状态: {}", status);

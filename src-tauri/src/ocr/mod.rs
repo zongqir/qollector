@@ -222,3 +222,37 @@ impl OcrResult {
         self
     }
 }
+
+/// 为云端视觉多模态大模型预处理图片（尺寸优化与 Base64 编码）
+///
+/// 1. 若图片长宽超过 2048px，采用高质量下采样保持文字清晰的同时控制尺寸；
+/// 2. 转换为 RGB JPEG 格式降低传输体积，降低服务端排队与解码延迟；
+/// 3. 若解析失败或格式异常，优雅降级为原二进制 Base64。
+pub fn preprocess_image_for_vlm(image_data: &[u8]) -> String {
+    use base64::{engine::general_purpose, Engine as _};
+    use image::{DynamicImage, ImageFormat};
+    use std::io::Cursor;
+
+    if let Ok(img) = image::load_from_memory(image_data) {
+        let (w, h) = (img.width(), img.height());
+        // 确保满足部分 VLM 模型的最小尺寸限制（>=28px）
+        if w >= 28 && h >= 28 {
+            let resized = if w > 2048 || h > 2048 {
+                crate::core::thumbnail::generate_thumbnail(&img, 2048)
+            } else {
+                img
+            };
+
+            let rgb_img = DynamicImage::ImageRgb8(resized.to_rgb8());
+            let mut buf = Cursor::new(Vec::new());
+            if rgb_img.write_to(&mut buf, ImageFormat::Jpeg).is_ok() {
+                let bytes = buf.into_inner();
+                if !bytes.is_empty() {
+                    return general_purpose::STANDARD.encode(&bytes);
+                }
+            }
+        }
+    }
+
+    base64::engine::general_purpose::STANDARD.encode(image_data)
+}

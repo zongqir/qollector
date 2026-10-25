@@ -386,7 +386,7 @@ pub struct AIService {
 
 impl AIService {
     pub fn new(config: AIConfig) -> Self {
-        let client = crate::http_client::client().clone();
+        let client = crate::http_client::long_running_client().clone();
 
         Self { config, client }
     }
