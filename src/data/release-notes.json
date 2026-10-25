@@ -2,6 +2,29 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.13",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-13",
+      "summary": {
+        "zh-CN": "修复截图工具（PixPin）位图捕获防丢机制，预览面板底栏新增主动 OCR 识别入口与就地注水，精简顶栏操作区，并加固图标加载异常防护。",
+        "en-US": "Enhanced screenshot (PixPin) delayed rendering capture reliability, added an active on-demand OCR trigger in the preview bottom bar with in-place hydration, streamlined preview top actions, and fortified favicon error handling."
+      },
+      "highlights": {
+        "zh-CN": [
+          "截图软件位图捕获防丢机制：重构 Windows 剪贴板底层轮询策略，消除延迟渲染（Delayed Rendering）就绪前遇到 UnsupportedType 导致的短路退出，提供完整的 150ms 异步缓冲重试；并在空白文本但含位图时优先提取图片，拓宽临时截图文件路径提升规则，彻底解决 PixPin 等工具复制截图漏记问题。",
+          "预览面板底栏主动 OCR 识别入口与就地注水：图片资产未识别时在底栏分享旁新增「识别文字」按钮，支持一键主动触发 OCR 并呈现旋转加载反馈；识别完成后立即将结果就地注水到当前预览项与上下文，免去重新选中卡片的繁琐交互。",
+          "预览面板顶栏动作精简：精简顶栏操作栏，移除冗余且使用频率不当的邮件发送按钮，使操作核心聚焦于复制、收藏、查看大图与删除。",
+          "链接图标异步加载异常安全守卫：修复虚拟列表快速滚动解挂时 Favicon 触发网络异常导致 onError 空指针解引用崩溃（Cannot read properties of null），保障界面极端滑动下的绝对稳定性。"
+        ],
+        "en-US": [
+          "Screenshot Delayed Rendering Capture Guard: Overhauled Windows clipboard polling logic to prevent early aborts on UnsupportedType during asynchronous delayed rendering by third-party tools like PixPin; added bitmap-priority fallback over empty text and broadened temp screenshot filename elevation rules to completely prevent dropped captures.",
+          "On-Demand Preview OCR Trigger & In-Place Hydration: Added an active 'Recognize Text' button in the preview bottom bar for unparsed image items with real-time spin animation; successfully extracted text is immediately hydrated in-place into the active preview state for instant copy and viewing.",
+          "Streamlined Preview Top Actions: Removed the redundant email share button from the preview top bar, keeping the primary toolbar clean, focused, and intuitive with Copy, Favorite, [Expand], and Delete.",
+          "Favicon Loading Crash Guard: Hardened image error fallback in CompactCard using safe element navigation and optional chaining, eliminating null-pointer exceptions (Cannot read properties of null) during rapid virtual list scrolling and unmounts."
+        ]
+      }
+    },
+    {
       "version": "0.6.12",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-12",
