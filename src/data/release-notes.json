@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.11",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-11",
+      "summary": {
+        "zh-CN": "新增 Markdown 预览排版渲染与编辑源码无缝回退，邮件分享模板集成一键复制，并全面优化标签管理多选与操作确认交互。",
+        "en-US": "Added rich in-place Markdown rendering with source editor rollback, integrated one-click copy buttons into email templates, and overhauled tag management with multi-selection and confirm actions."
+      },
+      "highlights": {
+        "zh-CN": [
+          "Markdown 就地排版渲染与编辑源码回退：预览面板对 Markdown 文本及 .md 文件默认提供优美的结构化排版（标题、表格、引用与列表），支持「渲染排版 / 原始源码」自由切换；编辑时无缝回退为原始纯文本，双击与工具栏复制始终 100% 复制原始 Markdown 源码，并配备 80KB 性能熔断与 XSS 安全过滤。",
+          "邮件分享模板集成一键复制：在邮件 HTML 模板中为正文文本、超长文本全文、图片资产、OCR 文本及文件列表新增专用「一键复制」按钮，并提供「已复制 ✓」动态反馈与无脚本客户端双击全选保底。",
+          "标签管理浮层多选与确认优化：补齐 common.close 国际化缺失，新增底部「确定 / 取消」操作栏；候选标签支持点击连续多选与反选（带高亮勾选反馈），并彻底根除选新标签覆盖旧标签的引用失效缺陷。"
+        ],
+        "en-US": [
+          "In-place Markdown Preview & Source Editor Rollback: PreviewPanel now renders formatted Markdown for text items and .md files by default, with a quick 'Preview / Source' toggle; seamlessly reverts to raw textarea upon editing while keeping all copy actions strictly copying raw Markdown source (safeguarded by an 80KB circuit breaker and XSS sanitizer).",
+          "One-Click Copy in Email Share Template: Added convenient 'Copy Content', 'Copy Image', and 'Copy OCR' buttons to outgoing HTML email templates, featuring visual feedback and pure-CSS select-all fallbacks for script-disabled webmail clients.",
+          "Tag Popover Multi-Select & Confirm Actions: Fixed the untranslated close button tooltip, introduced explicit Confirm / Cancel footer actions, enabled multi-tag toggling on frequent chips, and eliminated stale item reference overwrites."
+        ]
+      }
+    },
+    {
       "version": "0.6.10",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-10",
