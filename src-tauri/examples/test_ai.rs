@@ -28,7 +28,7 @@ async fn main() {
     println!("Generating tags...\n");
 
     match service.generate_tags(test_content, "en").await {
-        Ok((tags, language, title)) => {
+        Ok((tags, language, title, queries)) => {
             println!("Generated tags:");
             for tag in tags {
                 println!("  - {}", tag);
@@ -38,6 +38,9 @@ async fn main() {
             }
             if let Some(t) = title {
                 println!("Title: {}", t);
+            }
+            if !queries.is_empty() {
+                println!("Queries: {:?}", queries);
             }
         }
         Err(e) => {

@@ -622,7 +622,7 @@ impl ClipboardManager {
         transition_state: Arc<Mutex<ClipboardTransitionState>>,
         app_handle: AppHandle,
         chunk_buffer: Arc<Mutex<std::collections::HashMap<String, ChunkSession>>>,
-        platform: Arc<dyn PlatformClipboard>,
+        _platform: Arc<dyn PlatformClipboard>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("Handling clipboard change...");
 

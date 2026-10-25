@@ -2156,27 +2156,27 @@ impl ClipboardRepository {
         let ocr_tokens = tokenizer::tokenize(item.ocr_text.as_deref().unwrap_or(""));
         let note_tokens = tokenizer::tokenize(item.user_note.as_deref().unwrap_or(""));
 
-        let mut title_parts: Vec<&str> = Vec::new();
+        let mut title_parts: Vec<String> = Vec::new();
         let mut query_tokens = String::new();
 
         if let Some(metadata_str) = item.metadata.as_deref() {
             if let Ok(meta_val) = serde_json::from_str::<serde_json::Value>(metadata_str) {
                 if let Some(app) = meta_val.get("source_app").and_then(|v| v.as_str()) {
-                    title_parts.push(app);
+                    title_parts.push(app.to_string());
                 }
                 if let Some(win_title) = meta_val.get("window_title").and_then(|v| v.as_str()) {
-                    title_parts.push(win_title);
+                    title_parts.push(win_title.to_string());
                 }
                 if let Some(naming_title) = meta_val
                     .get("naming")
                     .and_then(|n| n.get("title"))
                     .and_then(|v| v.as_str())
                 {
-                    title_parts.push(naming_title);
+                    title_parts.push(naming_title.to_string());
                 }
                 if let Some(retrieval) = meta_val.get("ai_retrieval") {
                     if let Some(summary) = retrieval.get("summary").and_then(|v| v.as_str()) {
-                        title_parts.push(summary);
+                        title_parts.push(summary.to_string());
                     }
                     if let Some(queries) = retrieval.get("queries").and_then(|v| v.as_array()) {
                         let query_strings: Vec<&str> =

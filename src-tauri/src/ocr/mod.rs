@@ -187,7 +187,7 @@ impl OcrConfig {
 
         // 将旧的 api_key 和 api_secret 迁移到 credentials
         if legacy.api_key.is_some() || legacy.api_secret.is_some() {
-            config.set_current_credentials(legacy.api_key, legacy.api_secret);
+            config.set_current_credentials(legacy.api_key, legacy.api_secret, None);
         }
 
         Ok(config)
