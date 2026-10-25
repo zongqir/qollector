@@ -78,8 +78,23 @@ function QuickTagPopover({
 
   const suggestedTags = useMemo(() => {
     const currentSet = new Set(userTags.map((t) => t.toLowerCase()));
+    const isSystemOrAiTag = (tag) => {
+      const lower = tag.toLowerCase();
+      return (
+        lower.startsWith('ai:') ||
+        lower.startsWith('类型:') ||
+        lower.startsWith('来源:') ||
+        lower.startsWith('type:') ||
+        lower.startsWith('source:')
+      );
+    };
+
     const candidates = availableUserTags.filter(
-      (t) => typeof t === 'string' && t.trim() && !currentSet.has(t.trim().toLowerCase()),
+      (t) =>
+        typeof t === 'string' &&
+        t.trim() &&
+        !isSystemOrAiTag(t.trim()) &&
+        !currentSet.has(t.trim().toLowerCase()),
     );
     if (!normalizedInput) {
       return candidates.slice(0, 8);

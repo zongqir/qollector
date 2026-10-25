@@ -585,22 +585,13 @@ function HistoryStream({ style }) {
     };
   }, [debouncedTagSearchQuery, showFavoritesOnly, itemsRevision]);
 
-  const allTags = useMemo(() => {
+  const pureUserTags = useMemo(() => {
     const fallbackUserTags = new Set();
-    const sourceTags = new Set();
-    const typeTags = new Set();
-
     items.forEach(item => {
       const tags = getTags(item.tags);
       tags.forEach(tag => {
         if (!tag.startsWith('AI:')) fallbackUserTags.add(tag);
       });
-
-      const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
-      if (sourceTag) sourceTags.add(sourceTag);
-
-      const typeTag = buildTypeTag(item.type_, t);
-      if (typeTag) typeTags.add(typeTag);
     });
 
     const localFallbackList = Array.from(fallbackUserTags).sort();
@@ -613,16 +604,30 @@ function HistoryStream({ style }) {
       seenBackendTags.add(normalized);
       normalizedBackendTags.push(normalized);
     });
-    const userTagList = normalizedBackendTags.length > 0
+
+    return normalizedBackendTags.length > 0
       ? normalizedBackendTags
       : (!debouncedTagSearchQuery ? localFallbackList : []);
+  }, [items, backendUserTags, debouncedTagSearchQuery]);
+
+  const allTags = useMemo(() => {
+    const sourceTags = new Set();
+    const typeTags = new Set();
+
+    items.forEach(item => {
+      const sourceTag = buildSourceTag(getSourceApp(item.metadata), t);
+      if (sourceTag) sourceTags.add(sourceTag);
+
+      const typeTag = buildTypeTag(item.type_, t);
+      if (typeTag) typeTags.add(typeTag);
+    });
 
     return [
       ...Array.from(typeTags).sort(),
-      ...userTagList,
+      ...pureUserTags,
       ...Array.from(sourceTags).sort(),
     ];
-  }, [items, backendUserTags, debouncedTagSearchQuery, t, i18n.language]);
+  }, [items, pureUserTags, t, i18n.language]);
 
   const filteredTagsList = useMemo(() => {
     if (!tagSearchQuery.trim()) return allTags;
@@ -733,8 +738,24 @@ function HistoryStream({ style }) {
 
   const handleOpenQuickTag = useCallback((targetItem, anchorPosition = null) => {
     if (!targetItem?.id) return;
-    setQuickTagPopoverState({ item: targetItem, anchorPosition });
-  }, []);
+    closeContextMenu();
+    let computedAnchor = anchorPosition;
+    if (!computedAnchor && typeof document !== 'undefined') {
+      const el = document.querySelector(`[data-item-id="${targetItem.id}"]`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        computedAnchor = {
+          top: rect.top,
+          left: rect.left,
+          bottom: rect.bottom,
+          right: rect.right,
+          width: rect.width,
+          height: rect.height,
+        };
+      }
+    }
+    setQuickTagPopoverState({ item: targetItem, anchorPosition: computedAnchor });
+  }, [closeContextMenu]);
 
   const handleCardContextMenu = useCallback((item, index, event, scope = 'history') => {
     openContextMenu(item, index, event, scope);
@@ -1963,7 +1984,7 @@ function HistoryStream({ style }) {
         <QuickTagPopover
           item={quickTagPopoverState.item}
           anchorPosition={quickTagPopoverState.anchorPosition}
-          availableUserTags={allTags}
+          availableUserTags={pureUserTags}
           isMiniMode={isMiniMode}
           onClose={() => setQuickTagPopoverState(null)}
           onAddTag={addTagToItem}
