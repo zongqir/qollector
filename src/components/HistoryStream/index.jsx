@@ -903,7 +903,6 @@ function HistoryStream({ style }) {
     handleCopyPlainText,
     handleCopyAndAutoPaste,
     toggleFavorite,
-    setCollectionHintsDismissed,
     showQuickAddFeedback,
     openEditModal,
     t,

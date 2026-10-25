@@ -2,6 +2,23 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.9",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-9",
+      "summary": {
+        "zh-CN": "紧急修复 HistoryStream 依赖项遗留导致的启动运行时异常，彻底清除已废弃的提示状态引用。",
+        "en-US": "Hotfix for runtime ReferenceError on startup caused by leftover collection hints dependency."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复启动运行时异常：彻底清理了 HistoryStream 组件内部遗留的已废弃 setCollectionHintsDismissed 依赖项引用，解决打包后启动抛出 ReferenceError 的致命错误。"
+        ],
+        "en-US": [
+          "Fix Startup Runtime Exception: Thoroughly removed leftover legacy setCollectionHintsDismissed dependency from HistoryStream, resolving the fatal ReferenceError thrown on application boot."
+        ]
+      }
+    },
+    {
       "version": "0.6.8",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-8",
