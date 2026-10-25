@@ -305,13 +305,13 @@ impl EmailService {
             plain_body.push_str(text_content);
             plain_body.push_str("\r\n");
         } else if item.type_ != "image" && item.type_ != "file" {
-            if text_content.len() <= 1000 && !text_content.is_empty() {
+            if text_content.len() <= 20000 && !text_content.is_empty() {
                 plain_body.push_str("\r\n【正文内容】\r\n");
                 plain_body.push_str(text_content);
                 plain_body.push_str("\r\n");
-            } else if text_content.len() > 1000 {
-                plain_body.push_str("\r\n【正文摘要 (完整长文本已打包为附件 .txt)】\r\n");
-                let snippet: String = text_content.chars().take(400).collect();
+            } else if text_content.len() > 20000 {
+                plain_body.push_str("\r\n【正文摘要 (超长文本已完整打包为附件 .txt)】\r\n");
+                let snippet: String = text_content.chars().take(2000).collect();
                 plain_body.push_str(&snippet);
                 plain_body.push_str("\r\n...\r\n");
             }
@@ -334,8 +334,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 .meta-label { font-weight: 600; width: 75px; color: #334155; flex-shrink: 0; }
 .content { padding: 20px 24px; }
 .content-block { margin-bottom: 16px; }
-.content-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.content-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+.toolbar-actions { display: inline-flex; align-items: center; gap: 8px; }
 .content-title { font-size: 13px; font-weight: 600; color: #334155; }
+.qollect-tip-badge { font-size: 11px; color: #475569; background: #eff6ff; border: 1px solid #bfdbfe; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-weight: 500; }
 .qollect-copy-btn {
   display: inline-flex;
   align-items: center;
@@ -361,9 +363,46 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 .img-container img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .ocr-box { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 14px 18px; }
 .ocr-title { font-size: 13px; font-weight: 600; color: #2563eb; margin-bottom: 8px; }
-.ocr-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: #1e293b; user-select: all; -webkit-user-select: all; }
-.text-content { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; background: #f8fafc; padding: 16px; border-radius: 6px; border: 1px solid #e2e8f0; user-select: all; -webkit-user-select: all; }
-.footer { padding: 12px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
+.ocr-content {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #1e293b;
+  user-select: all;
+  -webkit-user-select: all;
+  -moz-user-select: all;
+  -ms-user-select: all;
+  cursor: pointer;
+}
+.text-content {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  user-select: all;
+  -webkit-user-select: all;
+  -moz-user-select: all;
+  -ms-user-select: all;
+  cursor: pointer;
+  max-height: 500px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.text-content:hover, .ocr-content:hover {
+  border-color: #93c5fd;
+  background-color: #f1f5f9;
+}
+.footer { padding: 14px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8; }
 </style>
 </head>
 <body>
@@ -428,9 +467,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
             html_body.push_str(r##"  <div class="content-block">
     <div class="content-toolbar">
       <span class="content-title">图片资产</span>
-      <button type="button" class="qollect-copy-btn" onclick="qollectCopyImage(this)" title="一键复制图片">
-        🖼️ 一键复制图片
-      </button>
+      <div class="toolbar-actions">
+        <span class="qollect-tip-badge">💡 右键“复制图片”或长按复制</span>
+        <button type="button" class="qollect-copy-btn" onclick="qollectCopyImage(this)" title="一键复制图片">
+          🖼️ 一键复制图片
+        </button>
+      </div>
     </div>
     <div class="img-container">
       <img id="qollect-img-asset" src="cid:qollect_img_asset" alt="Qollect 剪贴板图片" />
@@ -443,9 +485,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
                         r##"  <div class="content-block" style="margin-top: 18px;">
     <div class="content-toolbar">
       <span class="content-title">图片识别文本 (OCR)</span>
-      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制识别出的文本">
-        📋 复制识别文本
-      </button>
+      <div class="toolbar-actions">
+        <span class="qollect-tip-badge">💡 单击框内全选 · 按 Ctrl+C 复制</span>
+        <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制识别出的文本">
+          📋 复制识别文本
+        </button>
+      </div>
     </div>
     <div class="ocr-box">
       <pre class="ocr-content copy-target">{}</pre>
@@ -461,9 +506,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
                 r##"  <div class="content-block">
     <div class="content-toolbar">
       <span class="content-title">包含文件列表</span>
-      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制文件路径列表">
-        📋 复制文件路径
-      </button>
+      <div class="toolbar-actions">
+        <span class="qollect-tip-badge">💡 单击框内全选 · 按 Ctrl+C 复制</span>
+        <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="复制文件路径列表">
+          📋 复制文件路径
+        </button>
+      </div>
     </div>
     <div class="ocr-box">
       <pre class="ocr-content copy-target">{}</pre>
@@ -472,89 +520,101 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helv
 "##,
                 html_escape(text_content)
             ));
-        } else if item.type_ != "image" && item.type_ != "file" {
-            if text_content.len() <= 1000 && !text_content.is_empty() {
-                html_body.push_str(&format!(
-                    r##"  <div class="content-block">
+        } else if item.type_ != "image" && item.type_ != "file" && !text_content.is_empty() {
+            let section_title = if text_content.len() > 1000 {
+                "正文内容 (完整文本已作为附件 .txt 备份)"
+            } else {
+                "正文内容"
+            };
+            html_body.push_str(&format!(
+                r##"  <div class="content-block">
     <div class="content-toolbar">
-      <span class="content-title">正文内容</span>
-      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="一键复制正文内容">
-        📋 一键复制内容
-      </button>
+      <span class="content-title">{}</span>
+      <div class="toolbar-actions">
+        <span class="qollect-tip-badge">💡 单击框内全选 · 按 Ctrl+C 复制</span>
+        <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="一键复制正文内容">
+          📋 一键复制内容
+        </button>
+      </div>
     </div>
     <pre class="text-content copy-target">{}</pre>
   </div>
 "##,
-                    html_escape(text_content)
-                ));
-            } else if text_content.len() > 1000 {
-                let snippet: String = text_content.chars().take(400).collect();
-                html_body.push_str(&format!(
-                    r##"  <div class="content-block">
-    <div class="content-toolbar">
-      <span class="content-title">正文摘要 (完整长文本已打包为附件 .txt)</span>
-      <button type="button" class="qollect-copy-btn" onclick="qollectCopyText(this)" title="一键复制全部完整内容">
-        📋 一键复制完整内容
-      </button>
-    </div>
-    <div class="ocr-box">
-      <pre class="ocr-content copy-target" data-raw="{}">{}
-...
-</pre>
-    </div>
-  </div>
-"##,
-                    html_escape(text_content),
-                    html_escape(&snippet)
-                ));
-            }
+                section_title,
+                html_escape(text_content)
+            ));
         }
 
         html_body.push_str(r##"</div>
 <div class="footer">
-  由 Qollect 剪贴板提供支持
+  <p style="margin: 0 0 4px 0; font-weight: 500; color: #64748b;">由 Qollect 剪贴板提供支持</p>
+  <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+    💡 提示：若您的邮件客户端安全策略禁用了按钮脚本，直接单击上方正文框即可一键全选全部文本，按 Ctrl+C (Mac ⌘+C) 或长按即可秒速复制。
+  </p>
 </div>
 </div>
 <script>
+function qollectSelectTarget(el) {
+  if (!el) return;
+  try {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch(e) {}
+}
+
 function qollectCopyText(btn) {
   try {
-    var block = btn.closest ? btn.closest('.content-block') : btn.parentNode.parentNode;
+    var block = btn.closest ? btn.closest('.content-block') : btn.parentNode.parentNode.parentNode;
     var target = block ? block.querySelector('.copy-target') : null;
-    var text = target ? (target.getAttribute('data-raw') || target.innerText || target.textContent) : '';
+    if (!target) return;
+    qollectSelectTarget(target);
+    var text = target.innerText || target.textContent || '';
     if (!text) return;
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function() {
         qollectShowFeedback(btn, '已复制 ✓', true);
       }).catch(function() {
-        qollectExecCommandCopy(text, btn);
+        qollectExecCommandCopy(text, btn, target);
       });
     } else {
-      qollectExecCommandCopy(text, btn);
+      qollectExecCommandCopy(text, btn, target);
     }
   } catch(e) {
-    qollectShowFeedback(btn, '请划选复制', false);
+    qollectShowFeedback(btn, '已全选，按 Ctrl+C 复制', true);
   }
 }
 
-function qollectExecCommandCopy(text, btn) {
+function qollectExecCommandCopy(text, btn, target) {
   try {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '-9999px';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    var ok = document.execCommand('copy');
-    document.body.removeChild(ta);
+    var ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch(_) {}
+    if (!ok) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
     if (ok) {
       qollectShowFeedback(btn, '已复制 ✓', true);
     } else {
-      qollectShowFeedback(btn, '请划选复制', false);
+      if (target) qollectSelectTarget(target);
+      qollectShowFeedback(btn, '已全选，按 Ctrl+C 复制', true);
     }
   } catch(e) {
-    qollectShowFeedback(btn, '请划选复制', false);
+    if (target) qollectSelectTarget(target);
+    qollectShowFeedback(btn, '已全选，按 Ctrl+C 复制', true);
   }
 }
 
@@ -595,7 +655,7 @@ function qollectSelectImg(img, btn) {
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    qollectShowFeedback(btn, '已选中国片，按 Ctrl+C 复制', true);
+    qollectShowFeedback(btn, '已选中图片，按 Ctrl+C 复制', true);
   } catch(e) {
     qollectShowFeedback(btn, '请右键图片复制', false);
   }
