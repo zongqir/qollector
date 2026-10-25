@@ -114,7 +114,10 @@
       "ocr": "OCR",
       "tag": "Tag",
       "source": "Source",
-      "type": "Type"
+      "type": "Type",
+      "windowTitle": "Window",
+      "aiSummary": "Summary",
+      "aiIntent": "AI Intent"
     },
     "empty": {
       "noSearchResults": "No search results found",

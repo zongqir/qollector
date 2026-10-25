@@ -23,6 +23,7 @@ import { getImageOriginal } from '../../utils/imageHelpers';
 import { getTags, getSourceApp } from '../../utils/tagHelpers';
 import { getUserTags as getUserTagsSvc } from '../../services/clipboardService';
 import { getTranslationFromMetadata } from '../../utils/translationHelpers';
+import { getAiRetrievalFromMetadata } from '../../utils/filenameNaming';
 import AIAssistantPanel from '../../features/ai-assistant/components/AIAssistantPanel';
 import ItemTags from '../ItemCard/ItemTags';
 import NoteDisplay from '../ItemCard/NoteDisplay';
@@ -241,6 +242,7 @@ function PreviewPanel() {
   }, [item?.id]);
   const openButtonTitle = (item.type_ === 'file' || textOpenablePaths.length > 0) ? t('item.openFile') : t('item.openLink');
   const previewTypeClass = item.code_language ? 'type-code' : `type-${item.type_ || 'text'}`;
+  const aiRetrieval = useMemo(() => getAiRetrievalFromMetadata(item?.metadata), [item?.metadata]);
   const itemTypeLabel = useMemo(() => {
     if (isCurlCandidate) return t('curl.badge', 'cURL');
     if (isDateTime) return t('search.typeFilter.time', '时间');
@@ -1241,6 +1243,14 @@ function PreviewPanel() {
             )}
             <span className="preview-meta-time">{formatDate(item.updated_at, i18n.language)}</span>
             <span className="preview-meta-source">{getSourceApp(item.metadata)}</span>
+            {aiRetrieval?.summary && (
+              <span
+                className="preview-meta-ai-summary"
+                title={aiRetrieval.queries?.length ? aiRetrieval.queries.join(' | ') : aiRetrieval.summary}
+              >
+                💡 {aiRetrieval.summary}
+              </span>
+            )}
           </div>
         )}
       </div>

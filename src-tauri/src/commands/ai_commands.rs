@@ -45,11 +45,11 @@ pub async fn update_ai_config(
 pub async fn generate_ai_tags(
     state: State<'_, AIState>,
     content: String,
-) -> Result<(Vec<String>, Option<String>, Option<String>), String> {
+) -> Result<(Vec<String>, Option<String>, Option<String>, Vec<String>), String> {
     let config = state.config.lock().clone();
 
     if !config.enabled || config.get_current_api_key().is_empty() {
-        return Ok((Vec::new(), None, None));
+        return Ok((Vec::new(), None, None, Vec::new()));
     }
 
     let language = state
@@ -66,7 +66,7 @@ pub async fn generate_ai_tags(
         Ok(result) => Ok(result),
         Err(e) => {
             eprintln!("AI tag generation failed (silent): {}", e);
-            Ok((Vec::new(), None, None))
+            Ok((Vec::new(), None, None, Vec::new()))
         }
     }
 }

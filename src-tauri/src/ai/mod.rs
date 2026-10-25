@@ -395,16 +395,16 @@ impl AIService {
         &self,
         content: &str,
         language: &str,
-    ) -> Result<(Vec<String>, Option<String>, Option<String>), AIError> {
+    ) -> Result<(Vec<String>, Option<String>, Option<String>, Vec<String>), AIError> {
         if !self.config.enabled {
-            return Ok((Vec::new(), None, None));
+            return Ok((Vec::new(), None, None, Vec::new()));
         }
 
         let api_key = self.config.get_current_api_key();
 
         // Only try if API key exists.
         if api_key.is_empty() {
-            return Ok((Vec::new(), None, None));
+            return Ok((Vec::new(), None, None, Vec::new()));
         }
 
         // Sanitize and truncate content (考虑 UTF-8 字符边界)
@@ -422,7 +422,7 @@ impl AIService {
         let sanitized = truncated.replace('\0', "").trim().to_string();
 
         if sanitized.is_empty() {
-            return Ok((Vec::new(), None, None));
+            return Ok((Vec::new(), None, None, Vec::new()));
         }
 
         // 获取提示词：优先使用用户自定义，否则使用系统提示词
@@ -532,7 +532,9 @@ impl AIService {
                 .map(|lang| lang.to_lowercase());
 
             let mut ai_title: Option<String> = None;
+            let mut ai_queries: Vec<String> = Vec::new();
             let mut tag_lines: Vec<String> = Vec::new();
+
             for line in normalized_lines.iter().skip(1) {
                 if ai_title.is_none() {
                     if let Some(title) =
@@ -543,6 +545,22 @@ impl AIService {
                     }
                 }
 
+                if let Some(queries_part) = strip_prefixed_value(line, "QUERIES:") {
+                    let clean = queries_part.trim();
+                    if !clean.is_empty() && !clean.eq_ignore_ascii_case("none") {
+                        ai_queries = clean
+                            .split(&['|', ';', '；', '\n'][..])
+                            .map(|s| {
+                                s.trim()
+                                    .trim_matches(|c| matches!(c, '"' | '\'' | '`' | '*' | '-'))
+                                    .to_string()
+                            })
+                            .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("none"))
+                            .collect();
+                    }
+                    continue;
+                }
+
                 if let Some(tags_part) = strip_prefixed_value(line, "TAGS:") {
                     if !tags_part.is_empty() {
                         tag_lines.push(tags_part.to_string());
@@ -550,7 +568,10 @@ impl AIService {
                     continue;
                 }
 
-                if strip_prefixed_value(line, "LANG:").is_some() {
+                if strip_prefixed_value(line, "LANG:").is_some()
+                    || strip_prefixed_value(line, "TITLE:").is_some()
+                    || strip_prefixed_value(line, "QUERIES:").is_some()
+                {
                     continue;
                 }
 
@@ -571,6 +592,7 @@ impl AIService {
                     !s.is_empty()
                         && strip_prefixed_value(s, "LANG:").is_none()
                         && strip_prefixed_value(s, "TITLE:").is_none()
+                        && strip_prefixed_value(s, "QUERIES:").is_none()
                         && strip_prefixed_value(s, "TAGS:").is_none()
                 })
                 .filter(|s| seen.insert(s.to_lowercase()))
@@ -578,14 +600,15 @@ impl AIService {
                 .collect();
 
             println!(
-                "[AI] parsed tags count={}, code_language={:?}, title={:?}",
+                "[AI] parsed tags count={}, code_language={:?}, title={:?}, queries={:?}",
                 tags.len(),
                 code_language,
-                ai_title
+                ai_title,
+                ai_queries
             );
-            Ok((tags, code_language, ai_title))
+            Ok((tags, code_language, ai_title, ai_queries))
         } else {
-            Ok((Vec::new(), None, None))
+            Ok((Vec::new(), None, None, Vec::new()))
         }
     }
 

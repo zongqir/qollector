@@ -114,7 +114,10 @@
       "ocr": "OCR",
       "tag": "标签",
       "source": "来源",
-      "type": "类型"
+      "type": "类型",
+      "windowTitle": "窗口标题",
+      "aiSummary": "情境摘要",
+      "aiIntent": "回溯意图"
     },
     "empty": {
       "noSearchResults": "没有找到搜索结果",

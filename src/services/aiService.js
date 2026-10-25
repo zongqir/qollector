@@ -3,13 +3,14 @@ import { getTags } from '../utils/tagHelpers';
 import {
   getFilenameStemFromMetadata,
   mergeAiNamingIntoMetadata,
+  mergeAiRetrievalIntoMetadata,
 } from '../utils/filenameNaming';
 
 const toTaggedAITags = (aiTags) => (
   (aiTags || []).map((tag) => `AI:${tag}`)
 );
 
-const buildItemUpdateFromAIResult = (item, aiTags, codeLanguage, aiTitle) => {
+const buildItemUpdateFromAIResult = (item, aiTags, codeLanguage, aiTitle, aiQueries = []) => {
   const existingTags = getTags(item.tags);
   const taggedAI = toTaggedAITags(aiTags);
   const mergedTags = [...existingTags];
@@ -25,12 +26,19 @@ const buildItemUpdateFromAIResult = (item, aiTags, codeLanguage, aiTitle) => {
   const currentCodeLanguage = item.code_language || null;
   const codeLanguageChanged = nextCodeLanguage !== currentCodeLanguage;
 
-  const currentMetadata = item.metadata || null;
-  const nextMetadataCandidate = aiTitle
-    ? mergeAiNamingIntoMetadata(item.metadata, aiTitle)
-    : null;
-  const metadataChanged = !!nextMetadataCandidate && nextMetadataCandidate !== currentMetadata;
-  const nextMetadata = metadataChanged ? nextMetadataCandidate : currentMetadata;
+  let nextMetadata = item.metadata || null;
+  if (aiTitle) {
+    const candidate = mergeAiNamingIntoMetadata(nextMetadata, aiTitle);
+    if (candidate) nextMetadata = candidate;
+  }
+  if (aiTitle || (Array.isArray(aiQueries) && aiQueries.length > 0)) {
+    const candidate = mergeAiRetrievalIntoMetadata(nextMetadata, {
+      summary: aiTitle,
+      queries: aiQueries,
+    });
+    if (candidate) nextMetadata = candidate;
+  }
+  const metadataChanged = nextMetadata !== (item.metadata || null);
 
   if (!tagsChanged && !codeLanguageChanged && !metadataChanged) {
     return null;
@@ -52,8 +60,8 @@ const buildItemUpdateFromAIResult = (item, aiTags, codeLanguage, aiTitle) => {
 export const generateAITagsForItem = async (item) => {
   if (!item.content) return null;
 
-  const [aiTags, codeLanguage, aiTitle] = await invoke('generate_ai_tags', { content: item.content });
-  const updateResult = buildItemUpdateFromAIResult(item, aiTags, codeLanguage, aiTitle);
+  const [aiTags, codeLanguage, aiTitle, aiQueries] = await invoke('generate_ai_tags', { content: item.content });
+  const updateResult = buildItemUpdateFromAIResult(item, aiTags, codeLanguage, aiTitle, aiQueries);
   if (!updateResult) return null;
 
   await invoke('update_item', { item: updateResult.updatedItem });

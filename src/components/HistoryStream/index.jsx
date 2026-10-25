@@ -21,6 +21,7 @@ import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { getUserTags, searchItems } from '../../services/clipboardService';
 import { sendClipboardItemViaEmail } from '../../services/emailRelayService';
+import { getAiRetrievalFromMetadata } from '../../utils/filenameNaming';
 
 const MEMORY_PROBE_PREFIX = '[MemoryProbe]';
 const toLen = (value) => (typeof value === 'string' ? value.length : 0);
@@ -130,6 +131,39 @@ const buildSearchExplain = (item, searchTerms, t) => {
   if (typeMatch) {
     matchedSources.push('type');
     assignSnippet(typeLabel, typeMatch);
+  }
+
+  const retrieval = getAiRetrievalFromMetadata(item.metadata);
+  if (retrieval?.summary) {
+    const summaryMatch = findFirstMatch(retrieval.summary, searchTerms);
+    if (summaryMatch) {
+      matchedSources.push('aiSummary');
+      assignSnippet(retrieval.summary, summaryMatch);
+    }
+  }
+
+  if (Array.isArray(retrieval?.queries) && retrieval.queries.length > 0) {
+    const matchedQuery = retrieval.queries.find((q) => findFirstMatch(q, searchTerms));
+    if (matchedQuery) {
+      matchedSources.push('aiIntent');
+      assignSnippet(matchedQuery, findFirstMatch(matchedQuery, searchTerms));
+    }
+  }
+
+  let windowTitle = '';
+  try {
+    const parsed = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+    if (parsed && typeof parsed.window_title === 'string') {
+      windowTitle = parsed.window_title;
+    }
+  } catch (_) {}
+
+  if (windowTitle) {
+    const winMatch = findFirstMatch(windowTitle, searchTerms);
+    if (winMatch) {
+      matchedSources.push('windowTitle');
+      assignSnippet(windowTitle, winMatch);
+    }
   }
 
   if (matchedSources.length === 0) {

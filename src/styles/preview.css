@@ -128,6 +128,21 @@
   color: var(--text-secondary);
 }
 
+.preview-meta-ai-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .preview-meta-color-swatch {
   width: 12px;
   height: 12px;

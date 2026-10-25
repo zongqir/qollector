@@ -253,7 +253,7 @@ impl ClipboardRepository {
     }
 
     /// Current schema version. Bump this when adding new migrations.
-    const CURRENT_SCHEMA_VERSION: i64 = 8;
+    const CURRENT_SCHEMA_VERSION: i64 = 10;
 
     async fn init_database(&self) -> Result<(), sqlx::Error> {
         // Schema version table (always created first)
@@ -333,6 +333,9 @@ impl ClipboardRepository {
             self.set_schema_version(10).await?;
             println!("[Schema] migrated to version 10: normalized abnormal timestamps");
         }
+
+        // Always check FTS version and build/upgrade index when needed
+        self.migrate_fts_data().await?;
 
         Ok(())
     }
@@ -554,7 +557,9 @@ impl ClipboardRepository {
                 item_id UNINDEXED,
                 content_tokens,
                 ocr_tokens,
-                note_tokens
+                note_tokens,
+                title_tokens,
+                ai_query_tokens
             )
             "#,
         )
@@ -2068,7 +2073,7 @@ impl ClipboardRepository {
     // ========== FTS5 Full-Text Search ==========
 
     /// FTS index version — bump this when tokenizer logic changes to trigger rebuild.
-    const FTS_VERSION: i64 = 2;
+    const FTS_VERSION: i64 = 3;
 
     async fn migrate_fts_data(&self) -> Result<(), sqlx::Error> {
         // Track FTS index version in app_config-style pragma
@@ -2092,10 +2097,25 @@ impl ClipboardRepository {
             return Ok(());
         }
 
-        // Clear stale index
-        sqlx::query("DELETE FROM clipboard_fts")
+        // Drop and recreate table with latest column definition
+        let _ = sqlx::query("DROP TABLE IF EXISTS clipboard_fts")
             .execute(&self.pool)
-            .await?;
+            .await;
+
+        sqlx::query(
+            r#"
+            CREATE VIRTUAL TABLE IF NOT EXISTS clipboard_fts USING fts5(
+                item_id UNINDEXED,
+                content_tokens,
+                ocr_tokens,
+                note_tokens,
+                title_tokens,
+                ai_query_tokens
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
 
         let item_count: (i64,) =
             sqlx::query_as("SELECT COUNT(*) FROM clipboard_items WHERE is_deleted = 0")
@@ -2136,13 +2156,51 @@ impl ClipboardRepository {
         let ocr_tokens = tokenizer::tokenize(item.ocr_text.as_deref().unwrap_or(""));
         let note_tokens = tokenizer::tokenize(item.user_note.as_deref().unwrap_or(""));
 
+        let mut title_parts: Vec<&str> = Vec::new();
+        let mut query_tokens = String::new();
+
+        if let Some(metadata_str) = item.metadata.as_deref() {
+            if let Ok(meta_val) = serde_json::from_str::<serde_json::Value>(metadata_str) {
+                if let Some(app) = meta_val.get("source_app").and_then(|v| v.as_str()) {
+                    title_parts.push(app);
+                }
+                if let Some(win_title) = meta_val.get("window_title").and_then(|v| v.as_str()) {
+                    title_parts.push(win_title);
+                }
+                if let Some(naming_title) = meta_val
+                    .get("naming")
+                    .and_then(|n| n.get("title"))
+                    .and_then(|v| v.as_str())
+                {
+                    title_parts.push(naming_title);
+                }
+                if let Some(retrieval) = meta_val.get("ai_retrieval") {
+                    if let Some(summary) = retrieval.get("summary").and_then(|v| v.as_str()) {
+                        title_parts.push(summary);
+                    }
+                    if let Some(queries) = retrieval.get("queries").and_then(|v| v.as_array()) {
+                        let query_strings: Vec<&str> =
+                            queries.iter().filter_map(|q| q.as_str()).collect();
+                        if !query_strings.is_empty() {
+                            query_tokens = tokenizer::tokenize(&query_strings.join(" "));
+                        }
+                    }
+                }
+            }
+        }
+
+        let combined_titles = title_parts.join(" ");
+        let title_tokens = tokenizer::tokenize(&combined_titles);
+
         if let Err(e) = sqlx::query(
-            "INSERT INTO clipboard_fts (item_id, content_tokens, ocr_tokens, note_tokens) VALUES (?, ?, ?, ?)",
+            "INSERT INTO clipboard_fts (item_id, content_tokens, ocr_tokens, note_tokens, title_tokens, ai_query_tokens) VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(&item.id)
         .bind(&content_tokens)
         .bind(&ocr_tokens)
         .bind(&note_tokens)
+        .bind(&title_tokens)
+        .bind(&query_tokens)
         .execute(&self.pool)
         .await
         {

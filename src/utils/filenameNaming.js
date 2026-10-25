@@ -116,3 +116,41 @@ export const mergeAiNamingIntoMetadata = (metadata, title) => {
   return JSON.stringify(metadataObj);
 };
 
+export const getAiRetrievalFromMetadata = (metadata) => {
+  const metadataObj = toMetadataObject(metadata);
+  const retrieval = metadataObj.ai_retrieval;
+  if (!retrieval || typeof retrieval !== 'object' || Array.isArray(retrieval)) {
+    return null;
+  }
+  return {
+    summary: typeof retrieval.summary === 'string' ? retrieval.summary.trim() : '',
+    queries: Array.isArray(retrieval.queries)
+      ? retrieval.queries.map((q) => String(q).trim()).filter(Boolean)
+      : [],
+  };
+};
+
+export const mergeAiRetrievalIntoMetadata = (metadata, { summary, queries } = {}) => {
+  const normalizedSummary = typeof summary === 'string' ? summary.trim() : '';
+  const normalizedQueries = Array.isArray(queries)
+    ? queries.map((q) => String(q).trim()).filter((q) => q && q.toLowerCase() !== 'none')
+    : [];
+
+  if (!normalizedSummary && normalizedQueries.length === 0) {
+    return null;
+  }
+
+  const metadataObj = toMetadataObject(metadata);
+  const currentRetrieval = metadataObj.ai_retrieval && typeof metadataObj.ai_retrieval === 'object' && !Array.isArray(metadataObj.ai_retrieval)
+    ? metadataObj.ai_retrieval
+    : {};
+
+  metadataObj.ai_retrieval = {
+    ...currentRetrieval,
+    ...(normalizedSummary ? { summary: normalizedSummary } : {}),
+    ...(normalizedQueries.length > 0 ? { queries: normalizedQueries } : {}),
+  };
+
+  return JSON.stringify(metadataObj);
+};
+
