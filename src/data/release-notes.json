@@ -2,6 +2,23 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.10",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-10",
+      "summary": {
+        "zh-CN": "修复右键菜单渲染时遗漏的 isCollectionScope 变量定义，彻底消除启动时的 ReferenceError。",
+        "en-US": "Hotfix for missing isCollectionScope identifier in HistoryContextMenu, eliminating runtime ReferenceError."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复右键菜单头部渲染异常：在右键上下文菜单组件中补全 isCollectionScope 定义，彻底解决启动加载及右键交互时抛出 ReferenceError: isCollectionScope is not defined 的阻断错误。"
+        ],
+        "en-US": [
+          "Fix Context Menu Scope Identifier: Declared isCollectionScope in HistoryContextMenu, resolving the critical ReferenceError: isCollectionScope is not defined during boot and right-click interaction."
+        ]
+      }
+    },
+    {
       "version": "0.6.9",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-9",

@@ -65,6 +65,8 @@ function HistoryContextMenu({
 }) {
   const item = state?.item;
   const isMulti = Boolean(state?.isMulti);
+  const menuScope = state?.scope || 'history';
+  const isCollectionScope = menuScope === 'collection';
   const confirmDeleteFor = state?.confirmDeleteFor || null;
   const modifierKey = getModifierKeyLabel();
 
