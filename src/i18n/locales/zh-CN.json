@@ -1274,6 +1274,9 @@
     "timestampConvert": "转本地时间",
     "timestampConvertTitle": "将 Unix 时间戳转为本地格式化日期",
     "viewRaw": "原始文本",
-    "viewTransformed": "解码明文"
+    "viewTransformed": "解码明文",
+    "markdownRender": "渲染排版",
+    "markdownRaw": "原始源码",
+    "markdownDoc": "Markdown 预览"
   }
 }

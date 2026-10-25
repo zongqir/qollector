@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { ArrowLeft, FileText, Music, Film, File, Folder, FolderOpen } from 'lucide-react';
 import PdfPreview from './PdfPreview';
+import MarkdownView from './MarkdownView';
+import { isMarkdownFile } from '../../utils/markdownRenderer';
 import { getFileName } from '../../utils/formatters';
 import './FilePreview.css';
 
@@ -191,6 +193,16 @@ function FilePreviewItem({ filePath }) {
       case 'text':
         if (!data.text_content) {
           return <div className="file-preview-error">{t('filePreview.fileTooLarge')}</div>;
+        }
+        if (isMarkdownFile(renderFileName)) {
+          return (
+            <div className="file-preview-markdown-wrapper">
+              <MarkdownView content={data.text_content} />
+              {data.text_truncated && (
+                <div className="file-preview-text-truncated">{t('filePreview.textTruncated')}</div>
+              )}
+            </div>
+          );
         }
         return (
           <>

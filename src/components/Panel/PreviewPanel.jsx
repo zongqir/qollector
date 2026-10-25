@@ -33,6 +33,8 @@ import CurlBox from '../CurlBox/CurlBox';
 import { resolveMatchingTransforms } from '../../utils/transforms/index.js';
 import { TextChunkSplitter } from './TextChunkSplitter';
 import { sendClipboardItemViaEmail } from '../../services/emailRelayService';
+import MarkdownView from './MarkdownView';
+import { isLikelyMarkdown } from '../../utils/markdownRenderer';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 
@@ -49,6 +51,7 @@ function PreviewPanel() {
   const [previewToast, setPreviewToast] = useState('');
   const [copiedToolbarAction, setCopiedToolbarAction] = useState(null);
   const [showDecodedView, setShowDecodedView] = useState(false);
+  const [showMarkdownRaw, setShowMarkdownRaw] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [debouncedTagSuggestionQuery, setDebouncedTagSuggestionQuery] = useState('');
   const [backendUserTags, setBackendUserTags] = useState([]);
@@ -401,6 +404,7 @@ function PreviewPanel() {
   useEffect(() => {
     setShowAIAssistant(false);
     setIsEditingContent(false);
+    setShowMarkdownRaw(false);
   }, [item.id]);
 
   const showPreviewToast = useCallback((message, duration = 2000) => {
@@ -723,6 +727,63 @@ function PreviewPanel() {
       );
     }
 
+    const isMarkdownText = Boolean(
+      item.type_ !== 'image' &&
+      item.type_ !== 'file' &&
+      contentToDisplay &&
+      (item.code_language === 'markdown' || isLikelyMarkdown(contentToDisplay))
+    );
+
+    if (isMarkdownText && !showMarkdownRaw) {
+      return (
+        <div className="preview-text-wrapper">
+          {textChunkSplitterEnabled && (
+            <TextChunkSplitter
+              text={contentToDisplay}
+              onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
+              showToast={showPreviewToast}
+            />
+          )}
+          <div className="preview-transform-toggle-bar">
+            <span className="preview-transform-toggle-hint">
+              <FileText size={13} />
+              <span>{t('transforms.markdownDoc')}</span>
+            </span>
+            <div className="preview-transform-pill-group">
+              <button
+                type="button"
+                className="preview-transform-pill active"
+                onClick={() => setShowMarkdownRaw(false)}
+              >
+                {t('transforms.markdownRender')}
+              </button>
+              <button
+                type="button"
+                className="preview-transform-pill"
+                onClick={() => setShowMarkdownRaw(true)}
+              >
+                {t('transforms.markdownRaw')}
+              </button>
+            </div>
+          </div>
+          <div
+            ref={contentSelectableRef}
+            className="preview-markdown-content"
+            tabIndex={0}
+            title={t('item.doubleClickToCopy')}
+          >
+            <MarkdownView
+              content={contentToDisplay}
+              onDoubleClick={handleContentDoubleClick}
+              onKeyDown={handleContentKeyDown}
+              tabIndex={0}
+              title={t('item.doubleClickToCopy')}
+            />
+          </div>
+        </div>
+      );
+    }
+
     if (item.code_language && item.content) {
       const PreviewableIcon = previewableRule?.icon;
       return (
@@ -733,6 +794,30 @@ function PreviewPanel() {
               onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
               showToast={showPreviewToast}
             />
+          )}
+          {isMarkdownText && showMarkdownRaw && (
+            <div className="preview-transform-toggle-bar">
+              <span className="preview-transform-toggle-hint">
+                <FileText size={13} />
+                <span>{t('transforms.markdownDoc')}</span>
+              </span>
+              <div className="preview-transform-pill-group">
+                <button
+                  type="button"
+                  className="preview-transform-pill"
+                  onClick={() => setShowMarkdownRaw(false)}
+                >
+                  {t('transforms.markdownRender')}
+                </button>
+                <button
+                  type="button"
+                  className="preview-transform-pill active"
+                  onClick={() => setShowMarkdownRaw(true)}
+                >
+                  {t('transforms.markdownRaw')}
+                </button>
+              </div>
+            </div>
           )}
           {previewableRule && (
             <div className="preview-transform-toggle-bar">
@@ -827,6 +912,30 @@ function PreviewPanel() {
             onCopyChunk={(chunkText) => handleCopyPlainText(chunkText, 'preview')}
             showToast={showPreviewToast}
           />
+        )}
+        {isMarkdownText && showMarkdownRaw && (
+          <div className="preview-transform-toggle-bar">
+            <span className="preview-transform-toggle-hint">
+              <FileText size={13} />
+              <span>{t('transforms.markdownDoc')}</span>
+            </span>
+            <div className="preview-transform-pill-group">
+              <button
+                type="button"
+                className="preview-transform-pill"
+                onClick={() => setShowMarkdownRaw(false)}
+              >
+                {t('transforms.markdownRender')}
+              </button>
+              <button
+                type="button"
+                className="preview-transform-pill active"
+                onClick={() => setShowMarkdownRaw(true)}
+              >
+                {t('transforms.markdownRaw')}
+              </button>
+            </div>
+          </div>
         )}
         {previewableRule && (
           <div className="preview-transform-toggle-bar">

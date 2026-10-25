@@ -332,6 +332,26 @@
   user-select: text;
 }
 
+.preview-markdown-content {
+  outline: none;
+  user-select: text;
+  cursor: pointer;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+
+.preview-markdown-content:hover {
+  opacity: 0.95;
+}
+
+.file-preview-markdown-wrapper {
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  max-height: 480px;
+  overflow-y: auto;
+}
+
 .preview-image-content {
   cursor: pointer;
   transition: opacity var(--motion-fast) var(--ease-standard);

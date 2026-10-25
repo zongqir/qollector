@@ -1274,6 +1274,9 @@
     "timestampConvert": "Convert Time",
     "timestampConvertTitle": "Convert Unix timestamp to local formatted date",
     "viewRaw": "Raw",
-    "viewTransformed": "Transformed"
+    "viewTransformed": "Transformed",
+    "markdownRender": "Preview",
+    "markdownRaw": "Source",
+    "markdownDoc": "Markdown Preview"
   }
 }
