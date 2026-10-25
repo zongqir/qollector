@@ -14,7 +14,8 @@ export const createTagActions = (set, get) => ({
     try {
       const normalizedTag = typeof tagToAdd === 'string' ? tagToAdd.trim() : '';
       if (!normalizedTag) return;
-      const existingTags = getTags(item.tags);
+      const latestItem = get().items?.find((i) => i.id === item.id) || item;
+      const existingTags = getTags(latestItem.tags);
       if (existingTags.includes(normalizedTag)) {
         get().cancelAddTag();
         return;
@@ -24,7 +25,7 @@ export const createTagActions = (set, get) => ({
       const filteredExisting = existingTags.filter(t => t !== aiPrefixed);
       const newTags = [...filteredExisting, normalizedTag];
       const updatedItem = {
-        ...item,
+        ...latestItem,
         tags: JSON.stringify(newTags),
         updated_at: Math.floor(Date.now() / 1000),
       };
@@ -38,10 +39,11 @@ export const createTagActions = (set, get) => ({
 
   removeTagFromItem: async (item, tagToRemove) => {
     try {
-      const existingTags = getTags(item.tags);
+      const latestItem = get().items?.find((i) => i.id === item.id) || item;
+      const existingTags = getTags(latestItem.tags);
       const newTags = existingTags.filter(t => t !== tagToRemove);
       const updatedItem = {
-        ...item,
+        ...latestItem,
         tags: JSON.stringify(newTags),
         updated_at: Math.floor(Date.now() / 1000),
       };
@@ -54,8 +56,9 @@ export const createTagActions = (set, get) => ({
 
   updateItemTags: async (item, newTags) => {
     try {
+      const latestItem = get().items?.find((i) => i.id === item.id) || item;
       const updatedItem = {
-        ...item,
+        ...latestItem,
         tags: JSON.stringify(newTags),
         updated_at: Math.floor(Date.now() / 1000),
       };

@@ -334,6 +334,7 @@ function HistoryStream({ style }) {
   const clearSelection = useAppStore(s => s.clearSelection);
   const addTagToItem = useAppStore(s => s.addTagToItem);
   const removeTagFromItem = useAppStore(s => s.removeTagFromItem);
+  const updateItemTags = useAppStore(s => s.updateItemTags);
   const addTagToSelectedItems = useAppStore(s => s.addTagToSelectedItems);
   const [quickTagPopoverState, setQuickTagPopoverState] = useState(null);
   const deleteSelectedItems = useAppStore(s => s.deleteSelectedItems);
@@ -1962,6 +1963,7 @@ function HistoryStream({ style }) {
           availableUserTags={pureUserTags}
           isMiniMode={isMiniMode}
           onClose={() => setQuickTagPopoverState(null)}
+          onUpdateTags={updateItemTags}
           onAddTag={addTagToItem}
           onRemoveTag={removeTagFromItem}
         />

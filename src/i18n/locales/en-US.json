@@ -4,7 +4,9 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "clear": "Clear",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back"
   },
   "app": {
     "title": "Qollect",
