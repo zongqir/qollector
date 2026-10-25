@@ -348,6 +348,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
     setCurrentOcrApiKey,
     currentOcrApiSecret,
     setCurrentOcrApiSecret,
+    currentOcrModel,
+    setCurrentOcrModel,
     showOcrApiKey,
     setShowOcrApiKey,
     copySuccess,
@@ -831,6 +833,8 @@ function Settings({ onClose, themeMode, onThemeModeChange, onConfigChange }) {
                 setCurrentOcrApiKey={setCurrentOcrApiKey}
                 currentOcrApiSecret={currentOcrApiSecret}
                 setCurrentOcrApiSecret={setCurrentOcrApiSecret}
+                currentOcrModel={currentOcrModel}
+                setCurrentOcrModel={setCurrentOcrModel}
                 showOcrApiKey={showOcrApiKey}
                 setShowOcrApiKey={setShowOcrApiKey}
                 setOcrConfig={setOcrConfig}

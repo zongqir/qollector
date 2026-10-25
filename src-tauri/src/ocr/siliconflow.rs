@@ -69,19 +69,24 @@ struct ResponseMessage {
 }
 
 impl SiliconFlowOcr {
-    pub fn new(api_key: String, base_url: Option<String>) -> Self {
+    pub fn new(api_key: String, base_url: Option<String>, model: Option<String>) -> Self {
         let client = crate::http_client::client().clone();
+        let selected_model = model
+            .filter(|m| !m.trim().is_empty())
+            .unwrap_or_else(|| "Qwen/Qwen2.5-VL-72B-Instruct".to_string());
 
         Self {
             api_key,
             base_url: base_url.unwrap_or_else(|| "https://api.siliconflow.cn/v1".to_string()),
-            model: "Qwen/Qwen2-VL-72B-Instruct".to_string(), // 使用 Qwen2-VL-72B 模型
+            model: selected_model,
             client,
         }
     }
 
     pub fn with_model(mut self, model: String) -> Self {
-        self.model = model;
+        if !model.trim().is_empty() {
+            self.model = model;
+        }
         self
     }
 

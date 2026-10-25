@@ -69,19 +69,24 @@ struct ResponseMessage {
 }
 
 impl DeepSeekOcr {
-    pub fn new(api_key: String, base_url: Option<String>) -> Self {
+    pub fn new(api_key: String, base_url: Option<String>, model: Option<String>) -> Self {
         let client = crate::http_client::client().clone();
+        let selected_model = model
+            .filter(|m| !m.trim().is_empty())
+            .unwrap_or_else(|| "deepseek-chat".to_string());
 
         Self {
             api_key,
             base_url: base_url.unwrap_or_else(|| "https://api.deepseek.com/v1".to_string()),
-            model: "deepseek-chat".to_string(),
+            model: selected_model,
             client,
         }
     }
 
     pub fn with_model(mut self, model: String) -> Self {
-        self.model = model;
+        if !model.trim().is_empty() {
+            self.model = model;
+        }
         self
     }
 

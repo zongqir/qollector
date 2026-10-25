@@ -34,6 +34,7 @@ impl OcrService {
                 Ok(Arc::new(SiliconFlowOcr::new(
                     api_key,
                     config.current_provider.base_url().map(|s| s.to_string()),
+                    config.get_current_model(),
                 )))
             }
             OcrProviderType::DeepSeek => {
@@ -44,6 +45,7 @@ impl OcrService {
                 Ok(Arc::new(DeepSeekOcr::new(
                     api_key,
                     config.current_provider.base_url().map(|s| s.to_string()),
+                    config.get_current_model(),
                 )))
             }
             OcrProviderType::Aliyun => {

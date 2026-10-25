@@ -72,13 +72,16 @@ impl OcrProviderType {
 pub struct OcrCredentials {
     pub api_key: Option<String>,
     pub api_secret: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
 }
 
 impl OcrCredentials {
-    pub fn new(api_key: Option<String>, api_secret: Option<String>) -> Self {
+    pub fn new(api_key: Option<String>, api_secret: Option<String>, model: Option<String>) -> Self {
         Self {
             api_key,
             api_secret,
+            model,
         }
     }
 }
@@ -111,11 +114,18 @@ impl OcrConfig {
             .and_then(|c| c.api_secret.clone())
     }
 
+    /// 获取当前供应商的 Model
+    pub fn get_current_model(&self) -> Option<String> {
+        self.get_current_credentials()
+            .and_then(|c| c.model.clone())
+            .filter(|m| !m.trim().is_empty())
+    }
+
     /// 设置当前供应商的凭证
-    pub fn set_current_credentials(&mut self, api_key: Option<String>, api_secret: Option<String>) {
+    pub fn set_current_credentials(&mut self, api_key: Option<String>, api_secret: Option<String>, model: Option<String>) {
         let key = self.provider_key(&self.current_provider);
         self.credentials
-            .insert(key, OcrCredentials::new(api_key, api_secret));
+            .insert(key, OcrCredentials::new(api_key, api_secret, model));
     }
 
     /// 生成供应商的唯一键

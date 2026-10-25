@@ -50,6 +50,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
   const [showAiApiKey, setShowAiApiKey] = useState(false);
   const [currentOcrApiKey, setCurrentOcrApiKey] = useState('');
   const [currentOcrApiSecret, setCurrentOcrApiSecret] = useState('');
+  const [currentOcrModel, setCurrentOcrModel] = useState('');
   const [showOcrApiKey, setShowOcrApiKey] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [refreshingModels, setRefreshingModels] = useState(false);
@@ -151,6 +152,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     const creds = ocrConfig.credentials[providerKey];
     setCurrentOcrApiKey(creds?.api_key || '');
     setCurrentOcrApiSecret(creds?.api_secret || '');
+    setCurrentOcrModel(creds?.model || '');
   }, [ocrConfig.current_provider, ocrConfig.credentials]);
 
   const loadIntegrationConfigs = async () => {
@@ -343,6 +345,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
           [ocrProviderKey]: {
             api_key: currentOcrApiKey || null,
             api_secret: currentOcrApiSecret || null,
+            model: currentOcrModel || null,
           },
         },
       };
@@ -413,6 +416,7 @@ function useIntegrationsSettings({ t, onConfigChange }) {
           [providerKey]: {
             api_key: currentOcrApiKey || null,
             api_secret: currentOcrApiSecret || null,
+            model: currentOcrModel || null,
           },
         },
       };
@@ -588,6 +592,8 @@ function useIntegrationsSettings({ t, onConfigChange }) {
     setCurrentOcrApiKey,
     currentOcrApiSecret,
     setCurrentOcrApiSecret,
+    currentOcrModel,
+    setCurrentOcrModel,
     showOcrApiKey,
     setShowOcrApiKey,
     copySuccess,

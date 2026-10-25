@@ -87,6 +87,8 @@ function IntegrationsCoreSection({
   setCurrentOcrApiKey,
   currentOcrApiSecret,
   setCurrentOcrApiSecret,
+  currentOcrModel,
+  setCurrentOcrModel,
   showOcrApiKey,
   setShowOcrApiKey,
   setOcrConfig,
@@ -736,6 +738,7 @@ function IntegrationsCoreSection({
                     [oldProviderKey]: {
                       api_key: currentOcrApiKey || null,
                       api_secret: currentOcrApiSecret || null,
+                      model: currentOcrModel || null,
                     },
                   };
                   const newProviderKey = e.target.value.toLowerCase();
@@ -748,6 +751,7 @@ function IntegrationsCoreSection({
                   });
                   setCurrentOcrApiKey(newCreds?.api_key || '');
                   setCurrentOcrApiSecret(newCreds?.api_secret || '');
+                  setCurrentOcrModel(newCreds?.model || '');
                 }}
                 className="setting-select"
               >
@@ -780,6 +784,22 @@ function IntegrationsCoreSection({
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+
+            {['SiliconFlow', 'DeepSeek'].includes(ocrConfig.current_provider) && (
+              <div className="setting-item">
+                <label>{t('settings.ocr.model')}</label>
+                <input
+                  type="text"
+                  value={currentOcrModel}
+                  onChange={(e) => setCurrentOcrModel(e.target.value)}
+                  placeholder={ocrConfig.current_provider === 'SiliconFlow' ? 'Qwen/Qwen2.5-VL-72B-Instruct' : 'deepseek-chat'}
+                  className="setting-input"
+                />
+                <small className="setting-hint">
+                  {t('settings.ocr.modelHint')}
+                </small>
               </div>
             )}
 
