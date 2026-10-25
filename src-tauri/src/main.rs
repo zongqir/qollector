@@ -356,6 +356,7 @@ fn main() {
             println!("App data directory: {:?}", app_dir);
 
             std::fs::create_dir_all(&app_dir).expect("Failed to create app directory");
+            config::secure_store::init_secure_store(&app_dir);
             setup_meter.mark("ensure_app_dir");
 
             let db_path = app_dir.join("qollect.db");
@@ -397,18 +398,20 @@ fn main() {
                 let platform = platform::create_platform().expect("Failed to initialize clipboard");
                 init_meter.mark("create_platform");
 
-                // Load startup AI/OCR/MCP/general configs.
+                // Load startup AI/OCR/MCP/general/email configs.
                 let (
                     ai_config_opt,
                     ocr_config_opt,
                     mcp_config_opt,
                     general_config_opt,
+                    email_config_opt,
                 ) =
                     tokio::try_join!(
                         config_repo.load_ai_config(),
                         config_repo.load_ocr_config(),
                         config_repo.load_mcp_config(),
-                        config_repo.load_general_config()
+                        config_repo.load_general_config(),
+                        config_repo.load_email_relay_config()
                     )
                     .expect("Failed to load startup configs");
                 init_meter.mark("load_startup_configs");
@@ -541,7 +544,9 @@ fn main() {
 
                 let share_state = ShareState::new(config_repo.clone());
                 app.manage(share_state);
-                let email_state = EmailState::new(config_repo.clone());
+                let email_config = email_config_opt.unwrap_or_default();
+                let email_config_arc = Arc::new(Mutex::new(email_config));
+                let email_state = EmailState::new(email_config_arc, config_repo.clone());
                 app.manage(email_state);
 
                 init_meter.mark("register_states");
@@ -629,16 +634,23 @@ fn main() {
             tray::setup_tray(&app_handle_for_shortcuts, Some(&startup_general_config.language))?;
             setup_meter.mark("setup_tray");
 
-            // Sync autostart state with system
+            // Sync autostart state with system: DB config is the single source of truth for user intent!
             let app_for_autostart = app_handle_for_shortcuts.clone();
             tauri::async_runtime::spawn(async move {
                 if let Some(ai_state) = app_for_autostart.try_state::<AIState>() {
-                    if let Ok(Some(mut config)) = ai_state.config_repo.load_general_config().await {
-                        if let Ok(is_enabled) = app_for_autostart.autolaunch().is_enabled() {
-                            if config.autostart_enabled != is_enabled {
-                                println!("[Autostart] Syncing state: DB={}, System={}", config.autostart_enabled, is_enabled);
-                                config.autostart_enabled = is_enabled;
-                                let _ = ai_state.config_repo.save_general_config(&config).await;
+                    if let Ok(Some(config)) = ai_state.config_repo.load_general_config().await {
+                        let autolaunch = app_for_autostart.autolaunch();
+                        if let Ok(is_enabled) = autolaunch.is_enabled() {
+                            if config.autostart_enabled && !is_enabled {
+                                println!("[Autostart] Reconciling system state to match DB: enabling autolaunch (refreshing executable path)...");
+                                if let Err(e) = autolaunch.enable() {
+                                    eprintln!("[Autostart] Failed to enable autolaunch during sync: {}", e);
+                                }
+                            } else if !config.autostart_enabled && is_enabled {
+                                println!("[Autostart] Reconciling system state to match DB: disabling autolaunch...");
+                                if let Err(e) = autolaunch.disable() {
+                                    eprintln!("[Autostart] Failed to disable autolaunch during sync: {}", e);
+                                }
                             }
                         }
                     }

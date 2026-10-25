@@ -3,11 +3,19 @@ use aes_gcm::{Aes256Gcm, Nonce};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use uuid::Uuid;
 
 const KEY_FILE_NAME: &str = "config.master.key";
 const ENVELOPE_MARKER: &str = "qollect-sealed-v1";
+
+static AUTHORITATIVE_APP_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+/// Initialize secure store with authoritative app data directory from Tauri setup.
+pub fn init_secure_store(app_dir: &Path) {
+    let _ = AUTHORITATIVE_APP_DATA_DIR.set(app_dir.to_path_buf());
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SealedEnvelope {
@@ -16,7 +24,7 @@ struct SealedEnvelope {
     ciphertext: String,
 }
 
-fn app_data_dir() -> PathBuf {
+fn legacy_app_data_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         let appdata = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
@@ -34,6 +42,13 @@ fn app_data_dir() -> PathBuf {
     }
 }
 
+fn app_data_dir() -> PathBuf {
+    if let Some(dir) = AUTHORITATIVE_APP_DATA_DIR.get() {
+        return dir.clone();
+    }
+    legacy_app_data_dir()
+}
+
 fn master_key_path() -> PathBuf {
     app_data_dir().join(KEY_FILE_NAME)
 }
@@ -49,6 +64,23 @@ fn load_or_create_master_key() -> Result<[u8; 32], String> {
     let key_path = master_key_path();
     if let Some(parent) = key_path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("创建密钥目录失败: {}", e))?;
+    }
+
+    // If key does not exist in authoritative path, attempt migration from legacy path
+    if !key_path.exists() {
+        let legacy_key_path = legacy_app_data_dir().join(KEY_FILE_NAME);
+        if legacy_key_path.exists() && legacy_key_path != key_path {
+            if let Ok(content) = fs::read_to_string(&legacy_key_path) {
+                if let Err(e) = fs::write(&key_path, &content) {
+                    eprintln!("[SecureStore] Failed to migrate master key: {}", e);
+                } else {
+                    println!(
+                        "[SecureStore] Migrated master key from legacy path {:?} to {:?}",
+                        legacy_key_path, key_path
+                    );
+                }
+            }
+        }
     }
 
     if key_path.exists() {

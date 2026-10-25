@@ -13,19 +13,24 @@ export const createLoadConfigsAction = ({
       invoke('get_general_config'),
       invoke('has_lock_password'),
       invoke('get_license_info'),
-      invoke('get_email_relay_config').catch(() => null),
+      invoke('get_email_relay_config').catch((err) => {
+        console.warn('Failed to load email relay config on startup:', err);
+        return null;
+      }),
     ]);
 
     const licenseStatus = licenseInfo?.status || 'Free';
-    set((state) => ({
-      aiEnabled: aiConfig?.enabled || false,
-      ocrEnabled: ocrConfig?.enabled !== false,
-      emailRelayConfig: emailRelayConfig || null,
-      emailRelayEnabled: Boolean(emailRelayConfig?.enabled),
-      licenseStatus,
-      isProUser: licenseStatus === 'Active',
-      hasPassword: Boolean(hasLock),
-      isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
+    set((state) => {
+      const effectiveEmailConfig = emailRelayConfig || state.emailRelayConfig || null;
+      return {
+        aiEnabled: aiConfig?.enabled || false,
+        ocrEnabled: ocrConfig?.enabled !== false,
+        emailRelayConfig: effectiveEmailConfig,
+        emailRelayEnabled: Boolean(effectiveEmailConfig?.enabled),
+        licenseStatus,
+        isProUser: licenseStatus === 'Active',
+        hasPassword: Boolean(hasLock),
+        isLocked: hasLock ? (state.hasPassword ? state.isLocked : true) : false,
       workbenchPanelEnabled: generalConfig?.workbench_panel_enabled !== false,
       autoPasteOnDoubleClick: supportsAutoPasteOnDoubleClick
         && (generalConfig?.auto_paste_on_double_click || false),
@@ -48,7 +53,8 @@ export const createLoadConfigsAction = ({
         && !state.activeFilterViewId
         && Boolean(generalConfig?.startup_favorites_view_enabled)
       ) ? true : state.showFavoritesOnly,
-    }));
+    };
+  });
 
     if (generalConfig?.theme_mode) {
       set({ themeMode: generalConfig.theme_mode });

@@ -1,17 +1,19 @@
 use crate::core::clipboard_manager::ClipboardManager;
 use crate::email::{EmailRelayConfig, EmailService};
 use crate::repository::config_repo::ConfigRepository;
+use parking_lot::Mutex;
 use serde::Deserialize;
 use std::sync::Arc;
 use tauri::State;
 
 pub struct EmailState {
+    pub config: Arc<Mutex<EmailRelayConfig>>,
     pub config_repo: Arc<ConfigRepository>,
 }
 
 impl EmailState {
-    pub fn new(config_repo: Arc<ConfigRepository>) -> Self {
-        Self { config_repo }
+    pub fn new(config: Arc<Mutex<EmailRelayConfig>>, config_repo: Arc<ConfigRepository>) -> Self {
+        Self { config, config_repo }
     }
 }
 
@@ -28,12 +30,7 @@ pub struct SendClipboardEmailRequest {
 pub async fn get_email_relay_config(
     state: State<'_, EmailState>,
 ) -> Result<EmailRelayConfig, String> {
-    let loaded = state
-        .config_repo
-        .load_email_relay_config()
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(loaded.unwrap_or_default())
+    Ok(state.config.lock().clone())
 }
 
 #[tauri::command]
@@ -45,7 +42,9 @@ pub async fn update_email_relay_config(
         .config_repo
         .save_email_relay_config(&config)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    *state.config.lock() = config;
+    Ok(())
 }
 
 #[tauri::command]
@@ -62,12 +61,7 @@ pub async fn send_clipboard_item_via_email(
     state: State<'_, EmailState>,
     manager: State<'_, Arc<ClipboardManager>>,
 ) -> Result<String, String> {
-    let config = state
-        .config_repo
-        .load_email_relay_config()
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "未配置邮件中继服务，请先在设置中启用并配置".to_string())?;
+    let config = state.config.lock().clone();
 
     if !config.enabled {
         return Err("邮件中继功能当前未启用，请先在设置中启用".to_string());

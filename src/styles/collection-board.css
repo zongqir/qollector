@@ -180,10 +180,6 @@
 
 .collection-tag-chip:focus-visible,
 .collection-tag-search-clear:focus-visible,
-.collection-clear-tags-btn:focus-visible,
-.collection-hints-toggle:focus-visible,
-.collection-meta-hint-close:focus-visible,
-.collection-active-item-close:focus-visible,
 .collection-sort-toggle:focus-visible,
 .collection-card-actions button:focus-visible,
 .collection-card-tag:focus-visible,
@@ -315,139 +311,8 @@
   margin-left: 0;
 }
 
-.collection-tag-selection-summary {
-  order: 2;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.collection-tag-selection-summary .collection-meta-count {
-  flex: 0 0 auto;
-}
-
-.collection-tag-selection-summary .collection-clear-tags-btn {
-  width: auto;
-  min-height: 22px;
-  padding-inline: 10px;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-.collection-hints-summary {
-  max-width: min(100%, 440px);
-}
-
-.collection-active-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  padding: 2px 6px 2px 8px;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
-  color: color-mix(in srgb, var(--accent-color) 86%, var(--text-secondary) 14%);
-  background: color-mix(in srgb, var(--accent-light) 64%, transparent);
-  white-space: nowrap;
-}
-
-.collection-active-item-close {
-  width: 16px;
-  height: 16px;
-}
-
-.collection-meta-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 84%, transparent);
-  border-radius: 999px;
-  padding: 2px 6px 2px 8px;
-  background: color-mix(in srgb, var(--surface-muted) 82%, transparent);
-  color: var(--text-secondary);
-}
-
-.collection-filter-hint {
-  max-width: min(100%, 230px);
-}
-
-.collection-hints-toggle {
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-muted) 80%, transparent);
-  color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1;
-  padding: 4px 8px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
-}
-
-.collection-hints-toggle:hover {
-  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
-  color: var(--text-primary);
-}
-
-.collection-hints-toggle.active {
-  border-color: color-mix(in srgb, var(--accent-color) 38%, transparent);
-  background: color-mix(in srgb, var(--accent-light) 72%, transparent);
-  color: color-mix(in srgb, var(--accent-color) 84%, var(--text-primary) 16%);
-}
-
-.collection-meta-hint-close {
-  width: 17px;
-  height: 17px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
-  color: var(--text-tertiary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-}
-
-.collection-meta-hint-close:hover {
-  color: var(--text-primary);
-  border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
-}
-
 .collection-tag-feedback {
   color: var(--state-warning-fg);
-}
-
-.collection-hints-summary {
-  flex: 1 1 100%;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.collection-hints-summary-text {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.collection-clear-tags-btn {
-  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 88%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-muted) 80%, transparent);
-  color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1;
-  padding: 4px 8px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.collection-clear-tags-btn:hover {
-  border-color: color-mix(in srgb, var(--accent-color) 34%, transparent);
-  color: var(--text-primary);
 }
 
 .collection-grid {
@@ -1331,18 +1196,6 @@
     min-width: 0;
   }
 
-  .collection-tag-selection-summary {
-    gap: 5px;
-  }
-
-  .collection-tag-selection-summary .collection-clear-tags-btn {
-    min-height: 22px;
-    padding-inline: 8px;
-  }
-
-  .collection-hints-summary-text {
-    white-space: normal;
-  }
 
   .collection-card {
     min-height: 0;

@@ -168,11 +168,15 @@ function useIntegrationsSettings({ t, onConfigChange }) {
       invoke('get_share_config').catch(() => ({
         provider: 'Litterbox',
       })),
-      invoke('get_email_relay_config').catch(() => null),
+      invoke('get_email_relay_config').catch((err) => {
+        console.warn('Failed to load email relay config in settings:', err);
+        return null;
+      }),
     ]);
 
-    if (emailRelay) {
-      setEmailRelayConfig(emailRelay);
+    const effectiveEmailRelay = emailRelay || useAppStore.getState().emailRelayConfig;
+    if (effectiveEmailRelay) {
+      setEmailRelayConfig(effectiveEmailRelay);
     }
 
     setAiConfig(ai);

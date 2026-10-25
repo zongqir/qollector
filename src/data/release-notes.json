@@ -2,6 +2,31 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.8",
+      "publishedAt": "2026-10-25",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-8",
+      "summary": {
+        "zh-CN": "修复客户端升级后开机自启动与安全存储密钥丢失的隐秘缺陷，彻底净化收藏流界面并移除拥挤的说教式提示与冗余标签操作行。",
+        "en-US": "Fixed autostart and secure store credential loss upon app updates, and cleaned up the collection stream by eliminating cluttered hint rows and redundant tag bars."
+      },
+      "highlights": {
+        "zh-CN": [
+          "开机自启升级纠偏与持久化：启动时以本地数据库配置为唯一真源，单向纠偏刷新 Windows 注册表 Run 键，彻底终结每次更新后必须手动重新开关自启动的隐秘缺陷。",
+          "安全存储（SecureStore）路径平滑迁移：主加密密钥与权威数据目录强绑定，并自动完成历史环境变量路径平滑迁移，解决应用更新拉起后凭证与邮件配置丢失的问题。",
+          "邮件中继状态内存常驻直出：重构邮件中继配置为常驻内存态，启动即预加载，消除配置读取延迟与静默失效缺陷。",
+          "收藏流彻底告别视口挤压与说教式提示：删除低价值的隐藏/快捷长文案提示，并修复选择标签时强制展开次级面板引发的卡片列表抖动（Layout Shift），回归克制优雅。",
+          "标签清空交互收敛：移除多余的「已选 X 个标签」与次级清空按钮，统一由标签轨首项「全部」芯片与标签自身点击取消闭环。"
+        ],
+        "en-US": [
+          "Autostart Update Reconciliation: Established SQLite as the single source of truth to reconcile Windows Run registry entries on boot, eliminating the bug requiring manual toggling after updates.",
+          "SecureStore Seamless Path Migration: Bound encryption keys directly to the authoritative database directory with automatic legacy path migration, preventing credential loss across installer updates.",
+          "In-Memory Email Relay State: Preloaded email relay configuration into thread-safe memory on startup, ensuring zero-latency config retrieval and rock-solid dispatch reliability.",
+          "Clean Collection Stream & Zero Layout Shift: Completely eliminated verbose novice hint messages and avoided annoying card grid shifts when toggling tag filters.",
+          "Unified Tag Clearing Interaction: Removed redundant selected tag count badges and secondary clear buttons in favor of the clean 'All' rail chip and active tag toggles."
+        ]
+      }
+    },
+    {
       "version": "0.6.7",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-7",

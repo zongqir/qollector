@@ -4,7 +4,6 @@ import {
   CheckSquare,
   ClipboardPaste,
   Copy,
-  Eye,
   ExternalLink,
   FileText,
   FolderOpen,
@@ -62,13 +61,10 @@ function HistoryContextMenu({
   t,
   enableQuickPaste,
   emailRelayEnabled = false,
-  collectionHintsDismissed = false,
   onAction,
 }) {
   const item = state?.item;
   const isMulti = Boolean(state?.isMulti);
-  const menuScope = state?.scope || 'history';
-  const isCollectionScope = menuScope === 'collection';
   const confirmDeleteFor = state?.confirmDeleteFor || null;
   const modifierKey = getModifierKeyLabel();
 
@@ -141,28 +137,6 @@ function HistoryContextMenu({
       confirm: confirmDeleteFor === 'delete',
     };
 
-    if (isCollectionScope) {
-      const collectionEntries = [
-        ...(collectionHintsDismissed
-          ? [{
-            key: 'showCollectionHints',
-            label: t('collection.showHints'),
-            icon: Eye,
-            secondary: true,
-          }]
-          : []),
-      ];
-
-      return normalizeMenuEntries([
-        ...commonEntries,
-        { type: 'separator' },
-        ...openEntries,
-        ...(collectionEntries.length > 0 ? [{ type: 'separator' }, ...collectionEntries] : []),
-        { type: 'separator' },
-        deleteEntry,
-      ]);
-    }
-
     return normalizeMenuEntries([
       ...commonEntries,
       { type: 'separator' },
@@ -170,7 +144,7 @@ function HistoryContextMenu({
       { type: 'separator' },
       deleteEntry,
     ]);
-  }, [item, isMulti, isCollectionScope, confirmDeleteFor, modifierKey, t, enableQuickPaste, collectionHintsDismissed]);
+  }, [item, isMulti, confirmDeleteFor, modifierKey, t, enableQuickPaste, emailRelayEnabled]);
 
   const position = useMemo(() => {
     if (!item || typeof window === 'undefined') {

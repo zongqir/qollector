@@ -57,11 +57,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  COLLECTION_HINTS_VISIBILITY_EVENT,
-  readCollectionHintsDismissed,
-  setCollectionHintsDismissed,
-} from '../../utils/collectionHints';
-import {
   CARD_BACKGROUND_DEFAULT_ID,
   CARD_BACKGROUND_PRESETS,
   getCardBackgroundIdFromMetadata,
@@ -206,8 +201,6 @@ function CollectionBoard({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [backendFilteredFavoriteIds, setBackendFilteredFavoriteIds] = useState(null);
   const [showSortEntryToast, setShowSortEntryToast] = useState(false);
-  const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
-  const [collectionHintsExpanded, setCollectionHintsExpanded] = useState(false);
   const colorPickerRef = useRef(null);
   const collectionGridRef = useRef(null);
   const collectionCardRefsRef = useRef(new Map());
@@ -496,19 +489,6 @@ function CollectionBoard({
     });
   }, [collectionAvailableTags]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const syncDismissed = (event) => {
-      const dismissedFromEvent = event?.detail?.dismissed;
-      if (typeof dismissedFromEvent === 'boolean') {
-        setCollectionHintsDismissedState(dismissedFromEvent);
-        return;
-      }
-      setCollectionHintsDismissedState(readCollectionHintsDismissed());
-    };
-    window.addEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
-    return () => window.removeEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
-  }, []);
 
   useEffect(() => {
     if (!openColorPickerItemId) return undefined;
@@ -533,27 +513,13 @@ function CollectionBoard({
   }, [collectionItems, onVisibleItemsChange]);
 
   const activeItem = activeItemId ? itemsById.get(activeItemId) : null;
-  const shouldShowCollectionTagHint = !collectionHintsDismissed
-    && selectedCollectionTags.length > 0;
-  const shouldShowCollectionContextHint = !collectionHintsDismissed && Boolean(activeItem);
   const truncatedCollectionQuery = useMemo(() => {
     if (!normalizedSearchQuery) return '';
     return normalizedSearchQuery.length > 16
       ? `${normalizedSearchQuery.slice(0, 16)}…`
       : normalizedSearchQuery;
   }, [normalizedSearchQuery]);
-  const collectionHintMessages = useMemo(() => {
-    const messages = [];
-    if (shouldShowCollectionTagHint) {
-      messages.push(t('collection.tagFilterHint'));
-    }
-    if (shouldShowCollectionContextHint) {
-      messages.push(t('collection.activeCardHint'));
-      messages.push(t('collection.contextMenuHint'));
-    }
-    return messages;
-  }, [shouldShowCollectionContextHint, shouldShowCollectionTagHint, t]);
-  const hasCollectionHintMessages = collectionHintMessages.length > 0;
+
   const collectionFilterSummaryParts = useMemo(() => {
     const parts = [];
     if (truncatedCollectionQuery) {
@@ -643,8 +609,6 @@ function CollectionBoard({
   const backendStateError = backendFilterError || backendError;
   const shouldShowCollectionMetaRow = isBackendBusy
     || hasCollectionFilterSummary
-    || selectedCollectionTags.length > 0
-    || hasCollectionHintMessages
     || Boolean(tagEditorFeedback)
     || Boolean(backendStateError);
   const canLoadMore = !isBackendBusy && allFavoriteItems.length > collectionItems.length;
@@ -815,22 +779,6 @@ function CollectionBoard({
     }, 'collection');
   }, [onOpenContextMenu]);
 
-  const handleDismissCollectionHints = useCallback((event) => {
-    event.stopPropagation();
-    setCollectionHintsDismissed(true);
-    setCollectionHintsExpanded(false);
-  }, []);
-
-  const handleToggleCollectionHints = useCallback(() => {
-    if (!hasCollectionHintMessages) return;
-    setCollectionHintsExpanded((prev) => !prev);
-  }, [hasCollectionHintMessages]);
-
-  useEffect(() => {
-    if (collectionHintsDismissed || !hasCollectionHintMessages) {
-      setCollectionHintsExpanded(false);
-    }
-  }, [collectionHintsDismissed, hasCollectionHintMessages]);
 
   const clearCollectionSortLongPressTimer = useCallback(() => {
     if (collectionSortLongPressTimerRef.current) {
@@ -1473,6 +1421,7 @@ function CollectionBoard({
                 type="button"
                 className={`collection-tag-chip ${selectedCollectionTags.length === 0 ? 'active' : ''}`}
                 onClick={() => setSelectedCollectionTags([])}
+                title={selectedCollectionTags.length > 0 ? t('collection.clearTagFilter') : undefined}
               >
                 {t('collection.allTags')}
                 <span className="collection-tag-chip-count">{allCollectionTags.length}</span>
@@ -1557,27 +1506,6 @@ function CollectionBoard({
                 {collectionFilterSummaryParts.join(' · ')}
               </PanelSummaryText>
             )}
-            {selectedCollectionTags.length > 0 && (
-              <span className="collection-tag-selection-summary">
-                <PanelSummaryBadge className="collection-meta-count">{t('collection.selectedTagsCount', { count: selectedCollectionTags.length })}</PanelSummaryBadge>
-                <PanelSummaryActionButton
-                  className="collection-clear-tags-btn"
-                  onClick={() => setSelectedCollectionTags([])}
-                >
-                  {t('collection.clearTagFilter')}
-                </PanelSummaryActionButton>
-              </span>
-            )}
-            {hasCollectionHintMessages && (
-              <PanelSummaryActionButton
-                className={`collection-hints-toggle panel-summary-item--action ${collectionHintsExpanded ? 'active' : ''}`}
-                onClick={handleToggleCollectionHints}
-                aria-expanded={collectionHintsExpanded}
-                title={collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
-              >
-                {collectionHintsExpanded ? t('collection.hideHints') : t('collection.showHints')}
-              </PanelSummaryActionButton>
-            )}
             {tagEditorFeedback && (
               <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback">{tagEditorFeedback}</PanelSummaryFeedback>
             )}
@@ -1585,20 +1513,6 @@ function CollectionBoard({
               <PanelSummaryFeedback className="collection-tag-feedback panel-summary-item--feedback" title={backendStateError}>
                 {t('collection.queryFailed')}
               </PanelSummaryFeedback>
-            )}
-            {hasCollectionHintMessages && collectionHintsExpanded && (
-              <span className="collection-meta-hint collection-hints-summary panel-summary-item--aux">
-                <span className="collection-hints-summary-text">{collectionHintMessages.join(' · ')}</span>
-                <button
-                  type="button"
-                  className="collection-meta-hint-close"
-                  onClick={handleDismissCollectionHints}
-                  title={t('collection.hideHints')}
-                  aria-label={t('collection.hideHints')}
-                >
-                  <X size={11} />
-                </button>
-              </span>
             )}
           </PanelSummaryRow>
         )}

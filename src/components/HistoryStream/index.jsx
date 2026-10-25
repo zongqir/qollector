@@ -17,11 +17,6 @@ import useHistoryKeyboardNavigation from './hooks/useHistoryKeyboardNavigation';
 import useHistoryRowInteractions from './hooks/useHistoryRowInteractions';
 import { getTags, getSourceApp, buildSourceTag, buildTypeTag } from '../../utils/tagHelpers';
 import { QUICK_INPUT_SOURCE } from '../../utils/sourceConstants';
-import {
-  COLLECTION_HINTS_VISIBILITY_EVENT,
-  readCollectionHintsDismissed,
-  setCollectionHintsDismissed,
-} from '../../utils/collectionHints';
 import { openItemPreview } from '../../utils/previewInteractionPolicy';
 import { buildSearchRequest } from '../../utils/searchRequestBuilder';
 import { getUserTags, searchItems } from '../../services/clipboardService';
@@ -416,7 +411,6 @@ function HistoryStream({ style }) {
   const [quickAddMode, setQuickAddMode] = useState(null);
   const [quickAddUndoPending, setQuickAddUndoPending] = useState(false);
   const [collectionVisibleItems, setCollectionVisibleItems] = useState([]);
-  const [collectionHintsDismissed, setCollectionHintsDismissedState] = useState(() => readCollectionHintsDismissed());
 
   useEffect(() => {
     quickAddPendingRef.current = quickAddPending;
@@ -468,19 +462,6 @@ function HistoryStream({ style }) {
     return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const syncDismissed = (event) => {
-      const dismissedFromEvent = event?.detail?.dismissed;
-      if (typeof dismissedFromEvent === 'boolean') {
-        setCollectionHintsDismissedState(dismissedFromEvent);
-        return;
-      }
-      setCollectionHintsDismissedState(readCollectionHintsDismissed());
-    };
-    window.addEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
-    return () => window.removeEventListener(COLLECTION_HINTS_VISIBILITY_EVENT, syncDismissed);
-  }, []);
 
   useEffect(() => () => {
     if (compareFeedbackTimerRef.current) {
@@ -840,10 +821,6 @@ function HistoryStream({ style }) {
         }
         case 'favorite':
           await toggleFavorite(currentItem);
-          closeContextMenu();
-          return;
-        case 'showCollectionHints':
-          setCollectionHintsDismissed(false);
           closeContextMenu();
           return;
         case 'tag':
@@ -1976,7 +1953,6 @@ function HistoryStream({ style }) {
         t={t}
         enableQuickPaste={autoPasteOnDoubleClick}
         emailRelayEnabled={emailRelayEnabled}
-        collectionHintsDismissed={collectionHintsDismissed}
         onAction={handleContextMenuAction}
       />
 
