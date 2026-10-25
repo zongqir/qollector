@@ -17,6 +17,10 @@
   ],
   "rules": {
     "no-undef": "error",
+    "react/jsx-no-undef": "error",
+    "no-dupe-keys": "error",
+    "no-duplicate-case": "error",
+    "no-empty-pattern": "error",
     "no-unused-vars": "off",
     "no-control-regex": "off",
     "no-unused-expressions": "off",

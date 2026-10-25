@@ -25,6 +25,7 @@ import {
 import { getTranslationFromMetadata } from '../../utils/translationHelpers';
 import useAppStore from '../../store/useAppStore';
 import { INTERNAL_DRAG_MIME } from '../../constants/dragDrop';
+import { shouldIgnoreDragStartTarget } from '../../utils/previewInteractionPolicy';
 
 const CodeBlock = lazy(() => import('../CodeBlock/CodeBlock'));
 const FileIconLazy = lazy(() =>
@@ -358,9 +359,7 @@ function CompactCard({
       onDoubleClick={onDoubleClick}
       draggable={!isSelectionMode}
       onDragStart={(e) => {
-        if (
-          e.target.closest('button, input, textarea, a, select, .color-picker-popover, [data-longpress-ignore="true"]')
-        ) {
+        if (shouldIgnoreDragStartTarget(e.target)) {
           e.preventDefault();
           return;
         }

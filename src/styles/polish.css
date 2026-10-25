@@ -1,3 +1,10 @@
+/* ==========================================================================
+   @deprecated - POLISH LAYER FREEZE NOTICE:
+   DO NOT APPEND NEW GLOBAL CSS OVERRIDES OR COMPONENT FIXES TO THIS FILE.
+   Any new styles or component fixes MUST be declared inside their respective
+   component CSS files or scoped modules to avoid cascade pollution and regression.
+   ========================================================================== */
+
 /* Final polish layer for Scheme C */
 
 :root {

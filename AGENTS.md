@@ -24,7 +24,10 @@ npm run dev
 # 代码静态语法与未声明变量检查（oxlint，超极速，必须 0 报错）
 npm run lint:code
 
-# 全量门禁校验（代码语法 + 样式严格守卫）
+# 类型静态检查门禁（TypeScript，必须 0 报错）
+npm run typecheck
+
+# 全量门禁校验（代码语法 + 类型检查 + 样式严格守卫）
 npm run lint
 
 # 前端构建（自动前置执行 lint:code 门禁）
@@ -159,7 +162,8 @@ npm run build
 3. `shouldIgnoreCardDoubleClickTarget` 一类公共忽略规则，禁止把当前卡片根节点本身误判为“应忽略交互目标”；若卡片根节点带 `role="button"`，需结合 `currentTarget` 排除自身命中。
 4. 使用 `panel-card-actions--hover-reveal` 一类默认 `pointer-events: none` 的公共壳层时，新增弹层（如颜色面板）必须显式恢复命中能力，避免“看得到但点不到，点击穿透到底层卡片”。
 5. 工作区、收藏区、历史流若存在语义相同的卡片动作（如调色板、双击复制、预览按钮），优先复用同一套事件防护模式；若某一处修复了交互链路，必须同步检查另外两处是否存在同类漏洞。
-6. 涉及卡片交互的改动，至少手工验证以下路径：
+6. **统一事实来源（强制）**：所有卡片交互拦截必须统一引入 `src/utils/previewInteractionPolicy.js`（含 `shouldIgnoreDragStartTarget`, `shouldIgnoreCardDoubleClickTarget`, `shouldIgnoreLongPressTarget`, `INTERACTIVE_SUB_ELEMENT_SELECTOR`），严禁在组件内私自手写临时的 closest 选择器。
+7. 涉及卡片交互的改动，至少手工验证以下路径：
    `单击预览`、`双击复制/自动粘贴`、`调色板打开/点色切换`、`拖拽/长按排序`、`右键菜单`、`按钮点击不误触卡片预览`。
 
 ## 历史焦虑缓解约定（新增）
@@ -209,7 +213,8 @@ npm run build
 
 1. **致命陷阱警示（严禁仅以 build 成功为准）**：纯 JS/JSX 项目中，`vite build` 默认将未声明变量视为浏览器全局变量（类似 `window.xxx`）放行，即使变量不存在也能打包成功！必须严禁用“build 成功”作为变量没有未定义的依据！
 2. **重构符号归零铁律**：凡是删除/重命名 `import`、`const`、`let`、状态、函数或作用域变量，**必须对原变量名进行全文件全局检索**，确保所有引用、JSX 属性、条件判断、`useCallback` 依赖数组中的残留引用彻底清零！
-3. **强制门禁执行**：提交前与发版前必须执行 `npm run lint:code`（基于 `oxlint` 毫秒级断言 `no-undef` 规则），若有哪怕一个未声明变量，门禁将直接中断失败，不通过不允许提交与发包。
+3. **强制门禁执行**：提交前与发版前必须执行 `npm run lint`（自动串联 `oxlint` 未声明/JSX校验 + `tsc --noEmit` 静态类型检查 + `check-style-tokens` 样式守卫），若有哪怕一个报错，门禁将直接中断，不通过不允许提交与发包。
+4. **样式全局冻结（Polish Freeze）**：`src/styles/polish.css` 已打标 `@deprecated` 封箱。严禁向其中追加任何新的全局覆写样式；新组件样式必须收敛于自身独立的 CSS 文件中。
 
 ## 提交前自检建议
 

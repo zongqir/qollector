@@ -10,7 +10,8 @@
     "build": "oxlint -c .oxlintrc.json src/ && vite build",
     "preview": "vite preview",
     "lint:code": "oxlint -c .oxlintrc.json src/",
-    "lint": "npm run lint:code && npm run lint:styles:strict",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run lint:code && npm run typecheck && npm run lint:styles:strict",
     "lint:styles": "node scripts/check-style-tokens.mjs --mode=report",
     "lint:styles:strict": "node scripts/check-style-tokens.mjs --mode=strict",
     "lint:styles:baseline": "node scripts/check-style-tokens.mjs --mode=report --update-baseline",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@tauri-apps/cli": "~2.11.5",
     "oxlint": "^1.89.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "typescript": "^5.9.3"
   }
 }
