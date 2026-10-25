@@ -106,9 +106,6 @@ pub mod windows {
             for attempt in 0..retries {
                 match Self::get_clipboard_content_sync() {
                     Ok(content) => return Ok(content),
-                    Err(ClipboardError::UnsupportedType) => {
-                        return Err(ClipboardError::UnsupportedType);
-                    }
                     Err(error) => {
                         last_error = Some(error);
                         if attempt + 1 < retries {
@@ -350,6 +347,25 @@ pub mod windows {
                 Clipboard::new().map_err(|e| ClipboardError::AccessError(e.to_string()))?;
 
             if let Ok(text) = clipboard.get_text() {
+                // If text is purely whitespace or empty, check if an image is present first
+                // to prevent blank text payloads from overshadowing image clipboards.
+                if text.trim().is_empty() {
+                    if let Ok(img) = clipboard.get_image() {
+                        if let Some(rgba) = image::RgbaImage::from_raw(
+                            img.width as u32,
+                            img.height as u32,
+                            img.bytes.to_vec(),
+                        ) {
+                            let mut buffer = Vec::new();
+                            use image::codecs::png::PngEncoder;
+                            let encoder = PngEncoder::new(&mut buffer);
+                            if rgba.write_with_encoder(encoder).is_ok() {
+                                return Ok(ClipboardContent::Image(buffer));
+                            }
+                        }
+                    }
+                }
+
                 // Drop arboard before opening clipboard again for rich formats
                 drop(clipboard);
                 // Try to read rich text formats (HTML, RTF) via Win32 API

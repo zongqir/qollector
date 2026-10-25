@@ -214,15 +214,27 @@ export const createItemActions = (set, get) => ({
   },
 
   handleOCR: async (item) => {
-    if (!item.image_paths) return;
+    if (!item.image_paths) return '';
     set({ ocrProcessing: item.id });
     try {
       const paths = JSON.parse(item.image_paths);
       const imagePath = paths.raw || paths.original;
-      await invoke('recognize_and_update', { itemId: item.id, imagePath });
+      const text = await invoke('recognize_and_update', { itemId: item.id, imagePath });
+      const currentPreview = get().previewItem;
+      if (currentPreview?.id === item.id) {
+        set({
+          previewItem: {
+            ...currentPreview,
+            ocr_text: text,
+            ocr_truncated: false,
+          },
+        });
+      }
       await get().loadItems();
+      return text;
     } catch (error) {
       console.error('OCR 识别失败:', error);
+      throw error;
     } finally {
       set({ ocrProcessing: null });
     }

@@ -2798,12 +2798,22 @@ impl ClipboardManager {
             .and_then(|n| n.to_str())
             .map(|s| s.to_ascii_lowercase())
             .unwrap_or_default();
-        if file_name.starts_with("pixpin_") {
+        if file_name.starts_with("pixpin")
+            || file_name.starts_with("screenshot")
+            || file_name.starts_with("snip")
+            || file_name.starts_with("capture")
+            || file_name.contains("截图")
+            || file_name.contains("截屏")
+        {
             return true;
         }
 
         let full_path = path.to_string_lossy().to_ascii_lowercase();
         full_path.contains("pixpin")
+            || full_path.contains("temp")
+            || full_path.contains("tmp")
+            || full_path.contains("screenshot")
+            || full_path.contains("snipaste")
     }
 
     fn read_and_decode_image_with_retry(

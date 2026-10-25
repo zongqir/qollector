@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import {
   ArrowLeft, Inbox, Star, Sparkles, Search, StickyNote,
-  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages, Mail, RefreshCw
+  ExternalLink, Check, FileText, Copy, Download, Trash2, FolderOpen, Braces, Share2, Edit2, Clock3, Palette, Bot, Lock, MoreHorizontal, Maximize2, Languages, Mail, RefreshCw, ScanText
 } from 'lucide-react';
 import useAppStore from '../../store/useAppStore';
 import { buildItemDerivations } from '../../store/modules/itemsIndex';
@@ -179,8 +179,7 @@ function PreviewPanel() {
   const hasAITags = tags.some(tag => tag.startsWith('AI:'));
   const shouldShowAIButton = aiEnabled && item.type_ === 'text' && item.content && !hasAITags;
   const aiLocked = shouldShowAIButton && !isProUser;
-  const shouldShowOCRButton = ocrEnabled && item.type_ === 'image' && !item.ocr_text;
-  const ocrLocked = shouldShowOCRButton && !isProUser;
+  const shouldShowOCRButton = Boolean(item.type_ === 'image' && !item.ocr_text);
   const textOpenableUrls = useMemo(() => {
     if (item.type_ !== 'text') return [];
     return extractOpenableUrls(item.content);
@@ -492,6 +491,26 @@ function PreviewPanel() {
       setIsSendingEmail(false);
     }
   };
+
+  const handleTriggerOCR = useCallback(async () => {
+    if (!item || item.type_ !== 'image' || ocrProcessing === item.id) return;
+    try {
+      const text = await handleOCR(item);
+      if (text && text.trim()) {
+        showPreviewToast(t('item.recognizedText'));
+      } else {
+        showPreviewToast(t('item.noTextRecognized', { defaultValue: '未识别到有效文字' }));
+      }
+    } catch (err) {
+      const rawMsg = String(err?.message || err || '');
+      const isNotConfigured = rawMsg.includes('not initialized') || rawMsg.includes('未初始化');
+      showPreviewToast(
+        isNotConfigured
+          ? t('settings.ocr.notConfigured', { defaultValue: 'OCR 服务未初始化，请先在设置中配置' })
+          : t('item.ocrFailed', { defaultValue: `OCR 识别失败: ${rawMsg}` })
+      );
+    }
+  }, [handleOCR, item, ocrProcessing, showPreviewToast, t]);
 
   const handlePreviewCopy = useCallback(async () => {
     const copied = await handleCopy(item, 'preview');
@@ -1091,18 +1110,6 @@ function PreviewPanel() {
               <Maximize2 size={16} />
             </button>
           )}
-          {emailRelayEnabled && emailRelayConfig?.from_address && (
-            <button
-              type="button"
-              className={`preview-action-btn email-send-btn ${isSendingEmail ? 'loading' : ''}`}
-              onClick={handleQuickSendEmail}
-              disabled={isSendingEmail}
-              title={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
-              aria-label={t('item.sendToEmailTitle', { email: emailRelayConfig.from_address })}
-            >
-              {isSendingEmail ? <RefreshCw size={16} className="spin-icon" /> : <Mail size={16} />}
-            </button>
-          )}
           <span className="preview-nav-action-divider" aria-hidden="true" />
           <button
             className={`preview-action-btn delete-btn ${showDeleteConfirm ? 'confirm' : ''}`}
@@ -1372,17 +1379,6 @@ function PreviewPanel() {
                 <Bot size={14} />
                 <span>{t('aiAssistant.open')}</span>
               </button>
-              {shouldShowOCRButton && (
-                <button
-                  className={`preview-tool-btn ${ocrLocked ? 'locked' : ''}`}
-                  onClick={() => ocrLocked ? useAppStore.getState().setShowSettings(true, 'license') : handleOCR(item)}
-                  disabled={!ocrLocked && ocrProcessing === item.id}
-                  title={ocrLocked ? t('license.proFeature') : undefined}
-                >
-                  {ocrLocked ? <Lock size={14} /> : <Search size={14} />}
-                  <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
-                </button>
-              )}
               {isToolbarCompact && (
                 <button
                   className={`preview-tool-btn tool-more-btn ${showSecondaryTools ? 'active' : ''}`}
@@ -1462,6 +1458,22 @@ function PreviewPanel() {
                 <Share2 size={14} />
                 <span>{t('share.button')}</span>
               </button>
+              {shouldShowOCRButton && (
+                <button
+                  type="button"
+                  className={`preview-tool-btn secondary ocr-tool-btn ${ocrProcessing === item.id ? 'loading' : ''}`}
+                  onClick={handleTriggerOCR}
+                  disabled={ocrProcessing === item.id}
+                  title={ocrProcessing === item.id ? t('item.ocrRecognizing') : t('item.recognizeText')}
+                >
+                  {ocrProcessing === item.id ? (
+                    <RefreshCw size={14} className="spin-icon" />
+                  ) : (
+                    <ScanText size={14} />
+                  )}
+                  <span>{ocrProcessing === item.id ? t('item.recognizing') : t('item.ocr')}</span>
+                </button>
+              )}
             </>
           )}
         </div>
