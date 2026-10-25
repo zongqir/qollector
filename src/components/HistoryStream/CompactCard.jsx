@@ -291,7 +291,15 @@ function CompactCard({
               className="compact-link-favicon"
               src={parsed.favicon}
               alt=""
-              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'inline'; }}
+              loading="lazy"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img) img.style.display = 'none';
+                const fallback = img?.nextElementSibling;
+                if (fallback && fallback.style) {
+                  fallback.style.display = 'inline';
+                }
+              }}
             />
             <Link size={14} className="compact-link-fallback" style={{ display: 'none' }} />
             <div className="compact-link-info">
