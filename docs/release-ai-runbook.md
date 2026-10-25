@@ -97,10 +97,11 @@
 执行：
 
 ```bash
+npm run lint
 npm run build
 ```
 
-若失败，先修复再继续发布。
+注意：`npm run lint` 包含针对未声明变量的 `oxlint` 门禁与样式守卫，严禁跳过；`npm run build` 也已强制挂载该门禁。若失败，先修复再继续发布。
 
 ### Step D：执行发布
 

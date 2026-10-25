@@ -21,7 +21,13 @@ npm run tauri dev
 # 前端开发
 npm run dev
 
-# 前端构建
+# 代码静态语法与未声明变量检查（oxlint，超极速，必须 0 报错）
+npm run lint:code
+
+# 全量门禁校验（代码语法 + 样式严格守卫）
+npm run lint
+
+# 前端构建（自动前置执行 lint:code 门禁）
 npm run build
 
 # Tauri 生产构建
@@ -61,7 +67,8 @@ npm run tauri build
 ### 必跑命令（按顺序）
 
 ```powershell
-# 1) 构建校验
+# 1) 全量门禁校验与构建（强制阻断未声明变量与样式违规）
+npm run lint
 npm run build
 
 # 2) 提交并推送版本变更，由 GitHub Release workflow 正式发布
@@ -197,6 +204,12 @@ npm run build
 5. 禁止在工作区逻辑中继续引入 `collection` 命名（兼容迁移代码除外，且需注释标明 `legacy compatibility`）。
 6. 新增字段、方法、文案键前，先检查语义归属：若作用于 `pin`，命名必须落到 `workbench`；若作用于 `favorite`，命名必须落到 `collection`。
 7. Code Review 若发现语义混用（例如 `is_pinned` 搭配 `collection*` 新命名），视为必须修复项，不能带入后续迭代。
+
+## 未声明变量与代码质量防回归硬门禁（URGENT）
+
+1. **致命陷阱警示（严禁仅以 build 成功为准）**：纯 JS/JSX 项目中，`vite build` 默认将未声明变量视为浏览器全局变量（类似 `window.xxx`）放行，即使变量不存在也能打包成功！必须严禁用“build 成功”作为变量没有未定义的依据！
+2. **重构符号归零铁律**：凡是删除/重命名 `import`、`const`、`let`、状态、函数或作用域变量，**必须对原变量名进行全文件全局检索**，确保所有引用、JSX 属性、条件判断、`useCallback` 依赖数组中的残留引用彻底清零！
+3. **强制门禁执行**：提交前与发版前必须执行 `npm run lint:code`（基于 `oxlint` 毫秒级断言 `no-undef` 规则），若有哪怕一个未声明变量，门禁将直接中断失败，不通过不允许提交与发包。
 
 ## 提交前自检建议
 

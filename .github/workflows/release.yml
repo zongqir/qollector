@@ -32,6 +32,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Enforce code hygiene (no-undef)
+        run: npm run lint:code
+
       - name: Enforce style token guard
         run: npm run lint:styles:strict
 
