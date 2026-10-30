@@ -2,6 +2,25 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.16",
+      "publishedAt": "2026-10-30",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-16",
+      "summary": {
+        "zh-CN": "紧急修复 Windows 平台原生剪贴板格式探测类型断言错误，清理 OCR 模块未引用依赖警告，恢复 Release 编译构建与分发链路。",
+        "en-US": "Hotfix for Windows native clipboard format sniffing type assertion error in release builds and cleaned up unused imports in OCR modules."
+      },
+      "highlights": {
+        "zh-CN": [
+          "修复 Win32 IsClipboardFormatAvailable 编译错误：适配 windows 0.58 版本的 Result 规范，将 .as_bool() 修正为 .is_ok()，恢复跨平台 CI/CD 自动构建。",
+          "清理 OCR 模块未引用导入：移除 deepseek 与 siliconflow 模块中冗余的 base64 依赖引入，消除编译器 Warning。"
+        ],
+        "en-US": [
+          "Fixed Win32 IsClipboardFormatAvailable compilation error by adjusting to windows 0.58 crate Result semantics (.is_ok()), restoring automated CI/CD builds.",
+          "Cleaned up unused imports in OCR modules (deepseek and siliconflow) to ensure zero warnings in rustc."
+        ]
+      }
+    },
+    {
       "version": "0.6.15",
       "publishedAt": "2026-10-30",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-15",

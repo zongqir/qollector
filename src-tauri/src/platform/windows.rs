@@ -432,9 +432,9 @@ pub mod windows {
             const CF_DIBV5: u32 = 17;
 
             unsafe {
-                if IsClipboardFormatAvailable(CF_DIBV5).as_bool()
-                    || IsClipboardFormatAvailable(CF_DIB).as_bool()
-                    || IsClipboardFormatAvailable(CF_BITMAP).as_bool()
+                if IsClipboardFormatAvailable(CF_DIBV5).is_ok()
+                    || IsClipboardFormatAvailable(CF_DIB).is_ok()
+                    || IsClipboardFormatAvailable(CF_BITMAP).is_ok()
                 {
                     return true;
                 }
@@ -442,7 +442,7 @@ pub mod windows {
                 for fmt_name in ["PNG", "image/png"] {
                     let wide: Vec<u16> = OsStr::new(fmt_name).encode_wide().chain(Some(0)).collect();
                     let fmt = RegisterClipboardFormatW(windows::core::PCWSTR(wide.as_ptr()));
-                    if fmt != 0 && IsClipboardFormatAvailable(fmt).as_bool() {
+                    if fmt != 0 && IsClipboardFormatAvailable(fmt).is_ok() {
                         return true;
                     }
                 }

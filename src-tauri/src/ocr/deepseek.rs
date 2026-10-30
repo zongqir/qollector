@@ -1,6 +1,5 @@
 use super::{provider::OcrProvider, OcrError, OcrResult};
 use async_trait::async_trait;
-use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
 
 /// DeepSeek OCR 实现
