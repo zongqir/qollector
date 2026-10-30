@@ -46,3 +46,25 @@ pub fn hide_main_window(app: &AppHandle) {
         let _ = window.hide();
     }
 }
+
+static LAST_EXTERNAL_ACTIVE_HWND: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(0);
+
+pub fn record_external_active_window() {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        let hwnd = GetForegroundWindow();
+        if !hwnd.is_invalid() {
+            let mut pid = 0;
+            GetWindowThreadProcessId(hwnd, Some(&mut pid));
+            if pid != 0 && pid != std::process::id() {
+                LAST_EXTERNAL_ACTIVE_HWND.store(hwnd.0 as usize, Ordering::SeqCst);
+            }
+        }
+    }
+}
+
+pub fn get_last_external_active_window() -> usize {
+    LAST_EXTERNAL_ACTIVE_HWND.load(Ordering::SeqCst)
+}

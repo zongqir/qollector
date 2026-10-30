@@ -343,6 +343,7 @@ fn toggle_main_window(app: &tauri::AppHandle) {
             }
         }
 
+        crate::window_lifecycle::record_external_active_window();
         match ensure_main_window(&app_handle) {
             Ok(window) => {
                 let _ = window.show();

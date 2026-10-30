@@ -50,7 +50,6 @@ export default function useHistoryRowInteractions({
   toggleSelectItem,
   clearSelection,
   handleCopyAndAutoPaste,
-  handleCopy,
   switchToWorkbench,
 }) {
   const clickTimerRef = useRef(null);
@@ -64,12 +63,8 @@ export default function useHistoryRowInteractions({
   }, []);
 
   const triggerHistoryDoubleClickAction = useCallback((item) => {
-    if (item.type_ === 'image' || item.type_ === 'file') {
-      handleCopy(item, 'history', { bypassInternalSourceProtection: true });
-      return;
-    }
     handleCopyAndAutoPaste(item, 'history', { bypassInternalSourceProtection: true });
-  }, [handleCopy, handleCopyAndAutoPaste]);
+  }, [handleCopyAndAutoPaste]);
 
   const handleCardClick = useCallback((item, index, e) => {
     e.stopPropagation();

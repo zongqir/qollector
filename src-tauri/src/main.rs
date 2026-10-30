@@ -143,6 +143,7 @@ fn choose_window_position_near_cursor(
 }
 
 fn show_main_window_near_cursor(app: &tauri::AppHandle) {
+    crate::window_lifecycle::record_external_active_window();
     let window = match ensure_main_window(app) {
         Ok(window) => window,
         Err(error) => {

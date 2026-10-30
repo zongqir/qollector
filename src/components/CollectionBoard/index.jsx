@@ -922,16 +922,11 @@ function CollectionBoard({
     window.getSelection()?.removeAllRanges();
 
     if (isCollectionSortMode) return;
-    if (item.type_ === 'image' || item.type_ === 'file') {
-      onCopy?.(item, 'collection', { bypassInternalSourceProtection: true });
-      return;
-    }
     onCopyAndAutoPaste?.(item, 'collection', { bypassInternalSourceProtection: true });
   }, [
     clearCollectionSortLongPressTimer,
     clearCollectionCardClickTimer,
     isCollectionSortMode,
-    onCopy,
     onCopyAndAutoPaste,
   ]);
 

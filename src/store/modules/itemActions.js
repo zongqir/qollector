@@ -100,10 +100,6 @@ export const createItemActions = (set, get) => ({
         return true;
       }
 
-      // Only auto-paste for text/html/link types, skip image/file
-      if (itemForCopy.type_ === 'image' || itemForCopy.type_ === 'file') {
-        return true;
-      }
 
       try {
         const pasted = await invoke('try_paste_foreground');

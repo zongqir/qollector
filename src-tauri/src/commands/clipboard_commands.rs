@@ -276,6 +276,13 @@ pub async fn open_url(url: String) -> Result<(), String> {
 pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetForegroundWindow, IsWindow, SetForegroundWindow,
+        };
+
+        let target_hwnd_val = crate::window_lifecycle::get_last_external_active_window();
+
         let mut pinned_always_on_top = false;
         if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
             pinned_always_on_top = main_window.is_always_on_top().unwrap_or(false);
@@ -285,7 +292,7 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
         if pinned_always_on_top {
             // For pinned windows, briefly hide to hand focus back to the previous app,
             // then restore without activation after paste.
-            println!("[AutoPaste] main window is pinned(always-on-top), hide briefly and restore");
+            println!("[AutoPaste] main window is pinned (always-on-top), hide briefly to yield focus");
             if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 let _ = main_window.hide();
                 should_restore_pinned_window = true;
@@ -294,11 +301,40 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
             hide_main_window(&app);
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(80)).await;
+        // Explicitly restore and activate target window if known
+        if target_hwnd_val != 0 {
+            let target_hwnd = HWND(target_hwnd_val as *mut _);
+            unsafe {
+                if IsWindow(target_hwnd).as_bool() {
+                    let _ = SetForegroundWindow(target_hwnd);
+                }
+            }
+        }
+
+        // Wait for foreground focus transition to complete
+        let mut focus_ready = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+            unsafe {
+                let current_fg = GetForegroundWindow();
+                if !current_fg.is_invalid() {
+                    let fg_val = current_fg.0 as usize;
+                    if target_hwnd_val != 0 && fg_val == target_hwnd_val {
+                        focus_ready = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if !focus_ready {
+            tokio::time::sleep(std::time::Duration::from_millis(40)).await;
+        }
+
         send_ctrl_v_input().map_err(|e| format!("Failed to simulate paste: {}", e))?;
 
         if should_restore_pinned_window {
-            tokio::time::sleep(std::time::Duration::from_millis(45)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(60)).await;
             if let Some(main_window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 let _ = main_window.show();
                 let _ = main_window.set_always_on_top(true);
@@ -412,8 +448,8 @@ fn image_source_path(item: &ClipboardItem) -> Result<String, String> {
 fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::time::Duration;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VIRTUAL_KEY,
-        VK_CONTROL,
+        GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
+        VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
     };
 
     const VK_V_KEY: u16 = 0x56;
@@ -445,6 +481,22 @@ fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             return Err(format!("SendInput failed for vk {}, sent {}", vk, sent).into());
         }
         Ok(())
+    }
+
+    // Release any lingering physical modifier keys (Alt, Shift, Win) to avoid distorting Ctrl+V
+    unsafe {
+        if (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0 {
+            let _ = send_key_event(VK_MENU.0, 0, true);
+        }
+        if (GetAsyncKeyState(VK_SHIFT.0 as i32) as u16 & 0x8000) != 0 {
+            let _ = send_key_event(VK_SHIFT.0, 0, true);
+        }
+        if (GetAsyncKeyState(VK_LWIN.0 as i32) as u16 & 0x8000) != 0 {
+            let _ = send_key_event(VK_LWIN.0, 0, true);
+        }
+        if (GetAsyncKeyState(VK_RWIN.0 as i32) as u16 & 0x8000) != 0 {
+            let _ = send_key_event(VK_RWIN.0, 0, true);
+        }
     }
 
     // 1. Press Ctrl down
