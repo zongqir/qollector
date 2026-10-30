@@ -852,13 +852,12 @@ impl ClipboardManager {
             ClipboardContent::File(paths_str) => {
                 println!("File clipboard content detected");
 
-                if let Some(image_item) = Self::promote_pixpin_image_file_to_item(
+                if let Some(image_item) = Self::promote_single_image_file_to_item(
                     paths_str,
                     &metadata,
                     &image_dir,
-                    &source_app,
                 )? {
-                    println!("Promoted PixPin file payload to image item");
+                    println!("Promoted single image file payload to image item");
                     image_item
                 } else {
                     let paths: Vec<&str> = paths_str
@@ -2642,11 +2641,10 @@ impl ClipboardManager {
         }
     }
 
-    fn promote_pixpin_image_file_to_item(
+    fn promote_single_image_file_to_item(
         paths_str: &str,
         metadata: &WindowMetadata,
         image_dir: &Path,
-        source_app: &str,
     ) -> Result<Option<ClipboardItem>, Box<dyn std::error::Error>> {
         let Some(path_str) = Self::single_file_path(paths_str) else {
             return Ok(None);
@@ -2654,12 +2652,6 @@ impl ClipboardManager {
 
         let source_path = Path::new(path_str);
         if !source_path.is_file() {
-            return Ok(None);
-        }
-
-        let pixpin_source =
-            Self::is_pixpin_source(source_app) || Self::is_pixpin_capture_path(source_path);
-        if !pixpin_source {
             return Ok(None);
         }
 
@@ -2677,7 +2669,7 @@ impl ClipboardManager {
             Self::read_and_decode_image_with_retry(source_path, 8, 25)
         else {
             eprintln!(
-                "Skipped PixPin image-file promotion: decode failed after retries for '{}'",
+                "Skipped single image file promotion: decode failed after retries for '{}'",
                 path_str
             );
             return Ok(None);
@@ -2765,10 +2757,6 @@ impl ClipboardManager {
         Some(path)
     }
 
-    fn is_pixpin_source(source_app: &str) -> bool {
-        source_app.to_ascii_lowercase().contains("pixpin")
-    }
-
     fn is_qollect_managed_source(source_app: &str) -> bool {
         let normalized = source_app.trim().to_ascii_lowercase();
         let normalized = normalized.strip_suffix(".exe").unwrap_or(&normalized);
@@ -2790,30 +2778,6 @@ impl ClipboardManager {
             || normalized.contains("快速备注")
             || compact.contains("quickinput")
             || compact.contains("quicknote")
-    }
-
-    fn is_pixpin_capture_path(path: &Path) -> bool {
-        let file_name = path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .map(|s| s.to_ascii_lowercase())
-            .unwrap_or_default();
-        if file_name.starts_with("pixpin")
-            || file_name.starts_with("screenshot")
-            || file_name.starts_with("snip")
-            || file_name.starts_with("capture")
-            || file_name.contains("截图")
-            || file_name.contains("截屏")
-        {
-            return true;
-        }
-
-        let full_path = path.to_string_lossy().to_ascii_lowercase();
-        full_path.contains("pixpin")
-            || full_path.contains("temp")
-            || full_path.contains("tmp")
-            || full_path.contains("screenshot")
-            || full_path.contains("snipaste")
     }
 
     fn read_and_decode_image_with_retry(

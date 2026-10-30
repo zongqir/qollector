@@ -18,7 +18,7 @@ pub mod windows {
     static APP_NAME_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
     const CLIPBOARD_POLL_INTERVAL_MS: u64 = 30;
-    const CLIPBOARD_READ_RETRIES: usize = 6;
+    const CLIPBOARD_READ_RETRIES: usize = 8;
     const CLIPBOARD_READ_RETRY_DELAY_MS: u64 = 25;
     const INTERNAL_SEQUENCE_CAPTURE_RETRIES: usize = 20;
     const INTERNAL_SEQUENCE_CAPTURE_DELAY_MS: u64 = 5;
@@ -98,7 +98,7 @@ pub mod windows {
 
         fn get_clipboard_content_with_retry(
             max_retries: usize,
-            retry_delay_ms: u64,
+            base_retry_delay_ms: u64,
         ) -> Result<ClipboardContent, ClipboardError> {
             let retries = max_retries.max(1);
             let mut last_error: Option<ClipboardError> = None;
@@ -109,7 +109,9 @@ pub mod windows {
                     Err(error) => {
                         last_error = Some(error);
                         if attempt + 1 < retries {
-                            std::thread::sleep(std::time::Duration::from_millis(retry_delay_ms));
+                            // Gentle linear backoff: e.g. 25, 35, 45, 55, 65...
+                            let delay = base_retry_delay_ms + (attempt as u64 * 10);
+                            std::thread::sleep(std::time::Duration::from_millis(delay));
                         }
                     }
                 }
@@ -343,13 +345,10 @@ pub mod windows {
                 }
             }
 
-            let mut clipboard =
-                Clipboard::new().map_err(|e| ClipboardError::AccessError(e.to_string()))?;
-
-            if let Ok(text) = clipboard.get_text() {
-                // If text is purely whitespace or empty, check if an image is present first
-                // to prevent blank text payloads from overshadowing image clipboards.
-                if text.trim().is_empty() {
+            // Image-First: If image formats are available, attempt image extraction first
+            // to prevent browser / rich-text image copies from being overshadowed by text/URL.
+            if Self::has_image_format_available() {
+                if let Ok(mut clipboard) = Clipboard::new() {
                     if let Ok(img) = clipboard.get_image() {
                         if let Some(rgba) = image::RgbaImage::from_raw(
                             img.width as u32,
@@ -360,12 +359,25 @@ pub mod windows {
                             use image::codecs::png::PngEncoder;
                             let encoder = PngEncoder::new(&mut buffer);
                             if rgba.write_with_encoder(encoder).is_ok() {
+                                println!("[Clipboard] Captured image via arboard (image-first)");
                                 return Ok(ClipboardContent::Image(buffer));
                             }
                         }
                     }
                 }
 
+                // If arboard failed to read image (e.g. only CF_DIB or image/png format present),
+                // fallback to our native Win32 CF_DIB / PNG reader
+                if let Some(buffer) = Self::read_clipboard_image_native_fallback() {
+                    println!("[Clipboard] Captured image via native Win32 fallback (CF_DIB / PNG)");
+                    return Ok(ClipboardContent::Image(buffer));
+                }
+            }
+
+            let mut clipboard =
+                Clipboard::new().map_err(|e| ClipboardError::AccessError(e.to_string()))?;
+
+            if let Ok(text) = clipboard.get_text() {
                 // Drop arboard before opening clipboard again for rich formats
                 drop(clipboard);
                 // Try to read rich text formats (HTML, RTF) via Win32 API
@@ -382,6 +394,7 @@ pub mod windows {
                 });
             }
 
+            // Secondary fallback for image if has_image_format_available was false due to unusual formats
             if let Ok(img) = clipboard.get_image() {
                 let rgba = image::RgbaImage::from_raw(
                     img.width as u32,
@@ -401,7 +414,126 @@ pub mod windows {
                 return Ok(ClipboardContent::Image(buffer));
             }
 
+            if let Some(buffer) = Self::read_clipboard_image_native_fallback() {
+                return Ok(ClipboardContent::Image(buffer));
+            }
+
             Err(ClipboardError::UnsupportedType)
+        }
+
+        /// Sniff if standard or custom image formats are currently available on the clipboard
+        /// without acquiring exclusive lock.
+        fn has_image_format_available() -> bool {
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+
+            const CF_BITMAP: u32 = 2;
+            const CF_DIB: u32 = 8;
+            const CF_DIBV5: u32 = 17;
+
+            unsafe {
+                if IsClipboardFormatAvailable(CF_DIBV5).as_bool()
+                    || IsClipboardFormatAvailable(CF_DIB).as_bool()
+                    || IsClipboardFormatAvailable(CF_BITMAP).as_bool()
+                {
+                    return true;
+                }
+
+                for fmt_name in ["PNG", "image/png"] {
+                    let wide: Vec<u16> = OsStr::new(fmt_name).encode_wide().chain(Some(0)).collect();
+                    let fmt = RegisterClipboardFormatW(windows::core::PCWSTR(wide.as_ptr()));
+                    if fmt != 0 && IsClipboardFormatAvailable(fmt).as_bool() {
+                        return true;
+                    }
+                }
+            }
+
+            false
+        }
+
+        /// Native fallback to read CF_DIB (8) or registered PNG formats when arboard fails.
+        /// Decodes naked DIB directly into PNG via image::codecs::bmp::BmpDecoder::new_without_file_header.
+        fn read_clipboard_image_native_fallback() -> Option<Vec<u8>> {
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
+            use windows::Win32::System::Memory::*;
+
+            const CF_DIB: u32 = 8;
+            unsafe {
+                if OpenClipboard(None).is_err() {
+                    return None;
+                }
+
+                // 1) Try custom PNG formats first (often provides pristine alpha channel)
+                let mut png_bytes = None;
+                for fmt_name in ["PNG", "image/png"] {
+                    let wide: Vec<u16> = OsStr::new(fmt_name).encode_wide().chain(Some(0)).collect();
+                    let fmt = RegisterClipboardFormatW(windows::core::PCWSTR(wide.as_ptr()));
+                    if fmt != 0 {
+                        if let Ok(handle) = GetClipboardData(fmt) {
+                            if !handle.is_invalid() {
+                                let hglobal = HGLOBAL(handle.0);
+                                let ptr = GlobalLock(hglobal);
+                                if !ptr.is_null() {
+                                    let size = GlobalSize(hglobal);
+                                    if size > 0 {
+                                        png_bytes = Some(std::slice::from_raw_parts(ptr as *const u8, size).to_vec());
+                                    }
+                                    let _ = GlobalUnlock(hglobal);
+                                    if png_bytes.is_some() {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2) If no PNG bytes, try CF_DIB (8)
+                let mut dib_bytes = None;
+                if png_bytes.is_none() {
+                    if let Ok(handle) = GetClipboardData(CF_DIB) {
+                        if !handle.is_invalid() {
+                            let hglobal = HGLOBAL(handle.0);
+                            let ptr = GlobalLock(hglobal);
+                            if !ptr.is_null() {
+                                let size = GlobalSize(hglobal);
+                                if size > 0 {
+                                    dib_bytes = Some(std::slice::from_raw_parts(ptr as *const u8, size).to_vec());
+                                }
+                                let _ = GlobalUnlock(hglobal);
+                            }
+                        }
+                    }
+                }
+
+                let _ = CloseClipboard();
+
+                // If PNG data was retrieved, validate and return
+                if let Some(png_data) = png_bytes {
+                    if image::load_from_memory(&png_data).is_ok() {
+                        return Some(png_data);
+                    }
+                }
+
+                // If DIB data was retrieved, decode directly without BMP file header
+                if let Some(raw_data) = dib_bytes {
+                    let cursor = std::io::Cursor::new(raw_data);
+                    if let Ok(decoder) = image::codecs::bmp::BmpDecoder::new_without_file_header(cursor) {
+                        if let Ok(dynamic_image) = image::DynamicImage::from_decoder(decoder) {
+                            let rgba = dynamic_image.to_rgba8();
+                            let mut buffer = Vec::new();
+                            use image::codecs::png::PngEncoder;
+                            let encoder = PngEncoder::new(&mut buffer);
+                            if rgba.write_with_encoder(encoder).is_ok() {
+                                return Some(buffer);
+                            }
+                        }
+                    }
+                }
+
+                None
+            }
         }
 
         /// Read rich text formats (HTML Format, Rich Text Format) from the clipboard.

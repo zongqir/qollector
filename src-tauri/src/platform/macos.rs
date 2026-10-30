@@ -54,6 +54,12 @@ impl MacosClipboard {
         let mut clipboard = arboard::Clipboard::new()
             .map_err(|e| ClipboardError::AccessError(format!("Failed to open clipboard: {}", e)))?;
 
+        // Image-First: Try reading image before text to prevent browser / rich text
+        // image copies from being overshadowed by accompanying text/URL.
+        if let Ok(image) = clipboard.get_image() {
+            return Ok(ClipboardContent::Image(Self::image_to_png(image)?));
+        }
+
         if let Ok(text) = clipboard.get_text() {
             let raw_formats = Self::read_rich_formats();
             let raw_formats = if raw_formats.is_empty() {
@@ -65,10 +71,6 @@ impl MacosClipboard {
                 plain: text,
                 raw_formats,
             });
-        }
-
-        if let Ok(image) = clipboard.get_image() {
-            return Ok(ClipboardContent::Image(Self::image_to_png(image)?));
         }
 
         Err(ClipboardError::UnsupportedType)
