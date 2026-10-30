@@ -278,7 +278,11 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
     {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::UI::WindowsAndMessaging::{
-            GetForegroundWindow, IsWindow, SetForegroundWindow,
+            GetForegroundWindow, GetWindowThreadProcessId, IsWindow,
+            SetForegroundWindow, ShowWindow, BringWindowToTop, SW_SHOW,
+        };
+        use windows::Win32::System::Threading::{
+            GetCurrentThreadId, AttachThreadInput,
         };
 
         let target_hwnd_val = crate::window_lifecycle::get_last_external_active_window();
@@ -301,19 +305,37 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
             hide_main_window(&app);
         }
 
-        // Explicitly restore and activate target window if known
+        // Explicitly restore and activate target window if known.
+        // Use AttachThreadInput to bypass Windows Foreground Lock Timeout so that
+        // the external window is guaranteed to be brought to foreground rather than
+        // flashing in the taskbar.
         if target_hwnd_val != 0 {
             let target_hwnd = HWND(target_hwnd_val as *mut _);
             unsafe {
                 if IsWindow(target_hwnd).as_bool() {
+                    let our_tid = GetCurrentThreadId();
+                    let target_tid = GetWindowThreadProcessId(target_hwnd, None);
+
+                    let attached = if our_tid != target_tid && target_tid != 0 {
+                        AttachThreadInput(our_tid, target_tid, true).is_ok()
+                    } else {
+                        false
+                    };
+
+                    let _ = ShowWindow(target_hwnd, SW_SHOW);
+                    let _ = BringWindowToTop(target_hwnd);
                     let _ = SetForegroundWindow(target_hwnd);
+
+                    if attached {
+                        let _ = AttachThreadInput(our_tid, target_tid, false);
+                    }
                 }
             }
         }
 
         // Wait for foreground focus transition to complete
         let mut focus_ready = false;
-        for _ in 0..10 {
+        for _ in 0..12 {
             tokio::time::sleep(std::time::Duration::from_millis(15)).await;
             unsafe {
                 let current_fg = GetForegroundWindow();
@@ -329,6 +351,9 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
 
         if !focus_ready {
             tokio::time::sleep(std::time::Duration::from_millis(40)).await;
+        } else {
+            // Give target app event loop brief time to process WM_ACTIVATE and restore caret
+            tokio::time::sleep(std::time::Duration::from_millis(30)).await;
         }
 
         send_ctrl_v_input().map_err(|e| format!("Failed to simulate paste: {}", e))?;
@@ -449,7 +474,7 @@ fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     use std::time::Duration;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
-        VIRTUAL_KEY, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+        VIRTUAL_KEY, VK_CONTROL, VK_LBUTTON, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
     };
 
     const VK_V_KEY: u16 = 0x56;
@@ -485,6 +510,10 @@ fn send_ctrl_v_input() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Release any lingering physical modifier keys (Alt, Shift, Win) to avoid distorting Ctrl+V
     unsafe {
+        // If left mouse button is still physically held from double clicking the card, wait briefly
+        if (GetAsyncKeyState(VK_LBUTTON.0 as i32) as u16 & 0x8000) != 0 {
+            std::thread::sleep(Duration::from_millis(25));
+        }
         if (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0 {
             let _ = send_key_event(VK_MENU.0, 0, true);
         }

@@ -53,12 +53,23 @@ static LAST_EXTERNAL_ACTIVE_HWND: std::sync::atomic::AtomicUsize =
 pub fn record_external_active_window() {
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId,
+        };
         let hwnd = GetForegroundWindow();
         if !hwnd.is_invalid() {
             let mut pid = 0;
             GetWindowThreadProcessId(hwnd, Some(&mut pid));
             if pid != 0 && pid != std::process::id() {
+                // Filter out desktop and taskbar windows
+                let mut class_name = [0u16; 64];
+                let len = GetClassNameW(hwnd, &mut class_name);
+                if len > 0 {
+                    let name = String::from_utf16_lossy(&class_name[..len as usize]);
+                    if name == "Progman" || name == "WorkerW" || name == "Shell_TrayWnd" {
+                        return;
+                    }
+                }
                 LAST_EXTERNAL_ACTIVE_HWND.store(hwnd.0 as usize, Ordering::SeqCst);
             }
         }
