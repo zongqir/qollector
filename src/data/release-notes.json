@@ -2,6 +2,35 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.15",
+      "publishedAt": "2026-10-30",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-15",
+      "summary": {
+        "zh-CN": "系统级加固剪贴板图片捕获链路（补齐 Win32 原生 CF_DIB 解码、格式优先级反转与通用单图片文件提升），全面重构双击自动粘贴机制（锁定目标前台窗口、清理残留修饰键、解除图片与文件类型限制）。",
+        "en-US": "Fortified clipboard image capture pipeline with native Win32 CF_DIB decoding, image-first format sniffing and universal file promotion; overhauled auto-paste reliability with target window focus restoration, modifier cleanup, and lifted type limitations."
+      },
+      "highlights": {
+        "zh-CN": [
+          "补齐 Win32 原生 CF_DIB (8) 与注册 PNG 回退解码器：利用 image 原生免头 BMP 解码器补齐 Windows 传统位图支持，彻底打破 arboard 仅支持 CF_DIBV5 的局限，杜绝截图与绘图软件复制位图时静默丢弃。",
+          "图文检测优先级反转（Image-First 策略）：在 Windows 与 macOS 端嗅探图像格式，当网页或富文本复制图片携带 URL 或 alt 文本时，优先提取并保存图片资产，防止被文本通道截胡。",
+          "解除 PixPin 白名单硬编码，通用化单图片文件提升：凡剪贴板 CF_HDROP 仅含单张合法图片文件（无论是微信临时截图、Snipaste、还是文件管理器中复制），均自动提升为可预览、可 OCR 的图片资产。",
+          "剪贴板排他锁容错退避扩容：将重试扩容至 8 次并引入线性退避（总窗口约 385ms），从容应对大图编码与写盘延迟。",
+          "前台目标窗口（Target HWND）焦点恢复：在 Qollector 呼出前实时捕获目标前台窗口，双击自动粘贴时显式归位并等待焦点接管，根治输入框未激活导致的 Ctrl+V 击空。",
+          "物理残留修饰键安全清理：模拟按键前主动释放处于物理按下状态的 Alt、Shift 与 Win 键，杜绝快捷键呼出残留导致的组合键变形。",
+          "解除图片与文件自动粘贴限制：前端与核心动作层放开类型封锁，双击图片可直接输入粘贴到微信、飞书、Word 等目标应用中。"
+        ],
+        "en-US": [
+          "Native Win32 CF_DIB & PNG Fallback Decoder: Implemented headerless DIB decoding via image crate to overcome arboard's limitation of only handling CF_DIBV5, eliminating dropped captures from legacy tools and drawing apps.",
+          "Image-First Priority Format Sniffing: Sniffs image formats before text on Windows and macOS, ensuring browser/rich-text image copies with URLs or alt text are captured as image assets rather than hijacked into text items.",
+          "Universal Single Image File Promotion: Removed hardcoded app restrictions so any single image file copied in Windows/macOS file managers or temp screenshot folders is promoted to a full image item with thumbnails and OCR.",
+          "Extended Clipboard Lock Backoff Window: Expanded retry attempts to 8 with linear backoff (~385ms), resolving race conditions during heavy image encoding.",
+          "Target HWND Focus Restoration: Tracks external foreground window prior to activation and explicitly calls SetForegroundWindow before simulated paste, completely eliminating dropped Ctrl+V inputs.",
+          "Modifier Key Cleanup: Safely releases physically pressed Alt/Shift/Win keys before sending Ctrl+V to prevent keyboard shortcut distortion.",
+          "Lifted Auto-Paste Type Restrictions: Removed artificial roadblocks preventing image and file types from auto-pasting, enabling direct double-click pasting for images into chat apps and documents."
+        ]
+      }
+    },
+    {
       "version": "0.6.14",
       "publishedAt": "2026-10-25",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-14",
