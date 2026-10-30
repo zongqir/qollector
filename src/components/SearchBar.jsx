@@ -246,10 +246,13 @@ function SearchBar({
 
   useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
 
-  // 1) 重新打开主窗口（获得 focus / 变为可见）或窗口切走（blur / 隐藏）时，收起搜索下拉框并聚焦输入框
+  const dismissOpenDropdownsRef = useRef(dismissOpenDropdowns);
+  dismissOpenDropdownsRef.current = dismissOpenDropdowns;
+
+  // 1) 重新打开主窗口（获得 window focus）时，收起上次遗留的下拉框并聚焦输入框
   useEffect(() => {
-    const handleWindowFocusOrVisible = () => {
-      dismissOpenDropdowns();
+    const handleWindowFocus = () => {
+      dismissOpenDropdownsRef.current?.();
       const input = searchInputRef.current;
       if (!input) return;
       const active = document.activeElement;
@@ -261,52 +264,45 @@ function SearchBar({
       input.setSelectionRange?.(cursor, cursor);
     };
 
-    const handleWindowBlurOrHide = () => {
-      dismissOpenDropdowns();
-    };
-
-    const handleVisibilityChange = () => {
-      dismissOpenDropdowns();
-    };
-
-    const timer = window.setTimeout(handleWindowFocusOrVisible, 0);
-    window.addEventListener('focus', handleWindowFocusOrVisible);
-    window.addEventListener('blur', handleWindowBlurOrHide);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
+    window.addEventListener('focus', handleWindowFocus);
     return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('focus', handleWindowFocusOrVisible);
-      window.removeEventListener('blur', handleWindowBlurOrHide);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
     };
-  }, [dismissOpenDropdowns]);
+  }, []);
 
-  // 2) mini 模式切换（窗口缩小或放大）时，自动收起下拉框
+  // 2) mini 模式切换（窗口缩小或放大）时，真正切换模式才收起下拉框
+  const prevMiniModeRef = useRef(isMiniMode);
   useEffect(() => {
-    dismissOpenDropdowns();
-  }, [isMiniMode, dismissOpenDropdowns]);
+    if (prevMiniModeRef.current !== isMiniMode) {
+      prevMiniModeRef.current = isMiniMode;
+      dismissOpenDropdownsRef.current?.();
+    }
+  }, [isMiniMode]);
 
-  // 3) 窗口尺寸变化（resize / 缩放）时，自动收起下拉框
+  // 3) 窗口尺寸变化（resize / 缩放）时，防抖收起下拉框
   useEffect(() => {
     let resizeTimer = null;
     const handleResize = () => {
       if (resizeTimer) window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
-        dismissOpenDropdowns();
-      }, 50);
+        dismissOpenDropdownsRef.current?.();
+      }, 100);
     };
     window.addEventListener('resize', handleResize);
     return () => {
       if (resizeTimer) window.clearTimeout(resizeTimer);
       window.removeEventListener('resize', handleResize);
     };
-  }, [dismissOpenDropdowns]);
+  }, []);
 
-  // 4) 视图切换（历史流 vs 收藏区）时，自动收起下拉框
+  // 4) 视图切换（历史流 vs 收藏区）时，真正切换才收起下拉框
+  const prevFavoritesOnlyRef = useRef(showFavoritesOnly);
   useEffect(() => {
-    dismissOpenDropdowns();
-  }, [showFavoritesOnly, dismissOpenDropdowns]);
+    if (prevFavoritesOnlyRef.current !== showFavoritesOnly) {
+      prevFavoritesOnlyRef.current = showFavoritesOnly;
+      dismissOpenDropdownsRef.current?.();
+    }
+  }, [showFavoritesOnly]);
 
   // 5) 下拉框展开时，外部列表滚动（鼠标滚轮）自动收起下拉框
   useEffect(() => {
@@ -319,13 +315,13 @@ function SearchBar({
       ) {
         return;
       }
-      dismissOpenDropdowns();
+      dismissOpenDropdownsRef.current?.();
     };
     window.addEventListener('wheel', handleWheel, { passive: true });
     return () => {
       window.removeEventListener('wheel', handleWheel);
     };
-  }, [hasOpenDropdown, dismissOpenDropdowns]);
+  }, [hasOpenDropdown]);
 
   const toggleTagFilter = useCallback(() => {
     toggleDropdown('tag');

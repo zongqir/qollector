@@ -2,6 +2,27 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.18",
+      "publishedAt": "2026-10-30",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-18",
+      "summary": {
+        "zh-CN": "紧急修复搜索框点击展开最近搜索时被副作用意外自动收起的缺陷，恢复搜索历史下拉弹窗正常呼出与交互。",
+        "en-US": "Hotfix for search box recent searches dropdown immediately self-closing upon click due to effect dependency loop."
+      },
+      "highlights": {
+        "zh-CN": [
+          "解耦下拉收起依赖闭环：使用 dismissOpenDropdownsRef 彻底切断 useEffect 对下拉协调器函数引用的直接依赖，消除打开下拉框时触发依赖改变导致的自杀死锁，使点击搜索框时最近搜索列表稳定秒开。",
+          "状态翻转精准响应：对 mini 模式与收藏视图切换引入前值保护（prevRef），只在模式真正切换时执行下拉收起，避免普通重新渲染时误伤展开状态。",
+          "精简窗口事件监听：移除易产生误判的 window blur 监听，仅在窗口由外部重新激活（focus）时收起旧浮层并重定光标。"
+        ],
+        "en-US": [
+          "Decoupled Dropdown Dismissal Dependency Loop: Leveraged dismissOpenDropdownsRef to decouple useEffect hooks from coordinator function instances, eliminating self-closing deadlocks and restoring instant search history dropdown expansion.",
+          "State Toggle Precise Triggering: Introduced previous value refs for mini mode and collection view transitions so dropdowns are only dismissed on genuine state flips rather than routine re-renders.",
+          "Streamlined Window Focus Handling: Removed volatile window blur listeners, ensuring stale dropdowns are dismissed only when refocusing from external apps."
+        ]
+      }
+    },
+    {
       "version": "0.6.17",
       "publishedAt": "2026-10-30",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-17",
