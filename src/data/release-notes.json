@@ -2,6 +2,33 @@
   "changelogUrl": "https://qollect.zongqir.com/changelog",
   "releases": [
     {
+      "version": "0.6.17",
+      "publishedAt": "2026-10-30",
+      "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-17",
+      "summary": {
+        "zh-CN": "彻底加固 Windows 双击自动粘贴前台激活与光标恢复机制，全面优化搜索下拉框在窗口重开、缩放和滚动时的自动收起体验。",
+        "en-US": "Robustly fortified Windows auto-paste foreground window activation and caret restoration, and fully polished search dropdown auto-dismiss behavior on window reactivation, resize, and scroll."
+      },
+      "highlights": {
+        "zh-CN": [
+          "破解 Windows 前台激活锁定，根治自动粘贴光标丢失：通过临时借调输入线程权限确保目标应用 100% 真正激活置顶，彻底杜绝任务栏闪黄光与粘贴击空；移除不兼容的子控件暴力介入，由应用原生事件循环自然点亮输入光标。",
+          "时序缓冲与按键防抖优化：增加前台切换就绪确认与 30ms 光标平稳重绘缓冲，并在模拟 Ctrl+V 前增加鼠标左键物理释放防抖，避免双击手势与按键冲突。",
+          "外部窗口精准记录与桌面过滤：呼出时自动过滤桌面（Progman/WorkerW）与任务栏（Shell_TrayWnd），只锁定真实前台工作窗口。",
+          "搜索下拉框唤醒重开自动收起：主窗口从后台唤醒、重新聚焦或可见性切换时，自动收起遗留的搜索下拉框，恢复清爽视图。",
+          "窗口缩放与 mini 模式切换自适应收起：窗口 resize 或切换 mini 模式时自动收起下拉列表，避免浮层错位或过度遮挡。",
+          "搜索历史统一下拉协调与 Esc 收起：将最近搜索纳入统一状态协调器，与标签、类型筛选实现双向互斥，并支持按 Esc 统统一键收回。"
+        ],
+        "en-US": [
+          "Bypass Windows Foreground Lock Timeout: Temporary thread input attachment guarantees target windows are brought to genuine foreground instead of blinking in taskbar; eliminated invasive child SetFocus calls so applications naturally restore their native caret via WM_ACTIVATE.",
+          "Focus Settle Buffer & Mouse Debounce: Added foreground confirmation polling with 30ms caret repaint buffer, plus physical left-click release debounce before simulating Ctrl+V to prevent double-click input races.",
+          "Desktop & Taskbar Filtering: Automatically filters out desktop (Progman/WorkerW) and taskbar (Shell_TrayWnd) windows to only track valid user applications.",
+          "Search Dropdown Auto-Dismiss on Reactivation: Cleans up lingering search dropdowns whenever Qollector is reactivated, refocused, or unhidden from tray/background.",
+          "Adaptive Dismiss on Resize & Mini Mode: Automatically collapses dropdowns when resizing or switching between normal and mini modes, preventing misplaced or oversized floating panels.",
+          "Unified Dropdown Coordination & Esc Dismiss: Recent searches is now integrated into the filter coordinator, enabling mutual exclusion with tag/type filters and universal Escape key dismissal."
+        ]
+      }
+    },
+    {
       "version": "0.6.16",
       "publishedAt": "2026-10-30",
       "changelogUrl": "https://qollect.zongqir.com/changelog#v0-6-16",

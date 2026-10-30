@@ -1514,6 +1514,10 @@ function HistoryStream({ style }) {
     setShowTagFilter(!showTagFilter);
   }, [setShowTagFilter, showTagFilter]);
 
+  const handleCloseTagFilter = useCallback(() => {
+    setShowTagFilter(false);
+  }, [setShowTagFilter]);
+
   const handleOpenSettingsPanel = useCallback(() => {
     setShowSettings(true);
   }, [setShowSettings]);
@@ -1553,6 +1557,7 @@ function HistoryStream({ style }) {
     onClearTags: handleClearSelectedTags,
     showTagFilter,
     onToggleTagFilter: handleToggleTagFilterVisible,
+    onCloseTagFilter: handleCloseTagFilter,
     allTags: showFavoritesOnly ? [] : allTags,
     filteredTagsList: showFavoritesOnly ? [] : filteredTagsList,
     tagSearchQuery,
@@ -1584,6 +1589,7 @@ function HistoryStream({ style }) {
     handleClearSelectedTags,
     showTagFilter,
     handleToggleTagFilterVisible,
+    handleCloseTagFilter,
     allTags,
     filteredTagsList,
     tagSearchQuery,

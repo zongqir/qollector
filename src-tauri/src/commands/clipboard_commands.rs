@@ -317,7 +317,7 @@ pub async fn try_paste_foreground(app: tauri::AppHandle) -> Result<bool, String>
                     let target_tid = GetWindowThreadProcessId(target_hwnd, None);
 
                     let attached = if our_tid != target_tid && target_tid != 0 {
-                        AttachThreadInput(our_tid, target_tid, true).is_ok()
+                        AttachThreadInput(our_tid, target_tid, true).as_bool()
                     } else {
                         false
                     };

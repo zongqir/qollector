@@ -22,7 +22,7 @@ function SearchBar({
   showFavoritesOnly, onToggleFavorites,
   isMiniMode,
   selectedTags, onClearTags,
-  showTagFilter, onToggleTagFilter,
+  showTagFilter, onToggleTagFilter, onCloseTagFilter,
   allTags, filteredTagsList,
   tagSearchQuery, onTagSearchChange,
   onToggleTag,
@@ -43,28 +43,6 @@ function SearchBar({
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [activeRecentSearchIndex, setActiveRecentSearchIndex] = useState(-1);
 
-  useEffect(() => {
-    const focusSearchInput = () => {
-      const input = searchInputRef.current;
-      if (!input) return;
-      const active = document.activeElement;
-      if (active && active !== document.body && active !== document.documentElement) {
-        return;
-      }
-      input.focus();
-      const cursor = input.value?.length ?? 0;
-      input.setSelectionRange(cursor, cursor);
-    };
-
-    const timer = window.setTimeout(focusSearchInput, 0);
-    window.addEventListener('focus', focusSearchInput);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('focus', focusSearchInput);
-    };
-  }, []);
-
   useClickOutsideDismiss({
     isOpen: showRecentSearches,
     wrapperRef: searchBoxRef,
@@ -76,7 +54,13 @@ function SearchBar({
   useClickOutsideDismiss({
     isOpen: showTagFilter,
     wrapperRef: tagWrapperRef,
-    onDismiss: onToggleTagFilter,
+    onDismiss: () => {
+      if (onCloseTagFilter) {
+        onCloseTagFilter();
+      } else if (showTagFilter) {
+        onToggleTagFilter?.();
+      }
+    },
   });
   useClickOutsideDismiss({
     isOpen: showTypeFilter,
@@ -187,10 +171,12 @@ function SearchBar({
   const typeDropdownId = 'search-type-filter-dropdown';
 
   const closeTagFilter = useCallback(() => {
-    if (showTagFilter) {
+    if (onCloseTagFilter) {
+      onCloseTagFilter();
+    } else if (showTagFilter) {
       onToggleTagFilter?.();
     }
-  }, [showTagFilter, onToggleTagFilter]);
+  }, [showTagFilter, onToggleTagFilter, onCloseTagFilter]);
 
   const closeTypeFilter = useCallback(() => {
     if (showTypeFilter) {
@@ -217,12 +203,20 @@ function SearchBar({
       open: onToggleTagFilter,
       close: closeTagFilter,
     },
+    recentSearches: {
+      isOpen: showRecentSearches,
+      open: openRecentSearches,
+      close: closeRecentSearches,
+    },
   }), [
     showTypeFilter,
     closeTypeFilter,
     showTagFilter,
     onToggleTagFilter,
     closeTagFilter,
+    showRecentSearches,
+    openRecentSearches,
+    closeRecentSearches,
   ]);
 
   useEffect(() => {
@@ -251,6 +245,87 @@ function SearchBar({
   } = useFilterDropdownCoordinator(coordinatedDropdowns);
 
   useEscapeDismiss(hasOpenDropdown, dismissOpenDropdowns);
+
+  // 1) 重新打开主窗口（获得 focus / 变为可见）或窗口切走（blur / 隐藏）时，收起搜索下拉框并聚焦输入框
+  useEffect(() => {
+    const handleWindowFocusOrVisible = () => {
+      dismissOpenDropdowns();
+      const input = searchInputRef.current;
+      if (!input) return;
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) {
+        return;
+      }
+      input.focus();
+      const cursor = input.value?.length ?? 0;
+      input.setSelectionRange?.(cursor, cursor);
+    };
+
+    const handleWindowBlurOrHide = () => {
+      dismissOpenDropdowns();
+    };
+
+    const handleVisibilityChange = () => {
+      dismissOpenDropdowns();
+    };
+
+    const timer = window.setTimeout(handleWindowFocusOrVisible, 0);
+    window.addEventListener('focus', handleWindowFocusOrVisible);
+    window.addEventListener('blur', handleWindowBlurOrHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', handleWindowFocusOrVisible);
+      window.removeEventListener('blur', handleWindowBlurOrHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [dismissOpenDropdowns]);
+
+  // 2) mini 模式切换（窗口缩小或放大）时，自动收起下拉框
+  useEffect(() => {
+    dismissOpenDropdowns();
+  }, [isMiniMode, dismissOpenDropdowns]);
+
+  // 3) 窗口尺寸变化（resize / 缩放）时，自动收起下拉框
+  useEffect(() => {
+    let resizeTimer = null;
+    const handleResize = () => {
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        dismissOpenDropdowns();
+      }, 50);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [dismissOpenDropdowns]);
+
+  // 4) 视图切换（历史流 vs 收藏区）时，自动收起下拉框
+  useEffect(() => {
+    dismissOpenDropdowns();
+  }, [showFavoritesOnly, dismissOpenDropdowns]);
+
+  // 5) 下拉框展开时，外部列表滚动（鼠标滚轮）自动收起下拉框
+  useEffect(() => {
+    if (!hasOpenDropdown) return;
+    const handleWheel = (event) => {
+      if (
+        searchBoxRef.current?.contains(event.target) ||
+        tagWrapperRef.current?.contains(event.target) ||
+        typeWrapperRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      dismissOpenDropdowns();
+    };
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, [hasOpenDropdown, dismissOpenDropdowns]);
 
   const toggleTagFilter = useCallback(() => {
     toggleDropdown('tag');
@@ -440,7 +515,10 @@ function SearchBar({
           {searchQuery && (
             <button
               type="button"
-              onClick={() => onSearchChange('')}
+              onClick={() => {
+                onSearchChange('');
+                dismissOpenDropdowns();
+              }}
               className="clear-search"
               aria-label={t('toolbar.clearFilter')}
             >
